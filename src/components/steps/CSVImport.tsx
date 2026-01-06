@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StepHeader } from "@/components/ui/step-header";
+import { ReadOnlyBadge } from "@/components/ui/read-only-badge";
 
 interface CSVImportProps {
   onImport: (result: CSVImportResult) => void;
@@ -113,12 +115,12 @@ export function CSVImport({
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Import CSV Tarifs</h2>
-        <p className="text-muted-foreground">
-          Chargez le fichier CSV contenant les tarifs à jour.
-        </p>
-      </div>
+      <StepHeader
+        stepNumber={4}
+        totalSteps={7}
+        title="Import CSV Tarifs"
+        description="Chargez le fichier CSV contenant les tarifs à jour. Cette étape est optionnelle."
+      />
 
       {/* Mode d'import indicator */}
       <Card variant={importModeInfo.mode === 'application' ? "success" : "warning"}>

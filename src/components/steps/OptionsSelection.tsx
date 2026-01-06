@@ -5,6 +5,9 @@ import { ServiceOption, OptionsServicesData } from "@/types/quote";
 import { getOptionsStatusMessage } from "@/lib/options-parser";
 import { Settings, Check, Package, AlertTriangle, Ban, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StepHeader } from "@/components/ui/step-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { BlockingMessage } from "@/components/ui/blocking-message";
 
 interface OptionsSelectionProps {
   options: ServiceOption[];
@@ -26,23 +29,19 @@ export function OptionsSelection({
   if (optionsData?.isEmpty) {
     return (
       <div className="space-y-6 animate-slide-up">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Sélection des Options</h2>
-          <p className="text-muted-foreground">
-            Choisissez les options services à inclure dans le devis (page 6).
-          </p>
-        </div>
+        <StepHeader
+          stepNumber={5}
+          totalSteps={7}
+          title="Sélection des Options"
+          description="Choisissez les options services à inclure dans le devis (page 6)."
+        />
 
-        <Card variant="ghost" className="border-2 border-dashed">
-          <CardContent className="p-8 text-center">
-            <Info className="h-12 w-12 text-info mx-auto mb-4" />
-            <p className="text-lg font-medium mb-2">Aucune option disponible</p>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              L'onglet "Options services " du fichier Excel est vide. 
-              Aucune option ne sera injectée dans la page 6 du devis.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Info}
+          title="Aucune option disponible"
+          description="L'onglet « Options services  » du fichier Excel est vide. Aucune option ne sera injectée dans la page 6 du devis."
+          variant="info"
+        />
 
         <Card variant="ghost" className="border border-dashed">
           <CardContent className="p-4">
@@ -59,12 +58,12 @@ export function OptionsSelection({
   if (optionsData?.structureError) {
     return (
       <div className="space-y-6 animate-slide-up">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Sélection des Options</h2>
-          <p className="text-muted-foreground">
-            Choisissez les options services à inclure dans le devis (page 6).
-          </p>
-        </div>
+        <StepHeader
+          stepNumber={5}
+          totalSteps={7}
+          title="Sélection des Options"
+          description="Choisissez les options services à inclure dans le devis (page 6)."
+        />
 
         <Card variant="error">
           <CardContent className="p-6">
@@ -80,13 +79,7 @@ export function OptionsSelection({
           </CardContent>
         </Card>
 
-        <Card variant="ghost" className="border border-dashed">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground text-center">
-              La sélection d'options est bloquée tant que la structure de l'onglet n'est pas définie contractuellement.
-            </p>
-          </CardContent>
-        </Card>
+        <BlockingMessage message="La sélection d'options est bloquée tant que la structure de l'onglet n'est pas définie contractuellement." />
       </div>
     );
   }
@@ -95,39 +88,35 @@ export function OptionsSelection({
   if (options.length === 0) {
     return (
       <div className="space-y-6 animate-slide-up">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Sélection des Options</h2>
-          <p className="text-muted-foreground">
-            Choisissez les options services à inclure dans le devis (page 6).
-          </p>
-        </div>
+        <StepHeader
+          stepNumber={5}
+          totalSteps={7}
+          title="Sélection des Options"
+          description="Choisissez les options services à inclure dans le devis (page 6)."
+        />
 
-        <Card variant="ghost" className="border-2 border-dashed">
-          <CardContent className="p-8 text-center">
-            <Ban className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium mb-2">Aucune option chargée</p>
-            <p className="text-sm text-muted-foreground">
-              Importez un fichier Excel avec un onglet "Options services " valide.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Ban}
+          title="Aucune option chargée"
+          description="Importez un fichier Excel avec un onglet « Options services  » valide."
+          variant="warning"
+        />
       </div>
     );
   }
   
   const categories = [...new Set(options.map(o => o.category))];
   const selectedOptions = options.filter(o => o.selected);
-  const totalPrice = selectedOptions.reduce((sum, o) => sum + (o.price || 0), 0);
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Sélection des Options</h2>
-          <p className="text-muted-foreground">
-            Choisissez les options services à inclure dans le devis (page 6).
-          </p>
-        </div>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <StepHeader
+          stepNumber={5}
+          totalSteps={7}
+          title="Sélection des Options"
+          description="Choisissez les options services à inclure dans le devis (page 6)."
+        />
         
         <Badge variant={selectedCount > 0 ? "active" : "pending"} className="gap-1">
           <Package className="h-3 w-3" />
@@ -135,15 +124,15 @@ export function OptionsSelection({
         </Badge>
       </div>
 
-      {/* Summary */}
+      {/* Résumé des options sélectionnées - SANS calcul de total (interdit) */}
       {selectedCount > 0 && (
         <Card variant="selected">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
-                <p className="text-sm text-muted-foreground">Total options sélectionnées</p>
-                <p className="text-2xl font-bold text-primary">
-                  {totalPrice.toLocaleString('fr-FR')} €
+                <p className="text-sm text-muted-foreground">Options sélectionnées</p>
+                <p className="text-lg font-semibold text-primary">
+                  {selectedCount} option{selectedCount > 1 ? 's' : ''} incluse{selectedCount > 1 ? 's' : ''}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 max-w-md">

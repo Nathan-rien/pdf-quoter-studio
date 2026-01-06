@@ -13,9 +13,13 @@ import {
   DollarSign,
   ChevronRight,
   AlertTriangle,
-  Info
+  Info,
+  CheckCircle,
+  Circle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StepHeader } from "@/components/ui/step-header";
+import { BlockingMessage } from "@/components/ui/blocking-message";
 
 interface QuotePreviewProps {
   template: QuoteTemplate | null;
@@ -45,28 +49,41 @@ export function QuotePreview({
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Aperçu du Devis</h2>
-          <p className="text-muted-foreground">
-            Vérifiez la structure du devis avant l'export final.
-          </p>
-        </div>
-        
-        <Badge variant={isReady ? "success" : "warning"} className="gap-1">
-          {isReady ? (
-            <>
-              <Check className="h-3 w-3" />
-              Prêt pour export
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="h-3 w-3" />
-              Données incomplètes
-            </>
-          )}
-        </Badge>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <StepHeader
+          stepNumber={6}
+          totalSteps={7}
+          title="Aperçu du Devis"
+          description="Vérifiez la structure du devis avant l'export final."
+          status={isReady ? 'complete' : 'active'}
+          statusLabel={isReady ? 'Prêt pour export' : 'Données incomplètes'}
+        />
       </div>
+
+      {/* Checklist pré-export */}
+      <Card variant="ghost" className="border border-dashed">
+        <CardContent className="p-4">
+          <p className="text-sm font-medium mb-3">Vérification pré-export :</p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              {template ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
+              <span className={template ? '' : 'text-muted-foreground'}>Template sélectionné</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              {investData ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
+              <span className={investData ? '' : 'text-muted-foreground'}>Excel importé sans erreur</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              {isInvestReady ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
+              <span className={isInvestReady ? '' : 'text-muted-foreground'}>Invest validé</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              {selectedOpts.length > 0 ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
+              <span className="text-muted-foreground">Options sélectionnées (optionnel)</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Template info */}
       <Card>

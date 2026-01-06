@@ -16,6 +16,10 @@ import {
 } from "@/components/ui/table";
 import { Check, AlertTriangle, Eye, CheckCircle, XCircle, Clock, Ban, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StepHeader } from "@/components/ui/step-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { BlockingMessage } from "@/components/ui/blocking-message";
+import { ReadOnlyBadge } from "@/components/ui/read-only-badge";
 
 interface InvestValidationProps {
   investData: InvestData | null;
@@ -53,22 +57,22 @@ export function InvestValidation({ investData, onValidate, onReject, isValidated
   if (!investData) {
     return (
       <div className="space-y-6 animate-slide-up">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Validation Invest</h2>
-          <p className="text-muted-foreground">
-            Vérifiez les données à injecter dans le devis (pages 4-5).
-          </p>
-        </div>
+        <StepHeader
+          stepNumber={3}
+          totalSteps={7}
+          title="Validation Invest"
+          description="Vérifiez les données à injecter dans le devis (pages 4-5)."
+          isReadOnly
+        />
         
-        <Card variant="ghost" className="border-2 border-dashed">
-          <CardContent className="p-8 text-center">
-            <Ban className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium mb-2">Aucune donnée Invest</p>
-            <p className="text-sm text-muted-foreground">
-              Importez d'abord un fichier Excel contenant l'onglet "invest " (avec espace final).
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Ban}
+          title="Aucune donnée Invest"
+          description="Importez d'abord un fichier Excel contenant l'onglet « invest  » (avec espace final)."
+          variant="warning"
+        />
+
+        <BlockingMessage message="Import Excel requis pour continuer." />
       </div>
     );
   }
@@ -92,18 +96,20 @@ export function InvestValidation({ investData, onValidate, onReject, isValidated
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Validation Invest</h2>
-          <p className="text-muted-foreground">
-            Vérifiez les données à injecter dans le devis (pages 4-5).
-          </p>
-        </div>
-        
-        <Badge variant={statusInfo.variant} className="gap-1">
-          <StatusIcon className="h-3 w-3" />
-          {statusInfo.label}
-        </Badge>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <StepHeader
+          stepNumber={3}
+          totalSteps={7}
+          title="Validation Invest"
+          description="Vérifiez les données à injecter dans le devis (pages 4-5)."
+          isReadOnly
+          status={
+            investData.validationStatus === 'valide_pret_injection' ? 'complete' :
+            investData.validationStatus === 'rejete_a_corriger' ? 'error' :
+            investData.validationStatus === 'importe_non_valide' ? 'active' : 'pending'
+          }
+          statusLabel={statusInfo.label}
+        />
       </div>
 
       {/* Source info */}
