@@ -9,6 +9,7 @@ import type {
   EditableElement, 
   TemplateEditorState,
   TextContent,
+  ImageContent,
   TemplatePageContent,
   PublishValidationResult
 } from '@/types/template-editor';
@@ -29,8 +30,15 @@ interface TemplateEditorStore extends TemplateEditorState {
 
   // Actions d'édition (éléments NON dynamiques uniquement)
   updateTextContent: (elementId: string, content: Partial<TextContent>) => boolean;
+  updateImageContent: (elementId: string, content: Partial<ImageContent>) => boolean;
   updateElementPosition: (elementId: string, position: { x: number; y: number }) => boolean;
   updateElementSize: (elementId: string, size: { width: number; height: number }) => boolean;
+
+  // Ajout d'éléments
+  addElementMode: 'none' | 'text' | 'image';
+  setAddElementMode: (mode: 'none' | 'text' | 'image') => void;
+  addElement: (type: 'text' | 'image', position: { x: number; y: number }) => EditableElement;
+  deleteElement: (elementId: string) => boolean;
 
   // Protection des zones dynamiques
   isElementEditable: (elementId: string) => boolean;
@@ -92,7 +100,8 @@ const initialState: TemplateEditorState = {
   selectedElementId: null,
   selectedPageNumber: 1,
   editorMode: 'view',
-  hasUnsavedChanges: false
+  hasUnsavedChanges: false,
+  addElementMode: 'none'
 };
 
 export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => ({
@@ -210,7 +219,101 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
     return true;
   },
 
-  // Protection
+  // Modification d'image
+  updateImageContent: (elementId, content) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic || element.type !== 'image') return false;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    updatedElements[elementIndex] = {
+      ...element,
+      content: { ...(element.content as ImageContent), ...content }
+    };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
+
+  // Mode ajout d'éléments
+  setAddElementMode: (mode) => {
+    set({ addElementMode: mode });
+  },
+
+  // Ajout d'un nouvel élément
+  addElement: (type, position) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      throw new Error('Cannot add element to non-draft version');
+    }
+
+    const newElement: EditableElement = {
+      id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      pageNumber: selectedPageNumber,
+      isDynamic: false,
+      position,
+      size: type === 'text' ? { width: 150, height: 30 } : { width: 100, height: 80 },
+      content: type === 'text' 
+        ? { text: 'Nouveau texte', fontFamily: 'DM Sans', fontSize: 12, color: '#1f2937', bold: false, italic: false, underline: false }
+        : { imageUrl: '', alt: 'Nouvelle image' }
+    };
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) {
+      throw new Error('Page not found');
+    }
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements, newElement];
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementId: newElement.id,
+      addElementMode: 'none'
+    });
+
+    return newElement;
+  },
+
+  // Suppression d'un élément
+  deleteElement: (elementId) => {
+    const { currentVersion, selectedPageNumber, selectedElementId } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements.find(e => e.id === elementId);
+    if (!element || element.isDynamic) return false;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = updatedPages[pageIndex].elements.filter(e => e.id !== elementId);
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementId: selectedElementId === elementId ? null : selectedElementId
+    });
+    return true;
+  },
+
   isElementEditable: (elementId) => {
     const pageContent = get().getCurrentPageContent();
     if (!pageContent) return false;

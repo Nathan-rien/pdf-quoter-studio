@@ -3,6 +3,7 @@
  * Édition des textes et images (éléments NON dynamiques uniquement)
  */
 
+import { useRef } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ALLOWED_COLORS, ALLOWED_FONTS, ALLOWED_FONT_SIZES } from "@/lib/template-styles";
-import type { TextContent } from "@/types/template-editor";
+import type { TextContent, ImageContent } from "@/types/template-editor";
 import { 
   Type, 
   Image, 
@@ -27,18 +28,24 @@ import {
   Pencil,
   Edit3,
   Eye,
-  AlertTriangle
+  AlertTriangle,
+  Upload,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function ElementProperties() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const { 
     currentVersion,
     hasUnsavedChanges,
     updateTextContent,
+    updateImageContent,
     updateElementPosition,
     updateElementSize,
+    deleteElement,
     createNewVersion,
     getSelectedElement
   } = useTemplateEditorStore();
@@ -100,6 +107,10 @@ export function ElementProperties() {
     ? selectedElement.content as TextContent 
     : null;
 
+  const imageContent = selectedElement.type === 'image'
+    ? selectedElement.content as ImageContent
+    : null;
+
   const handleTextChange = (updates: Partial<TextContent>) => {
     if (isEditable && textContent) {
       updateTextContent(selectedElement.id, updates);
@@ -128,6 +139,45 @@ export function ElementProperties() {
     const newVersion = createNewVersion();
     if (newVersion) {
       toast.success(`Brouillon v${newVersion.versionNumber} créé. Vous pouvez maintenant modifier.`);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !isEditable || !selectedElement) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error("Veuillez sélectionner un fichier image valide.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string;
+      updateImageContent(selectedElement.id, { imageUrl });
+      toast.success("Image mise à jour");
+    };
+    reader.onerror = () => {
+      toast.error("Erreur lors de la lecture du fichier");
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImageAltChange = (alt: string) => {
+    if (isEditable && selectedElement) {
+      updateImageContent(selectedElement.id, { alt });
+    }
+  };
+
+  const handleDeleteElement = () => {
+    if (isEditable && selectedElement) {
+      deleteElement(selectedElement.id);
+      toast.success("Élément supprimé");
     }
   };
 
@@ -267,12 +317,52 @@ export function ElementProperties() {
 
         {selectedElement.type === 'image' && (
           <div className="space-y-4">
-            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
-              <Image className="h-8 w-8 text-muted-foreground" />
+            {/* Prévisualisation */}
+            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden border">
+              {imageContent?.imageUrl ? (
+                <img 
+                  src={imageContent.imageUrl} 
+                  alt={imageContent.alt || 'Image'} 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Image className="h-8 w-8" />
+                  <span className="text-xs">Aucune image</span>
+                </div>
+              )}
             </div>
-            <Button variant="outline" className="w-full" disabled={!isEditable}>
-              Remplacer l'image
+            
+            {/* Input file caché */}
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageUpload}
+              ref={fileInputRef}
+              className="hidden"
+            />
+            
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              disabled={!isEditable}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {imageContent?.imageUrl ? 'Remplacer l\'image' : 'Ajouter une image'}
             </Button>
+            
+            {/* Texte alternatif */}
+            <div className="space-y-2">
+              <Label htmlFor="image-alt">Texte alternatif</Label>
+              <Input
+                id="image-alt"
+                value={imageContent?.alt || ''}
+                onChange={(e) => handleImageAltChange(e.target.value)}
+                disabled={!isEditable}
+                placeholder="Description de l'image..."
+              />
+            </div>
             
             <Separator />
             
@@ -332,6 +422,19 @@ export function ElementProperties() {
             </div>
           </div>
         </div>
+
+        {/* Bouton supprimer */}
+        {isEditable && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="w-full"
+            onClick={handleDeleteElement}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Supprimer l'élément
+          </Button>
+        )}
 
         {!isEditable && (
           <div className="p-3 rounded-lg bg-muted space-y-3">

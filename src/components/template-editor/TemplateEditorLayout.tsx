@@ -22,7 +22,9 @@ import {
   FileText,
   History,
   Palette,
-  Pencil
+  Pencil,
+  Type,
+  ImagePlus
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,11 +37,13 @@ export function TemplateEditorLayout() {
     hasUnsavedChanges,
     editorMode,
     allVersions,
+    addElementMode,
     createNewVersion,
     saveCurrentVersion,
     loadVersion,
     discardChanges,
-    getPublishedVersions
+    getPublishedVersions,
+    setAddElementMode
   } = useTemplateEditorStore();
 
   // Charger automatiquement une version au montage si aucune n'est sélectionnée
@@ -73,7 +77,7 @@ export function TemplateEditorLayout() {
   };
 
   const publishedVersions = getPublishedVersions();
-
+  const isEditable = currentVersion?.status === 'brouillon';
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Header */}
@@ -134,7 +138,29 @@ export function TemplateEditorLayout() {
           </TabsList>
 
           {activeTab === 'editor' && currentVersion && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
+              {/* Barre d'outils ajout d'éléments */}
+              {isEditable && (
+                <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
+                  <Button
+                    variant={addElementMode === 'text' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setAddElementMode(addElementMode === 'text' ? 'none' : 'text')}
+                  >
+                    <Type className="h-4 w-4 mr-1" />
+                    Texte
+                  </Button>
+                  <Button
+                    variant={addElementMode === 'image' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setAddElementMode(addElementMode === 'image' ? 'none' : 'image')}
+                  >
+                    <ImagePlus className="h-4 w-4 mr-1" />
+                    Image
+                  </Button>
+                </div>
+              )}
+              
               {currentVersion.status === 'brouillon' ? (
                 <>
                   {hasUnsavedChanges && (
