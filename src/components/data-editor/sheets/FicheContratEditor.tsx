@@ -1,23 +1,17 @@
-import { useDataEditorStore, FicheContratData } from "@/stores/dataEditorStore";
+import { useDataEditorStore } from "@/stores/dataEditorStore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Info } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Info, Euro, User, FileCheck } from "lucide-react";
 
+// Structure exacte de l'onglet "Fiche Contrat" du fichier Excel
 export function FicheContratEditor() {
-  const { ficheContratData, updateFicheContratField, getSheetErrors } = useDataEditorStore();
-  const errors = getSheetErrors('ficheContrat');
-
-  const getFieldError = (field: keyof FicheContratData) => {
-    return errors.find(e => e.column === field);
-  };
-
-  const handleChange = (field: keyof FicheContratData, value: string | number | null) => {
-    updateFicheContratField(field, value === '' ? null : value);
-  };
+  const { ficheContratData, updateFicheContratField } = useDataEditorStore();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card className="bg-muted/30 border-dashed">
         <CardHeader className="py-3">
           <div className="flex items-start gap-2">
@@ -25,155 +19,178 @@ export function FicheContratEditor() {
             <div>
               <CardTitle className="text-sm font-medium">Structure de l'onglet "Fiche Contrat"</CardTitle>
               <CardDescription className="text-xs">
-                Informations du client et paramètres du contrat de location.
+                Synthèse du contrat avec informations client, paramètres financiers et validation.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
       </Card>
 
+      {/* Section Client */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Informations Client</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Client</CardTitle>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="client">
-              Client <span className="text-destructive">*</span>
-            </Label>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="fc-client">Client</Label>
             <Input
-              id="client"
+              id="fc-client"
               value={ficheContratData.client || ''}
-              onChange={(e) => handleChange('client', e.target.value)}
+              onChange={(e) => updateFicheContratField('client', e.target.value || null)}
               placeholder="Nom du client"
-              className={getFieldError('client') ? 'border-destructive' : ''}
-            />
-            {getFieldError('client') && (
-              <p className="text-xs text-destructive">{getFieldError('client')?.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="siret">SIRET</Label>
-            <Input
-              id="siret"
-              value={ficheContratData.siret || ''}
-              onChange={(e) => handleChange('siret', e.target.value)}
-              placeholder="123 456 789 00012"
-            />
-          </div>
-
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="adresse">Adresse</Label>
-            <Input
-              id="adresse"
-              value={ficheContratData.adresse || ''}
-              onChange={(e) => handleChange('adresse', e.target.value)}
-              placeholder="Adresse complète"
+              className="text-lg font-medium"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="codePostal">Code Postal</Label>
+            <Label htmlFor="fc-ic">IC (Ingénieur Commercial)</Label>
             <Input
-              id="codePostal"
-              value={ficheContratData.codePostal || ''}
-              onChange={(e) => handleChange('codePostal', e.target.value)}
-              placeholder="75001"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ville">Ville</Label>
-            <Input
-              id="ville"
-              value={ficheContratData.ville || ''}
-              onChange={(e) => handleChange('ville', e.target.value)}
-              placeholder="Paris"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contact">Contact</Label>
-            <Input
-              id="contact"
+              id="fc-ic"
               value={ficheContratData.contact || ''}
-              onChange={(e) => handleChange('contact', e.target.value)}
-              placeholder="Nom du contact"
+              onChange={(e) => updateFicheContratField('contact', e.target.value || null)}
+              placeholder="Nom du commercial"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="telephone">Téléphone</Label>
+            <Label htmlFor="fc-gc">GC (Gestionnaire Commercial)</Label>
             <Input
-              id="telephone"
-              value={ficheContratData.telephone || ''}
-              onChange={(e) => handleChange('telephone', e.target.value)}
-              placeholder="01 23 45 67 89"
+              id="fc-gc"
+              placeholder="Nom du gestionnaire"
             />
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="fc-date">Date de démarrage</Label>
             <Input
-              id="email"
-              type="email"
-              value={ficheContratData.email || ''}
-              onChange={(e) => handleChange('email', e.target.value)}
-              placeholder="contact@client.com"
+              id="fc-date"
+              type="date"
+              value={typeof ficheContratData.dateDevis === 'string' ? ficheContratData.dateDevis : ''}
+              onChange={(e) => updateFicheContratField('dateDevis', e.target.value || null)}
             />
           </div>
         </CardContent>
       </Card>
 
+      {/* Section Paramètres financiers */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Paramètres du Contrat</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Euro className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Paramètres Financiers</CardTitle>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="referenceDevis">Référence Devis</Label>
-            <Input
-              id="referenceDevis"
-              value={ficheContratData.referenceDevis || ''}
-              onChange={(e) => handleChange('referenceDevis', e.target.value)}
-              placeholder="DEV-2025-001"
-            />
+            <Label>Investissements</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+              <span className="font-mono text-lg font-medium">— €</span>
+              <Badge variant="outline" className="text-xs ml-auto">Onglet invest</Badge>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dateDevis">Date du Devis</Label>
+            <Label htmlFor="fc-duree">Durée (mois)</Label>
             <Input
-              id="dateDevis"
-              type="date"
-              value={ficheContratData.dateDevis instanceof Date 
-                ? ficheContratData.dateDevis.toISOString().split('T')[0] 
-                : (ficheContratData.dateDevis as string) || ''
-              }
-              onChange={(e) => handleChange('dateDevis', e.target.value ? e.target.value : null)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="dureeLocation">Durée de Location (mois)</Label>
-            <Input
-              id="dureeLocation"
+              id="fc-duree"
               type="number"
               value={ficheContratData.dureeLocation || ''}
-              onChange={(e) => handleChange('dureeLocation', e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) => updateFicheContratField('dureeLocation', e.target.value ? parseInt(e.target.value) : null)}
               placeholder="36"
+              className="font-mono"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="partenaire">Partenaire</Label>
+            <Label>Échéances mensuelles</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+              <span className="font-mono">— € HT</span>
+              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Échéances trimestrielles</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+              <span className="font-mono">— € HT</span>
+              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fc-refi">Refinanceur</Label>
             <Input
-              id="partenaire"
+              id="fc-refi"
               value={ficheContratData.partenaire || ''}
-              onChange={(e) => handleChange('partenaire', e.target.value)}
-              placeholder="Nom du partenaire financier"
+              onChange={(e) => updateFicheContratField('partenaire', e.target.value || null)}
+              placeholder="Lixxbail 1"
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Marge</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-success/10 text-success rounded-md">
+              <span className="font-mono font-medium">— €</span>
+              <Badge variant="outline" className="text-xs ml-auto border-success/30">Calculé</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Marge / Investissements</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+              <span className="font-mono">— %</span>
+              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Facturation refi</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+              <span className="font-mono">— €</span>
+              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Facturation loyer intermédiaire</Label>
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+              <span className="font-mono">0.00 €</span>
+              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section Remarques */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Remarques</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Ajoutez vos remarques ici..."
+            className="min-h-[100px]"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Section Validation */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <FileCheck className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Validation DA / DR</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Zone de validation pour DA / DR..."
+            className="min-h-[80px]"
+          />
         </CardContent>
       </Card>
     </div>
