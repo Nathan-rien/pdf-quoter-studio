@@ -226,22 +226,43 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
   },
 
   createNewVersion: () => {
-    const { allVersions } = get();
+    const { allVersions, currentVersion } = get();
     const maxVersion = Math.max(...allVersions.map(v => v.versionNumber), 0);
     
+    // Clone profond de la version courante si elle existe, sinon version initiale
+    const baseVersion = currentVersion 
+      ? {
+          ...currentVersion,
+          pages: currentVersion.pages.map(page => ({
+            ...page,
+            elements: page.elements.map(el => ({
+              ...el,
+              position: { ...el.position },
+              size: { ...el.size },
+              content: el.content ? { ...el.content } : undefined
+            })),
+            dynamicZones: page.dynamicZones.map(zone => ({ ...zone }))
+          }))
+        }
+      : createInitialVersion();
+
     const newVersion: TemplateVersion = {
-      ...createInitialVersion(),
+      ...baseVersion,
       id: `version-${Date.now()}`,
       versionNumber: maxVersion + 1,
+      status: 'brouillon',
       createdAt: new Date(),
-      createdBy: 'user' // En production, utiliser l'ID utilisateur réel
+      createdBy: 'user',
+      publishedAt: null,
+      dynamicZonesIntact: true
     };
 
     set({
       allVersions: [...allVersions, newVersion],
       currentVersion: newVersion,
       hasUnsavedChanges: false,
-      editorMode: 'edit'
+      editorMode: 'edit',
+      selectedElement: null
     });
 
     return newVersion;

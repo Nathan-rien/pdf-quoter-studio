@@ -21,7 +21,8 @@ import {
   AlertCircle,
   FileText,
   History,
-  Palette
+  Palette,
+  Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -133,39 +134,52 @@ export function TemplateEditorLayout() {
             </TabsTrigger>
           </TabsList>
 
-          {activeTab === 'editor' && currentVersion?.status === 'brouillon' && (
+          {activeTab === 'editor' && currentVersion && (
             <div className="flex items-center gap-2">
-              {hasUnsavedChanges && (
-                <Badge variant="warning" className="animate-pulse">
-                  Modifications non sauvegardées
-                </Badge>
+              {currentVersion.status === 'brouillon' ? (
+                <>
+                  {hasUnsavedChanges && (
+                    <Badge variant="warning" className="animate-pulse">
+                      Modifications non sauvegardées
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDiscard}
+                    disabled={!hasUnsavedChanges}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Annuler
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={!hasUnsavedChanges}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Sauvegarder
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setShowPublishDialog(true)}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Publier
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleCreateVersion}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Éditer (créer un brouillon)
+                </Button>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDiscard}
-                disabled={!hasUnsavedChanges}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Annuler
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSave}
-                disabled={!hasUnsavedChanges}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Sauvegarder
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setShowPublishDialog(true)}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Publier
-              </Button>
             </div>
           )}
         </div>
