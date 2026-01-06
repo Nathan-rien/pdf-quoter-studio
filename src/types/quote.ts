@@ -12,6 +12,13 @@ export const REQUIRED_EXCEL_SHEETS = [
 
 export type RequiredExcelSheet = typeof REQUIRED_EXCEL_SHEETS[number];
 
+// === Quote Status (machine à états) ===
+export type QuoteStatus = 
+  | 'brouillon'
+  | 'pret_apercu'
+  | 'pret_export'
+  | 'exporte';
+
 // === Workflow Steps ===
 export type WorkflowStep = 
   | 'template'
@@ -23,6 +30,9 @@ export type WorkflowStep =
   | 'export';
 
 export type StepStatus = 'pending' | 'active' | 'complete' | 'error' | 'blocked';
+
+// === CSV Import Mode ===
+export type CSVImportMode = 'lecture_seule' | 'application';
 
 export interface WorkflowStepConfig {
   id: WorkflowStep;
@@ -204,12 +214,16 @@ export interface ServiceOption {
 // === Quote State ===
 export interface QuoteState {
   currentStep: WorkflowStep;
+  quoteStatus: QuoteStatus;
   template: QuoteTemplate | null;
   excelImport: ExcelImportResult | null;
   investData: InvestData | null;
   optionsData: OptionsServicesData | null;
   csvImport: CSVImportResult | null;
   csvConfig: CSVImportConfig | null;
+  csvImportMode: CSVImportMode;
   selectedOptions: ServiceOption[];
   auditLogs: AuditLog[];
+  previewGenerated: boolean;
+  optionsValidated: boolean;
 }

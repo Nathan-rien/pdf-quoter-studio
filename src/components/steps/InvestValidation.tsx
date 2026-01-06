@@ -3,7 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InvestData, InvestValidationStatus } from "@/types/quote";
-import { INVEST_COLUMNS, calculateInvestTotal, countValidRows } from "@/lib/invest-parser";
+import { INVEST_COLUMNS } from "@/lib/invest-parser";
+import { canValidateInvestData, canRejectInvestData } from "@/lib/invest-validation";
+import { getSourceTotal } from "@/lib/calculation-rules";
 import { 
   Table, 
   TableBody, 
@@ -12,12 +14,13 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Check, AlertTriangle, Eye, CheckCircle, XCircle, Clock, Ban } from "lucide-react";
+import { Check, AlertTriangle, Eye, CheckCircle, XCircle, Clock, Ban, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InvestValidationProps {
   investData: InvestData | null;
   onValidate: () => void;
+  onReject: () => void;
   isValidated: boolean;
 }
 
@@ -43,7 +46,7 @@ function getStatusBadge(status: InvestValidationStatus) {
   }
 }
 
-export function InvestValidation({ investData, onValidate, isValidated }: InvestValidationProps) {
+export function InvestValidation({ investData, onValidate, onReject, isValidated }: InvestValidationProps) {
   const [showPreview, setShowPreview] = useState(true);
   
   // Si pas de données, afficher message explicite
@@ -72,9 +75,20 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
 
   const statusInfo = getStatusBadge(investData.validationStatus);
   const StatusIcon = statusInfo.icon;
-  const totalAmount = calculateInvestTotal(investData.rows);
-  const validRowCount = countValidRows(investData.rows);
+  
+  // Utiliser getSourceTotal au lieu de calculateInvestTotal (pas de calcul automatique)
+  const sourceLabels = investData.rows.map(r => r.designation);
+  const vtnValues = investData.rows.map(r => r.vtn);
+  const totalInfo = getSourceTotal(vtnValues, sourceLabels);
+  
+  // Compter les lignes avec au moins une valeur
+  const validRowCount = investData.rows.filter(r => 
+    r.designation !== null || r.nb !== null || r.vun !== null || r.vtn !== null
+  ).length;
+  
   const hasBlockingErrors = investData.validationErrors.some(e => e.severity === 'error');
+  const validationCheck = canValidateInvestData(investData);
+  const canReject = canRejectInvestData(investData);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -120,9 +134,12 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
               </div>
               <div className="h-10 w-px bg-border" />
               <div>
-                <p className="text-sm text-muted-foreground">Total VTN</p>
+                <p className="text-sm text-muted-foreground">Total VTN (source)</p>
                 <p className="text-2xl font-bold text-primary">
-                  {totalAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                  {totalInfo.isFromSource && totalInfo.total !== null
+                    ? `${totalInfo.total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`
+                    : <span className="text-muted-foreground text-base">Non défini dans les sources</span>
+                  }
                 </p>
               </div>
             </div>
@@ -237,7 +254,7 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
                   ? "Données validées et prêtes à injecter"
                   : investData.validationStatus === 'rejete_a_corriger'
                   ? "Données rejetées - correction requise"
-                  : "Confirmez la validité des données"
+                  : "Confirmez ou rejetez les données"
                 }
               </p>
               <p className="text-sm text-muted-foreground">
@@ -248,26 +265,47 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
                   : "Cette action est bloquante pour la suite du processus"
                 }
               </p>
+              {!validationCheck.canValidate && validationCheck.blockers.length > 0 && (
+                <ul className="mt-2 text-xs text-warning space-y-1">
+                  {validationCheck.blockers.map((blocker, i) => (
+                    <li key={i}>• {blocker}</li>
+                  ))}
+                </ul>
+              )}
             </div>
             
-            <Button
-              variant={investData.validationStatus === 'valide_pret_injection' ? "success" : "default"}
-              onClick={onValidate}
-              disabled={investData.validationStatus === 'valide_pret_injection' || hasBlockingErrors}
-              className="gap-2"
-            >
-              {investData.validationStatus === 'valide_pret_injection' ? (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  Validé
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4" />
-                  Valider les données
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              {/* Bouton Rejeter - explicite */}
+              <Button
+                variant="outline"
+                onClick={onReject}
+                disabled={!canReject}
+                className="gap-2 border-destructive text-destructive hover:bg-destructive/10"
+              >
+                <X className="h-4 w-4" />
+                Rejeter
+              </Button>
+
+              {/* Bouton Valider */}
+              <Button
+                variant={investData.validationStatus === 'valide_pret_injection' ? "success" : "default"}
+                onClick={onValidate}
+                disabled={!validationCheck.canValidate}
+                className="gap-2"
+              >
+                {investData.validationStatus === 'valide_pret_injection' ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Validé
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Valider les données
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
