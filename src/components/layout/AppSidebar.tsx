@@ -12,6 +12,7 @@ import {
   History,
   ChevronRight,
   CheckCircle,
+  Palette,
   Circle,
   Lock
 } from "lucide-react";
@@ -25,9 +26,9 @@ import {
 } from "@/components/ui/tooltip";
 
 interface AppSidebarProps {
-  currentView: 'dashboard' | 'workflow' | 'history';
+  currentView: 'dashboard' | 'workflow' | 'history' | 'template-editor';
   currentStep: WorkflowStep;
-  onNavigate: (view: 'dashboard' | 'workflow' | 'history') => void;
+  onNavigate: (view: 'dashboard' | 'workflow' | 'history' | 'template-editor') => void;
   onStepNavigate: (step: WorkflowStep) => void;
   canNavigateTo: (step: WorkflowStep) => boolean;
   isWorkflowActive: boolean;
@@ -103,6 +104,21 @@ export function AppSidebar({
           <History className="h-4 w-4" />
           Historique
         </Button>
+
+        {/* Section Administration */}
+        <div className="pt-4 mt-4 border-t border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-3">
+            Administration
+          </p>
+          <Button
+            variant={currentView === 'template-editor' ? 'secondary' : 'ghost'}
+            className="w-full justify-start gap-3"
+            onClick={() => onNavigate('template-editor')}
+          >
+            <Palette className="h-4 w-4" />
+            Éditeur de Template
+          </Button>
+        </div>
 
         {/* Workflow steps */}
         {isWorkflowActive && (
