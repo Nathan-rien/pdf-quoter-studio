@@ -1,10 +1,13 @@
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ExcelImportResult, REQUIRED_EXCEL_SHEETS } from "@/types/quote";
 import { validateSheetNames, createSheetList, displaySheetName } from "@/lib/excel-validation";
-import { Upload, FileSpreadsheet, Check, X, AlertTriangle, Loader2, Info } from "lucide-react";
+import { Upload, FileSpreadsheet, Check, X, AlertTriangle, Loader2, Info, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StepHeader } from "@/components/ui/step-header";
+import { BlockingMessage } from "@/components/ui/blocking-message";
 
 interface ExcelImportProps {
   onImport: (result: ExcelImportResult) => void;
@@ -78,12 +81,12 @@ export function ExcelImport({ onImport, currentImport }: ExcelImportProps) {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Import Excel (Matrice)</h2>
-        <p className="text-muted-foreground">
-          Chargez votre fichier Excel contenant les onglets requis.
-        </p>
-      </div>
+      <StepHeader
+        stepNumber={2}
+        totalSteps={7}
+        title="Import Excel (Matrice)"
+        description="Chargez votre fichier Excel contenant les onglets requis."
+      />
 
       {/* Required sheets info - Noms EXACTS contractuels */}
       <Card variant="ghost" className="border border-dashed">

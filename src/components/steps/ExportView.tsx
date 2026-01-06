@@ -12,9 +12,12 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Info
+  Info,
+  RotateCcw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StepHeader } from "@/components/ui/step-header";
+import { BlockingMessage } from "@/components/ui/blocking-message";
 
 interface ExportViewProps {
   isReady: boolean;
@@ -59,12 +62,19 @@ export function ExportView({ isReady, auditLogs, onExport }: ExportViewProps) {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Export PDF</h2>
-        <p className="text-muted-foreground">
-          Générez et téléchargez le devis final au format PDF.
-        </p>
-      </div>
+      <StepHeader
+        stepNumber={7}
+        totalSteps={7}
+        title="Export PDF"
+        description="Générez et téléchargez le devis final au format PDF."
+        status={exportComplete ? 'complete' : isReady ? 'active' : 'blocked'}
+        statusLabel={exportComplete ? 'Exporté' : isReady ? 'Prêt' : 'Bloqué'}
+      />
+
+      {/* Message de blocage si pas prêt */}
+      {!isReady && !exportComplete && (
+        <BlockingMessage message="Complétez les étapes précédentes pour débloquer l'export." />
+      )}
 
       {/* Export card */}
       <Card variant={exportComplete ? "success" : "default"}>
