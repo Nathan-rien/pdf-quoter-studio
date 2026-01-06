@@ -16,6 +16,7 @@ import type { PDFPageNumber, DynamicZone } from '@/types/pdf-template';
 import { PDF_TEMPLATE_CONTRACT } from '@/lib/pdf-template-contract';
 import { validateTemplateForPublication } from '@/lib/template-validation';
 import { blockDynamicZoneEdit, getDynamicZonesForPage } from '@/lib/template-protection';
+import { PDF_TEMPLATE_ELEMENTS } from '@/lib/pdf-template-elements';
 
 interface TemplateEditorStore extends TemplateEditorState {
   // Actions de navigation
@@ -48,11 +49,11 @@ interface TemplateEditorStore extends TemplateEditorState {
   discardChanges: () => void;
 }
 
-// Créer une version initiale basée sur le contrat
+// Créer une version initiale basée sur le contrat avec les éléments réels du PDF
 function createInitialVersion(): TemplateVersion {
   const pages: TemplatePageContent[] = PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
     pageNumber: pageConfig.pageNumber,
-    elements: [],
+    elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
     dynamicZones: pageConfig.dynamicZones as DynamicZone[]
   }));
 
