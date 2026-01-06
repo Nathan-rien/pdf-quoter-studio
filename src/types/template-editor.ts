@@ -96,7 +96,7 @@ export interface PublishValidationWarning {
 export interface TemplateEditorState {
   currentVersion: TemplateVersion | null;
   allVersions: TemplateVersion[];
-  selectedElement: EditableElement | null;
+  selectedElementId: string | null;
   selectedPageNumber: PDFPageNumber;
   editorMode: 'view' | 'edit';
   hasUnsavedChanges: boolean;

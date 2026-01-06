@@ -34,7 +34,6 @@ export function TemplateEditorLayout() {
     currentVersion,
     hasUnsavedChanges,
     editorMode,
-    selectedElement,
     allVersions,
     createNewVersion,
     saveCurrentVersion,
