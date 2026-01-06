@@ -37,7 +37,7 @@ interface AppSidebarProps {
 
 const workflowSteps: { step: WorkflowStep; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { step: 'template', label: 'Template', icon: FileText },
-  { step: 'excel-import', label: 'Import Excel', icon: Upload },
+  { step: 'data-editor', label: 'Données', icon: Upload },
   { step: 'invest-validation', label: 'Validation Invest', icon: CheckSquare },
   { step: 'csv-import', label: 'Import Tarifs', icon: DollarSign },
   { step: 'options-selection', label: 'Options', icon: Settings },

@@ -22,7 +22,7 @@ export type QuoteStatus =
 // === Workflow Steps ===
 export type WorkflowStep = 
   | 'template'
-  | 'excel-import'
+  | 'data-editor'
   | 'invest-validation'
   | 'csv-import'
   | 'options-selection'

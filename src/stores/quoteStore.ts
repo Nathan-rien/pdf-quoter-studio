@@ -93,7 +93,7 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
     const state = get();
     const stepOrder: WorkflowStep[] = [
       'template',
-      'excel-import',
+      'data-editor',
       'invest-validation',
       'csv-import',
       'options-selection',

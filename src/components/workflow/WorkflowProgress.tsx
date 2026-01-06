@@ -32,7 +32,7 @@ interface WorkflowStepIndicatorProps {
 
 const stepIcons: Record<WorkflowStep, React.ComponentType<{ className?: string }>> = {
   'template': FileText,
-  'excel-import': Upload,
+  'data-editor': Upload,
   'invest-validation': CheckCircle,
   'csv-import': DollarSign,
   'options-selection': Settings,
