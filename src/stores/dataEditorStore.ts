@@ -6,6 +6,7 @@ import {
   OptionsServiceRow,
   ValidationError 
 } from '@/types/quote';
+import { ParsedExcelData } from '@/lib/excel-import-parser';
 
 // === Structure Matrice ===
 export interface MatriceRow {
@@ -32,6 +33,15 @@ export interface FicheContratData {
 
 export type SheetName = 'matrice' | 'ficheContrat' | 'invest' | 'devis' | 'optionsServices' | 'baseTaux';
 
+// === Import Status ===
+export interface ImportStatus {
+  isImported: boolean;
+  fileName: string | null;
+  importDate: Date | null;
+  parsedSheets: string[];
+  errors: string[];
+}
+
 interface DataEditorState {
   // Data for each sheet
   matriceData: MatriceRow[];
@@ -48,6 +58,9 @@ interface DataEditorState {
   
   // Track which sheets have been modified
   modifiedSheets: Set<SheetName>;
+  
+  // Import status
+  importStatus: ImportStatus;
 }
 
 interface DataEditorActions {
@@ -84,6 +97,10 @@ interface DataEditorActions {
   // Reset
   resetSheet: (sheet: SheetName) => void;
   resetAllData: () => void;
+  
+  // Excel Import
+  importFromExcel: (data: ParsedExcelData, fileName: string) => void;
+  getImportStatus: () => ImportStatus;
 }
 
 const initialFicheContrat: FicheContratData = {
@@ -99,6 +116,14 @@ const initialFicheContrat: FicheContratData = {
   referenceDevis: null,
   dureeLocation: null,
   partenaire: null,
+};
+
+const initialImportStatus: ImportStatus = {
+  isImported: false,
+  fileName: null,
+  importDate: null,
+  parsedSheets: [],
+  errors: [],
 };
 
 const initialState: DataEditorState = {
@@ -119,6 +144,7 @@ const initialState: DataEditorState = {
     baseTaux: [],
   },
   modifiedSheets: new Set(),
+  importStatus: initialImportStatus,
 };
 
 export const useDataEditorStore = create<DataEditorState & DataEditorActions>((set, get) => ({
@@ -456,4 +482,33 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
   resetAllData: () => {
     set(initialState);
   },
+
+  // === EXCEL IMPORT ===
+  importFromExcel: (data, fileName) => {
+    set({
+      matriceData: data.matrice,
+      ficheContratData: {
+        ...initialFicheContrat,
+        ...data.ficheContrat,
+      },
+      investData: data.invest,
+      devisData: data.devis,
+      optionsServicesData: data.optionsServices,
+      baseTauxData: data.baseTaux,
+      hasUnsavedChanges: true,
+      modifiedSheets: new Set(['matrice', 'ficheContrat', 'invest', 'devis', 'optionsServices', 'baseTaux']),
+      importStatus: {
+        isImported: true,
+        fileName,
+        importDate: new Date(),
+        parsedSheets: Object.keys(data).filter(k => {
+          const val = data[k as keyof typeof data];
+          return Array.isArray(val) ? val.length > 0 : Object.keys(val).length > 0;
+        }),
+        errors: [],
+      },
+    });
+  },
+
+  getImportStatus: () => get().importStatus,
 }));

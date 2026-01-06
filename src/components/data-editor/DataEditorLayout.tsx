@@ -4,12 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StepHeader } from "@/components/ui/step-header";
+import { ExcelImportZone } from "./ExcelImportZone";
 import { InvestEditor } from "./sheets/InvestEditor";
 import { DevisEditor } from "./sheets/DevisEditor";
 import { BaseTauxEditor } from "./sheets/BaseTauxEditor";
 import { OptionsServicesEditor } from "./sheets/OptionsServicesEditor";
 import { FicheContratEditor } from "./sheets/FicheContratEditor";
 import { MatriceEditor } from "./sheets/MatriceEditor";
+import { ExcelParseResult } from "@/lib/excel-import-parser";
 import { 
   Save, 
   RotateCcw, 
@@ -45,7 +47,23 @@ export function DataEditorLayout() {
     isSheetValid,
     getSheetErrors,
     resetAllData,
+    importFromExcel,
   } = useDataEditorStore();
+
+  const handleExcelImport = (result: ExcelParseResult) => {
+    if (result.data) {
+      importFromExcel(result.data, result.fileName);
+      toast.success(`Fichier "${result.fileName}" importé avec succès`, {
+        description: `${result.parsedSheets.length} onglets parsés`,
+      });
+    }
+  };
+
+  const handleExcelImportError = (errors: string[]) => {
+    toast.error("Erreurs lors de l'import", {
+      description: errors[0],
+    });
+  };
 
   const handleSave = () => {
     const isValid = validateAllSheets();
@@ -115,7 +133,13 @@ export function DataEditorLayout() {
         stepNumber={2}
         totalSteps={7}
         title="Éditeur de Données"
-        description="Saisissez les données directement dans les tableaux (structure identique au fichier Excel source)"
+        description="Importez un fichier Excel ou saisissez les données directement dans les tableaux"
+      />
+
+      <ExcelImportZone
+        onImportSuccess={handleExcelImport}
+        onImportError={handleExcelImportError}
+        hasUnsavedChanges={hasUnsavedChanges}
       />
 
       <Card>
