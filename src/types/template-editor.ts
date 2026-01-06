@@ -12,7 +12,7 @@ export type TemplateVersionStatus = 'brouillon' | 'publie' | 'archive';
 export type EditableElementType = 'text' | 'image' | 'block';
 
 // Polices autorisées (liste fermée)
-export type AllowedFont = 'DM Sans' | 'Inter' | 'Roboto';
+export type AllowedFont = 'Garet' | 'DM Sans' | 'Inter' | 'Roboto';
 
 // Tailles autorisées (liste fermée)
 export type AllowedFontSize = 9 | 10 | 11 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
@@ -100,4 +100,5 @@ export interface TemplateEditorState {
   selectedPageNumber: PDFPageNumber;
   editorMode: 'view' | 'edit';
   hasUnsavedChanges: boolean;
+  addElementMode: 'none' | 'text' | 'image';
 }

@@ -6,6 +6,7 @@
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DynamicZoneOverlay } from "./DynamicZoneOverlay";
 import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { getDynamicZonesForPage } from "@/lib/template-protection";
@@ -37,7 +38,10 @@ export function EditorCanvas() {
     currentVersion,
     editorMode,
     selectedElementId,
-    selectElement
+    addElementMode,
+    selectElement,
+    addElement,
+    setAddElementMode
   } = useTemplateEditorStore();
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
@@ -48,6 +52,7 @@ export function EditorCanvas() {
   const pageContent = currentVersion?.pages.find(p => p.pageNumber === selectedPageNumber);
   
   const isEditable = currentVersion?.status === 'brouillon' && editorMode === 'edit';
+  const isAddMode = addElementMode !== 'none';
 
   // Convertir position absolue en position relative canvas
   const getElementStyle = (element: { position: { x: number; y: number }; size: { width: number; height: number } }) => {
@@ -77,8 +82,27 @@ export function EditorCanvas() {
     }
   };
 
-  const handleCanvasClick = () => {
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Mode ajout d'élément
+    if (isAddMode && isEditable) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * CANVAS_SCALE.width;
+      const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SCALE.height;
+      
+      try {
+        const newElement = addElement(addElementMode, { x: Math.round(x), y: Math.round(y) });
+        toast.success(`${addElementMode === 'image' ? 'Image' : 'Texte'} ajouté(e)`);
+      } catch (error) {
+        toast.error("Erreur lors de l'ajout de l'élément");
+      }
+      return;
+    }
+    
     selectElement(null);
+  };
+
+  const handleCancelAddMode = () => {
+    setAddElementMode('none');
   };
 
   return (
@@ -111,12 +135,25 @@ export function EditorCanvas() {
       </CardHeader>
       
       <CardContent className="p-4">
+        {/* Message mode ajout */}
+        {isAddMode && (
+          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between">
+            <p className="text-sm text-primary">
+              Cliquez sur le canvas pour placer {addElementMode === 'image' ? 'l\'image' : 'le texte'}
+            </p>
+            <Button variant="ghost" size="sm" onClick={handleCancelAddMode}>
+              Annuler
+            </Button>
+          </div>
+        )}
+
         {/* Canvas A4 simulé */}
         <div 
           className={cn(
             "relative mx-auto bg-white rounded-lg shadow-lg overflow-hidden",
             "border-2",
-            isEditable ? "border-primary/30" : "border-border"
+            isEditable ? "border-primary/30" : "border-border",
+            isAddMode && "cursor-crosshair"
           )}
           style={{
             width: '100%',
