@@ -65,9 +65,8 @@ export function EditorCanvas() {
 
   const handleElementClick = (elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isEditable) {
-      selectElement(elementId);
-    }
+    // Toujours permettre la sélection (l'édition est contrôlée dans ElementProperties)
+    selectElement(elementId);
   };
 
   const handleCanvasClick = () => {
@@ -160,9 +159,7 @@ export function EditorCanvas() {
                     "rounded-sm",
                     isSelected 
                       ? "ring-2 ring-primary ring-offset-1 bg-primary/5 z-20" 
-                      : isEditable 
-                        ? "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50 z-10"
-                        : "z-10",
+                      : "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50 z-10",
                   )}
                   style={style}
                   onClick={(e) => handleElementClick(element.id, e)}
