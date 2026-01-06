@@ -1,18 +1,15 @@
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExcelImportResult, ExcelSheet } from "@/types/quote";
-import { Upload, FileSpreadsheet, Check, X, AlertTriangle, Loader2 } from "lucide-react";
+import { ExcelImportResult, REQUIRED_EXCEL_SHEETS } from "@/types/quote";
+import { validateSheetNames, createSheetList, displaySheetName } from "@/lib/excel-validation";
+import { Upload, FileSpreadsheet, Check, X, AlertTriangle, Loader2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ExcelImportProps {
   onImport: (result: ExcelImportResult) => void;
   currentImport: ExcelImportResult | null;
 }
-
-// Required sheets that must be present in the Excel file
-const REQUIRED_SHEETS = ["invest", "Options services"];
 
 export function ExcelImport({ onImport, currentImport }: ExcelImportProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -31,28 +28,31 @@ export function ExcelImport({ onImport, currentImport }: ExcelImportProps) {
   const processFile = useCallback(async (file: File) => {
     setIsProcessing(true);
     
-    // Simulate file processing - in production, this would parse the Excel file
+    // Simulate file processing - in production, this would call an edge function
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Mock result - simulating detection of sheets
-    const detectedSheets: ExcelSheet[] = [
-      { name: "invest", required: true, found: true, rowCount: 42 },
-      { name: "Options services", required: true, found: true, rowCount: 15 },
-      { name: "Paramètres", required: false, found: true, rowCount: 8 },
+    // NOTE: En production, ceci sera remplacé par un vrai parsing via Edge Function
+    // Pour l'instant, on simule la détection des onglets EXACTS
+    // IMPORTANT: Les noms incluent les espaces finaux obligatoires
+    const detectedSheets = [
+      'Matrice',
+      'Fiche Contrat',
+      'invest ',          // Espace final présent
+      'Devis',
+      'Options services ', // Espace final présent
+      'Base Taux'
     ];
 
-    const missingRequired = REQUIRED_SHEETS.filter(
-      req => !detectedSheets.find(s => s.name === req && s.found)
-    );
+    const validation = validateSheetNames(detectedSheets);
+    const sheets = createSheetList(detectedSheets);
 
     const result: ExcelImportResult = {
       fileName: file.name,
       importDate: new Date(),
-      sheets: detectedSheets,
-      isValid: missingRequired.length === 0,
-      errors: missingRequired.length > 0 
-        ? [`Onglets manquants : ${missingRequired.join(", ")}`]
-        : [],
+      sheets,
+      isValid: validation.isValid,
+      errors: validation.errors,
+      sheetValidation: validation,
     };
 
     setIsProcessing(false);
@@ -85,14 +85,29 @@ export function ExcelImport({ onImport, currentImport }: ExcelImportProps) {
         </p>
       </div>
 
-      {/* Required sheets info */}
+      {/* Required sheets info - Noms EXACTS contractuels */}
       <Card variant="ghost" className="border border-dashed">
         <CardContent className="p-4">
-          <p className="text-sm font-medium mb-2">Onglets requis :</p>
+          <div className="flex items-start gap-3 mb-3">
+            <Info className="h-4 w-4 text-info mt-0.5" />
+            <div>
+              <p className="text-sm font-medium mb-2">Onglets requis (noms exacts) :</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Attention : certains noms incluent un espace final obligatoire (symbolisé par ␣)
+              </p>
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {REQUIRED_SHEETS.map(sheet => (
-              <Badge key={sheet} variant="outline" className="font-mono">
-                {sheet}
+            {REQUIRED_EXCEL_SHEETS.map(sheet => (
+              <Badge 
+                key={sheet} 
+                variant="outline" 
+                className={cn(
+                  "font-mono",
+                  sheet.endsWith(' ') && "border-warning text-warning"
+                )}
+              >
+                {displaySheetName(sheet)}
               </Badge>
             ))}
           </div>
@@ -187,9 +202,12 @@ export function ExcelImport({ onImport, currentImport }: ExcelImportProps) {
                       ) : (
                         <X className="h-4 w-4 text-destructive" />
                       )}
-                      <span className="text-sm font-mono">{sheet.name}</span>
+                      <span className="text-sm font-mono">{displaySheetName(sheet.name)}</span>
                       {sheet.required && (
                         <Badge variant="outline" className="text-xs">Requis</Badge>
+                      )}
+                      {sheet.hasTrailingSpace && (
+                        <Badge variant="warning" className="text-xs">espace final</Badge>
                       )}
                     </div>
                     {sheet.rowCount !== undefined && (
@@ -200,6 +218,22 @@ export function ExcelImport({ onImport, currentImport }: ExcelImportProps) {
                   </div>
                 ))}
               </div>
+
+              {/* Almost matches warning */}
+              {currentImport.sheetValidation?.almostMatches && 
+               currentImport.sheetValidation.almostMatches.length > 0 && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 text-warning">
+                  <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium mb-1">Noms d'onglets proches détectés</p>
+                    {currentImport.sheetValidation.almostMatches.map((match, i) => (
+                      <p key={i}>
+                        "{match.detected}" trouvé, mais "{displaySheetName(match.expected)}" attendu
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {currentImport.errors.length > 0 && (
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">

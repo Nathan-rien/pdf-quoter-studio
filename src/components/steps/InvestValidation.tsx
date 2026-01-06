@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { InvestData } from "@/types/quote";
+import { InvestData, InvestValidationStatus } from "@/types/quote";
+import { INVEST_COLUMNS, calculateInvestTotal, countValidRows } from "@/lib/invest-parser";
 import { 
   Table, 
   TableBody, 
@@ -11,7 +12,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Check, AlertTriangle, Eye, CheckCircle } from "lucide-react";
+import { Check, AlertTriangle, Eye, CheckCircle, XCircle, Clock, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InvestValidationProps {
@@ -20,30 +21,60 @@ interface InvestValidationProps {
   isValidated: boolean;
 }
 
-// Mock invest data for demonstration
-const mockInvestData: InvestData = {
-  columns: ["Référence", "Désignation", "Quantité", "Prix unitaire", "Total"],
-  rows: [
-    { Référence: "INV-001", Désignation: "Installation serveur principal", Quantité: 1, "Prix unitaire": 2500, Total: 2500 },
-    { Référence: "INV-002", Désignation: "Configuration réseau", Quantité: 1, "Prix unitaire": 1200, Total: 1200 },
-    { Référence: "INV-003", Désignation: "Licences logicielles", Quantité: 10, "Prix unitaire": 150, Total: 1500 },
-    { Référence: "INV-004", Désignation: "Formation utilisateurs", Quantité: 2, "Prix unitaire": 800, Total: 1600 },
-    { Référence: "INV-005", Désignation: "Support technique", Quantité: 12, "Prix unitaire": 200, Total: 2400 },
-  ],
-  isValidated: false,
-  validationErrors: [],
-};
+// Colonnes contractuelles à afficher
+const DISPLAY_COLUMNS = [
+  { key: 'rawRowIndex', label: 'Ligne', width: 'w-16' },
+  { key: 'designation', label: INVEST_COLUMNS.B.header, width: 'flex-1' },
+  { key: 'nb', label: INVEST_COLUMNS.C.header, width: 'w-20', align: 'right' as const },
+  { key: 'vun', label: INVEST_COLUMNS.D.header, width: 'w-24', align: 'right' as const },
+  { key: 'vtn', label: INVEST_COLUMNS.E.header, width: 'w-24', align: 'right' as const },
+];
+
+function getStatusBadge(status: InvestValidationStatus) {
+  switch (status) {
+    case 'non_importe':
+      return { variant: 'pending' as const, icon: Clock, label: 'Non importé' };
+    case 'importe_non_valide':
+      return { variant: 'warning' as const, icon: AlertTriangle, label: 'En attente de validation' };
+    case 'valide_pret_injection':
+      return { variant: 'success' as const, icon: CheckCircle, label: 'Validé - Prêt à injecter' };
+    case 'rejete_a_corriger':
+      return { variant: 'error' as const, icon: XCircle, label: 'Rejeté - À corriger' };
+  }
+}
 
 export function InvestValidation({ investData, onValidate, isValidated }: InvestValidationProps) {
   const [showPreview, setShowPreview] = useState(true);
   
-  // Use mock data if no real data is provided
-  const data = investData || mockInvestData;
+  // Si pas de données, afficher message explicite
+  if (!investData) {
+    return (
+      <div className="space-y-6 animate-slide-up">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Validation Invest</h2>
+          <p className="text-muted-foreground">
+            Vérifiez les données à injecter dans le devis (pages 4-5).
+          </p>
+        </div>
+        
+        <Card variant="ghost" className="border-2 border-dashed">
+          <CardContent className="p-8 text-center">
+            <Ban className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-medium mb-2">Aucune donnée Invest</p>
+            <p className="text-sm text-muted-foreground">
+              Importez d'abord un fichier Excel contenant l'onglet "invest " (avec espace final).
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const totalAmount = data.rows.reduce((sum, row) => {
-    const total = typeof row.Total === 'number' ? row.Total : 0;
-    return sum + total;
-  }, 0);
+  const statusInfo = getStatusBadge(investData.validationStatus);
+  const StatusIcon = statusInfo.icon;
+  const totalAmount = calculateInvestTotal(investData.rows);
+  const validRowCount = countValidRows(investData.rows);
+  const hasBlockingErrors = investData.validationErrors.some(e => e.severity === 'error');
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -55,18 +86,23 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
           </p>
         </div>
         
-        {isValidated ? (
-          <Badge variant="success" className="gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Validé
-          </Badge>
-        ) : (
-          <Badge variant="warning" className="gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            En attente de validation
-          </Badge>
-        )}
+        <Badge variant={statusInfo.variant} className="gap-1">
+          <StatusIcon className="h-3 w-3" />
+          {statusInfo.label}
+        </Badge>
       </div>
+
+      {/* Source info */}
+      <Card variant="ghost" className="border border-dashed">
+        <CardContent className="p-3">
+          <p className="text-xs text-muted-foreground">
+            Source : onglet <span className="font-mono font-medium">"{investData.sourceSheet}"</span>
+            {investData.headerRowIndex >= 0 && (
+              <> • En-tête détectée ligne {investData.headerRowIndex + 1}</>
+            )}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Summary Card */}
       <Card>
@@ -75,18 +111,18 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
             <div className="flex items-center gap-6">
               <div>
                 <p className="text-sm text-muted-foreground">Lignes</p>
-                <p className="text-2xl font-bold">{data.rows.length}</p>
+                <p className="text-2xl font-bold">{investData.rows.length}</p>
               </div>
               <div className="h-10 w-px bg-border" />
               <div>
-                <p className="text-sm text-muted-foreground">Colonnes</p>
-                <p className="text-2xl font-bold">{data.columns.length}</p>
+                <p className="text-sm text-muted-foreground">Valides</p>
+                <p className="text-2xl font-bold">{validRowCount}</p>
               </div>
               <div className="h-10 w-px bg-border" />
               <div>
-                <p className="text-sm text-muted-foreground">Total estimé</p>
+                <p className="text-sm text-muted-foreground">Total VTN</p>
                 <p className="text-2xl font-bold text-primary">
-                  {totalAmount.toLocaleString('fr-FR')} €
+                  {totalAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
                 </p>
               </div>
             </div>
@@ -104,13 +140,13 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
         </CardContent>
       </Card>
 
-      {/* Data Preview Table */}
+      {/* Data Preview Table - Structure contractuelle */}
       {showPreview && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Aperçu des données</CardTitle>
             <CardDescription>
-              Contenu de l'onglet "invest" à injecter
+              Structure contractuelle : Colonnes B (Désignation), C (Nb), D (VUN), E (VTN)
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -118,45 +154,71 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    {data.columns.map((col) => (
-                      <TableHead key={col} className="font-semibold">
-                        {col}
+                    {DISPLAY_COLUMNS.map((col) => (
+                      <TableHead 
+                        key={col.key} 
+                        className={cn("font-semibold", col.width, col.align === 'right' && "text-right")}
+                      >
+                        {col.label}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.rows.map((row, index) => (
+                  {investData.rows.slice(0, 20).map((row, index) => (
                     <TableRow key={index}>
-                      {data.columns.map((col) => (
-                        <TableCell key={col} className="font-mono text-sm">
-                          {typeof row[col] === 'number' 
-                            ? row[col].toLocaleString('fr-FR')
-                            : row[col]}
-                        </TableCell>
-                      ))}
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {row.rawRowIndex}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {row.designation ?? <span className="text-muted-foreground italic">—</span>}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm text-right">
+                        {row.nb ?? <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm text-right">
+                        {row.vun !== null 
+                          ? row.vun.toLocaleString('fr-FR', { minimumFractionDigits: 2 })
+                          : <span className="text-muted-foreground">—</span>
+                        }
+                      </TableCell>
+                      <TableCell className="font-mono text-sm text-right">
+                        {row.vtn !== null 
+                          ? row.vtn.toLocaleString('fr-FR', { minimumFractionDigits: 2 })
+                          : <span className="text-muted-foreground">—</span>
+                        }
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              {investData.rows.length > 20 && (
+                <div className="p-3 text-center text-sm text-muted-foreground border-t">
+                  ... et {investData.rows.length - 20} lignes supplémentaires
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Validation Errors */}
-      {data.validationErrors.length > 0 && (
+      {investData.validationErrors.length > 0 && (
         <Card variant="error">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-destructive mb-2">
-                  Erreurs détectées
+                  Erreurs détectées ({investData.validationErrors.length})
                 </p>
                 <ul className="text-sm space-y-1">
-                  {data.validationErrors.map((error, i) => (
-                    <li key={i}>{error}</li>
+                  {investData.validationErrors.map((error, i) => (
+                    <li key={i} className={cn(
+                      error.severity === 'error' ? 'text-destructive' : 'text-warning'
+                    )}>
+                      Ligne {error.rowIndex}, colonne {error.column} : {error.message}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -171,26 +233,30 @@ export function InvestValidation({ investData, onValidate, isValidated }: Invest
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium mb-1">
-                {isValidated 
+                {investData.validationStatus === 'valide_pret_injection'
                   ? "Données validées et prêtes à injecter"
+                  : investData.validationStatus === 'rejete_a_corriger'
+                  ? "Données rejetées - correction requise"
                   : "Confirmez la validité des données"
                 }
               </p>
               <p className="text-sm text-muted-foreground">
-                {isValidated
+                {investData.validationStatus === 'valide_pret_injection'
                   ? "Vous pouvez passer à l'étape suivante"
+                  : investData.validationStatus === 'rejete_a_corriger'
+                  ? "Corrigez les erreurs dans le fichier Excel et réimportez"
                   : "Cette action est bloquante pour la suite du processus"
                 }
               </p>
             </div>
             
             <Button
-              variant={isValidated ? "success" : "default"}
+              variant={investData.validationStatus === 'valide_pret_injection' ? "success" : "default"}
               onClick={onValidate}
-              disabled={isValidated || data.validationErrors.length > 0}
+              disabled={investData.validationStatus === 'valide_pret_injection' || hasBlockingErrors}
               className="gap-2"
             >
-              {isValidated ? (
+              {investData.validationStatus === 'valide_pret_injection' ? (
                 <>
                   <CheckCircle className="h-4 w-4" />
                   Validé
