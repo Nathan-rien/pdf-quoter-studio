@@ -22,7 +22,7 @@ export const ALLOWED_FONTS = [
 ] as const;
 
 // Tailles autorisées
-export const ALLOWED_FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32] as const;
+export const ALLOWED_FONT_SIZES = [9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32] as const;
 
 // Validation qu'une couleur est autorisée
 export function isAllowedColor(color: string): boolean {

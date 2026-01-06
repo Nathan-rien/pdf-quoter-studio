@@ -15,7 +15,7 @@ export type EditableElementType = 'text' | 'image' | 'block';
 export type AllowedFont = 'DM Sans' | 'Inter' | 'Roboto';
 
 // Tailles autorisées (liste fermée)
-export type AllowedFontSize = 10 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
+export type AllowedFontSize = 9 | 10 | 11 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
 
 // Contenu texte avec styles
 export interface TextContent {

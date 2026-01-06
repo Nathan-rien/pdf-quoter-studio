@@ -3,7 +3,7 @@
  * Mode administration strictement séparé du mode devis
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { EditorSidebar } from "./EditorSidebar";
 import { EditorCanvas } from "./EditorCanvas";
@@ -41,6 +41,19 @@ export function TemplateEditorLayout() {
     discardChanges,
     getPublishedVersions
   } = useTemplateEditorStore();
+
+  // Charger automatiquement une version au montage si aucune n'est sélectionnée
+  useEffect(() => {
+    if (!currentVersion && allVersions.length > 0) {
+      // Chercher d'abord un brouillon, sinon la dernière version publiée
+      const draft = allVersions.find(v => v.status === 'brouillon');
+      const published = allVersions.find(v => v.status === 'publie');
+      loadVersion(draft || published || allVersions[0]);
+    } else if (!currentVersion && allVersions.length === 0) {
+      // Créer une première version si aucune n'existe
+      createNewVersion();
+    }
+  }, []);
 
   const handleSave = () => {
     saveCurrentVersion();
