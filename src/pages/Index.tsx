@@ -11,12 +11,13 @@ import { OptionsSelection } from "@/components/steps/OptionsSelection";
 import { QuotePreview } from "@/components/steps/QuotePreview";
 import { ExportView } from "@/components/steps/ExportView";
 import { WorkflowProgress } from "@/components/workflow/WorkflowProgress";
+import { TemplateEditorLayout } from "@/components/template-editor";
 import { Button } from "@/components/ui/button";
 import { WorkflowStep, StepStatus, ServiceOption } from "@/types/quote";
 import { parseOptionsServicesSheet } from "@/lib/options-parser";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-type ViewType = 'dashboard' | 'workflow' | 'history';
+type ViewType = 'dashboard' | 'workflow' | 'history' | 'template-editor';
 
 const workflowStepsConfig: { step: WorkflowStep; label: string }[] = [
   { step: 'template', label: 'Template' },
@@ -274,6 +275,8 @@ export default function Index() {
         );
       case 'history':
         return <HistoryView />;
+      case 'template-editor':
+        return <TemplateEditorLayout />;
       case 'workflow':
         return (
           <div className="space-y-6">
