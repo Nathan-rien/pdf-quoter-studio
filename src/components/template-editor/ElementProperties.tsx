@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { ALLOWED_COLORS, ALLOWED_FONTS, ALLOWED_FONT_SIZES } from "@/lib/template-styles";
 import type { TextContent } from "@/types/template-editor";
 import { 
@@ -23,29 +24,39 @@ import {
   MousePointer,
   Info,
   AlertCircle,
-  Pencil
+  Pencil,
+  Edit3,
+  Eye,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function ElementProperties() {
   const { 
-    selectedElement, 
     currentVersion,
+    hasUnsavedChanges,
     updateTextContent,
-    createNewVersion
+    updateElementPosition,
+    updateElementSize,
+    createNewVersion,
+    getSelectedElement
   } = useTemplateEditorStore();
 
+  const selectedElement = getSelectedElement();
   const isEditable = currentVersion?.status === 'brouillon';
 
   if (!selectedElement) {
     return (
       <Card className="h-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <MousePointer className="h-4 w-4" />
-            Propriétés
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <MousePointer className="h-4 w-4" />
+              Propriétés
+            </CardTitle>
+            <StatusBadge isEditable={isEditable} hasUnsavedChanges={hasUnsavedChanges} />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -95,17 +106,45 @@ export function ElementProperties() {
     }
   };
 
+  const handlePositionChange = (axis: 'x' | 'y', value: number) => {
+    if (isEditable && selectedElement) {
+      updateElementPosition(selectedElement.id, {
+        ...selectedElement.position,
+        [axis]: value
+      });
+    }
+  };
+
+  const handleSizeChange = (dimension: 'width' | 'height', value: number) => {
+    if (isEditable && selectedElement) {
+      updateElementSize(selectedElement.id, {
+        ...selectedElement.size,
+        [dimension]: value
+      });
+    }
+  };
+
+  const handleCreateDraft = () => {
+    const newVersion = createNewVersion();
+    if (newVersion) {
+      toast.success(`Brouillon v${newVersion.versionNumber} créé. Vous pouvez maintenant modifier.`);
+    }
+  };
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          {selectedElement.type === 'text' ? (
-            <Type className="h-4 w-4" />
-          ) : (
-            <Image className="h-4 w-4" />
-          )}
-          Propriétés - {selectedElement.type === 'text' ? 'Texte' : 'Image'}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            {selectedElement.type === 'text' ? (
+              <Type className="h-4 w-4" />
+            ) : (
+              <Image className="h-4 w-4" />
+            )}
+            Propriétés - {selectedElement.type === 'text' ? 'Texte' : 'Image'}
+          </CardTitle>
+          <StatusBadge isEditable={isEditable} hasUnsavedChanges={hasUnsavedChanges} />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {selectedElement.type === 'text' && textContent && (
@@ -212,7 +251,8 @@ export function ElementProperties() {
                       "w-6 h-6 rounded border-2 transition-all",
                       textContent.color === color.value 
                         ? "border-primary ring-2 ring-primary/30" 
-                        : "border-transparent hover:border-muted-foreground/50"
+                        : "border-transparent hover:border-muted-foreground/50",
+                      !isEditable && "opacity-50 cursor-not-allowed"
                     )}
                     style={{ backgroundColor: color.value }}
                     onClick={() => handleTextChange({ color: color.value })}
@@ -244,6 +284,7 @@ export function ElementProperties() {
                   id="width"
                   type="number"
                   value={selectedElement.size.width}
+                  onChange={(e) => handleSizeChange('width', parseInt(e.target.value) || 0)}
                   disabled={!isEditable}
                 />
               </div>
@@ -253,6 +294,7 @@ export function ElementProperties() {
                   id="height"
                   type="number"
                   value={selectedElement.size.height}
+                  onChange={(e) => handleSizeChange('height', parseInt(e.target.value) || 0)}
                   disabled={!isEditable}
                 />
               </div>
@@ -272,6 +314,7 @@ export function ElementProperties() {
                 id="pos-x"
                 type="number"
                 value={selectedElement.position.x}
+                onChange={(e) => handlePositionChange('x', parseInt(e.target.value) || 0)}
                 disabled={!isEditable}
                 className="h-8 text-sm"
               />
@@ -282,6 +325,7 @@ export function ElementProperties() {
                 id="pos-y"
                 type="number"
                 value={selectedElement.position.y}
+                onChange={(e) => handlePositionChange('y', parseInt(e.target.value) || 0)}
                 disabled={!isEditable}
                 className="h-8 text-sm"
               />
@@ -298,12 +342,7 @@ export function ElementProperties() {
               variant="outline"
               size="sm"
               className="w-full"
-              onClick={() => {
-                const newVersion = createNewVersion();
-                if (newVersion) {
-                  toast.success(`Brouillon v${newVersion.versionNumber} créé. Vous pouvez maintenant modifier.`);
-                }
-              }}
+              onClick={handleCreateDraft}
             >
               <Pencil className="h-4 w-4 mr-2" />
               Créer un brouillon pour éditer
@@ -312,5 +351,23 @@ export function ElementProperties() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// Composant de badge de statut
+function StatusBadge({ isEditable, hasUnsavedChanges }: { isEditable: boolean; hasUnsavedChanges: boolean }) {
+  return (
+    <div className="flex items-center gap-1">
+      {hasUnsavedChanges && (
+        <Badge variant="warning" className="gap-1 text-xs">
+          <AlertTriangle className="h-3 w-3" />
+          Non sauvegardé
+        </Badge>
+      )}
+      <Badge variant={isEditable ? 'success' : 'secondary'} className="gap-1 text-xs">
+        {isEditable ? <Edit3 className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+        {isEditable ? 'Édition' : 'Lecture seule'}
+      </Badge>
+    </div>
   );
 }

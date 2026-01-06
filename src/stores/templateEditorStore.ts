@@ -24,6 +24,9 @@ interface TemplateEditorStore extends TemplateEditorState {
   selectElement: (elementId: string | null) => void;
   setEditorMode: (mode: 'view' | 'edit') => void;
 
+  // Getter pour l'élément sélectionné (dynamique)
+  getSelectedElement: () => EditableElement | null;
+
   // Actions d'édition (éléments NON dynamiques uniquement)
   updateTextContent: (elementId: string, content: Partial<TextContent>) => boolean;
   updateElementPosition: (elementId: string, position: { x: number; y: number }) => boolean;
@@ -86,7 +89,7 @@ function createPublishedDemoVersion(): TemplateVersion {
 const initialState: TemplateEditorState = {
   currentVersion: null,
   allVersions: [createPublishedDemoVersion()],
-  selectedElement: null,
+  selectedElementId: null,
   selectedPageNumber: 1,
   editorMode: 'view',
   hasUnsavedChanges: false
@@ -95,14 +98,23 @@ const initialState: TemplateEditorState = {
 export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => ({
   ...initialState,
 
+  // Getter dynamique pour l'élément sélectionné
+  getSelectedElement: () => {
+    const { selectedElementId, currentVersion, selectedPageNumber } = get();
+    if (!selectedElementId || !currentVersion) return null;
+    
+    const page = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
+    return page?.elements.find(e => e.id === selectedElementId) || null;
+  },
+
   // Navigation
   setSelectedPage: (pageNumber) => {
-    set({ selectedPageNumber: pageNumber, selectedElement: null });
+    set({ selectedPageNumber: pageNumber, selectedElementId: null });
   },
 
   selectElement: (elementId) => {
     if (!elementId) {
-      set({ selectedElement: null });
+      set({ selectedElementId: null });
       return;
     }
 
@@ -111,7 +123,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
 
     const element = pageContent.elements.find(e => e.id === elementId);
     if (element && !element.isDynamic) {
-      set({ selectedElement: element });
+      set({ selectedElementId: elementId });
     }
   },
 
@@ -219,14 +231,14 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
     set({ 
       currentVersion: version, 
       hasUnsavedChanges: false,
-      selectedElement: null,
+      selectedElementId: null,
       selectedPageNumber: 1,
       editorMode: version.status === 'brouillon' ? 'edit' : 'view'
     });
   },
 
   createNewVersion: () => {
-    const { allVersions, currentVersion } = get();
+    const { allVersions, currentVersion, selectedElementId } = get();
     const maxVersion = Math.max(...allVersions.map(v => v.versionNumber), 0);
     
     // Clone profond de la version courante si elle existe, sinon version initiale
@@ -262,7 +274,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
       currentVersion: newVersion,
       hasUnsavedChanges: false,
       editorMode: 'edit',
-      selectedElement: null
+      selectedElementId: selectedElementId // Conserver la sélection
     });
 
     return newVersion;

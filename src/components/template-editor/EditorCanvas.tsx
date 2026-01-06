@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
 import type { TextContent, ImageContent } from "@/types/template-editor";
+import { toast } from "sonner";
 
 // Configuration des zones dynamiques (positions simulées pour le rendu visuel)
 const ZONE_POSITIONS: Record<string, { top: string; height: string }> = {
@@ -35,7 +36,7 @@ export function EditorCanvas() {
     selectedPageNumber, 
     currentVersion,
     editorMode,
-    selectedElement,
+    selectedElementId,
     selectElement
   } = useTemplateEditorStore();
 
@@ -65,8 +66,15 @@ export function EditorCanvas() {
 
   const handleElementClick = (elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Toujours permettre la sélection (l'édition est contrôlée dans ElementProperties)
     selectElement(elementId);
+    
+    // Afficher un hint si en mode lecture seule
+    if (!isEditable && currentVersion?.status !== 'brouillon') {
+      toast.info("Version publiée en lecture seule. Cliquez sur 'Éditer' pour créer un brouillon.", {
+        id: 'readonly-hint',
+        duration: 3000
+      });
+    }
   };
 
   const handleCanvasClick = () => {
@@ -146,7 +154,7 @@ export function EditorCanvas() {
             .filter(e => !e.isDynamic)
             .map((element) => {
               const style = getElementStyle(element);
-              const isSelected = selectedElement?.id === element.id;
+              const isSelected = selectedElementId === element.id;
               const isTextElement = element.type === 'text';
               const textContent = isTextElement ? element.content as TextContent : null;
               const imageContent = !isTextElement && element.type === 'image' ? element.content as ImageContent : null;
