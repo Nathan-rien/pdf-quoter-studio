@@ -22,15 +22,18 @@ import {
   Underline, 
   MousePointer,
   Info,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function ElementProperties() {
   const { 
     selectedElement, 
     currentVersion,
-    updateTextContent
+    updateTextContent,
+    createNewVersion
   } = useTemplateEditorStore();
 
   const isEditable = currentVersion?.status === 'brouillon';
@@ -287,8 +290,24 @@ export function ElementProperties() {
         </div>
 
         {!isEditable && (
-          <div className="p-3 rounded-lg bg-muted text-xs text-muted-foreground text-center">
-            Mode lecture seule. Créez un brouillon pour modifier.
+          <div className="p-3 rounded-lg bg-muted space-y-3">
+            <p className="text-xs text-muted-foreground text-center">
+              Mode lecture seule. Créez un brouillon pour modifier.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                const newVersion = createNewVersion();
+                if (newVersion) {
+                  toast.success(`Brouillon v${newVersion.versionNumber} créé. Vous pouvez maintenant modifier.`);
+                }
+              }}
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Créer un brouillon pour éditer
+            </Button>
           </div>
         )}
       </CardContent>
