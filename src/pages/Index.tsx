@@ -4,7 +4,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateSelection } from "@/components/steps/TemplateSelection";
-import { ExcelImport } from "@/components/steps/ExcelImport";
+import { DataEditorLayout } from "@/components/data-editor";
 import { InvestValidation } from "@/components/steps/InvestValidation";
 import { CSVImport } from "@/components/steps/CSVImport";
 import { OptionsSelection } from "@/components/steps/OptionsSelection";
@@ -21,7 +21,7 @@ type ViewType = 'dashboard' | 'workflow' | 'history' | 'template-editor';
 
 const workflowStepsConfig: { step: WorkflowStep; label: string }[] = [
   { step: 'template', label: 'Template' },
-  { step: 'excel-import', label: 'Import Excel' },
+  { step: 'data-editor', label: 'Données' },
   { step: 'invest-validation', label: 'Validation' },
   { step: 'csv-import', label: 'Tarifs CSV' },
   { step: 'options-selection', label: 'Options' },
@@ -65,7 +65,7 @@ export default function Index() {
 
   const getStepStatus = (step: WorkflowStep): StepStatus => {
     const stepOrder: WorkflowStep[] = [
-      'template', 'excel-import', 'invest-validation', 
+      'template', 'data-editor', 'invest-validation', 
       'csv-import', 'options-selection', 'preview', 'export'
     ];
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -73,7 +73,7 @@ export default function Index() {
 
     if (stepIndex < currentIndex) {
       if (step === 'template' && template) return 'complete';
-      if (step === 'excel-import' && excelImport?.isValid) return 'complete';
+      if (step === 'data-editor') return 'complete'; // Data editor is always accessible once template selected
       if (step === 'invest-validation' && investData?.validationStatus === 'valide_pret_injection') return 'complete';
       if (step === 'csv-import') return csvImport?.isValid ? 'complete' : 'pending';
       if (step === 'options-selection') return 'complete';
@@ -105,7 +105,7 @@ export default function Index() {
 
   const handleNextStep = useCallback(() => {
     const stepOrder: WorkflowStep[] = [
-      'template', 'excel-import', 'invest-validation', 
+      'template', 'data-editor', 'invest-validation', 
       'csv-import', 'options-selection', 'preview', 'export'
     ];
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -119,7 +119,7 @@ export default function Index() {
 
   const handlePrevStep = useCallback(() => {
     const stepOrder: WorkflowStep[] = [
-      'template', 'excel-import', 'invest-validation', 
+      'template', 'data-editor', 'invest-validation', 
       'csv-import', 'options-selection', 'preview', 'export'
     ];
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -196,13 +196,8 @@ export default function Index() {
             selectedTemplate={template}
           />
         );
-      case 'excel-import':
-        return (
-          <ExcelImport 
-            onImport={handleExcelImport}
-            currentImport={excelImport}
-          />
-        );
+      case 'data-editor':
+        return <DataEditorLayout />;
       case 'invest-validation':
         return (
           <InvestValidation 
