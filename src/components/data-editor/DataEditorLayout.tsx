@@ -24,13 +24,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const sheetConfig: { id: SheetName; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'ficheContrat', label: 'Fiche Contrat', icon: FileText },
-  { id: 'invest', label: 'invest ', icon: Calculator },
-  { id: 'devis', label: 'Devis', icon: Table2 },
-  { id: 'optionsServices', label: 'Options services ', icon: Settings },
-  { id: 'baseTaux', label: 'Base Taux', icon: Percent },
-  { id: 'matrice', label: 'Matrice', icon: LayoutGrid },
+// Configuration des onglets selon la structure Excel réelle
+const sheetConfig: { id: SheetName; label: string; icon: React.ComponentType<{ className?: string }>; excelName: string }[] = [
+  { id: 'matrice', label: 'Matrice', icon: LayoutGrid, excelName: 'Matrice' },
+  { id: 'ficheContrat', label: 'Fiche Contrat', icon: FileText, excelName: 'Fiche Contrat' },
+  { id: 'invest', label: 'invest ', icon: Calculator, excelName: 'invest ' },
+  { id: 'devis', label: 'Devis', icon: Table2, excelName: 'Devis' },
+  { id: 'optionsServices', label: 'Options services ', icon: Settings, excelName: 'Options services ' },
+  { id: 'baseTaux', label: 'Base Taux', icon: Percent, excelName: 'Base Taux' },
 ];
 
 export function DataEditorLayout() {
@@ -91,6 +92,10 @@ export function DataEditorLayout() {
 
   const renderEditor = () => {
     switch (activeSheet) {
+      case 'matrice':
+        return <MatriceEditor />;
+      case 'ficheContrat':
+        return <FicheContratEditor />;
       case 'invest':
         return <InvestEditor />;
       case 'devis':
@@ -99,10 +104,6 @@ export function DataEditorLayout() {
         return <BaseTauxEditor />;
       case 'optionsServices':
         return <OptionsServicesEditor />;
-      case 'ficheContrat':
-        return <FicheContratEditor />;
-      case 'matrice':
-        return <MatriceEditor />;
       default:
         return null;
     }
@@ -114,16 +115,16 @@ export function DataEditorLayout() {
         stepNumber={2}
         totalSteps={7}
         title="Éditeur de Données"
-        description="Saisissez les données directement dans les tableaux ci-dessous"
+        description="Saisissez les données directement dans les tableaux (structure identique au fichier Excel source)"
       />
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <CardTitle className="text-lg">Structure Excel</CardTitle>
+              <CardTitle className="text-lg">Structure Excel — Matrice_Location</CardTitle>
               <CardDescription>
-                6 onglets correspondant à la structure du fichier Excel source
+                6 onglets correspondant au fichier source avec espaces finaux préservés
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -159,11 +160,12 @@ export function DataEditorLayout() {
             className="w-full"
           >
             <TabsList className="w-full justify-start h-auto flex-wrap gap-1 bg-muted/50 p-1">
-              {sheetConfig.map(({ id, label, icon: Icon }) => (
+              {sheetConfig.map(({ id, label, icon: Icon, excelName }) => (
                 <TabsTrigger 
                   key={id} 
                   value={id}
                   className="flex items-center gap-2 data-[state=active]:bg-background"
+                  title={`Onglet Excel : "${excelName}"`}
                 >
                   <Icon className="h-4 w-4" />
                   <span className="hidden sm:inline">{label}</span>
