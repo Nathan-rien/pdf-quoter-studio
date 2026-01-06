@@ -1,31 +1,40 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { QuoteTemplate, InvestData, CSVImportResult, ServiceOption } from "@/types/quote";
-import { getSourceTotal } from "@/lib/calculation-rules";
-import { checkInvestInjectionRules, prepareOptionsInjection } from "@/lib/pdf-injection";
+import { QuoteTemplate, InvestData, CSVImportResult, ServiceOption, OptionsServicesData } from "@/types/quote";
+import { validatePDFExport, getExportValidationSummary } from "@/lib/pdf-export-validation";
+import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { 
   FileText, 
-  Eye, 
-  Check, 
-  Table, 
-  Settings,
-  DollarSign,
   ChevronRight,
-  AlertTriangle,
-  Info,
   CheckCircle,
-  Circle
+  Circle,
+  AlertTriangle,
+  Eye,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { StepHeader } from "@/components/ui/step-header";
 import { BlockingMessage } from "@/components/ui/blocking-message";
+import {
+  Page1Cover,
+  Page2Engagements,
+  Page3Location,
+  Page4OffreRachat,
+  Page5OffreMateriel,
+  Page6Services,
+  Page7ServicesPro,
+  Page8Signature
+} from "@/components/pdf/pages";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface QuotePreviewProps {
   template: QuoteTemplate | null;
   investData: InvestData | null;
   csvImport: CSVImportResult | null;
   selectedOptions: ServiceOption[];
+  optionsData?: OptionsServicesData | null;
   onExport: () => void;
 }
 
@@ -34,18 +43,32 @@ export function QuotePreview({
   investData, 
   csvImport, 
   selectedOptions,
+  optionsData,
   onExport 
 }: QuotePreviewProps) {
-  // Vérifier les règles d'injection
-  const investInjectionCheck = checkInvestInjectionRules(investData);
-  const isInvestReady = investData?.validationStatus === 'valide_pret_injection';
-  const isReady = template && isInvestReady && investInjectionCheck.canInject;
-  const selectedOpts = selectedOptions.filter(o => o.selected);
+  const [expandedView, setExpandedView] = useState(false);
+  
+  // Construire optionsData à partir de selectedOptions si non fourni
+  const effectiveOptionsData: OptionsServicesData | null = optionsData || (selectedOptions.length > 0 ? {
+    isEmpty: false,
+    rows: selectedOptions.map(o => ({
+      id: o.id,
+      name: o.name,
+      description: o.description,
+      selected: o.selected,
+      category: o.category,
+      price: o.price
+    })),
+    structureError: null
+  } : null);
 
-  // Calculer le total depuis les sources (pas de calcul automatique)
-  const sourceLabels = investData?.rows.map(r => r.designation) || [];
-  const vtnValues = investData?.rows.map(r => r.vtn) || [];
-  const totalInfo = getSourceTotal(vtnValues, sourceLabels);
+  // Validation du template
+  const validation = validatePDFExport(investData, effectiveOptionsData);
+  const validationSummary = getExportValidationSummary(investData, effectiveOptionsData);
+  
+  const isInvestReady = investData?.validationStatus === 'valide_pret_injection';
+  const isReady = template && validation.canExport;
+  const selectedOpts = selectedOptions.filter(o => o.selected);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -54,24 +77,42 @@ export function QuotePreview({
           stepNumber={6}
           totalSteps={7}
           title="Aperçu du Devis"
-          description="Vérifiez la structure du devis avant l'export final."
+          description="Vérifiez la structure du devis 8 pages avant l'export final."
           status={isReady ? 'complete' : 'active'}
           statusLabel={isReady ? 'Prêt pour export' : 'Données incomplètes'}
         />
       </div>
 
+      {/* Template info */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium">{PDF_TEMPLATE_CONTRACT.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {PDF_TEMPLATE_CONTRACT.totalPages} pages • Version {PDF_TEMPLATE_CONTRACT.version}
+              </p>
+            </div>
+            <Badge variant="success">Actif</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Checklist pré-export */}
       <Card variant="ghost" className="border border-dashed">
         <CardContent className="p-4">
           <p className="text-sm font-medium mb-3">Vérification pré-export :</p>
-          <div className="space-y-2">
+          <div className="grid sm:grid-cols-2 gap-2">
             <div className="flex items-center gap-2 text-sm">
               {template ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
               <span className={template ? '' : 'text-muted-foreground'}>Template sélectionné</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               {investData ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
-              <span className={investData ? '' : 'text-muted-foreground'}>Excel importé sans erreur</span>
+              <span className={investData ? '' : 'text-muted-foreground'}>Excel importé</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               {isInvestReady ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
@@ -79,191 +120,131 @@ export function QuotePreview({
             </div>
             <div className="flex items-center gap-2 text-sm">
               {selectedOpts.length > 0 ? <CheckCircle className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
-              <span className="text-muted-foreground">Options sélectionnées (optionnel)</span>
+              <span className="text-muted-foreground">Options (optionnel)</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Template info */}
+      {/* Résumé des pages */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <FileText className="h-5 w-5 text-primary" />
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Structure du document</span>
             </div>
-            <div>
-              <CardTitle className="text-base">Template</CardTitle>
-              <CardDescription>
-                {template?.name || "Non sélectionné"}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Document structure preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Eye className="h-4 w-4" />
-            Structure du document
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Pages 1-3: Template header */}
-          <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-            <div className="w-12 h-16 rounded border-2 border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-              1-3
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">Pages d'en-tête</p>
-              <p className="text-sm text-muted-foreground">
-                Contenu fixe du template
-              </p>
-            </div>
-            <Badge variant="success">Template</Badge>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setExpandedView(!expandedView)}
+              className="gap-1"
+            >
+              {expandedView ? (
+                <>Réduire <ChevronUp className="h-4 w-4" /></>
+              ) : (
+                <>Voir les 8 pages <ChevronDown className="h-4 w-4" /></>
+              )}
+            </Button>
           </div>
 
-          {/* Pages 4-5: Invest table */}
-          <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-            <div className={cn(
-              "w-12 h-16 rounded border-2 flex items-center justify-center text-xs font-medium",
-              isInvestReady 
-                ? "border-primary bg-primary/5 text-primary" 
-                : "border-warning bg-warning/5 text-warning"
-            )}>
-              4-5
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">Tableau Invest</p>
-              <p className="text-sm text-muted-foreground">
-                {investData?.validationStatus === 'valide_pret_injection'
-                  ? `${investData.rows.length} lignes validées`
-                  : investData?.validationStatus === 'importe_non_valide'
-                  ? "En attente de validation"
-                  : investData?.validationStatus === 'rejete_a_corriger'
-                  ? "Rejeté - À corriger"
-                  : "Non importé"
-                }
-              </p>
-            </div>
-            <Badge variant={isInvestReady ? "success" : "pending"}>
-              {isInvestReady ? (
-                <><Check className="h-3 w-3 mr-1" /> Inject</>
-              ) : "À valider"}
-            </Badge>
-          </div>
+          {/* Vue compacte */}
+          {!expandedView && (
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+              {PDF_TEMPLATE_CONTRACT.pages.map((page) => {
+                const pageResult = validation.pageResults.find(r => r.pageNumber === page.pageNumber);
+                const hasError = pageResult && !pageResult.isValid;
+                const isDynamic = page.type !== 'static';
+                const isPageReady = !hasError && (!isDynamic || isInvestReady);
 
-          {/* Page 6: Options */}
-          <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-            <div className="w-12 h-16 rounded border-2 border-primary bg-primary/5 flex items-center justify-center text-xs text-primary font-medium">
-              6
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">Options Services</p>
-              <p className="text-sm text-muted-foreground">
-                {selectedOpts.length > 0 
-                  ? `${selectedOpts.length} option${selectedOpts.length > 1 ? 's' : ''} sélectionnée${selectedOpts.length > 1 ? 's' : ''}`
-                  : "Aucune option sélectionnée"
-                }
-              </p>
-            </div>
-            <Badge variant={selectedOpts.length > 0 ? "success" : "pending"}>
-              {selectedOpts.length > 0 ? (
-                <><Settings className="h-3 w-3 mr-1" /> Inject</>
-              ) : "Optionnel"}
-            </Badge>
-          </div>
-
-          {/* Pages 7+: Template footer */}
-          <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-            <div className="w-12 h-16 rounded border-2 border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-              7+
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">Pages de fin</p>
-              <p className="text-sm text-muted-foreground">
-                CGV, mentions légales
-              </p>
-            </div>
-            <Badge variant="success">Template</Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Data summary */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-muted">
-                <Table className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <span className="font-medium">Données Invest</span>
-            </div>
-            {investData ? (
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Lignes</span>
-                  <span className="font-medium">{investData.rows.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total VTN (source)</span>
-                  <span className="font-medium">
-                    {totalInfo.isFromSource && totalInfo.total !== null
-                      ? `${totalInfo.total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`
-                      : <span className="text-muted-foreground italic">—</span>
-                    }
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Statut</span>
-                  <Badge 
-                    variant={investData.validationStatus === 'valide_pret_injection' ? "success" : "pending"} 
-                    className="text-xs"
+                return (
+                  <div
+                    key={page.pageNumber}
+                    className={cn(
+                      "aspect-[210/297] rounded border-2 flex flex-col items-center justify-center text-xs",
+                      hasError && "border-destructive bg-destructive/5",
+                      !hasError && page.type === 'static' && "border-muted bg-muted/30",
+                      !hasError && isDynamic && isPageReady && "border-success bg-success/5",
+                      !hasError && isDynamic && !isPageReady && "border-warning bg-warning/5"
+                    )}
+                    title={page.title}
                   >
-                    {investData.validationStatus === 'valide_pret_injection' ? "Validé" : "Non validé"}
-                  </Badge>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Non importé</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-muted">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <span className="font-medium">Tarifs CSV</span>
+                    <span className="font-bold">{page.pageNumber}</span>
+                    {hasError && <AlertTriangle className="h-3 w-3 text-destructive mt-1" />}
+                  </div>
+                );
+              })}
             </div>
-            {csvImport ? (
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fichier</span>
-                  <span className="font-medium truncate max-w-[150px]">{csvImport.fileName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tarifs</span>
-                  <span className="font-medium">{csvImport.rowCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Statut</span>
-                  <Badge variant={csvImport.isValid ? "success" : "error"} className="text-xs">
-                    {csvImport.isValid ? "Valide" : "Erreur"}
-                  </Badge>
-                </div>
+          )}
+
+          {/* Légende */}
+          {!expandedView && (
+            <div className="flex flex-wrap gap-4 mt-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded border border-muted bg-muted/30" />
+                <span>Statique</span>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Non importé (optionnel)</p>
-            )}
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded border-2 border-success bg-success/5" />
+                <span>Dynamique prêt</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded border-2 border-warning bg-warning/5" />
+                <span>En attente</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Vue étendue - 8 pages */}
+      {expandedView && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <Page1Cover />
+          <Page2Engagements />
+          <Page3Location />
+          <Page4OffreRachat investData={investData} />
+          <Page5OffreMateriel investData={investData} />
+          <Page6Services optionsData={effectiveOptionsData} />
+          <Page7ServicesPro />
+          <Page8Signature />
+        </div>
+      )}
+
+      {/* Erreurs bloquantes */}
+      {validation.blockers.length > 0 && (
+        <Card className="border-destructive">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-destructive mb-2">
+                  Export bloqué ({validation.blockers.length} erreur{validation.blockers.length > 1 ? 's' : ''})
+                </p>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {validation.blockers.map((blocker, i) => (
+                    <li key={i}>• {blocker}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {/* Avertissements */}
+      {validation.warnings.length > 0 && (
+        <Card className="border-warning/50">
+          <CardContent className="p-4">
+            <p className="text-sm text-warning mb-2">Avertissements :</p>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              {validation.warnings.map((warning, i) => (
+                <li key={i}>• {warning}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Export action */}
       <Card variant="ghost" className="border-2 border-dashed">
@@ -277,10 +258,7 @@ export function QuotePreview({
                 }
               </p>
               <p className="text-sm text-muted-foreground">
-                {isReady
-                  ? "Générez le PDF final conforme au template"
-                  : "Le tableau Invest doit être au statut 'validé_prêt_injection' avant l'export"
-                }
+                {validationSummary.summary}
               </p>
             </div>
             
@@ -296,6 +274,13 @@ export function QuotePreview({
           </div>
         </CardContent>
       </Card>
+
+      {!isReady && (
+        <BlockingMessage 
+          message="Le tableau Invest doit être au statut 'validé_prêt_injection' avant l'export."
+          variant="warning"
+        />
+      )}
     </div>
   );
 }
