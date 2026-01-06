@@ -1,30 +1,119 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ServiceOption } from "@/types/quote";
-import { Settings, Check, Package } from "lucide-react";
+import { ServiceOption, OptionsServicesData } from "@/types/quote";
+import { getOptionsStatusMessage } from "@/lib/options-parser";
+import { Settings, Check, Package, AlertTriangle, Ban, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface OptionsSelectionProps {
   options: ServiceOption[];
   onToggle: (optionId: string) => void;
   selectedCount: number;
+  optionsData?: OptionsServicesData | null;
 }
 
-// Mock options for demonstration
-const mockOptions: ServiceOption[] = [
-  { id: "opt-1", name: "Support Premium 24/7", description: "Assistance technique disponible 24h/24, 7j/7", price: 299, selected: false, category: "Support" },
-  { id: "opt-2", name: "Formation avancée", description: "Formation approfondie de 2 jours pour les administrateurs", price: 1500, selected: false, category: "Formation" },
-  { id: "opt-3", name: "Garantie étendue", description: "Extension de garantie de 2 ans supplémentaires", price: 450, selected: false, category: "Garantie" },
-  { id: "opt-4", name: "Migration données", description: "Service de migration complète des données existantes", price: 800, selected: false, category: "Services" },
-  { id: "opt-5", name: "Audit sécurité", description: "Audit de sécurité complet avec rapport détaillé", price: 1200, selected: false, category: "Sécurité" },
-  { id: "opt-6", name: "Sauvegarde cloud", description: "Solution de sauvegarde automatique dans le cloud", price: 99, selected: false, category: "Infrastructure" },
-];
+export function OptionsSelection({ 
+  options, 
+  onToggle, 
+  selectedCount,
+  optionsData 
+}: OptionsSelectionProps) {
+  // Vérifier l'état de l'onglet "Options services "
+  const statusMessage = optionsData ? getOptionsStatusMessage(optionsData) : null;
 
-export function OptionsSelection({ options: propOptions, onToggle, selectedCount }: OptionsSelectionProps) {
-  const options = propOptions.length > 0 ? propOptions : mockOptions;
+  // Si onglet vide
+  if (optionsData?.isEmpty) {
+    return (
+      <div className="space-y-6 animate-slide-up">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Sélection des Options</h2>
+          <p className="text-muted-foreground">
+            Choisissez les options services à inclure dans le devis (page 6).
+          </p>
+        </div>
+
+        <Card variant="ghost" className="border-2 border-dashed">
+          <CardContent className="p-8 text-center">
+            <Info className="h-12 w-12 text-info mx-auto mb-4" />
+            <p className="text-lg font-medium mb-2">Aucune option disponible</p>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              L'onglet "Options services " du fichier Excel est vide. 
+              Aucune option ne sera injectée dans la page 6 du devis.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card variant="ghost" className="border border-dashed">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Cette étape est optionnelle. Vous pouvez continuer sans sélectionner d'options.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Si structure non définie (onglet avec données mais colonnes inconnues)
+  if (optionsData?.structureError) {
+    return (
+      <div className="space-y-6 animate-slide-up">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Sélection des Options</h2>
+          <p className="text-muted-foreground">
+            Choisissez les options services à inclure dans le devis (page 6).
+          </p>
+        </div>
+
+        <Card variant="error">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <AlertTriangle className="h-6 w-6 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-destructive mb-2">Structure non définie</p>
+                <p className="text-sm text-muted-foreground">
+                  {optionsData.structureError}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="ghost" className="border border-dashed">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground text-center">
+              La sélection d'options est bloquée tant que la structure de l'onglet n'est pas définie contractuellement.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Si pas de données du tout (legacy mode avec options passées en props)
+  if (options.length === 0) {
+    return (
+      <div className="space-y-6 animate-slide-up">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Sélection des Options</h2>
+          <p className="text-muted-foreground">
+            Choisissez les options services à inclure dans le devis (page 6).
+          </p>
+        </div>
+
+        <Card variant="ghost" className="border-2 border-dashed">
+          <CardContent className="p-8 text-center">
+            <Ban className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-lg font-medium mb-2">Aucune option chargée</p>
+            <p className="text-sm text-muted-foreground">
+              Importez un fichier Excel avec un onglet "Options services " valide.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   const categories = [...new Set(options.map(o => o.category))];
   const selectedOptions = options.filter(o => o.selected);

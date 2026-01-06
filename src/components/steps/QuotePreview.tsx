@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QuoteTemplate, InvestData, CSVImportResult, ServiceOption } from "@/types/quote";
+import { calculateInvestTotal } from "@/lib/invest-parser";
 import { 
   FileText, 
   Eye, 
@@ -9,7 +10,8 @@ import {
   Table, 
   Settings,
   DollarSign,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +30,9 @@ export function QuotePreview({
   selectedOptions,
   onExport 
 }: QuotePreviewProps) {
-  const isReady = template && investData?.isValidated;
+  // Export bloqué si Invest non validé (statut valide_pret_injection requis)
+  const isInvestReady = investData?.validationStatus === 'valide_pret_injection';
+  const isReady = template && isInvestReady;
   const selectedOpts = selectedOptions.filter(o => o.selected);
 
   return (
@@ -48,7 +52,10 @@ export function QuotePreview({
               Prêt pour export
             </>
           ) : (
-            "Données incomplètes"
+            <>
+              <AlertTriangle className="h-3 w-3" />
+              Données incomplètes
+            </>
           )}
         </Badge>
       </div>
@@ -95,20 +102,29 @@ export function QuotePreview({
 
           {/* Pages 4-5: Invest table */}
           <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-            <div className="w-12 h-16 rounded border-2 border-primary bg-primary/5 flex items-center justify-center text-xs text-primary font-medium">
+            <div className={cn(
+              "w-12 h-16 rounded border-2 flex items-center justify-center text-xs font-medium",
+              isInvestReady 
+                ? "border-primary bg-primary/5 text-primary" 
+                : "border-warning bg-warning/5 text-warning"
+            )}>
               4-5
             </div>
             <div className="flex-1">
               <p className="font-medium">Tableau Invest</p>
               <p className="text-sm text-muted-foreground">
-                {investData?.isValidated 
+                {investData?.validationStatus === 'valide_pret_injection'
                   ? `${investData.rows.length} lignes validées`
-                  : "En attente de validation"
+                  : investData?.validationStatus === 'importe_non_valide'
+                  ? "En attente de validation"
+                  : investData?.validationStatus === 'rejete_a_corriger'
+                  ? "Rejeté - À corriger"
+                  : "Non importé"
                 }
               </p>
             </div>
-            <Badge variant={investData?.isValidated ? "success" : "pending"}>
-              {investData?.isValidated ? (
+            <Badge variant={isInvestReady ? "success" : "pending"}>
+              {isInvestReady ? (
                 <><Check className="h-3 w-3 mr-1" /> Inject</>
               ) : "À valider"}
             </Badge>
@@ -168,13 +184,18 @@ export function QuotePreview({
                   <span className="font-medium">{investData.rows.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Colonnes</span>
-                  <span className="font-medium">{investData.columns.length}</span>
+                  <span className="text-muted-foreground">Total VTN</span>
+                  <span className="font-medium">
+                    {calculateInvestTotal(investData.rows).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Statut</span>
-                  <Badge variant={investData.isValidated ? "success" : "pending"} className="text-xs">
-                    {investData.isValidated ? "Validé" : "Non validé"}
+                  <Badge 
+                    variant={investData.validationStatus === 'valide_pret_injection' ? "success" : "pending"} 
+                    className="text-xs"
+                  >
+                    {investData.validationStatus === 'valide_pret_injection' ? "Validé" : "Non validé"}
                   </Badge>
                 </div>
               </div>
@@ -210,7 +231,7 @@ export function QuotePreview({
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Non importé</p>
+              <p className="text-sm text-muted-foreground">Non importé (optionnel)</p>
             )}
           </CardContent>
         </Card>
@@ -230,7 +251,7 @@ export function QuotePreview({
               <p className="text-sm text-muted-foreground">
                 {isReady
                   ? "Générez le PDF final conforme au template"
-                  : "Le tableau Invest doit être validé avant l'export"
+                  : "Le tableau Invest doit être au statut 'validé_prêt_injection' avant l'export"
                 }
               </p>
             </div>

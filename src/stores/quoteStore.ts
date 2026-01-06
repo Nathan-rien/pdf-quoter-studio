@@ -6,8 +6,11 @@ import {
   ExcelImportResult, 
   InvestData, 
   CSVImportResult, 
+  CSVImportConfig,
   ServiceOption, 
-  AuditLog 
+  AuditLog,
+  OptionsServicesData,
+  InvestValidationStatus
 } from '@/types/quote';
 
 interface QuoteStore extends QuoteState {
@@ -24,18 +27,26 @@ interface QuoteStore extends QuoteState {
   
   // Invest Validation
   setInvestData: (data: InvestData) => void;
+  setInvestValidationStatus: (status: InvestValidationStatus) => void;
   validateInvestData: () => void;
+  
+  // Options
+  setOptionsData: (data: OptionsServicesData) => void;
   
   // CSV Import
   setCSVImport: (result: CSVImportResult) => void;
+  setCSVConfig: (config: CSVImportConfig) => void;
   clearCSVImport: () => void;
   
-  // Options
+  // Service Options (legacy)
   setSelectedOptions: (options: ServiceOption[]) => void;
   toggleOption: (optionId: string) => void;
   
   // Audit
   addAuditLog: (log: Omit<AuditLog, 'id' | 'timestamp'>) => void;
+  
+  // Export validation
+  canExportPDF: () => boolean;
   
   // Reset
   resetQuote: () => void;
@@ -46,7 +57,9 @@ const initialState: QuoteState = {
   template: null,
   excelImport: null,
   investData: null,
+  optionsData: null,
   csvImport: null,
+  csvConfig: null,
   selectedOptions: [],
   auditLogs: [],
 };
@@ -76,8 +89,9 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
     // Check prerequisites
     if (targetIndex >= 1 && !state.template) return false;
     if (targetIndex >= 2 && (!state.excelImport || !state.excelImport.isValid)) return false;
-    if (targetIndex >= 3 && (!state.investData || !state.investData.isValidated)) return false;
-    if (targetIndex >= 5 && (!state.csvImport || !state.csvImport.isValid)) return false;
+    if (targetIndex >= 3 && (!state.investData || state.investData.validationStatus !== 'valide_pret_injection')) return false;
+    // CSV is optional but if present must be valid
+    if (targetIndex >= 5 && state.csvImport && !state.csvImport.isValid) return false;
     
     return true;
   },
@@ -103,18 +117,72 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
     });
   },
 
-  clearExcelImport: () => set({ excelImport: null, investData: null }),
+  clearExcelImport: () => set({ 
+    excelImport: null, 
+    investData: null,
+    optionsData: null 
+  }),
 
-  setInvestData: (data) => set({ investData: data }),
+  setInvestData: (data) => {
+    set({ investData: data });
+    get().addAuditLog({
+      type: 'invest-status-change',
+      message: `Données Invest importées`,
+      status: data.validationStatus === 'rejete_a_corriger' ? 'error' : 'info',
+      details: `${data.rows.length} lignes, statut: ${data.validationStatus}`,
+    });
+  },
+
+  setInvestValidationStatus: (status) => {
+    const { investData } = get();
+    if (!investData) return;
+
+    set({
+      investData: {
+        ...investData,
+        validationStatus: status,
+        isValidated: status === 'valide_pret_injection'
+      }
+    });
+
+    get().addAuditLog({
+      type: 'invest-status-change',
+      message: `Statut Invest : ${status}`,
+      status: status === 'valide_pret_injection' ? 'success' : 
+              status === 'rejete_a_corriger' ? 'error' : 'warning'
+    });
+  },
 
   validateInvestData: () => {
     const { investData } = get();
     if (!investData) return;
     
+    // Check for blocking errors
+    const hasErrors = investData.validationErrors.some(e => e.severity === 'error');
+    
+    if (hasErrors) {
+      set({ 
+        investData: { 
+          ...investData, 
+          validationStatus: 'rejete_a_corriger',
+          isValidated: false
+        } 
+      });
+      
+      get().addAuditLog({
+        type: 'validation',
+        message: 'Validation Invest échouée',
+        status: 'error',
+        details: `${investData.validationErrors.length} erreur(s) détectée(s)`,
+      });
+      return;
+    }
+    
     set({ 
       investData: { 
         ...investData, 
         isValidated: true, 
+        validationStatus: 'valide_pret_injection',
         validationErrors: [] 
       } 
     });
@@ -127,6 +195,8 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
     });
   },
 
+  setOptionsData: (data) => set({ optionsData: data }),
+
   setCSVImport: (result) => {
     set({ csvImport: result });
     get().addAuditLog({
@@ -135,9 +205,11 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
       status: result.isValid ? 'success' : 'error',
       details: result.isValid 
         ? `${result.rowCount} tarifs mis à jour` 
-        : result.errors.join(', '),
+        : result.errors.map(e => e.message).join(', '),
     });
   },
+
+  setCSVConfig: (config) => set({ csvConfig: config }),
 
   clearCSVImport: () => set({ csvImport: null }),
 
@@ -158,6 +230,12 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
       timestamp: new Date(),
     };
     set(state => ({ auditLogs: [newLog, ...state.auditLogs] }));
+  },
+
+  canExportPDF: () => {
+    const { investData, template } = get();
+    return template !== null && 
+           investData?.validationStatus === 'valide_pret_injection';
   },
 
   resetQuote: () => {

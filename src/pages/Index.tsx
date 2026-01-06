@@ -13,6 +13,7 @@ import { ExportView } from "@/components/steps/ExportView";
 import { WorkflowProgress } from "@/components/workflow/WorkflowProgress";
 import { Button } from "@/components/ui/button";
 import { WorkflowStep, StepStatus, InvestData, ServiceOption } from "@/types/quote";
+import { parseOptionsServicesSheet } from "@/lib/options-parser";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type ViewType = 'dashboard' | 'workflow' | 'history';
@@ -27,19 +28,9 @@ const workflowStepsConfig: { step: WorkflowStep; label: string }[] = [
   { step: 'export', label: 'Export' },
 ];
 
-// Mock service options
-const initialOptions: ServiceOption[] = [
-  { id: "opt-1", name: "Support Premium 24/7", description: "Assistance technique disponible 24h/24, 7j/7", price: 299, selected: false, category: "Support" },
-  { id: "opt-2", name: "Formation avancée", description: "Formation approfondie de 2 jours pour les administrateurs", price: 1500, selected: false, category: "Formation" },
-  { id: "opt-3", name: "Garantie étendue", description: "Extension de garantie de 2 ans supplémentaires", price: 450, selected: false, category: "Garantie" },
-  { id: "opt-4", name: "Migration données", description: "Service de migration complète des données existantes", price: 800, selected: false, category: "Services" },
-  { id: "opt-5", name: "Audit sécurité", description: "Audit de sécurité complet avec rapport détaillé", price: 1200, selected: false, category: "Sécurité" },
-  { id: "opt-6", name: "Sauvegarde cloud", description: "Solution de sauvegarde automatique dans le cloud", price: 99, selected: false, category: "Infrastructure" },
-];
-
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
-  const [localOptions, setLocalOptions] = useState<ServiceOption[]>(initialOptions);
+  const [localOptions, setLocalOptions] = useState<ServiceOption[]>([]);
   
   const {
     currentStep,
@@ -51,14 +42,19 @@ export default function Index() {
     investData,
     setInvestData,
     validateInvestData,
+    optionsData,
+    setOptionsData,
     csvImport,
     setCSVImport,
+    csvConfig,
+    setCSVConfig,
     selectedOptions,
     setSelectedOptions,
     toggleOption,
     auditLogs,
     addAuditLog,
     canProceedToStep,
+    canExportPDF,
     resetQuote,
   } = useQuoteStore();
 
@@ -73,11 +69,10 @@ export default function Index() {
     const stepIndex = stepOrder.indexOf(step);
 
     if (stepIndex < currentIndex) {
-      // Check if prerequisites are met
       if (step === 'template' && template) return 'complete';
       if (step === 'excel-import' && excelImport?.isValid) return 'complete';
-      if (step === 'invest-validation' && investData?.isValidated) return 'complete';
-      if (step === 'csv-import' && csvImport?.isValid) return 'complete';
+      if (step === 'invest-validation' && investData?.validationStatus === 'valide_pret_injection') return 'complete';
+      if (step === 'csv-import') return csvImport?.isValid ? 'complete' : 'pending';
       if (step === 'options-selection') return 'complete';
       return 'pending';
     }
@@ -89,6 +84,7 @@ export default function Index() {
 
   const handleStartNewQuote = useCallback(() => {
     resetQuote();
+    setLocalOptions([]);
     setCurrentStep('template');
     setCurrentView('workflow');
   }, [resetQuote, setCurrentStep]);
@@ -137,8 +133,52 @@ export default function Index() {
     );
   }, []);
 
+  const handleExcelImport = useCallback((result: typeof excelImport) => {
+    if (!result) return;
+    
+    setExcelImport(result);
+    
+    if (result.isValid) {
+      // Simuler le parsing de l'onglet "invest "
+      // En production, cela viendrait du parsing réel via Edge Function
+      const mockInvestData: InvestData = {
+        rows: [
+          { designation: 'Serveur Dell PowerEdge', nb: 2, vun: 3500.00, vtn: 7000.00, rawRowIndex: 5 },
+          { designation: 'Switch Cisco 48 ports', nb: 4, vun: 1200.00, vtn: 4800.00, rawRowIndex: 6 },
+          { designation: 'Onduleur APC 3000VA', nb: 2, vun: 850.00, vtn: 1700.00, rawRowIndex: 7 },
+          { designation: 'Câblage réseau Cat6', nb: 1, vun: 2500.00, vtn: 2500.00, rawRowIndex: 8 },
+          { designation: 'Installation et configuration', nb: 1, vun: 3000.00, vtn: 3000.00, rawRowIndex: 9 },
+          { designation: null, nb: null, vun: null, vtn: null, rawRowIndex: 10 }, // Ligne vide
+          { designation: 'TOTAL HT', nb: null, vun: null, vtn: 19000.00, rawRowIndex: 11 },
+        ],
+        headerRowIndex: 4,
+        sourceSheet: 'invest ',
+        isValidated: false,
+        validationStatus: 'importe_non_valide',
+        validationErrors: []
+      };
+      
+      setInvestData(mockInvestData);
+      
+      // Simuler le parsing de l'onglet "Options services "
+      // En production, cela viendrait du parsing réel
+      const optionsResult = parseOptionsServicesSheet(null); // Simule onglet vide
+      setOptionsData(optionsResult);
+      
+      handleNextStep();
+    }
+  }, [setExcelImport, setInvestData, setOptionsData, handleNextStep]);
+
   const handleExport = useCallback(async () => {
-    // Simulate export
+    if (!canExportPDF()) {
+      addAuditLog({
+        type: 'error',
+        message: 'Export bloqué : données Invest non validées',
+        status: 'blocked',
+      });
+      return;
+    }
+    
     await new Promise(resolve => setTimeout(resolve, 2000));
     addAuditLog({
       type: 'export',
@@ -146,21 +186,7 @@ export default function Index() {
       status: 'success',
       details: 'Fichier PDF généré et prêt au téléchargement',
     });
-  }, [addAuditLog]);
-
-  // Mock invest data for validation step
-  const mockInvestData: InvestData = {
-    columns: ["Référence", "Désignation", "Quantité", "Prix unitaire", "Total"],
-    rows: [
-      { Référence: "INV-001", Désignation: "Installation serveur principal", Quantité: 1, "Prix unitaire": 2500, Total: 2500 },
-      { Référence: "INV-002", Désignation: "Configuration réseau", Quantité: 1, "Prix unitaire": 1200, Total: 1200 },
-      { Référence: "INV-003", Désignation: "Licences logicielles", Quantité: 10, "Prix unitaire": 150, Total: 1500 },
-      { Référence: "INV-004", Désignation: "Formation utilisateurs", Quantité: 2, "Prix unitaire": 800, Total: 1600 },
-      { Référence: "INV-005", Désignation: "Support technique", Quantité: 12, "Prix unitaire": 200, Total: 2400 },
-    ],
-    isValidated: investData?.isValidated || false,
-    validationErrors: [],
-  };
+  }, [addAuditLog, canExportPDF]);
 
   const renderWorkflowStep = () => {
     switch (currentStep) {
@@ -177,25 +203,19 @@ export default function Index() {
       case 'excel-import':
         return (
           <ExcelImport 
-            onImport={(result) => {
-              setExcelImport(result);
-              if (result.isValid) {
-                setInvestData(mockInvestData);
-                handleNextStep();
-              }
-            }}
+            onImport={handleExcelImport}
             currentImport={excelImport}
           />
         );
       case 'invest-validation':
         return (
           <InvestValidation 
-            investData={investData || mockInvestData}
+            investData={investData}
             onValidate={() => {
               validateInvestData();
               handleNextStep();
             }}
-            isValidated={investData?.isValidated || false}
+            isValidated={investData?.validationStatus === 'valide_pret_injection'}
           />
         );
       case 'csv-import':
@@ -208,6 +228,8 @@ export default function Index() {
               }
             }}
             currentImport={csvImport}
+            config={csvConfig}
+            onConfigChange={setCSVConfig}
           />
         );
       case 'options-selection':
@@ -216,13 +238,14 @@ export default function Index() {
             options={localOptions}
             onToggle={handleToggleOption}
             selectedCount={localOptions.filter(o => o.selected).length}
+            optionsData={optionsData}
           />
         );
       case 'preview':
         return (
           <QuotePreview 
             template={template}
-            investData={investData || mockInvestData}
+            investData={investData}
             csvImport={csvImport}
             selectedOptions={localOptions}
             onExport={() => setCurrentStep('export')}
@@ -231,7 +254,7 @@ export default function Index() {
       case 'export':
         return (
           <ExportView 
-            isReady={!!template && (investData?.isValidated || mockInvestData.isValidated)}
+            isReady={canExportPDF()}
             auditLogs={auditLogs}
             onExport={handleExport}
           />
@@ -256,7 +279,6 @@ export default function Index() {
       case 'workflow':
         return (
           <div className="space-y-6">
-            {/* Workflow progress */}
             <WorkflowProgress
               steps={workflowStepsConfig.map(({ step, label }) => ({
                 step,
@@ -268,12 +290,10 @@ export default function Index() {
               canNavigateTo={canProceedToStep}
             />
 
-            {/* Step content */}
             <div className="min-h-[400px]">
               {renderWorkflowStep()}
             </div>
 
-            {/* Navigation buttons */}
             <div className="flex items-center justify-between pt-6 border-t border-border">
               <Button
                 variant="ghost"
