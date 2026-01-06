@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CSVImportResult, CSVImportConfig, CSVEncoding, CSVSeparator } from "@/types/quote";
-import { validateCSVImport, isValidCSVConfig, getCSVImportStatusMessage } from "@/lib/csv-parser";
+import { validateCSVImport, isValidCSVConfig, getCSVImportStatusMessage, determineCSVImportMode } from "@/lib/csv-parser";
 import { 
   Upload, 
   FileText, 
@@ -109,6 +109,7 @@ export function CSVImport({
   };
 
   const isConfigValid = isValidCSVConfig(config) || isValidCSVConfig(localConfig);
+  const importModeInfo = determineCSVImportMode(isConfigValid ? (config || localConfig as CSVImportConfig) : null);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -118,6 +119,34 @@ export function CSVImport({
           Chargez le fichier CSV contenant les tarifs à jour.
         </p>
       </div>
+
+      {/* Mode d'import indicator */}
+      <Card variant={importModeInfo.mode === 'application' ? "success" : "warning"}>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className={cn(
+              "p-2 rounded-lg",
+              importModeInfo.mode === 'application' ? "bg-success/10" : "bg-warning/10"
+            )}>
+              {importModeInfo.mode === 'application' 
+                ? <Check className="h-4 w-4 text-success" />
+                : <AlertTriangle className="h-4 w-4 text-warning" />
+              }
+            </div>
+            <div>
+              <p className="font-medium">
+                Mode : {importModeInfo.mode === 'application' ? 'Application des mises à jour' : 'LECTURE SEULE'}
+              </p>
+              <p className="text-sm text-muted-foreground">{importModeInfo.reason}</p>
+              {importModeInfo.missingElements.length > 0 && (
+                <p className="text-xs text-warning mt-1">
+                  Éléments manquants : {importModeInfo.missingElements.join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Configuration section - OBLIGATOIRE */}
       <Card variant={isConfigValid ? "success" : "warning"}>

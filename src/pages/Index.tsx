@@ -12,7 +12,7 @@ import { QuotePreview } from "@/components/steps/QuotePreview";
 import { ExportView } from "@/components/steps/ExportView";
 import { WorkflowProgress } from "@/components/workflow/WorkflowProgress";
 import { Button } from "@/components/ui/button";
-import { WorkflowStep, StepStatus, InvestData, ServiceOption } from "@/types/quote";
+import { WorkflowStep, StepStatus, ServiceOption } from "@/types/quote";
 import { parseOptionsServicesSheet } from "@/lib/options-parser";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -42,6 +42,7 @@ export default function Index() {
     investData,
     setInvestData,
     validateInvestData,
+    rejectInvestData,
     optionsData,
     setOptionsData,
     csvImport,
@@ -56,6 +57,7 @@ export default function Index() {
     canProceedToStep,
     canExportPDF,
     resetQuote,
+    setPreviewGenerated,
   } = useQuoteStore();
 
   const isWorkflowActive = currentView === 'workflow' || !!template || !!excelImport;
@@ -139,35 +141,28 @@ export default function Index() {
     setExcelImport(result);
     
     if (result.isValid) {
-      // Simuler le parsing de l'onglet "invest "
-      // En production, cela viendrait du parsing réel via Edge Function
-      const mockInvestData: InvestData = {
-        rows: [
-          { designation: 'Serveur Dell PowerEdge', nb: 2, vun: 3500.00, vtn: 7000.00, rawRowIndex: 5 },
-          { designation: 'Switch Cisco 48 ports', nb: 4, vun: 1200.00, vtn: 4800.00, rawRowIndex: 6 },
-          { designation: 'Onduleur APC 3000VA', nb: 2, vun: 850.00, vtn: 1700.00, rawRowIndex: 7 },
-          { designation: 'Câblage réseau Cat6', nb: 1, vun: 2500.00, vtn: 2500.00, rawRowIndex: 8 },
-          { designation: 'Installation et configuration', nb: 1, vun: 3000.00, vtn: 3000.00, rawRowIndex: 9 },
-          { designation: null, nb: null, vun: null, vtn: null, rawRowIndex: 10 }, // Ligne vide
-          { designation: 'TOTAL HT', nb: null, vun: null, vtn: 19000.00, rawRowIndex: 11 },
-        ],
-        headerRowIndex: 4,
-        sourceSheet: 'invest ',
-        isValidated: false,
-        validationStatus: 'importe_non_valide',
-        validationErrors: []
-      };
-      
-      setInvestData(mockInvestData);
+      // EN ATTENTE DU PARSING RÉEL VIA EDGE FUNCTION
+      // Les données viendront du parsing réel du fichier Excel
+      // Pour l'instant, on signale que le parsing backend est requis
+      addAuditLog({
+        type: 'excel-import',
+        message: 'Import Excel réussi - parsing des données en attente',
+        status: 'warning',
+        details: 'Le parsing réel des onglets "invest " et "Options services " nécessite l\'activation de Lovable Cloud'
+      });
       
       // Simuler le parsing de l'onglet "Options services "
       // En production, cela viendrait du parsing réel
       const optionsResult = parseOptionsServicesSheet(null); // Simule onglet vide
       setOptionsData(optionsResult);
       
+      // Note: setInvestData n'est PAS appelé ici
+      // Les données Invest doivent venir du parsing réel
+      // Pour le développement, on peut créer un état "en attente de parsing"
+      
       handleNextStep();
     }
-  }, [setExcelImport, setInvestData, setOptionsData, handleNextStep]);
+  }, [setExcelImport, setOptionsData, addAuditLog, handleNextStep]);
 
   const handleExport = useCallback(async () => {
     if (!canExportPDF()) {
@@ -214,6 +209,9 @@ export default function Index() {
             onValidate={() => {
               validateInvestData();
               handleNextStep();
+            }}
+            onReject={() => {
+              rejectInvestData();
             }}
             isValidated={investData?.validationStatus === 'valide_pret_injection'}
           />

@@ -2,7 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QuoteTemplate, InvestData, CSVImportResult, ServiceOption } from "@/types/quote";
-import { calculateInvestTotal } from "@/lib/invest-parser";
+import { getSourceTotal } from "@/lib/calculation-rules";
+import { checkInvestInjectionRules, prepareOptionsInjection } from "@/lib/pdf-injection";
 import { 
   FileText, 
   Eye, 
@@ -11,7 +12,8 @@ import {
   Settings,
   DollarSign,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,10 +32,16 @@ export function QuotePreview({
   selectedOptions,
   onExport 
 }: QuotePreviewProps) {
-  // Export bloqué si Invest non validé (statut valide_pret_injection requis)
+  // Vérifier les règles d'injection
+  const investInjectionCheck = checkInvestInjectionRules(investData);
   const isInvestReady = investData?.validationStatus === 'valide_pret_injection';
-  const isReady = template && isInvestReady;
+  const isReady = template && isInvestReady && investInjectionCheck.canInject;
   const selectedOpts = selectedOptions.filter(o => o.selected);
+
+  // Calculer le total depuis les sources (pas de calcul automatique)
+  const sourceLabels = investData?.rows.map(r => r.designation) || [];
+  const vtnValues = investData?.rows.map(r => r.vtn) || [];
+  const totalInfo = getSourceTotal(vtnValues, sourceLabels);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -184,9 +192,12 @@ export function QuotePreview({
                   <span className="font-medium">{investData.rows.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total VTN</span>
+                  <span className="text-muted-foreground">Total VTN (source)</span>
                   <span className="font-medium">
-                    {calculateInvestTotal(investData.rows).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                    {totalInfo.isFromSource && totalInfo.total !== null
+                      ? `${totalInfo.total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`
+                      : <span className="text-muted-foreground italic">—</span>
+                    }
                   </span>
                 </div>
                 <div className="flex justify-between">

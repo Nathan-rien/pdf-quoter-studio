@@ -1,5 +1,54 @@
 // Validation et parsing CSV avec contrat strict
-import { CSVImportConfig, CSVImportResult, CSVImportError } from '@/types/quote';
+import { CSVImportConfig, CSVImportResult, CSVImportError, CSVImportMode } from '@/types/quote';
+
+/**
+ * Détermine le mode d'import CSV
+ * 
+ * MODE LECTURE_SEULE : Si contrat non défini, l'import est journalisé mais
+ * AUCUNE mise à jour de prix n'est appliquée.
+ * 
+ * MODE APPLICATION : Si contrat complet, les mises à jour sont appliquées.
+ */
+export function determineCSVImportMode(config: CSVImportConfig | null): {
+  mode: CSVImportMode;
+  reason: string;
+  missingElements: string[];
+} {
+  const missingElements: string[] = [];
+
+  if (!config) {
+    return {
+      mode: 'lecture_seule',
+      reason: 'Contrat CSV non défini. Import autorisé en lecture seule - aucune mise à jour de prix appliquée.',
+      missingElements: ['encodage', 'séparateur', 'colonnes', 'clé de correspondance', 'types']
+    };
+  }
+
+  // Vérifier que tous les éléments du contrat sont définis
+  if (!config.encoding) missingElements.push('encodage');
+  if (!config.separator) missingElements.push('séparateur');
+  if (!config.requiredColumns || config.requiredColumns.length === 0) {
+    missingElements.push('colonnes requises');
+  }
+  if (!config.keyColumn) missingElements.push('clé de correspondance');
+  if (!config.columnTypes || Object.keys(config.columnTypes).length === 0) {
+    missingElements.push('types de colonnes');
+  }
+
+  if (missingElements.length > 0) {
+    return {
+      mode: 'lecture_seule',
+      reason: `Éléments manquants dans le contrat CSV : ${missingElements.join(', ')}. Import en lecture seule uniquement.`,
+      missingElements
+    };
+  }
+
+  return {
+    mode: 'application',
+    reason: 'Contrat CSV complet - mise à jour des prix autorisée',
+    missingElements: []
+  };
+}
 
 /**
  * Valide un import CSV selon la configuration contractuelle
@@ -16,24 +65,30 @@ export function validateCSVImport(
   config: CSVImportConfig | null
 ): CSVImportResult {
   const importDate = new Date();
+  const importMode = determineCSVImportMode(config);
 
-  // BLOQUANT : pas de configuration
-  if (!config) {
+  // MODE LECTURE SEULE : journaliser mais pas de validation stricte
+  if (importMode.mode === 'lecture_seule') {
+    const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
+    
     return {
       fileName,
       importDate,
-      rowCount: 0,
-      isValid: false,
+      rowCount: Math.max(0, lines.length - 1), // -1 pour l'en-tête
+      isValid: true, // Valide pour lecture seule
       errors: [{
         type: 'config_missing',
-        message: 'Configuration CSV requise avant import. Veuillez définir : encodage, séparateur, colonnes exactes (noms contractuels), types de données, et colonne clé de correspondance.'
+        message: importMode.reason
       }],
-      config: null
+      config: null,
+      importedRows: 0, // Aucune ligne appliquée
+      matchedKeys: 0
     };
   }
 
+  // MODE APPLICATION : validation stricte
   const errors: CSVImportError[] = [];
-  
+
   // Parser le contenu
   const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
   
