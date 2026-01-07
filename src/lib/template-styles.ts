@@ -16,8 +16,8 @@ export const ALLOWED_COLORS = [
 
 // Polices autorisées
 export const ALLOWED_FONTS = [
-  { name: 'Garet', value: 'Garet, sans-serif' },
-  { name: 'DM Sans', value: 'DM Sans, sans-serif' },
+  { name: 'Garet', value: 'Outfit, sans-serif' },
+  { name: 'DM Sans', value: '"DM Sans", sans-serif' },
   { name: 'Inter', value: 'Inter, sans-serif' },
   { name: 'Roboto', value: 'Roboto, sans-serif' },
 ] as const;
