@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ServiceOptionDefinition } from "@/types/options-admin";
+import { ServiceOptionDefinition, ServiceItem } from "@/types/options-admin";
 import { useOptionsAdminStore } from "@/stores/optionsAdminStore";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,11 @@ interface OptionsServiceCardProps {
   option: ServiceOptionDefinition;
 }
 
+// Helper pour migrer les anciens services (string) vers le nouveau format (ServiceItem)
+const migrateService = (service: string | ServiceItem): ServiceItem => {
+  return typeof service === 'string' ? { text: service } : service;
+};
+
 export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -52,10 +57,16 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
     addServiceToOption,
     updateService,
     removeService,
+    addSubItemToService,
+    updateSubItem,
+    removeSubItem,
     setOptionPrice,
     removeOptionPrice,
     toggleOptionActive,
   } = useOptionsAdminStore();
+
+  // Migrer les services pour l'affichage
+  const services: ServiceItem[] = option.services.map(migrateService);
 
   const handleTitleBlur = () => {
     setIsEditingTitle(false);
@@ -211,13 +222,16 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
             <div className="pl-9 space-y-2">
               {/* Services list */}
               <div className="space-y-1">
-                {option.services.map((service, index) => (
+                {services.map((service, index) => (
                   <ServiceItemEditor
                     key={index}
-                    value={service}
+                    service={service}
                     onChange={(newValue) => updateService(option.id, index, newValue)}
                     onDelete={() => removeService(option.id, index)}
-                    canDelete={option.services.length > 1}
+                    canDelete={services.length > 1}
+                    onAddSubItem={() => addSubItemToService(option.id, index, "Nouvelle précision")}
+                    onUpdateSubItem={(subIndex, value) => updateSubItem(option.id, index, subIndex, value)}
+                    onDeleteSubItem={(subIndex) => removeSubItem(option.id, index, subIndex)}
                   />
                 ))}
               </div>

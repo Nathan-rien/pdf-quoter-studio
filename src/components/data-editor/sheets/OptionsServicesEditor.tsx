@@ -71,7 +71,11 @@ export function OptionsServicesEditor() {
     selectedAdminOptions.forEach(optionId => {
       const option = activeAdminOptions.find(opt => opt.id === optionId);
       if (option) {
-        addOptionsServiceFromAdmin(option.title, option.services, option.price?.amount);
+        // Convertir ServiceItem[] en string[] pour l'import
+        const servicesAsStrings = option.services.map(s => 
+          typeof s === 'string' ? s : s.text
+        );
+        addOptionsServiceFromAdmin(option.title, servicesAsStrings, option.price?.amount);
       }
     });
     setSelectedAdminOptions([]);
