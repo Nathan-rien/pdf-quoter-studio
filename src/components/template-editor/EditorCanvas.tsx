@@ -40,17 +40,21 @@ export function EditorCanvas() {
     currentVersion,
     editorMode,
     selectedElementId,
+    selectedElementIds,
     selectedDynamicZoneId,
     addElementMode,
     selectedShapeType,
     selectElement,
+    toggleElementSelection,
+    clearSelection,
     selectDynamicZone,
     addElement,
     addShape,
     setAddElementMode,
     updateElementPosition,
     updateElementSize,
-    updateDynamicZonePosition
+    updateDynamicZonePosition,
+    moveSelectedElements
   } = useTemplateEditorStore();
 
   // États pour le drag & drop
@@ -72,51 +76,40 @@ export function EditorCanvas() {
 
   // Raccourcis clavier pour déplacer les éléments
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Vérifier qu'on a un élément sélectionné et qu'on est en mode édition
-    if (!selectedElementId || !currentVersion || currentVersion.status !== 'brouillon' || editorMode !== 'edit') {
+    // Vérifier qu'on a des éléments sélectionnés et qu'on est en mode édition
+    if (selectedElementIds.length === 0 || !currentVersion || currentVersion.status !== 'brouillon' || editorMode !== 'edit') {
       return;
     }
     
-    const pageContentForKey = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
-    const element = pageContentForKey?.elements.find(el => el.id === selectedElementId);
-    if (!element || element.isDynamic) return;
-    
     const step = e.shiftKey ? MOVE_STEP_FINE : MOVE_STEP;
-    let newX = element.position.x;
-    let newY = element.position.y;
     let moved = false;
     
     switch (e.key) {
       case 'ArrowUp':
-        newY = Math.max(0, element.position.y - step);
-        moved = true;
+        moved = moveSelectedElements(0, -step);
         break;
       case 'ArrowDown':
-        newY = Math.min(CANVAS_SCALE.height - element.size.height, element.position.y + step);
-        moved = true;
+        moved = moveSelectedElements(0, step);
         break;
       case 'ArrowLeft':
-        newX = Math.max(0, element.position.x - step);
-        moved = true;
+        moved = moveSelectedElements(-step, 0);
         break;
       case 'ArrowRight':
-        newX = Math.min(CANVAS_SCALE.width - element.size.width, element.position.x + step);
-        moved = true;
+        moved = moveSelectedElements(step, 0);
         break;
     }
     
     if (moved) {
       e.preventDefault();
-      updateElementPosition(selectedElementId, { x: newX, y: newY });
     }
-  }, [selectedElementId, currentVersion, editorMode, selectedPageNumber, updateElementPosition]);
+  }, [selectedElementIds, currentVersion, editorMode, moveSelectedElements]);
 
   // Focus sur le conteneur pour capturer les événements clavier
   useEffect(() => {
-    if (selectedElementId && containerRef.current) {
+    if (selectedElementIds.length > 0 && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [selectedElementId]);
+  }, [selectedElementIds]);
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
     p => p.pageNumber === selectedPageNumber
@@ -172,8 +165,18 @@ export function EditorCanvas() {
       y: e.clientY - rect.top
     });
     setIsDragging(true);
-    selectElement(elementId);
-  }, [isEditable, isAddMode, pageContent, selectElement]);
+    
+    // Multi-sélection avec Ctrl ou Cmd
+    if (e.ctrlKey || e.metaKey) {
+      toggleElementSelection(elementId);
+    } else {
+      // Si l'élément n'est pas déjà dans la sélection, le sélectionner seul
+      if (!selectedElementIds.includes(elementId)) {
+        selectElement(elementId);
+      }
+      // Sinon, garder la multi-sélection actuelle pour pouvoir déplacer le groupe
+    }
+  }, [isEditable, isAddMode, pageContent, selectElement, toggleElementSelection, selectedElementIds]);
 
   // Handler pour démarrer le resize
   const handleResizeMouseDown = useCallback((elementId: string, handle: 'nw' | 'ne' | 'sw' | 'se', e: React.MouseEvent) => {
@@ -396,7 +399,12 @@ export function EditorCanvas() {
     e.stopPropagation();
     if (isDragging) return;
     
-    selectElement(elementId);
+    // Multi-sélection avec Ctrl ou Cmd
+    if (e.ctrlKey || e.metaKey) {
+      toggleElementSelection(elementId);
+    } else {
+      selectElement(elementId);
+    }
     
     // Afficher un hint si en mode lecture seule
     if (!isEditable && currentVersion?.status !== 'brouillon') {
@@ -430,7 +438,7 @@ export function EditorCanvas() {
       return;
     }
     
-    selectElement(null);
+    clearSelection();
     selectDynamicZone(null);
   };
 
@@ -587,14 +595,15 @@ export function EditorCanvas() {
             .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
             .map((element) => {
               const style = getElementStyle({ ...element, type: element.type });
-              const isSelected = selectedElementId === element.id;
+              const isSelected = selectedElementIds.includes(element.id);
+              const isPrimarySelected = selectedElementId === element.id;
               const isTextElement = element.type === 'text';
               const isShapeElement = element.type === 'shape';
               const textContent = isTextElement ? element.content as TextContent : null;
               const imageContent = element.type === 'image' ? element.content as ImageContent : null;
               const shapeContent = isShapeElement ? element.content as ShapeContent : null;
               
-              const isDraggedElement = isDragging && selectedElementId === element.id;
+              const isDraggedElement = isDragging && isSelected;
               const isResizingElement = isResizing && selectedElementId === element.id;
               
               // Rendu du texte avec support des listes
@@ -684,7 +693,9 @@ export function EditorCanvas() {
                     isDraggedElement && "cursor-grabbing opacity-80 shadow-lg scale-[1.02]",
                     isResizingElement && "ring-2 ring-primary",
                     isSelected 
-                      ? "ring-1 ring-primary bg-primary/5" 
+                      ? isPrimarySelected 
+                        ? "ring-2 ring-primary bg-primary/10" 
+                        : "ring-1 ring-primary/70 bg-primary/5"
                       : "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50",
                   )}
                   style={{
@@ -693,7 +704,7 @@ export function EditorCanvas() {
                   }}
                   onMouseDown={(e) => handleMouseDown(element.id, e)}
                   onClick={(e) => handleElementClick(element.id, e)}
-                  title={isEditable ? "Glisser pour déplacer" : "Mode lecture seule"}
+                  title={isEditable ? (selectedElementIds.length > 1 ? "Ctrl+clic pour modifier la sélection" : "Glisser pour déplacer, Ctrl+clic pour multi-sélection") : "Mode lecture seule"}
                 >
                   {isTextElement && textContent && (
                     <div 

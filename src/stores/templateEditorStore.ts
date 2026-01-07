@@ -44,6 +44,10 @@ interface TemplateEditorStore extends TemplateEditorState {
   // Actions de navigation
   setSelectedPage: (pageNumber: PDFPageNumber) => void;
   selectElement: (elementId: string | null) => void;
+  toggleElementSelection: (elementId: string) => void; // Multi-sélection avec Ctrl+clic
+  selectMultipleElements: (elementIds: string[]) => void;
+  clearSelection: () => void;
+  getSelectedElements: () => EditableElement[];
   setEditorMode: (mode: 'view' | 'edit') => void;
 
   // Getter pour l'élément sélectionné (dynamique)
@@ -54,6 +58,11 @@ interface TemplateEditorStore extends TemplateEditorState {
   updateImageContent: (elementId: string, content: Partial<ImageContent>) => boolean;
   updateElementPosition: (elementId: string, position: { x: number; y: number }) => boolean;
   updateElementSize: (elementId: string, size: { width: number; height: number }) => boolean;
+  
+  // Actions multi-sélection
+  moveSelectedElements: (deltaX: number, deltaY: number) => boolean;
+  deleteSelectedElements: () => number;
+  duplicateSelectedElements: () => EditableElement[];
 
   // Ajout d'éléments
   setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape') => void;
@@ -154,6 +163,7 @@ const initialState: TemplateEditorState = {
   currentVersion: null,
   allVersions: [createPublishedDemoVersion(DEFAULT_TEMPLATE.id)],
   selectedElementId: null,
+  selectedElementIds: [],
   selectedDynamicZoneId: null,
   selectedPageNumber: 1,
   editorMode: 'view',
@@ -382,12 +392,12 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   // Navigation
   setSelectedPage: (pageNumber) => {
-    set({ selectedPageNumber: pageNumber, selectedElementId: null });
+    set({ selectedPageNumber: pageNumber, selectedElementId: null, selectedElementIds: [] });
   },
 
   selectElement: (elementId) => {
     if (!elementId) {
-      set({ selectedElementId: null });
+      set({ selectedElementId: null, selectedElementIds: [] });
       return;
     }
 
@@ -396,8 +406,64 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
     const element = pageContent.elements.find(e => e.id === elementId);
     if (element && !element.isDynamic) {
-      set({ selectedElementId: elementId });
+      set({ selectedElementId: elementId, selectedElementIds: [elementId] });
     }
+  },
+
+  // Multi-sélection avec Ctrl+clic
+  toggleElementSelection: (elementId) => {
+    const { selectedElementIds } = get();
+    const pageContent = get().getCurrentPageContent();
+    if (!pageContent) return;
+
+    const element = pageContent.elements.find(e => e.id === elementId);
+    if (!element || element.isDynamic) return;
+
+    let newSelectedIds: string[];
+    if (selectedElementIds.includes(elementId)) {
+      // Retirer de la sélection
+      newSelectedIds = selectedElementIds.filter(id => id !== elementId);
+    } else {
+      // Ajouter à la sélection
+      newSelectedIds = [...selectedElementIds, elementId];
+    }
+
+    set({ 
+      selectedElementIds: newSelectedIds,
+      selectedElementId: newSelectedIds.length === 1 ? newSelectedIds[0] : (newSelectedIds.length > 0 ? newSelectedIds[0] : null)
+    });
+  },
+
+  selectMultipleElements: (elementIds) => {
+    const pageContent = get().getCurrentPageContent();
+    if (!pageContent) return;
+
+    // Filtrer seulement les éléments valides et non-dynamiques
+    const validIds = elementIds.filter(id => {
+      const element = pageContent.elements.find(e => e.id === id);
+      return element && !element.isDynamic;
+    });
+
+    set({
+      selectedElementIds: validIds,
+      selectedElementId: validIds.length > 0 ? validIds[0] : null
+    });
+  },
+
+  clearSelection: () => {
+    set({ selectedElementId: null, selectedElementIds: [] });
+  },
+
+  getSelectedElements: () => {
+    const { selectedElementIds, currentVersion, selectedPageNumber } = get();
+    if (!currentVersion) return [];
+    
+    const page = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
+    if (!page) return [];
+
+    return selectedElementIds
+      .map(id => page.elements.find(e => e.id === id))
+      .filter((e): e is EditableElement => e !== undefined && !e.isDynamic);
   },
 
   setEditorMode: (mode) => {
@@ -688,10 +754,139 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     set({
       currentVersion: { ...currentVersion, pages: updatedPages },
       hasUnsavedChanges: true,
-      selectedElementId: duplicatedElement.id
+      selectedElementId: duplicatedElement.id,
+      selectedElementIds: [duplicatedElement.id]
     });
 
     return duplicatedElement;
+  },
+
+  // Déplacer tous les éléments sélectionnés
+  moveSelectedElements: (deltaX, deltaY) => {
+    const { currentVersion, selectedPageNumber, selectedElementIds } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+    if (selectedElementIds.length === 0) return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+
+    let movedCount = 0;
+    selectedElementIds.forEach(elementId => {
+      const elementIndex = updatedElements.findIndex(e => e.id === elementId);
+      if (elementIndex === -1) return;
+
+      const element = updatedElements[elementIndex];
+      if (element.isDynamic) return;
+
+      // Pour les formes verrouillées, ne pas déplacer
+      if (element.type === 'shape') {
+        const shapeContent = element.content as ShapeContent;
+        if (shapeContent.isLocked) return;
+      }
+
+      updatedElements[elementIndex] = {
+        ...element,
+        position: {
+          x: Math.max(0, element.position.x + deltaX),
+          y: Math.max(0, element.position.y + deltaY)
+        }
+      };
+      movedCount++;
+    });
+
+    if (movedCount === 0) return false;
+
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
+
+  // Supprimer tous les éléments sélectionnés
+  deleteSelectedElements: () => {
+    const { currentVersion, selectedPageNumber, selectedElementIds } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return 0;
+    if (selectedElementIds.length === 0) return 0;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return 0;
+
+    const elementsToDelete = new Set(selectedElementIds);
+    const updatedPages = [...currentVersion.pages];
+    const originalLength = updatedPages[pageIndex].elements.length;
+    
+    // Filtrer les éléments non-dynamiques qui sont dans la sélection
+    const updatedElements = updatedPages[pageIndex].elements.filter(e => {
+      if (e.isDynamic) return true; // Garder les éléments dynamiques
+      return !elementsToDelete.has(e.id);
+    });
+
+    const deletedCount = originalLength - updatedElements.length;
+    if (deletedCount === 0) return 0;
+
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementId: null,
+      selectedElementIds: []
+    });
+
+    return deletedCount;
+  },
+
+  // Dupliquer tous les éléments sélectionnés
+  duplicateSelectedElements: () => {
+    const { currentVersion, selectedPageNumber, selectedElementIds } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return [];
+    if (selectedElementIds.length === 0) return [];
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return [];
+
+    const existingElements = currentVersion.pages[pageIndex].elements.filter(e => !e.isDynamic);
+    let maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+
+    const duplicatedElements: EditableElement[] = [];
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+
+    selectedElementIds.forEach(elementId => {
+      const element = updatedPages[pageIndex].elements.find(e => e.id === elementId);
+      if (!element || element.isDynamic) return;
+
+      maxZIndex++;
+      const duplicated: EditableElement = {
+        ...element,
+        id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        position: { x: element.position.x + 20, y: element.position.y + 20 },
+        content: { ...element.content },
+        zIndex: maxZIndex
+      };
+
+      updatedElements.push(duplicated);
+      duplicatedElements.push(duplicated);
+    });
+
+    if (duplicatedElements.length === 0) return [];
+
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementIds: duplicatedElements.map(e => e.id),
+      selectedElementId: duplicatedElements.length > 0 ? duplicatedElements[0].id : null
+    });
+
+    return duplicatedElements;
   },
 
   // Mise à jour du contenu d'une forme

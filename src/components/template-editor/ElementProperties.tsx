@@ -82,11 +82,84 @@ export function ElementProperties() {
     createNewVersion,
     getSelectedElement,
     bringToFront,
-    sendToBack
+    sendToBack,
+    selectedElementIds,
+    getSelectedElements,
+    deleteSelectedElements,
+    duplicateSelectedElements
   } = useTemplateEditorStore();
 
   const selectedElement = getSelectedElement();
+  const selectedElements = getSelectedElements();
   const isEditable = currentVersion?.status === 'brouillon';
+  const isMultiSelect = selectedElementIds.length > 1;
+
+  // Panel multi-sélection
+  if (isMultiSelect) {
+    return (
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="text-sm flex items-center gap-2 shrink-0">
+              <Layers className="h-4 w-4" />
+              {selectedElementIds.length} éléments
+            </CardTitle>
+            <StatusBadge isEditable={isEditable} hasUnsavedChanges={hasUnsavedChanges} />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-3 rounded-lg bg-muted/50 text-sm">
+            <p className="font-medium mb-2">Multi-sélection active</p>
+            <p className="text-xs text-muted-foreground">
+              {selectedElements.filter(e => e.type === 'text').length} texte(s), {' '}
+              {selectedElements.filter(e => e.type === 'image').length} image(s), {' '}
+              {selectedElements.filter(e => e.type === 'shape').length} forme(s)
+            </p>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Utilisez les flèches pour déplacer tous les éléments sélectionnés.
+            Ctrl+clic pour modifier la sélection.
+          </p>
+
+          <Separator />
+
+          {isEditable && (
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  const duplicated = duplicateSelectedElements();
+                  if (duplicated.length > 0) {
+                    toast.success(`${duplicated.length} élément(s) dupliqué(s)`);
+                  }
+                }}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Dupliquer la sélection
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  const count = deleteSelectedElements();
+                  if (count > 0) {
+                    toast.success(`${count} élément(s) supprimé(s)`);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Supprimer la sélection
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!selectedElement) {
     return (
@@ -109,7 +182,7 @@ export function ElementProperties() {
               Aucun élément sélectionné
             </p>
             <p className="text-xs text-muted-foreground">
-              Cliquez sur un élément éditable dans le canvas pour modifier ses propriétés.
+              Cliquez sur un élément éditable. Ctrl+clic pour multi-sélection.
             </p>
           </div>
         </CardContent>
