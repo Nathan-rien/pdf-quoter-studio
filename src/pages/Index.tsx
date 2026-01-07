@@ -5,7 +5,6 @@ import { Dashboard } from "@/components/dashboard/Dashboard";
 import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateSelection } from "@/components/steps/TemplateSelection";
 import { DataEditorLayout } from "@/components/data-editor";
-import { InvestValidation } from "@/components/steps/InvestValidation";
 import { CSVImport } from "@/components/steps/CSVImport";
 import { QuotePreview } from "@/components/steps/QuotePreview";
 import { ExportView } from "@/components/steps/ExportView";
@@ -16,12 +15,11 @@ import { Button } from "@/components/ui/button";
 import { WorkflowStep, StepStatus } from "@/types/quote";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// 6 étapes : Template → Données → Tarifs CSV → Validation → Aperçu → Export
+// 5 étapes : Template → Données → Tarifs CSV → Aperçu → Export
 const workflowStepsConfig: { step: WorkflowStep; label: string }[] = [
   { step: 'template', label: 'Template' },
   { step: 'data-editor', label: 'Données' },
   { step: 'csv-import', label: 'Tarifs CSV' },
-  { step: 'invest-validation', label: 'Validation' },
   { step: 'preview', label: 'Aperçu' },
   { step: 'export', label: 'Export' },
 ];
@@ -37,8 +35,6 @@ export default function Index() {
     excelImport,
     setExcelImport,
     investData,
-    validateInvestData,
-    rejectInvestData,
     csvImport,
     setCSVImport,
     csvConfig,
@@ -54,8 +50,7 @@ export default function Index() {
 
   const getStepStatus = (step: WorkflowStep): StepStatus => {
     const stepOrder: WorkflowStep[] = [
-      'template', 'data-editor', 'csv-import', 
-      'invest-validation', 'preview', 'export'
+      'template', 'data-editor', 'csv-import', 'preview', 'export'
     ];
     const currentIndex = stepOrder.indexOf(currentStep);
     const stepIndex = stepOrder.indexOf(step);
@@ -64,7 +59,6 @@ export default function Index() {
       if (step === 'template' && template) return 'complete';
       if (step === 'data-editor') return 'complete';
       if (step === 'csv-import') return csvImport?.isValid ? 'complete' : 'pending';
-      if (step === 'invest-validation' && investData?.validationStatus === 'valide_pret_injection') return 'complete';
       return 'pending';
     }
     
@@ -92,8 +86,7 @@ export default function Index() {
 
   const handleNextStep = useCallback(() => {
     const stepOrder: WorkflowStep[] = [
-      'template', 'data-editor', 'csv-import', 
-      'invest-validation', 'preview', 'export'
+      'template', 'data-editor', 'csv-import', 'preview', 'export'
     ];
     const currentIndex = stepOrder.indexOf(currentStep);
     if (currentIndex < stepOrder.length - 1) {
@@ -106,8 +99,7 @@ export default function Index() {
 
   const handlePrevStep = useCallback(() => {
     const stepOrder: WorkflowStep[] = [
-      'template', 'data-editor', 'csv-import', 
-      'invest-validation', 'preview', 'export'
+      'template', 'data-editor', 'csv-import', 'preview', 'export'
     ];
     const currentIndex = stepOrder.indexOf(currentStep);
     if (currentIndex > 0) {
@@ -165,20 +157,6 @@ export default function Index() {
         );
       case 'data-editor':
         return <DataEditorLayout />;
-      case 'invest-validation':
-        return (
-          <InvestValidation 
-            investData={investData}
-            onValidate={() => {
-              validateInvestData();
-              handleNextStep();
-            }}
-            onReject={() => {
-              rejectInvestData();
-            }}
-            isValidated={investData?.validationStatus === 'valide_pret_injection'}
-          />
-        );
       case 'csv-import':
         return (
           <CSVImport 

@@ -94,8 +94,7 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
     const stepOrder: WorkflowStep[] = [
       'template',
       'data-editor',
-      'csv-import',           // Étape 3
-      'invest-validation',    // Étape 4
+      'csv-import',
       'preview',
       'export'
     ];
@@ -108,8 +107,9 @@ export const useQuoteStore = create<QuoteStore>((set, get) => ({
     // Check prerequisites
     if (targetIndex >= 1 && !state.template) return false;
     if (targetIndex >= 2 && (!state.excelImport || !state.excelImport.isValid)) return false;
-    // CSV is optional - can proceed to validation without CSV
-    if (targetIndex >= 4 && (!state.investData || state.investData.validationStatus !== 'valide_pret_injection')) return false;
+    // CSV is optional - can proceed to preview without CSV
+    // Preview requires valid invest data
+    if (targetIndex >= 3 && (!state.investData || state.investData.validationStatus !== 'valide_pret_injection')) return false;
     
     return true;
   },
