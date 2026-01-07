@@ -71,6 +71,7 @@ export function EditorCanvas() {
   const [isLassoing, setIsLassoing] = useState(false);
   const [lassoStart, setLassoStart] = useState<{ x: number; y: number } | null>(null);
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
+  const justFinishedLassoRef = useRef(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -407,6 +408,9 @@ export function EditorCanvas() {
         
         if (intersectingIds.length > 0) {
           selectMultipleElements(intersectingIds);
+          // Marquer qu'on vient de finir un lasso avec sélection pour éviter que onClick efface
+          justFinishedLassoRef.current = true;
+          setTimeout(() => { justFinishedLassoRef.current = false; }, 0);
         }
       }
     }
@@ -441,16 +445,21 @@ export function EditorCanvas() {
     // Ne pas démarrer le lasso si on clique sur un élément ou en mode ajout
     if (isAddMode || !isEditable) return;
     
-    // Vérifier qu'on clique bien sur le canvas et non sur un élément
-    if (e.target !== canvasRef.current) return;
+    // Vérifier qu'on clique bien sur le canvas (ou ses enfants directs de décoration, pas sur un élément interactif)
+    const target = e.target as HTMLElement;
+    // Si on clique sur un élément avec data-element-id, c'est un élément interactif
+    if (target.closest('[data-element-id]')) return;
     
-    const rect = canvasRef.current.getBoundingClientRect();
+    const rect = canvasRef.current!.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * CANVAS_SCALE.width;
     const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SCALE.height;
     
     setLassoStart({ x, y });
     setLassoEnd({ x, y });
     setIsLassoing(true);
+    
+    // Empêcher la sélection de texte pendant le lasso
+    e.preventDefault();
   }, [isAddMode, isEditable]);
 
   // Handler pour démarrer le drag d'une zone dynamique
@@ -490,7 +499,15 @@ export function EditorCanvas() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Ne pas réagir au click si on vient de terminer un lasso ou un drag
     if (isDragging || isDraggingZone || isResizing) return;
+    
+    // Si on vient de finir un lasso avec sélection, ne pas clear
+    if (justFinishedLassoRef.current) return;
+    
+    // Si on a cliqué sur un élément, laisser handleElementClick gérer
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-element-id]')) return;
     
     // Mode ajout d'élément
     if (isAddMode && isEditable) {
@@ -512,6 +529,7 @@ export function EditorCanvas() {
       return;
     }
     
+    // Clear seulement sur un clic simple sur le canvas vide
     clearSelection();
     selectDynamicZone(null);
   };
