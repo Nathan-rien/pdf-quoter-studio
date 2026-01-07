@@ -263,20 +263,22 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   return result;
 }
 
-// Extract text using pdfjs-dist legacy build
+// Extract text using pdfjs-dist legacy build (v3.x - no top-level await)
 async function extractTextWithPdfJs(file: File): Promise<string> {
   try {
-    // Dynamic import of legacy build to avoid top-level await
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    // Dynamic import of legacy build (v3.x uses .js files)
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
     
-    // Set worker source
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+    // Set worker source using Vite's ?url pattern for reliable resolution
+    const workerUrl = new URL(
+      'pdfjs-dist/legacy/build/pdf.worker.min.js',
       import.meta.url
     ).toString();
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
     
     let fullText = '';
     
@@ -284,11 +286,9 @@ async function extractTextWithPdfJs(file: File): Promise<string> {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
-        .map((item) => {
-          if ('str' in item && typeof item.str === 'string') {
-            return item.str;
-          }
-          return '';
+        .map((item: unknown) => {
+          const textItem = item as { str?: string };
+          return textItem.str || '';
         })
         .join(' ');
       fullText += pageText + '\n';
