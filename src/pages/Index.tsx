@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useQuoteStore } from "@/stores/quoteStore";
 import { AppSidebar, ViewType } from "@/components/layout/AppSidebar";
 import { Dashboard } from "@/components/dashboard/Dashboard";
+import { RentalProposalDashboard } from "@/components/dashboard/RentalProposalDashboard";
 import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateSelection } from "@/components/steps/TemplateSelection";
 import { DataEditorLayout } from "@/components/data-editor";
@@ -201,6 +202,14 @@ export default function Index() {
           <Dashboard 
             onNewQuote={handleStartNewQuote}
             onResumeQuote={handleResumeQuote}
+            onViewHistory={() => setCurrentView('history')}
+          />
+        );
+      case 'rental-proposal':
+        return (
+          <RentalProposalDashboard 
+            onNewProposal={handleStartNewQuote}
+            onResumeProposal={handleResumeQuote}
             onViewHistory={() => setCurrentView('history')}
           />
         );

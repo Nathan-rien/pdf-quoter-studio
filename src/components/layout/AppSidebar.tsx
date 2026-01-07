@@ -12,7 +12,8 @@ import {
   CheckCircle,
   Palette,
   Circle,
-  Lock
+  Lock,
+  Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkflowStep } from "@/types/quote";
@@ -23,7 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type ViewType = 'dashboard' | 'workflow' | 'history' | 'template-editor' | 'options-admin';
+export type ViewType = 'dashboard' | 'rental-proposal' | 'workflow' | 'history' | 'template-editor' | 'options-admin';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -93,6 +94,15 @@ export function AppSidebar({
         >
           <LayoutDashboard className="h-4 w-4" />
           Tableau de bord
+        </Button>
+
+        <Button
+          variant={currentView === 'rental-proposal' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-3"
+          onClick={() => onNavigate('rental-proposal')}
+        >
+          <Building2 className="h-4 w-4" />
+          Proposition Location
         </Button>
 
         <Button
