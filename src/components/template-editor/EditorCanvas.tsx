@@ -1,8 +1,9 @@
 /**
  * Canvas de l'éditeur - Visualisation et édition de la page
- * Affiche les éléments réels du PDF avec sélection interactive
+ * Affiche les éléments réels du PDF avec sélection interactive et drag & drop
  */
 
+import { useState, useRef, useCallback } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,8 +42,14 @@ export function EditorCanvas() {
     addElementMode,
     selectElement,
     addElement,
-    setAddElementMode
+    setAddElementMode,
+    updateElementPosition
   } = useTemplateEditorStore();
+
+  // États pour le drag & drop
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
     p => p.pageNumber === selectedPageNumber
@@ -69,8 +76,59 @@ export function EditorCanvas() {
     };
   };
 
+  // Drag & Drop handlers
+  const handleMouseDown = useCallback((elementId: string, e: React.MouseEvent) => {
+    if (!isEditable || isAddMode) return;
+    
+    const element = pageContent?.elements.find(el => el.id === elementId);
+    if (!element || element.isDynamic) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+    setIsDragging(true);
+    selectElement(elementId);
+  }, [isEditable, isAddMode, pageContent, selectElement]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging || !selectedElementId || !canvasRef.current) return;
+    
+    const element = pageContent?.elements.find(el => el.id === selectedElementId);
+    if (!element) return;
+    
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const x = ((e.clientX - canvasRect.left - dragOffset.x) / canvasRect.width) * CANVAS_SCALE.width;
+    const y = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * CANVAS_SCALE.height;
+    
+    // Clamper aux limites du canvas
+    const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - element.size.width));
+    const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - element.size.height));
+    
+    updateElementPosition(selectedElementId, { 
+      x: Math.round(clampedX), 
+      y: Math.round(clampedY) 
+    });
+  }, [isDragging, selectedElementId, dragOffset, pageContent, updateElementPosition]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
+    }
+  }, [isDragging]);
+
   const handleElementClick = (elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isDragging) return;
+    
     selectElement(elementId);
     
     // Afficher un hint si en mode lecture seule
@@ -83,6 +141,8 @@ export function EditorCanvas() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDragging) return;
+    
     // Mode ajout d'élément
     if (isAddMode && isEditable) {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -149,11 +209,13 @@ export function EditorCanvas() {
 
         {/* Canvas A4 simulé */}
         <div 
+          ref={canvasRef}
           className={cn(
             "relative mx-auto bg-white rounded-lg shadow-lg overflow-hidden",
             "border-2",
             isEditable ? "border-primary/30" : "border-border",
-            isAddMode && "cursor-crosshair"
+            isAddMode && "cursor-crosshair",
+            isDragging && "cursor-grabbing"
           )}
           style={{
             width: '100%',
@@ -161,6 +223,9 @@ export function EditorCanvas() {
             aspectRatio: '210 / 297', // A4 ratio
           }}
           onClick={handleCanvasClick}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
         >
           {/* Header simulé */}
           <div className="absolute top-3 left-4 right-4 flex items-center justify-between pb-2 border-b border-gray-100">
@@ -196,19 +261,24 @@ export function EditorCanvas() {
               const textContent = isTextElement ? element.content as TextContent : null;
               const imageContent = !isTextElement && element.type === 'image' ? element.content as ImageContent : null;
               
+              const isDraggedElement = isDragging && selectedElementId === element.id;
+              
               return (
                 <div
                   key={element.id}
                   className={cn(
-                    "absolute cursor-pointer transition-all duration-150 overflow-hidden",
-                    "rounded-sm",
+                    "absolute overflow-hidden rounded-sm",
+                    !isDragging && "transition-all duration-150",
+                    isEditable && !element.isDynamic ? "cursor-grab" : "cursor-pointer",
+                    isDraggedElement && "cursor-grabbing opacity-80 shadow-lg scale-[1.02]",
                     isSelected 
                       ? "ring-2 ring-primary ring-offset-1 bg-primary/5 z-20" 
                       : "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50 z-10",
                   )}
                   style={style}
+                  onMouseDown={(e) => handleMouseDown(element.id, e)}
                   onClick={(e) => handleElementClick(element.id, e)}
-                  title={isEditable ? "Cliquez pour modifier" : "Mode lecture seule"}
+                  title={isEditable ? "Glisser pour déplacer" : "Mode lecture seule"}
                 >
                   {isTextElement && textContent && (
                     <div 
