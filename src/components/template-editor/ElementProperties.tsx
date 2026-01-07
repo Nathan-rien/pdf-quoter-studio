@@ -57,8 +57,8 @@ export function ElementProperties() {
     return (
       <Card className="h-full">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="text-sm flex items-center gap-2 shrink-0">
               <MousePointer className="h-4 w-4" />
               Propriétés
             </CardTitle>
@@ -184,14 +184,16 @@ export function ElementProperties() {
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className="text-sm flex items-center gap-2 shrink-0">
             {selectedElement.type === 'text' ? (
               <Type className="h-4 w-4" />
             ) : (
               <Image className="h-4 w-4" />
             )}
-            Propriétés - {selectedElement.type === 'text' ? 'Texte' : 'Image'}
+            <span className="truncate">
+              {selectedElement.type === 'text' ? 'Texte' : 'Image'}
+            </span>
           </CardTitle>
           <StatusBadge isEditable={isEditable} hasUnsavedChanges={hasUnsavedChanges} />
         </div>
