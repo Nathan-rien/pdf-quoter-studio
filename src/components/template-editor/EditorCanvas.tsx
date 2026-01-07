@@ -54,7 +54,11 @@ export function EditorCanvas() {
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingZone, setIsDraggingZone] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [alignmentGuides, setAlignmentGuides] = useState<{ x?: number; y?: number; centerX?: boolean; centerY?: boolean }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Seuil de snap pour les guides (en pixels canvas)
+  const SNAP_THRESHOLD = 8;
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
     p => p.pageNumber === selectedPageNumber
@@ -122,8 +126,57 @@ export function EditorCanvas() {
       if (!element) return;
       
       const canvasRect = canvasRef.current.getBoundingClientRect();
-      const x = ((e.clientX - canvasRect.left - dragOffset.x) / canvasRect.width) * CANVAS_SCALE.width;
-      const y = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * CANVAS_SCALE.height;
+      let x = ((e.clientX - canvasRect.left - dragOffset.x) / canvasRect.width) * CANVAS_SCALE.width;
+      let y = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * CANVAS_SCALE.height;
+      
+      // Calculer les guides d'alignement
+      const centerCanvasX = CANVAS_SCALE.width / 2;
+      const centerCanvasY = CANVAS_SCALE.height / 2;
+      const elementCenterX = x + element.size.width / 2;
+      const elementCenterY = y + element.size.height / 2;
+      
+      const newGuides: { x?: number; y?: number; centerX?: boolean; centerY?: boolean } = {};
+      
+      // Snap au centre horizontal
+      if (Math.abs(elementCenterX - centerCanvasX) < SNAP_THRESHOLD) {
+        x = centerCanvasX - element.size.width / 2;
+        newGuides.x = centerCanvasX;
+        newGuides.centerX = true;
+      }
+      
+      // Snap au centre vertical
+      if (Math.abs(elementCenterY - centerCanvasY) < SNAP_THRESHOLD) {
+        y = centerCanvasY - element.size.height / 2;
+        newGuides.y = centerCanvasY;
+        newGuides.centerY = true;
+      }
+      
+      // Snap aux bords (marges de 20px)
+      const margins = [20, 40, 60];
+      for (const margin of margins) {
+        // Bord gauche
+        if (Math.abs(x - margin) < SNAP_THRESHOLD) {
+          x = margin;
+          newGuides.x = margin;
+        }
+        // Bord droit
+        if (Math.abs(x + element.size.width - (CANVAS_SCALE.width - margin)) < SNAP_THRESHOLD) {
+          x = CANVAS_SCALE.width - margin - element.size.width;
+          newGuides.x = CANVAS_SCALE.width - margin;
+        }
+        // Bord haut
+        if (Math.abs(y - margin) < SNAP_THRESHOLD) {
+          y = margin;
+          newGuides.y = margin;
+        }
+        // Bord bas
+        if (Math.abs(y + element.size.height - (CANVAS_SCALE.height - margin)) < SNAP_THRESHOLD) {
+          y = CANVAS_SCALE.height - margin - element.size.height;
+          newGuides.y = CANVAS_SCALE.height - margin;
+        }
+      }
+      
+      setAlignmentGuides(newGuides);
       
       // Limites plus souples : permettre de déplacer jusqu'aux bords du canvas
       // avec une marge minimale de 10px
@@ -160,12 +213,14 @@ export function EditorCanvas() {
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     setIsDraggingZone(false);
+    setAlignmentGuides({});
   }, []);
 
   const handleMouseLeave = useCallback(() => {
     if (isDragging || isDraggingZone) {
       setIsDragging(false);
       setIsDraggingZone(false);
+      setAlignmentGuides({});
     }
   }, [isDragging, isDraggingZone]);
 
@@ -288,6 +343,38 @@ export function EditorCanvas() {
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
         >
+          {/* Guides d'alignement */}
+          {isDragging && alignmentGuides.x !== undefined && (
+            <div 
+              className="absolute top-0 bottom-0 w-px bg-primary z-50 pointer-events-none"
+              style={{ 
+                left: `${(alignmentGuides.x / CANVAS_SCALE.width) * 100}%`,
+                boxShadow: '0 0 4px hsl(var(--primary))'
+              }}
+            >
+              {alignmentGuides.centerX && (
+                <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[8px] px-1 rounded">
+                  Centre
+                </div>
+              )}
+            </div>
+          )}
+          {isDragging && alignmentGuides.y !== undefined && (
+            <div 
+              className="absolute left-0 right-0 h-px bg-primary z-50 pointer-events-none"
+              style={{ 
+                top: `${(alignmentGuides.y / CANVAS_SCALE.height) * 100}%`,
+                boxShadow: '0 0 4px hsl(var(--primary))'
+              }}
+            >
+              {alignmentGuides.centerY && (
+                <div className="absolute left-1 top-1 bg-primary text-primary-foreground text-[8px] px-1 rounded">
+                  Centre
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Header simulé */}
           <div className="absolute top-3 left-4 right-4 flex items-center justify-between pb-2 border-b border-gray-100">
             <div className="w-20 h-6 bg-gray-100/50 rounded" />
