@@ -1,10 +1,8 @@
 import { cn } from "@/lib/utils";
 import { 
   FileText, 
-  Home,
   LayoutDashboard,
   Upload,
-  CheckSquare,
   DollarSign,
   Settings,
   Eye,
@@ -37,12 +35,11 @@ interface AppSidebarProps {
   stepStatuses?: Partial<Record<WorkflowStep, 'pending' | 'complete' | 'error'>>;
 }
 
-// 6 étapes : Template → Données → Tarifs CSV → Validation → Aperçu → Export
+// 5 étapes : Template → Données → Tarifs CSV → Aperçu → Export
 const workflowSteps: { step: WorkflowStep; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { step: 'template', label: 'Template', icon: FileText },
   { step: 'data-editor', label: 'Données', icon: Upload },
   { step: 'csv-import', label: 'Tarifs CSV', icon: DollarSign },
-  { step: 'invest-validation', label: 'Validation', icon: CheckSquare },
   { step: 'preview', label: 'Aperçu', icon: Eye },
   { step: 'export', label: 'Export', icon: Download },
 ];

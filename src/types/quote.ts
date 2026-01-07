@@ -19,12 +19,11 @@ export type QuoteStatus =
   | 'pret_export'
   | 'exporte';
 
-// === Workflow Steps (6 étapes) ===
+// === Workflow Steps (5 étapes) ===
 export type WorkflowStep = 
   | 'template'
   | 'data-editor'
-  | 'csv-import'           // Étape 3 - avant validation
-  | 'invest-validation'    // Étape 4 - après CSV
+  | 'csv-import'
   | 'preview'
   | 'export';
 

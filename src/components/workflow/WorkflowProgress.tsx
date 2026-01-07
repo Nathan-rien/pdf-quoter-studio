@@ -28,12 +28,11 @@ interface WorkflowStepIndicatorProps {
   blockReason?: string;
 }
 
-// 6 étapes sans Options
+// 5 étapes
 const stepIcons: Record<WorkflowStep, React.ComponentType<{ className?: string }>> = {
   'template': FileText,
   'data-editor': Upload,
   'csv-import': DollarSign,
-  'invest-validation': CheckCircle,
   'preview': Eye,
   'export': Download,
 };
@@ -108,7 +107,7 @@ export function WorkflowStepIndicator({
         <StatusIcon />
       </div>
       <div className="flex flex-col items-center">
-        <span className="text-[10px] text-muted-foreground font-mono">{stepNumber}/6</span>
+        <span className="text-[10px] text-muted-foreground font-mono">{stepNumber}/5</span>
         <span className={cn("text-xs text-center leading-tight", styles.label)}>
           {label}
         </span>
