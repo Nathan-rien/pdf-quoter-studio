@@ -183,7 +183,8 @@ export interface TemplateEditorState {
   // Versions du template courant
   currentVersion: TemplateVersion | null;
   allVersions: TemplateVersion[];
-  selectedElementId: string | null;
+  selectedElementId: string | null; // Élément principal sélectionné (pour compatibilité)
+  selectedElementIds: string[]; // Multi-sélection
   selectedDynamicZoneId: string | null;
   selectedPageNumber: PDFPageNumber;
   editorMode: 'view' | 'edit';
