@@ -178,8 +178,8 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     totaux: { totalHT: null, tva: null, totalTTC: null },
   };
 
-  // Extract devis number
-  const devisMatch = text.match(/DEVIS\s+N°\s*(\d+)/i);
+  // Extract devis number (handles "DEVIS N°6380967" and variants)
+  const devisMatch = text.match(/DEVIS\s*N[°o]\s*[:#]?\s*(\d{6,})/i);
   if (devisMatch) {
     result.devis!.reference = devisMatch[1];
   }
@@ -190,33 +190,38 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.devis!.date = dateMatch[1];
   }
 
-  // Extract client number
-  const clientNumMatch = text.match(/N°\s*CLIENT\s*[:\s]*(\d+)/i);
+  // Extract client number (handles cases where spaces/newlines are weird)
+  const clientNumMatch = text.match(/N°\s*CLIENT\s*:?\s*(\d{6,10})/i);
   if (clientNumMatch) {
     result.devis!.numeroClient = clientNumMatch[1];
   }
 
-  // Extract client name (look for company name pattern after "Livraison")
-  const livraisonMatch = text.match(/Livraison\s*[:\s]*([A-Za-zÀ-ÿ\s]+?)(?=\s+\d+\s+RUE|\s+[A-Z]+\s+[A-Z]+)/i);
-  if (livraisonMatch) {
-    result.client!.nom = livraisonMatch[1].trim();
+  // Extract delivery block (name + address + CP + city)
+  const deliveryMatch = text.match(
+    /ADRESSE\s+DE\s+LIVRAISON\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]{3,})\s+(\d+\s+RUE\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]+)\s+(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]+)/i
+  );
+  if (deliveryMatch) {
+    result.client!.nom = deliveryMatch[1].trim();
+    result.client!.adresse = deliveryMatch[2].trim();
+    result.client!.codePostal = deliveryMatch[3];
+    result.client!.ville = deliveryMatch[4].trim();
   }
 
-  // Extract address
-  const adresseMatch = text.match(/(\d+\s+RUE\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+)/i);
-  if (adresseMatch) {
-    result.client!.adresse = adresseMatch[1].trim();
+  // Fallback: extract address + CP/city even if name block isn't reconstructed
+  if (!result.client!.adresse) {
+    const adresseMatch = text.match(/(\d+\s+RUE\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]+)/i);
+    if (adresseMatch) result.client!.adresse = adresseMatch[1].trim();
+  }
+  if (!result.client!.codePostal || !result.client!.ville) {
+    const cpVilleMatch = text.match(/(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]{2,})/i);
+    if (cpVilleMatch) {
+      result.client!.codePostal = result.client!.codePostal || cpVilleMatch[1];
+      result.client!.ville = result.client!.ville || cpVilleMatch[2].trim();
+    }
   }
 
-  // Extract postal code and city
-  const cpVilleMatch = text.match(/(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ]+)/i);
-  if (cpVilleMatch) {
-    result.client!.codePostal = cpVilleMatch[1];
-    result.client!.ville = cpVilleMatch[2];
-  }
-
-  // Extract phone
-  const telMatch = text.match(/(?:Tél|Tel|Téléphone)\s*[:\s]*(\d{10})/i) || text.match(/(\d{10})/);
+  // Extract phone (10 digits)
+  const telMatch = text.match(/\b(0\d{9})\b/);
   if (telMatch) {
     result.client!.telephone = telMatch[1];
   }
@@ -227,36 +232,37 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.client!.email = emailMatch[1];
   }
 
-  // Extract totals
-  const totalHTMatch = text.match(/TOTAL\s+HT\s*[:\s]*([\d\s,]+)\s*€/i);
-  if (totalHTMatch) {
-    result.totaux!.totalHT = parseNumber(totalHTMatch[1]);
+  // Totals (take the LAST match to avoid picking table/header noise)
+  const money = '(\\d{1,3}(?:[ \\.]\\d{3})*(?:,\\d{2})?)';
+
+  const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT\\s*:?\\s*${money}\\s*€`, 'gi'))];
+  if (totalHTMatches.length) {
+    result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
   }
 
-  const tvaMatch = text.match(/(?:TVA|T\.V\.A\.?)\s*(?:\d+(?:[.,]\d+)?%?)?\s*[:\s]*([\d\s,]+)\s*€/i);
-  if (tvaMatch) {
-    result.totaux!.tva = parseNumber(tvaMatch[1]);
+  const tvaMatches = [...text.matchAll(new RegExp(`\\bTVA\\b[\\s\\S]{0,40}?${money}\\s*€`, 'gi'))];
+  if (tvaMatches.length) {
+    result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
   }
 
-  const totalTTCMatch = text.match(/TOTAL\s+TTC\s*[:\s]*([\d\s,]+)\s*€/i);
-  if (totalTTCMatch) {
-    result.totaux!.totalTTC = parseNumber(totalTTCMatch[1]);
+  const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC\\s*:?\\s*${money}\\s*€`, 'gi'))];
+  if (totalTTCMatches.length) {
+    result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
   }
 
-  // Parse product lines - GrosBill format: CODE DESIGNATION PRIX_UNI QTE TOTAL_HT
-  const productLineRegex = /(\d{8,})\s+(.+?)\s+([\d\s,]+)\s*€\s+(\d+)\s+([\d\s,]+)\s*€/gi;
-  let match;
-  while ((match = productLineRegex.exec(text)) !== null) {
-    // Skip eco-taxe lines
-    if (match[2].toLowerCase().includes('eco-taxe') || match[2].toLowerCase().includes('ecotaxe')) {
-      continue;
-    }
+  // Parse product lines (works best when extractTextWithPdfJs outputs line-like text)
+  const lineRegex = new RegExp(`^(\\d{8,})\\s+(.+?)\\s+${money}\\s*€\\s+(\\d+)\\s+${money}\\s*€$`, 'i');
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.trim().match(lineRegex);
+    if (!m) continue;
+    if (/eco-?taxe/i.test(m[2])) continue;
+
     result.lignes!.push({
-      reference: match[1],
-      designation: match[2].trim(),
-      prixUnitaire: parseNumber(match[3]),
-      quantite: parseInt(match[4]) || 1,
-      totalHT: parseNumber(match[5]) || 0,
+      reference: m[1],
+      designation: m[2].trim(),
+      prixUnitaire: parseNumber(m[3]),
+      quantite: parseInt(m[4], 10) || 1,
+      totalHT: parseNumber(m[5]) || 0,
     });
   }
 
@@ -266,35 +272,65 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
 // Extract text using pdfjs-dist legacy build (v3.x - no top-level await)
 async function extractTextWithPdfJs(file: File): Promise<string> {
   try {
-    // Dynamic import of legacy build (v3.x uses .js files)
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
-    
-    // Set worker source using Vite's ?url pattern for reliable resolution
-    const workerUrl = new URL(
+
+    // Worker
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
       'pdfjs-dist/legacy/build/pdf.worker.min.js',
       import.meta.url
     ).toString();
-    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
-    
-    let fullText = '';
-    
+
+    const lines: string[] = [];
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: unknown) => {
-          const textItem = item as { str?: string };
-          return textItem.str || '';
+
+      const items = (textContent.items as unknown[])
+        .map((it) => {
+          const item = it as { str?: string; transform?: number[] };
+          const str = item.str ?? '';
+          const x = item.transform?.[4] ?? 0;
+          const y = item.transform?.[5] ?? 0;
+          return { str, x, y };
         })
-        .join(' ');
-      fullText += pageText + '\n';
+        .filter((it) => it.str.trim().length > 0)
+        // pdfjs origin: sort by y (top->bottom) then x (left->right)
+        .sort((a, b) => (b.y - a.y) || (a.x - b.x));
+
+      // group into lines by y proximity
+      let currentY: number | null = null;
+      let currentLine: string[] = [];
+
+      const flush = () => {
+        const joined = currentLine.join(' ').replace(/\s+/g, ' ').trim();
+        if (joined) lines.push(joined);
+        currentLine = [];
+      };
+
+      for (const it of items) {
+        if (currentY === null) {
+          currentY = it.y;
+          currentLine.push(it.str);
+          continue;
+        }
+
+        if (Math.abs(it.y - currentY) > 2) {
+          flush();
+          currentY = it.y;
+        }
+
+        currentLine.push(it.str);
+      }
+
+      flush();
     }
-    
-    return fullText;
+
+    return lines.join('\n');
   } catch (error) {
     console.error('PDF.js extraction failed:', error);
     return '';
