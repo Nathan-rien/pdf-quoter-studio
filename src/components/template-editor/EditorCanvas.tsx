@@ -90,7 +90,7 @@ export function EditorCanvas() {
         moved = true;
         break;
       case 'ArrowDown':
-        newY = Math.min(CANVAS_SCALE.height - 10, element.position.y + step);
+        newY = Math.min(CANVAS_SCALE.height - element.size.height, element.position.y + step);
         moved = true;
         break;
       case 'ArrowLeft':
@@ -98,7 +98,7 @@ export function EditorCanvas() {
         moved = true;
         break;
       case 'ArrowRight':
-        newX = Math.min(CANVAS_SCALE.width - 10, element.position.x + step);
+        newX = Math.min(CANVAS_SCALE.width - element.size.width, element.position.x + step);
         moved = true;
         break;
     }
@@ -137,17 +137,17 @@ export function EditorCanvas() {
     const isTextType = element.type === 'text';
     
     return {
-      left: `${Math.min(left, 95)}%`,
-      top: `${Math.min(top, 95)}%`,
+      left: `${Math.min(left, 100)}%`,
+      top: `${Math.min(top, 100)}%`,
       // Pour les textes: largeur auto avec max-width, pour les images: largeur fixe
       ...(isTextType 
         ? { 
-            maxWidth: `${Math.min(Math.max(maxWidth, 5), 95)}%`,
+            maxWidth: `${Math.min(Math.max(maxWidth, 5), 100)}%`,
             width: 'fit-content',
             height: 'auto'
           }
         : { 
-            width: `${Math.min(Math.max(maxWidth, 3), 95)}%`,
+            width: `${Math.min(Math.max(maxWidth, 3), 100)}%`,
             height: `${Math.max(minHeight, 2)}%` 
           }
       ),
@@ -243,9 +243,10 @@ export function EditorCanvas() {
           break;
       }
       
-      // Clamper les valeurs
+      // Clamper les valeurs - permettre d'atteindre les bords (0)
       newX = Math.max(0, Math.min(newX, CANVAS_SCALE.width - MIN_SIZE));
       newY = Math.max(0, Math.min(newY, CANVAS_SCALE.height - MIN_SIZE));
+      // Permettre à l'élément d'occuper toute la largeur/hauteur disponible
       newWidth = Math.min(newWidth, CANVAS_SCALE.width - newX);
       newHeight = Math.min(newHeight, CANVAS_SCALE.height - newY);
       
@@ -322,10 +323,9 @@ export function EditorCanvas() {
       
       setAlignmentGuides(newGuides);
       
-      // Limites plus souples : permettre de déplacer jusqu'aux bords du canvas
-      // avec une marge minimale de 10px
-      const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - 10));
-      const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - 10));
+      // Permettre de déplacer jusqu'aux bords du canvas (sans marge)
+      const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - element.size.width));
+      const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - element.size.height));
       
       updateElementPosition(selectedElementId, { 
         x: Math.round(clampedX), 
