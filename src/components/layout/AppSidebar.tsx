@@ -102,7 +102,7 @@ export function AppSidebar({
           onClick={() => onNavigate('rental-proposal')}
         >
           <Building2 className="h-4 w-4" />
-          Proposition Location
+          Proposition
         </Button>
 
         <Button

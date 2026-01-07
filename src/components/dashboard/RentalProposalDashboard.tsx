@@ -177,7 +177,7 @@ export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onVie
         {/* Info Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Workflow Proposition Location</CardTitle>
+            <CardTitle className="text-lg">Workflow Proposition</CardTitle>
             <CardDescription>4 étapes pour créer votre proposition</CardDescription>
           </CardHeader>
           <CardContent>
