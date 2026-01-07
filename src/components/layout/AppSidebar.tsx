@@ -37,12 +37,12 @@ interface AppSidebarProps {
   stepStatuses?: Partial<Record<WorkflowStep, 'pending' | 'complete' | 'error'>>;
 }
 
+// 6 étapes : Template → Données → Tarifs CSV → Validation → Aperçu → Export
 const workflowSteps: { step: WorkflowStep; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { step: 'template', label: 'Template', icon: FileText },
   { step: 'data-editor', label: 'Données', icon: Upload },
-  { step: 'invest-validation', label: 'Validation Invest', icon: CheckSquare },
-  { step: 'csv-import', label: 'Import Tarifs', icon: DollarSign },
-  { step: 'options-selection', label: 'Options', icon: Settings },
+  { step: 'csv-import', label: 'Tarifs CSV', icon: DollarSign },
+  { step: 'invest-validation', label: 'Validation', icon: CheckSquare },
   { step: 'preview', label: 'Aperçu', icon: Eye },
   { step: 'export', label: 'Export', icon: Download },
 ];

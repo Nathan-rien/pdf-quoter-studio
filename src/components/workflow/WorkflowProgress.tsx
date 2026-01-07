@@ -5,10 +5,8 @@ import {
   Upload, 
   CheckCircle, 
   DollarSign, 
-  Settings, 
   Eye, 
   Download,
-  Circle,
   AlertCircle,
   Lock
 } from "lucide-react";
@@ -30,12 +28,12 @@ interface WorkflowStepIndicatorProps {
   blockReason?: string;
 }
 
+// 6 étapes sans Options
 const stepIcons: Record<WorkflowStep, React.ComponentType<{ className?: string }>> = {
   'template': FileText,
   'data-editor': Upload,
-  'invest-validation': CheckCircle,
   'csv-import': DollarSign,
-  'options-selection': Settings,
+  'invest-validation': CheckCircle,
   'preview': Eye,
   'export': Download,
 };
@@ -110,7 +108,7 @@ export function WorkflowStepIndicator({
         <StatusIcon />
       </div>
       <div className="flex flex-col items-center">
-        <span className="text-[10px] text-muted-foreground font-mono">{stepNumber}/7</span>
+        <span className="text-[10px] text-muted-foreground font-mono">{stepNumber}/6</span>
         <span className={cn("text-xs text-center leading-tight", styles.label)}>
           {label}
         </span>
