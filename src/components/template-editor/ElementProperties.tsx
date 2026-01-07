@@ -206,10 +206,19 @@ export function ElementProperties() {
                 id="text-content"
                 value={textContent.text}
                 onChange={(e) => handleTextChange({ text: e.target.value })}
+                onKeyDown={(e) => {
+                  // Permettre Shift+Enter pour les retours à la ligne
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.stopPropagation();
+                  }
+                }}
                 disabled={!isEditable}
-                className="min-h-[80px]"
-                placeholder="Saisissez le texte..."
+                className="min-h-[120px] resize-y font-mono text-sm leading-relaxed whitespace-pre-wrap"
+                placeholder="Saisissez le texte...&#10;(Utilisez Entrée pour les retours à la ligne)"
               />
+              <p className="text-xs text-muted-foreground">
+                Appuyez sur Entrée pour un retour à la ligne
+              </p>
             </div>
 
             <Separator />

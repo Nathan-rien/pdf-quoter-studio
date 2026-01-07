@@ -114,6 +114,7 @@ export interface TemplateEditorState {
   currentVersion: TemplateVersion | null;
   allVersions: TemplateVersion[];
   selectedElementId: string | null;
+  selectedDynamicZoneId: string | null;
   selectedPageNumber: PDFPageNumber;
   editorMode: 'view' | 'edit';
   hasUnsavedChanges: boolean;
