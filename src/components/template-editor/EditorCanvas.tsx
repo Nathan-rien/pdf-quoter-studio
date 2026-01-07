@@ -12,6 +12,7 @@ import { DynamicZoneOverlay } from "./DynamicZoneOverlay";
 import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
+import { ALLOWED_FONTS } from "@/lib/template-styles";
 import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
 import type { TextContent, ImageContent } from "@/types/template-editor";
@@ -284,7 +285,7 @@ export function EditorCanvas() {
                     <div 
                       className="p-1 w-full h-full flex items-start"
                       style={{
-                        fontFamily: textContent.fontFamily,
+                        fontFamily: ALLOWED_FONTS.find(f => f.name === textContent.fontFamily)?.value || textContent.fontFamily,
                         fontSize: `${Math.max(textContent.fontSize * 0.4, 6)}px`,
                         color: textContent.color,
                         fontWeight: textContent.bold ? 'bold' : 'normal',
