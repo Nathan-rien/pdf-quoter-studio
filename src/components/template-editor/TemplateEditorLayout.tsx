@@ -16,8 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Save, 
-  Upload, 
+  Save,
   RotateCcw, 
   AlertCircle,
   FileText,
@@ -44,7 +43,6 @@ export function TemplateEditorLayout() {
     viewMode,
     addElementMode,
     createNewVersion,
-    saveCurrentVersion,
     loadVersion,
     discardChanges,
     getPublishedVersions,
@@ -58,11 +56,6 @@ export function TemplateEditorLayout() {
   
   // Récupérer les versions du template courant
   const templateVersions = currentTemplateId ? getTemplateVersions(currentTemplateId) : [];
-
-  const handleSave = () => {
-    saveCurrentVersion();
-    toast.success("Version sauvegardée");
-  };
 
   const handleDiscard = () => {
     discardChanges();
@@ -197,22 +190,15 @@ export function TemplateEditorLayout() {
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Annuler
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={!hasUnsavedChanges}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Sauvegarder
-                  </Button>
+
                   <Button
                     variant="default"
                     size="sm"
                     onClick={() => setShowPublishDialog(true)}
+                    disabled={!hasUnsavedChanges}
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Publier
+                    <Save className="h-4 w-4 mr-2" />
+                    Sauvegarder
                   </Button>
                 </>
               ) : (

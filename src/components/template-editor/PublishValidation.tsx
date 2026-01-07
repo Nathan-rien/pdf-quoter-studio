@@ -22,7 +22,7 @@ import {
   CheckCircle, 
   XCircle, 
   Loader2,
-  Upload,
+  Save,
   AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
@@ -57,12 +57,12 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
     setIsPublishing(false);
     
     if (result.canPublish) {
-      toast.success("Template publié avec succès", {
+      toast.success("Template sauvegardé", {
         description: `Version ${currentVersion?.versionNumber} maintenant disponible pour les devis.`
       });
       onOpenChange(false);
     } else {
-      toast.error("Échec de la publication", {
+      toast.error("Échec de la sauvegarde", {
         description: result.errors[0]?.message || "Une erreur est survenue."
       });
     }
@@ -77,11 +77,11 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Publier la version {currentVersion.versionNumber}
+            <Save className="h-5 w-5" />
+            Sauvegarder la version {currentVersion.versionNumber}
           </DialogTitle>
           <DialogDescription>
-            Vérification de l'intégrité du template avant publication.
+            Vérification de l'intégrité du template avant sauvegarde.
           </DialogDescription>
         </DialogHeader>
 
@@ -177,7 +177,7 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
 
           {/* Informations de publication */}
           <div className="text-sm text-muted-foreground">
-            <p className="mb-2">Après publication :</p>
+            <p className="mb-2">Après sauvegarde :</p>
             <ul className="list-disc list-inside space-y-1 text-xs">
               <li>Cette version sera figée et ne pourra plus être modifiée</li>
               <li>Elle sera disponible pour la création de nouveaux devis</li>
@@ -198,12 +198,12 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
             {isPublishing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Publication...
+                Sauvegarde...
               </>
             ) : (
               <>
-                <Upload className="h-4 w-4" />
-                Publier
+                <Save className="h-4 w-4" />
+                Sauvegarder
               </>
             )}
           </Button>
