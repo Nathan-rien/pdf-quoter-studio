@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { useDataEditorStore } from "@/stores/dataEditorStore";
+import { useOptionsAdminStore } from "@/stores/optionsAdminStore";
 import { EditableTable, ColumnDef } from "../EditableTable";
 import { OptionsServiceRow } from "@/types/quote";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Info, Plus, Download } from "lucide-react";
 
 const optionsColumns: ColumnDef<OptionsServiceRow>[] = [
   { 
@@ -37,15 +42,41 @@ const optionsColumns: ColumnDef<OptionsServiceRow>[] = [
 ];
 
 export function OptionsServicesEditor() {
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
+  
   const { 
     optionsServicesData, 
     updateOptionsServiceCell, 
     addOptionsServiceRow, 
     deleteOptionsServiceRow,
+    addOptionsServiceFromAdmin,
     getSheetErrors,
   } = useDataEditorStore();
 
+  const { options: adminOptions } = useOptionsAdminStore();
+  const activeAdminOptions = adminOptions.filter(opt => opt.isActive);
+
   const errors = getSheetErrors('optionsServices');
+
+  const toggleAdminOption = (optionId: string) => {
+    setSelectedAdminOptions(prev => 
+      prev.includes(optionId) 
+        ? prev.filter(id => id !== optionId)
+        : [...prev, optionId]
+    );
+  };
+
+  const handleImportSelected = () => {
+    selectedAdminOptions.forEach(optionId => {
+      const option = activeAdminOptions.find(opt => opt.id === optionId);
+      if (option) {
+        addOptionsServiceFromAdmin(option.title, option.services, option.price?.amount);
+      }
+    });
+    setSelectedAdminOptions([]);
+    setIsPopoverOpen(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -62,6 +93,58 @@ export function OptionsServicesEditor() {
           </div>
         </CardHeader>
       </Card>
+
+      <div className="flex gap-2">
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" disabled={activeAdminOptions.length === 0}>
+              <Download className="h-4 w-4 mr-2" />
+              Importer depuis Admin
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" align="start">
+            <div className="space-y-3">
+              <div className="font-medium text-sm">Options disponibles</div>
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {activeAdminOptions.map((option) => (
+                  <label
+                    key={option.id}
+                    className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedAdminOptions.includes(option.id)}
+                      onCheckedChange={() => toggleAdminOption(option.id)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{option.title}</div>
+                      {option.price && (
+                        <div className="text-xs text-muted-foreground">
+                          {option.price.amount} {option.price.unit}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <Button 
+                size="sm" 
+                className="w-full"
+                disabled={selectedAdminOptions.length === 0}
+                onClick={handleImportSelected}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter {selectedAdminOptions.length > 0 && `(${selectedAdminOptions.length})`}
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+        {activeAdminOptions.length === 0 && (
+          <span className="text-xs text-muted-foreground self-center">
+            Aucune option active dans Administration
+          </span>
+        )}
+      </div>
 
       <EditableTable
         data={optionsServicesData}
