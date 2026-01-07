@@ -264,9 +264,19 @@ function parseMatriceSheet(sheet: XLSX.WorkSheet): {
       if (cellValue) {
         const lowerValue = cellValue.toLowerCase().trim();
         
-        // La valeur associée est généralement dans la colonne E (index 4)
-        const valueCell = getCell(sheet, 'E', rowNum);
-        const value = extractString(valueCell);
+        // Chercher la valeur dans les colonnes suivantes (première cellule non-vide après le label)
+        let value: string | null = null;
+        let valueCell: XLSX.CellObject | undefined;
+        for (let valCol = c + 1; valCol <= 4; valCol++) {
+          const testColLetter = XLSX.utils.encode_col(valCol);
+          const testCell = getCell(sheet, testColLetter, rowNum);
+          const testValue = extractString(testCell);
+          if (testValue && testValue.trim() !== '') {
+            value = testValue;
+            valueCell = testCell;
+            break;
+          }
+        }
         
         if (lowerValue.includes('nom du client') || lowerValue === 'client') {
           if (value) clientData.client = value;
