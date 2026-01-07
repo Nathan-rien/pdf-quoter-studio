@@ -9,7 +9,10 @@ import type { PDFPageNumber, DynamicZone } from './pdf-template';
 export type TemplateVersionStatus = 'brouillon' | 'publie' | 'archive';
 
 // Types d'éléments éditables
-export type EditableElementType = 'text' | 'image' | 'block';
+export type EditableElementType = 'text' | 'image' | 'block' | 'shape' | 'group';
+
+// Types de formes disponibles
+export type ShapeType = 'rectangle' | 'square' | 'rounded-rectangle' | 'circle' | 'ellipse' | 'line';
 
 // Polices autorisées (liste fermée)
 export type AllowedFont = 'Garet' | 'DM Sans' | 'Inter' | 'Roboto';
@@ -52,6 +55,59 @@ export interface BlockContent {
   elements: EditableElement[];
 }
 
+// Style de bordure pour les formes
+export interface ShapeBorderStyle {
+  enabled: boolean;
+  color: string;
+  width: number; // 1-10px
+}
+
+// Contenu texte interne d'une forme
+export interface ShapeInnerText {
+  content: string;
+  fontSize: AllowedFontSize;
+  color: string;
+  fontFamily: AllowedFont;
+  bold: boolean;
+  italic: boolean;
+}
+
+// Contenu icône interne d'une forme
+export interface ShapeInnerIcon {
+  name: string; // Nom de l'icône Lucide
+  size: number;
+  color: string;
+}
+
+// Contenu interne d'une forme
+export interface ShapeInnerContent {
+  text?: ShapeInnerText;
+  icon?: ShapeInnerIcon;
+  alignment: {
+    horizontal: 'left' | 'center' | 'right';
+    vertical: 'top' | 'center' | 'bottom';
+  };
+  padding: number; // Marges internes 0-32px
+}
+
+// Contenu d'une forme
+export interface ShapeContent {
+  shapeType: ShapeType;
+  backgroundColor: string;
+  backgroundOpacity: number; // 0-100%
+  border: ShapeBorderStyle;
+  cornerRadius: number; // 0-50px (0 = angles droits)
+  rotation: number; // 0, 90, 180, 270
+  innerContent?: ShapeInnerContent;
+  aspectRatioLocked: boolean;
+  isLocked: boolean; // Forme verrouillée (non modifiable)
+}
+
+// Groupe d'éléments
+export interface GroupContent {
+  elementIds: string[]; // IDs des éléments groupés
+}
+
 // Élément éditable
 export interface EditableElement {
   id: string;
@@ -60,7 +116,7 @@ export interface EditableElement {
   isDynamic: boolean; // Si true = LECTURE SEULE absolue
   position: { x: number; y: number };
   size: { width: number; height: number };
-  content: TextContent | ImageContent | BlockContent;
+  content: TextContent | ImageContent | BlockContent | ShapeContent | GroupContent;
   dynamicZoneId?: string; // Référence vers la zone dynamique si isDynamic
   zIndex?: number; // Ordre d'empilement (0 = fond, plus haut = devant)
 }
@@ -132,5 +188,6 @@ export interface TemplateEditorState {
   selectedPageNumber: PDFPageNumber;
   editorMode: 'view' | 'edit';
   hasUnsavedChanges: boolean;
-  addElementMode: 'none' | 'text' | 'image';
+  addElementMode: 'none' | 'text' | 'image' | 'shape';
+  selectedShapeType: ShapeType | null;
 }

@@ -1,5 +1,5 @@
 /**
- * Sidebar de l'éditeur - Navigation entre les pages
+ * Sidebar de l'éditeur - Navigation entre les pages et ajout de formes
  */
 
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
-import { Lock, FileText, Table, Settings } from "lucide-react";
+import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
+import type { ShapeType } from "@/types/template-editor";
 
 const PAGE_ICONS: Record<number, React.ComponentType<{ className?: string }>> = {
   4: Table,
@@ -18,14 +20,35 @@ const PAGE_ICONS: Record<number, React.ComponentType<{ className?: string }>> = 
   6: Settings,
 };
 
+const SHAPE_OPTIONS: { type: ShapeType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { type: 'rectangle', label: 'Rectangle', icon: RectangleHorizontal },
+  { type: 'square', label: 'Carré', icon: Square },
+  { type: 'rounded-rectangle', label: 'Arrondi', icon: RectangleHorizontal },
+  { type: 'circle', label: 'Cercle', icon: Circle },
+  { type: 'ellipse', label: 'Ellipse', icon: Circle },
+  { type: 'line', label: 'Ligne', icon: Minus },
+];
+
 export function EditorSidebar() {
   const { 
     selectedPageNumber, 
     setSelectedPage,
-    currentVersion 
+    currentVersion,
+    editorMode,
+    addElementMode,
+    selectedShapeType,
+    setAddElementMode,
+    setSelectedShapeType
   } = useTemplateEditorStore();
 
   const pages = PDF_TEMPLATE_CONTRACT.pages;
+  const isEditable = editorMode === 'edit' && currentVersion?.status === 'brouillon';
+
+  const handleShapeClick = (shapeType: ShapeType) => {
+    if (!isEditable) return;
+    setAddElementMode('shape');
+    setSelectedShapeType(shapeType);
+  };
 
   return (
     <Card className="h-full">
@@ -36,7 +59,7 @@ export function EditorSidebar() {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-2">
-        <ScrollArea className="h-[600px]">
+        <ScrollArea className="h-[400px]">
           <div className="space-y-1">
             {pages.map((page) => {
               const isSelected = selectedPageNumber === page.pageNumber;
@@ -91,6 +114,34 @@ export function EditorSidebar() {
             })}
           </div>
         </ScrollArea>
+
+        {isEditable && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground px-1">Ajouter une forme</p>
+              <div className="grid grid-cols-3 gap-1">
+                {SHAPE_OPTIONS.map(({ type, label, icon: ShapeIcon }) => (
+                  <Button
+                    key={type}
+                    variant={addElementMode === 'shape' && selectedShapeType === type ? "default" : "outline"}
+                    size="sm"
+                    className="h-14 flex-col gap-1 text-[10px]"
+                    onClick={() => handleShapeClick(type)}
+                  >
+                    <ShapeIcon className={cn("h-4 w-4", type === 'rounded-rectangle' && "rounded")} />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              {addElementMode === 'shape' && selectedShapeType && (
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Cliquez sur le canvas pour placer la forme
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
