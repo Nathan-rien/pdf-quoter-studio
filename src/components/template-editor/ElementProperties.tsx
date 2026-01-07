@@ -26,7 +26,7 @@ import {
   ALLOWED_BORDER_WIDTHS,
   ALLOWED_CORNER_RADII
 } from "@/lib/template-styles";
-import type { TextContent, ImageContent, ShapeContent, TextPresetStyle, ListType, ShapeType, TextAlign } from "@/types/template-editor";
+import type { TextContent, ImageContent, ShapeContent, TextPresetStyle, ListType, ShapeType, TextAlign, IconContent } from "@/types/template-editor";
 import { 
   Type, 
   Image, 
@@ -63,7 +63,8 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  AlignJustify
+  AlignJustify,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -83,6 +84,7 @@ export function ElementProperties() {
     duplicateElement,
     toggleAspectRatioLock,
     toggleElementLock,
+    updateIconContent,
     createNewVersion,
     getSelectedElement,
     bringToFront,
@@ -225,6 +227,10 @@ export function ElementProperties() {
 
   const shapeContent = selectedElement.type === 'shape'
     ? selectedElement.content as ShapeContent
+    : null;
+
+  const iconContent = selectedElement.type === 'icon'
+    ? selectedElement.content as IconContent
     : null;
 
   const handleTextChange = (updates: Partial<TextContent>) => {
@@ -429,11 +435,13 @@ export function ElementProperties() {
               <Type className="h-4 w-4" />
             ) : selectedElement.type === 'shape' ? (
               <ShapeIcon className="h-4 w-4" />
+            ) : selectedElement.type === 'icon' ? (
+              <Sparkles className="h-4 w-4" />
             ) : (
               <Image className="h-4 w-4" />
             )}
             <span className="truncate">
-              {selectedElement.type === 'text' ? 'Texte' : selectedElement.type === 'shape' ? getShapeLabel() : 'Image'}
+              {selectedElement.type === 'text' ? 'Texte' : selectedElement.type === 'shape' ? getShapeLabel() : selectedElement.type === 'icon' ? 'Icône' : 'Image'}
             </span>
             {shapeContent?.isLocked && (
               <Lock className="h-3 w-3 text-muted-foreground" />
@@ -443,7 +451,65 @@ export function ElementProperties() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {selectedElement.type === 'text' && textContent && (
+        {/* Icon properties */}
+        {selectedElement.type === 'icon' && iconContent && (
+          <>
+            <div className="space-y-2">
+              <Label>Icône sélectionnée</Label>
+              <div className="p-3 rounded-lg bg-muted/50 flex items-center gap-3">
+                <Sparkles className="h-5 w-5" />
+                <span className="text-sm font-medium">{iconContent.iconName}</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Taille ({iconContent.size}px)</Label>
+              <Slider
+                value={[iconContent.size]}
+                onValueChange={([size]) => updateIconContent(selectedElement.id, { size })}
+                min={16}
+                max={128}
+                step={4}
+                disabled={!isEditable}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Couleur</Label>
+              <div className="grid grid-cols-4 gap-1">
+                {ALLOWED_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    className={cn(
+                      "w-8 h-8 rounded border-2 transition-all",
+                      iconContent.color === color.value ? "border-primary scale-110" : "border-transparent hover:border-muted-foreground/50"
+                    )}
+                    style={{ backgroundColor: color.value }}
+                    onClick={() => updateIconContent(selectedElement.id, { color: color.value })}
+                    disabled={!isEditable}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Épaisseur du trait ({iconContent.strokeWidth})</Label>
+              <Slider
+                value={[iconContent.strokeWidth]}
+                onValueChange={([strokeWidth]) => updateIconContent(selectedElement.id, { strokeWidth })}
+                min={1}
+                max={4}
+                step={0.5}
+                disabled={!isEditable}
+              />
+            </div>
+
+            <Separator />
+          </>
+        )}
           <>
             {/* Contenu texte */}
             <div className="space-y-2">

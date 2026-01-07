@@ -1,7 +1,8 @@
 /**
- * Sidebar de l'éditeur - Navigation entre les pages et ajout de formes
+ * Sidebar de l'éditeur - Navigation entre les pages et ajout de formes/icônes
  */
 
+import { useState } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +11,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
-import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal } from "lucide-react";
+import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal, Sparkles } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
 import type { ShapeType } from "@/types/template-editor";
+import { IconLibraryDialog } from "./IconLibraryDialog";
 
 const PAGE_ICONS: Record<number, React.ComponentType<{ className?: string }>> = {
   4: Table,
@@ -30,6 +32,8 @@ const SHAPE_OPTIONS: { type: ShapeType; label: string; icon: React.ComponentType
 ];
 
 export function EditorSidebar() {
+  const [iconDialogOpen, setIconDialogOpen] = useState(false);
+  
   const { 
     selectedPageNumber, 
     setSelectedPage,
@@ -38,7 +42,8 @@ export function EditorSidebar() {
     addElementMode,
     selectedShapeType,
     setAddElementMode,
-    setSelectedShapeType
+    setSelectedShapeType,
+    setSelectedIconName
   } = useTemplateEditorStore();
 
   const pages = PDF_TEMPLATE_CONTRACT.pages;
@@ -48,6 +53,12 @@ export function EditorSidebar() {
     if (!isEditable) return;
     setAddElementMode('shape');
     setSelectedShapeType(shapeType);
+  };
+
+  const handleIconSelect = (iconName: string) => {
+    if (!isEditable) return;
+    setAddElementMode('icon');
+    setSelectedIconName(iconName);
   };
 
   return (
@@ -130,7 +141,7 @@ export function EditorSidebar() {
                     onClick={() => handleShapeClick(type)}
                   >
                     <ShapeIcon className={cn("h-4 w-4", type === 'rounded-rectangle' && "rounded")} />
-                    {label}
+                  {label}
                   </Button>
                 ))}
               </div>
@@ -140,8 +151,36 @@ export function EditorSidebar() {
                 </p>
               )}
             </div>
+
+            <Separator className="my-4" />
+
+            {/* Section Icônes */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground px-1">Ajouter une icône</p>
+              <Button
+                variant={addElementMode === 'icon' ? "default" : "outline"}
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => setIconDialogOpen(true)}
+              >
+                <Sparkles className="h-4 w-4" />
+                Bibliothèque d'icônes
+              </Button>
+              {addElementMode === 'icon' && (
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Cliquez sur le canvas pour placer l'icône
+                </p>
+              )}
+            </div>
           </>
         )}
+
+        {/* Dialog de sélection d'icônes */}
+        <IconLibraryDialog
+          open={iconDialogOpen}
+          onOpenChange={setIconDialogOpen}
+          onSelect={handleIconSelect}
+        />
       </CardContent>
     </Card>
   );
