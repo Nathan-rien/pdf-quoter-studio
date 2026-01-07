@@ -33,10 +33,10 @@ export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onVie
             <div className="p-2 bg-accent-foreground/10 rounded-lg backdrop-blur-sm">
               <Building2 className="h-6 w-6" />
             </div>
-            <h1 className="text-2xl font-bold">Proposition de Location</h1>
+            <h1 className="text-2xl font-bold">Proposition</h1>
           </div>
           <p className="text-accent-foreground/80 max-w-xl mb-6">
-            Créez des propositions de location professionnelles avec vos conditions et tarifs personnalisés.
+            Créez des propositions professionnelles avec vos conditions et tarifs personnalisés.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button 
@@ -78,7 +78,7 @@ export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onVie
               <div>
                 <h3 className="font-semibold mb-1">Nouvelle proposition</h3>
                 <p className="text-sm text-muted-foreground">
-                  Démarrer une nouvelle proposition de location
+                  Démarrer une nouvelle proposition
                 </p>
               </div>
             </div>
