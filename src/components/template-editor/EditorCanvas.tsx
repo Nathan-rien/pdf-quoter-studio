@@ -339,9 +339,10 @@ export function EditorCanvas() {
       
       setAlignmentGuides(newGuides);
       
-      // Permettre de déplacer jusqu'aux bords du canvas (sans marge)
-      const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - element.size.width));
-      const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - element.size.height));
+      // Permettre de déplacer jusqu'aux bords absolus du canvas (0 = bord gauche/haut)
+      // L'élément peut déborder du canvas côté droit/bas si l'utilisateur le souhaite
+      const clampedX = Math.max(0, x);
+      const clampedY = Math.max(0, y);
       
       updateElementPosition(selectedElementId, { 
         x: Math.round(clampedX), 
