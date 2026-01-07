@@ -196,15 +196,32 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.devis!.numeroClient = clientNumMatch[1];
   }
 
-  // Extract delivery block (name + address + CP + city)
+  // Prefer "Adresse de facturation" block for client identity (requested mapping)
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const factIdx = lines.findIndex((l) => /ADRESSE\s+DE\s+FACTURATION/i.test(l));
+  if (factIdx !== -1) {
+    const l1 = lines[factIdx + 1] ?? null; // ex: MAGEN GO
+    const l2 = lines[factIdx + 2] ?? null; // ex: 41 rue Jean Bonal
+
+    if (l1) result.client!.nom = l1;
+    // Note: per your requirement, the UI "Ville" field should take the 2nd line.
+    if (l2) result.client!.ville = l2;
+  }
+
+  // Fallback: delivery block (name + address + CP + city)
   const deliveryMatch = text.match(
     /ADRESSE\s+DE\s+LIVRAISON\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]{3,})\s+(\d+\s+RUE\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]+)\s+(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]+)/i
   );
   if (deliveryMatch) {
-    result.client!.nom = deliveryMatch[1].trim();
-    result.client!.adresse = deliveryMatch[2].trim();
-    result.client!.codePostal = deliveryMatch[3];
-    result.client!.ville = deliveryMatch[4].trim();
+    if (!result.client!.nom) result.client!.nom = deliveryMatch[1].trim();
+    result.client!.adresse = result.client!.adresse || deliveryMatch[2].trim();
+    result.client!.codePostal = result.client!.codePostal || deliveryMatch[3];
+    // Only set city if we didn't already map the "Ville" field from facturation.
+    if (!result.client!.ville) result.client!.ville = deliveryMatch[4].trim();
   }
 
   // Fallback: extract address + CP/city even if name block isn't reconstructed
@@ -216,6 +233,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     const cpVilleMatch = text.match(/(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]{2,})/i);
     if (cpVilleMatch) {
       result.client!.codePostal = result.client!.codePostal || cpVilleMatch[1];
+      // don't overwrite "ville" if facturation already used it
       result.client!.ville = result.client!.ville || cpVilleMatch[2].trim();
     }
   }
