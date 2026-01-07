@@ -60,6 +60,7 @@ export function EditorCanvas() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [alignmentGuides, setAlignmentGuides] = useState<{ x?: number; y?: number; centerX?: boolean; centerY?: boolean }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Seuil de snap pour les guides (en pixels canvas)
   const SNAP_THRESHOLD = 8;
@@ -68,59 +69,52 @@ export function EditorCanvas() {
   const MOVE_STEP_FINE = 1; // Pas de déplacement fin avec Shift (pixels)
 
   // Raccourcis clavier pour déplacer les éléments
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ne pas interférer si on est dans un input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-      
-      // Vérifier qu'on a un élément sélectionné et qu'on est en mode édition
-      if (!selectedElementId || !currentVersion || currentVersion.status !== 'brouillon' || editorMode !== 'edit') {
-        return;
-      }
-      
-      const pageContent = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
-      const element = pageContent?.elements.find(el => el.id === selectedElementId);
-      if (!element || element.isDynamic) return;
-      
-      const step = e.shiftKey ? MOVE_STEP_FINE : MOVE_STEP;
-      let newX = element.position.x;
-      let newY = element.position.y;
-      let moved = false;
-      
-      switch (e.key) {
-        case 'ArrowUp':
-          newY = Math.max(0, element.position.y - step);
-          moved = true;
-          break;
-        case 'ArrowDown':
-          newY = Math.min(CANVAS_SCALE.height - 10, element.position.y + step);
-          moved = true;
-          break;
-        case 'ArrowLeft':
-          newX = Math.max(0, element.position.x - step);
-          moved = true;
-          break;
-        case 'ArrowRight':
-          newX = Math.min(CANVAS_SCALE.width - 10, element.position.x + step);
-          moved = true;
-          break;
-        case 'Delete':
-        case 'Backspace':
-          // Supprimer l'élément (si supporté)
-          break;
-      }
-      
-      if (moved) {
-        e.preventDefault();
-        updateElementPosition(selectedElementId, { x: newX, y: newY });
-      }
-    };
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Vérifier qu'on a un élément sélectionné et qu'on est en mode édition
+    if (!selectedElementId || !currentVersion || currentVersion.status !== 'brouillon' || editorMode !== 'edit') {
+      return;
+    }
     
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const pageContentForKey = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
+    const element = pageContentForKey?.elements.find(el => el.id === selectedElementId);
+    if (!element || element.isDynamic) return;
+    
+    const step = e.shiftKey ? MOVE_STEP_FINE : MOVE_STEP;
+    let newX = element.position.x;
+    let newY = element.position.y;
+    let moved = false;
+    
+    switch (e.key) {
+      case 'ArrowUp':
+        newY = Math.max(0, element.position.y - step);
+        moved = true;
+        break;
+      case 'ArrowDown':
+        newY = Math.min(CANVAS_SCALE.height - 10, element.position.y + step);
+        moved = true;
+        break;
+      case 'ArrowLeft':
+        newX = Math.max(0, element.position.x - step);
+        moved = true;
+        break;
+      case 'ArrowRight':
+        newX = Math.min(CANVAS_SCALE.width - 10, element.position.x + step);
+        moved = true;
+        break;
+    }
+    
+    if (moved) {
+      e.preventDefault();
+      updateElementPosition(selectedElementId, { x: newX, y: newY });
+    }
   }, [selectedElementId, currentVersion, editorMode, selectedPageNumber, updateElementPosition]);
+
+  // Focus sur le conteneur pour capturer les événements clavier
+  useEffect(() => {
+    if (selectedElementId && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [selectedElementId]);
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
     p => p.pageNumber === selectedPageNumber
@@ -467,39 +461,46 @@ export function EditorCanvas() {
       </CardHeader>
       
       <CardContent className="p-4">
-        {/* Message mode ajout */}
-        {isAddMode && (
-          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between">
-            <p className="text-sm text-primary">
-              Cliquez sur le canvas pour placer {addElementMode === 'image' ? 'l\'image' : 'le texte'}
-            </p>
-            <Button variant="ghost" size="sm" onClick={handleCancelAddMode}>
-              Annuler
-            </Button>
-          </div>
-        )}
-
-        {/* Canvas A4 simulé */}
-        <div 
-          ref={canvasRef}
-          className={cn(
-            "relative mx-auto bg-white rounded-lg shadow-lg overflow-hidden",
-            "border-2",
-            isEditable ? "border-primary/30" : "border-border",
-            isAddMode && "cursor-crosshair",
-            (isDragging || isDraggingZone) && "cursor-grabbing",
-            isResizing && "cursor-nwse-resize"
-          )}
-          style={{
-            width: '100%',
-            maxWidth: '500px',
-            aspectRatio: '210 / 297', // A4 ratio
-          }}
-          onClick={handleCanvasClick}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
+        {/* Conteneur focusable pour les raccourcis clavier */}
+        <div
+          ref={containerRef}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          className="outline-none"
         >
+          {/* Message mode ajout */}
+          {isAddMode && (
+            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between">
+              <p className="text-sm text-primary">
+                Cliquez sur le canvas pour placer {addElementMode === 'image' ? 'l\'image' : 'le texte'}
+              </p>
+              <Button variant="ghost" size="sm" onClick={handleCancelAddMode}>
+                Annuler
+              </Button>
+            </div>
+          )}
+
+          {/* Canvas A4 simulé */}
+          <div 
+            ref={canvasRef}
+            className={cn(
+              "relative mx-auto bg-white rounded-lg shadow-lg overflow-hidden",
+              "border-2",
+              isEditable ? "border-primary/30" : "border-border",
+              isAddMode && "cursor-crosshair",
+              (isDragging || isDraggingZone) && "cursor-grabbing",
+              isResizing && "cursor-nwse-resize"
+            )}
+            style={{
+              width: '100%',
+              maxWidth: '500px',
+              aspectRatio: '210 / 297', // A4 ratio
+            }}
+            onClick={handleCanvasClick}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+          >
           {/* Guides d'alignement */}
           {isDragging && alignmentGuides.x !== undefined && (
             <div 
@@ -681,28 +682,29 @@ export function EditorCanvas() {
                 </div>
               );
             })}
-        </div>
+          </div>
 
-        {/* Légende et stats */}
-        <div className="mt-4 flex flex-col gap-2">
-          <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded border-2 border-warning bg-warning/20" />
-              <span>Zone dynamique (protégée)</span>
-            </div>
-            {isEditable && (
+          {/* Légende et stats */}
+          <div className="mt-4 flex flex-col gap-2">
+            <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded ring-2 ring-primary bg-primary/10" />
-                <span>Élément sélectionné</span>
+                <div className="w-3 h-3 rounded border-2 border-warning bg-warning/20" />
+                <span>Zone dynamique (protégée)</span>
+              </div>
+              {isEditable && (
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded ring-2 ring-primary bg-primary/10" />
+                  <span>Élément sélectionné</span>
+                </div>
+              )}
+            </div>
+            
+            {pageContent && (
+              <div className="text-center text-xs text-muted-foreground">
+                {pageContent.elements.filter(e => !e.isDynamic).length} élément(s) éditable(s) sur cette page
               </div>
             )}
           </div>
-          
-          {pageContent && (
-            <div className="text-center text-xs text-muted-foreground">
-              {pageContent.elements.filter(e => !e.isDynamic).length} élément(s) éditable(s) sur cette page
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
