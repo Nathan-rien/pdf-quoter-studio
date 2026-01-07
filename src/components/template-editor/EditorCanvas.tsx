@@ -47,18 +47,23 @@ export function EditorCanvas() {
     addElement,
     setAddElementMode,
     updateElementPosition,
+    updateElementSize,
     updateDynamicZonePosition
   } = useTemplateEditorStore();
 
   // États pour le drag & drop
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingZone, setIsDraggingZone] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
+  const [resizeStart, setResizeStart] = useState<{ x: number; y: number; width: number; height: number; posX: number; posY: number } | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [alignmentGuides, setAlignmentGuides] = useState<{ x?: number; y?: number; centerX?: boolean; centerY?: boolean }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Seuil de snap pour les guides (en pixels canvas)
   const SNAP_THRESHOLD = 8;
+  const MIN_SIZE = 20; // Taille minimale d'un élément
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
     p => p.pageNumber === selectedPageNumber
@@ -117,8 +122,96 @@ export function EditorCanvas() {
     selectElement(elementId);
   }, [isEditable, isAddMode, pageContent, selectElement]);
 
+  // Handler pour démarrer le resize
+  const handleResizeMouseDown = useCallback((elementId: string, handle: 'nw' | 'ne' | 'sw' | 'se', e: React.MouseEvent) => {
+    if (!isEditable || isAddMode) return;
+    
+    const element = pageContent?.elements.find(el => el.id === elementId);
+    if (!element || element.isDynamic) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: element.size.width,
+      height: element.size.height,
+      posX: element.position.x,
+      posY: element.position.y
+    });
+    setResizeHandle(handle);
+    setIsResizing(true);
+    selectElement(elementId);
+  }, [isEditable, isAddMode, pageContent, selectElement]);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!canvasRef.current) return;
+    
+    // Resize d'un élément
+    if (isResizing && selectedElementId && resizeStart && resizeHandle) {
+      const element = pageContent?.elements.find(el => el.id === selectedElementId);
+      if (!element) return;
+      
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const scaleX = CANVAS_SCALE.width / canvasRect.width;
+      const scaleY = CANVAS_SCALE.height / canvasRect.height;
+      
+      const deltaX = (e.clientX - resizeStart.x) * scaleX;
+      const deltaY = (e.clientY - resizeStart.y) * scaleY;
+      
+      let newWidth = resizeStart.width;
+      let newHeight = resizeStart.height;
+      let newX = resizeStart.posX;
+      let newY = resizeStart.posY;
+      
+      // Calculer les nouvelles dimensions selon la poignée
+      switch (resizeHandle) {
+        case 'se': // Coin bas-droite
+          newWidth = Math.max(MIN_SIZE, resizeStart.width + deltaX);
+          newHeight = Math.max(MIN_SIZE, resizeStart.height + deltaY);
+          break;
+        case 'sw': // Coin bas-gauche
+          newWidth = Math.max(MIN_SIZE, resizeStart.width - deltaX);
+          newHeight = Math.max(MIN_SIZE, resizeStart.height + deltaY);
+          newX = resizeStart.posX + (resizeStart.width - newWidth);
+          break;
+        case 'ne': // Coin haut-droite
+          newWidth = Math.max(MIN_SIZE, resizeStart.width + deltaX);
+          newHeight = Math.max(MIN_SIZE, resizeStart.height - deltaY);
+          newY = resizeStart.posY + (resizeStart.height - newHeight);
+          break;
+        case 'nw': // Coin haut-gauche
+          newWidth = Math.max(MIN_SIZE, resizeStart.width - deltaX);
+          newHeight = Math.max(MIN_SIZE, resizeStart.height - deltaY);
+          newX = resizeStart.posX + (resizeStart.width - newWidth);
+          newY = resizeStart.posY + (resizeStart.height - newHeight);
+          break;
+      }
+      
+      // Clamper les valeurs
+      newX = Math.max(0, Math.min(newX, CANVAS_SCALE.width - MIN_SIZE));
+      newY = Math.max(0, Math.min(newY, CANVAS_SCALE.height - MIN_SIZE));
+      newWidth = Math.min(newWidth, CANVAS_SCALE.width - newX);
+      newHeight = Math.min(newHeight, CANVAS_SCALE.height - newY);
+      
+      updateElementSize(selectedElementId, {
+        width: Math.round(newWidth),
+        height: Math.round(newHeight)
+      });
+      
+      if (newX !== element.position.x || newY !== element.position.y) {
+        updateElementPosition(selectedElementId, {
+          x: Math.round(newX),
+          y: Math.round(newY)
+        });
+      }
+      
+      return;
+    }
     
     // Drag d'un élément normal
     if (isDragging && selectedElementId) {
@@ -208,21 +301,27 @@ export function EditorCanvas() {
         height: currentHeight
       });
     }
-  }, [isDragging, isDraggingZone, selectedElementId, selectedDynamicZoneId, dragOffset, pageContent, dynamicZones, updateElementPosition, updateDynamicZonePosition]);
+  }, [isDragging, isDraggingZone, isResizing, selectedElementId, selectedDynamicZoneId, dragOffset, resizeStart, resizeHandle, pageContent, dynamicZones, updateElementPosition, updateElementSize, updateDynamicZonePosition]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     setIsDraggingZone(false);
+    setIsResizing(false);
+    setResizeHandle(null);
+    setResizeStart(null);
     setAlignmentGuides({});
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    if (isDragging || isDraggingZone) {
+    if (isDragging || isDraggingZone || isResizing) {
       setIsDragging(false);
       setIsDraggingZone(false);
+      setIsResizing(false);
+      setResizeHandle(null);
+      setResizeStart(null);
       setAlignmentGuides({});
     }
-  }, [isDragging, isDraggingZone]);
+  }, [isDragging, isDraggingZone, isResizing]);
 
   // Handler pour démarrer le drag d'une zone dynamique
   const handleZoneMouseDown = useCallback((zoneId: string, e: React.MouseEvent) => {
@@ -256,7 +355,7 @@ export function EditorCanvas() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging || isDraggingZone) return;
+    if (isDragging || isDraggingZone || isResizing) return;
     
     // Mode ajout d'élément
     if (isAddMode && isEditable) {
@@ -331,7 +430,8 @@ export function EditorCanvas() {
             "border-2",
             isEditable ? "border-primary/30" : "border-border",
             isAddMode && "cursor-crosshair",
-            (isDragging || isDraggingZone) && "cursor-grabbing"
+            (isDragging || isDraggingZone) && "cursor-grabbing",
+            isResizing && "cursor-nwse-resize"
           )}
           style={{
             width: '100%',
@@ -427,15 +527,21 @@ export function EditorCanvas() {
               const imageContent = !isTextElement && element.type === 'image' ? element.content as ImageContent : null;
               
               const isDraggedElement = isDragging && selectedElementId === element.id;
+              const isResizingElement = isResizing && selectedElementId === element.id;
+              
+              // Dimensions calculées pour les poignées
+              const elementWidth = (element.size.width / CANVAS_SCALE.width) * 100;
+              const elementHeight = (element.size.height / CANVAS_SCALE.height) * 100;
               
               return (
                 <div
                   key={element.id}
                   className={cn(
                     "absolute rounded-sm",
-                    !isDragging && "transition-all duration-150",
+                    !isDragging && !isResizing && "transition-all duration-150",
                     isEditable && !element.isDynamic ? "cursor-grab" : "cursor-pointer",
                     isDraggedElement && "cursor-grabbing opacity-80 shadow-lg scale-[1.02]",
+                    isResizingElement && "ring-2 ring-primary",
                     isSelected 
                       ? "ring-1 ring-primary bg-primary/5 z-20" 
                       : "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50 z-10",
@@ -488,6 +594,32 @@ export function EditorCanvas() {
                         <ImageIcon className="h-2.5 w-2.5" />
                       )}
                     </div>
+                  )}
+
+                  {/* Poignées de redimensionnement */}
+                  {isSelected && isEditable && (
+                    <>
+                      {/* Coin haut-gauche */}
+                      <div
+                        className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-nw-resize z-30 hover:scale-125 transition-transform"
+                        onMouseDown={(e) => handleResizeMouseDown(element.id, 'nw', e)}
+                      />
+                      {/* Coin haut-droite */}
+                      <div
+                        className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-ne-resize z-30 hover:scale-125 transition-transform"
+                        onMouseDown={(e) => handleResizeMouseDown(element.id, 'ne', e)}
+                      />
+                      {/* Coin bas-gauche */}
+                      <div
+                        className="absolute -bottom-1 -left-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-sw-resize z-30 hover:scale-125 transition-transform"
+                        onMouseDown={(e) => handleResizeMouseDown(element.id, 'sw', e)}
+                      />
+                      {/* Coin bas-droite */}
+                      <div
+                        className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-se-resize z-30 hover:scale-125 transition-transform"
+                        onMouseDown={(e) => handleResizeMouseDown(element.id, 'se', e)}
+                      />
+                    </>
                   )}
                 </div>
               );
