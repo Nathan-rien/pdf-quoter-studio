@@ -233,7 +233,7 @@ export function RentalDataEditor() {
                       <TableHead className="w-[120px]">Référence</TableHead>
                       <TableHead>Désignation</TableHead>
                       <TableHead className="w-[100px] text-right">Prix unit. HT</TableHead>
-                      <TableHead className="w-[80px] text-right">Qté</TableHead>
+                      <TableHead className="w-[100px] text-right">Qté</TableHead>
                       <TableHead className="w-[120px] text-right">Total HT</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
