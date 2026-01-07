@@ -100,7 +100,9 @@ function parseInvestSheet(sheet: XLSX.WorkSheet): { rows: InvestRow[]; errors: E
     const designation = extractString(getCell(sheet, 'B', r));
     const nb = extractNumber(getCell(sheet, 'C', r));
     const vun = extractNumber(getCell(sheet, 'D', r));
-    const vtn = extractNumber(getCell(sheet, 'E', r));
+    const vtnRaw = extractNumber(getCell(sheet, 'E', r));
+    // Arrondir VTN à 2 décimales pour éviter les erreurs de précision
+    const vtn = vtnRaw !== null ? Math.round(vtnRaw * 100) / 100 : null;
     
     // Ignorer les lignes complètement vides
     if (!designation && nb === null && vun === null && vtn === null) {
