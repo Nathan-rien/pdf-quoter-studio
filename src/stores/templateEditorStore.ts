@@ -11,6 +11,9 @@ import type {
   TemplateEditorState,
   TextContent,
   ImageContent,
+  ShapeContent,
+  ShapeType,
+  ShapeInnerContent,
   TemplatePageContent,
   PublishValidationResult,
   PDFTemplate
@@ -20,6 +23,7 @@ import { PDF_TEMPLATE_CONTRACT } from '@/lib/pdf-template-contract';
 import { validateTemplateForPublication } from '@/lib/template-validation';
 import { blockDynamicZoneEdit } from '@/lib/template-protection';
 import { PDF_TEMPLATE_ELEMENTS } from '@/lib/pdf-template-elements';
+import { SHAPE_DEFAULT_SIZES } from '@/lib/template-styles';
 
 interface TemplateEditorStore extends TemplateEditorState {
   // Actions templates
@@ -52,10 +56,18 @@ interface TemplateEditorStore extends TemplateEditorState {
   updateElementSize: (elementId: string, size: { width: number; height: number }) => boolean;
 
   // Ajout d'éléments
-  addElementMode: 'none' | 'text' | 'image';
-  setAddElementMode: (mode: 'none' | 'text' | 'image') => void;
+  setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape') => void;
+  setSelectedShapeType: (type: ShapeType | null) => void;
   addElement: (type: 'text' | 'image', position: { x: number; y: number }) => EditableElement;
+  addShape: (shapeType: ShapeType, position: { x: number; y: number }) => EditableElement;
   deleteElement: (elementId: string) => boolean;
+  duplicateElement: (elementId: string) => EditableElement | null;
+  
+  // Actions spécifiques aux formes
+  updateShapeContent: (elementId: string, content: Partial<ShapeContent>) => boolean;
+  updateShapeInnerContent: (elementId: string, innerContent: Partial<ShapeInnerContent>) => boolean;
+  toggleAspectRatioLock: (elementId: string) => boolean;
+  toggleElementLock: (elementId: string) => boolean;
   
   // Gestion des calques
   updateElementZIndex: (elementId: string, zIndex: number) => boolean;
@@ -146,7 +158,8 @@ const initialState: TemplateEditorState = {
   selectedPageNumber: 1,
   editorMode: 'view',
   hasUnsavedChanges: false,
-  addElementMode: 'none'
+  addElementMode: 'none',
+  selectedShapeType: null
 };
 
 // Helper pour convertir les strings en dates lors de la désérialisation
@@ -501,7 +514,11 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   // Mode ajout d'éléments
   setAddElementMode: (mode) => {
-    set({ addElementMode: mode });
+    set({ addElementMode: mode, selectedShapeType: mode === 'shape' ? null : null });
+  },
+
+  setSelectedShapeType: (type) => {
+    set({ selectedShapeType: type });
   },
 
   // Ajout d'un nouvel élément
@@ -581,6 +598,232 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       currentVersion: { ...currentVersion, pages: updatedPages },
       hasUnsavedChanges: true,
       selectedElementId: selectedElementId === elementId ? null : selectedElementId
+    });
+    return true;
+  },
+
+  // Ajout d'une forme
+  addShape: (shapeType, position) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      throw new Error('Cannot add shape to non-draft version');
+    }
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) {
+      throw new Error('Page not found');
+    }
+
+    const existingElements = currentVersion.pages[pageIndex].elements.filter(e => !e.isDynamic);
+    const maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+    const defaultSize = SHAPE_DEFAULT_SIZES[shapeType];
+
+    const defaultContent: ShapeContent = {
+      shapeType,
+      backgroundColor: '#f3f4f6',
+      backgroundOpacity: 100,
+      border: {
+        enabled: true,
+        color: '#1f2937',
+        width: 1
+      },
+      cornerRadius: shapeType === 'rounded-rectangle' ? 8 : 0,
+      rotation: 0,
+      aspectRatioLocked: shapeType === 'square' || shapeType === 'circle',
+      isLocked: false
+    };
+
+    const newElement: EditableElement = {
+      id: `shape-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'shape',
+      pageNumber: selectedPageNumber,
+      isDynamic: false,
+      position,
+      size: { ...defaultSize },
+      content: defaultContent,
+      zIndex: maxZIndex + 1
+    };
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements, newElement];
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementId: newElement.id,
+      addElementMode: 'none',
+      selectedShapeType: null
+    });
+
+    return newElement;
+  },
+
+  // Duplication d'un élément
+  duplicateElement: (elementId) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return null;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return null;
+
+    const element = currentVersion.pages[pageIndex].elements.find(e => e.id === elementId);
+    if (!element || element.isDynamic) return null;
+
+    const existingElements = currentVersion.pages[pageIndex].elements.filter(e => !e.isDynamic);
+    const maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+
+    const duplicatedElement: EditableElement = {
+      ...element,
+      id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      position: { x: element.position.x + 20, y: element.position.y + 20 },
+      content: { ...element.content },
+      zIndex: maxZIndex + 1
+    };
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements, duplicatedElement];
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementId: duplicatedElement.id
+    });
+
+    return duplicatedElement;
+  },
+
+  // Mise à jour du contenu d'une forme
+  updateShapeContent: (elementId, content) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic || element.type !== 'shape') return false;
+
+    const shapeContent = element.content as ShapeContent;
+    if (shapeContent.isLocked) return false;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    updatedElements[elementIndex] = {
+      ...element,
+      content: { ...shapeContent, ...content }
+    };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
+
+  // Mise à jour du contenu interne d'une forme
+  updateShapeInnerContent: (elementId, innerContent) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic || element.type !== 'shape') return false;
+
+    const shapeContent = element.content as ShapeContent;
+    if (shapeContent.isLocked) return false;
+
+    const currentInnerContent: ShapeInnerContent = shapeContent.innerContent || {
+      alignment: { horizontal: 'center', vertical: 'center' },
+      padding: 8
+    };
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    updatedElements[elementIndex] = {
+      ...element,
+      content: { 
+        ...shapeContent, 
+        innerContent: { ...currentInnerContent, ...innerContent }
+      }
+    };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
+
+  // Verrouillage du ratio d'aspect
+  toggleAspectRatioLock: (elementId) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic || element.type !== 'shape') return false;
+
+    const shapeContent = element.content as ShapeContent;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    updatedElements[elementIndex] = {
+      ...element,
+      content: { ...shapeContent, aspectRatioLocked: !shapeContent.aspectRatioLocked }
+    };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
+
+  // Verrouillage d'une forme
+  toggleElementLock: (elementId) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic || element.type !== 'shape') return false;
+
+    const shapeContent = element.content as ShapeContent;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    updatedElements[elementIndex] = {
+      ...element,
+      content: { ...shapeContent, isLocked: !shapeContent.isLocked }
+    };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
     });
     return true;
   },

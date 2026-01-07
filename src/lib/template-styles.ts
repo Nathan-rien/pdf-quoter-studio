@@ -3,7 +3,7 @@
  * Aucun style personnalisé n'est permis en dehors de ces définitions
  */
 
-import type { AllowedFontSize, TextPresetStyle } from '@/types/template-editor';
+import type { AllowedFontSize, TextPresetStyle, ShapeType } from '@/types/template-editor';
 
 // Palette couleurs autorisée
 export const ALLOWED_COLORS = [
@@ -13,6 +13,22 @@ export const ALLOWED_COLORS = [
   { name: 'Text', value: '#1f2937' },         // Gray 800
   { name: 'Muted', value: '#6b7280' },        // Gray 500
   { name: 'White', value: '#ffffff' },
+  { name: 'Black', value: '#000000' },
+] as const;
+
+// Couleurs de fond pour les formes (étend la palette existante)
+export const SHAPE_BACKGROUND_COLORS = [
+  { name: 'Transparent', value: 'transparent' },
+  { name: 'White', value: '#ffffff' },
+  { name: 'Light Gray', value: '#f3f4f6' },
+  { name: 'Gray', value: '#e5e7eb' },
+  { name: 'Primary', value: '#1e3a5f' },
+  { name: 'Secondary', value: '#10b981' },
+  { name: 'Accent', value: '#0ea5e9' },
+  { name: 'Light Blue', value: '#dbeafe' },
+  { name: 'Light Green', value: '#dcfce7' },
+  { name: 'Light Yellow', value: '#fef9c3' },
+  { name: 'Light Red', value: '#fee2e2' },
   { name: 'Black', value: '#000000' },
 ] as const;
 
@@ -57,8 +73,33 @@ export const TEXT_PRESET_STYLES: Record<TextPresetStyle, {
   },
 } as const;
 
-// Rotations autorisées pour les images
+// Rotations autorisées pour les images et formes
 export const ALLOWED_ROTATIONS = [0, 90, 180, 270] as const;
+
+// Épaisseurs de bordure autorisées
+export const ALLOWED_BORDER_WIDTHS = [1, 2, 3, 4, 5] as const;
+
+// Rayons de coins autorisés
+export const ALLOWED_CORNER_RADII = [0, 4, 8, 12, 16, 24, 32, 50] as const;
+
+// Icônes disponibles pour les formes (liste fermée)
+export const ALLOWED_SHAPE_ICONS = [
+  'Check', 'X', 'Star', 'Heart', 'Phone', 'Mail', 'User',
+  'Home', 'Settings', 'Bell', 'Calendar', 'Clock', 'Search',
+  'Plus', 'Minus', 'ArrowRight', 'ArrowLeft', 'ChevronRight', 'ChevronDown',
+  'FileText', 'Folder', 'Image', 'Link', 'ExternalLink', 'Download',
+  'Upload', 'Share', 'Copy', 'Trash', 'Edit', 'Eye', 'EyeOff'
+] as const;
+
+// Tailles par défaut pour chaque type de forme
+export const SHAPE_DEFAULT_SIZES: Record<ShapeType, { width: number; height: number }> = {
+  rectangle: { width: 120, height: 60 },
+  square: { width: 80, height: 80 },
+  'rounded-rectangle': { width: 120, height: 60 },
+  circle: { width: 60, height: 60 },
+  ellipse: { width: 100, height: 60 },
+  line: { width: 100, height: 2 },
+};
 
 // Validation qu'une couleur est autorisée
 export function isAllowedColor(color: string): boolean {

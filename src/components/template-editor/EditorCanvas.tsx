@@ -13,9 +13,9 @@ import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
-import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon } from "lucide-react";
+import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
-import type { TextContent, ImageContent } from "@/types/template-editor";
+import type { TextContent, ImageContent, ShapeContent } from "@/types/template-editor";
 import { toast } from "sonner";
 
 // Configuration des zones dynamiques (positions simulées pour le rendu visuel)
@@ -42,9 +42,11 @@ export function EditorCanvas() {
     selectedElementId,
     selectedDynamicZoneId,
     addElementMode,
+    selectedShapeType,
     selectElement,
     selectDynamicZone,
     addElement,
+    addShape,
     setAddElementMode,
     updateElementPosition,
     updateElementSize,
@@ -415,8 +417,13 @@ export function EditorCanvas() {
       const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SCALE.height;
       
       try {
-        const newElement = addElement(addElementMode, { x: Math.round(x), y: Math.round(y) });
-        toast.success(`${addElementMode === 'image' ? 'Image' : 'Texte'} ajouté(e)`);
+        if (addElementMode === 'shape' && selectedShapeType) {
+          const newElement = addShape(selectedShapeType, { x: Math.round(x), y: Math.round(y) });
+          toast.success(`Forme ajoutée`);
+        } else if (addElementMode === 'text' || addElementMode === 'image') {
+          const newElement = addElement(addElementMode, { x: Math.round(x), y: Math.round(y) });
+          toast.success(`${addElementMode === 'image' ? 'Image' : 'Texte'} ajouté(e)`);
+        }
       } catch (error) {
         toast.error("Erreur lors de l'ajout de l'élément");
       }
@@ -582,8 +589,10 @@ export function EditorCanvas() {
               const style = getElementStyle({ ...element, type: element.type });
               const isSelected = selectedElementId === element.id;
               const isTextElement = element.type === 'text';
+              const isShapeElement = element.type === 'shape';
               const textContent = isTextElement ? element.content as TextContent : null;
-              const imageContent = !isTextElement && element.type === 'image' ? element.content as ImageContent : null;
+              const imageContent = element.type === 'image' ? element.content as ImageContent : null;
+              const shapeContent = isShapeElement ? element.content as ShapeContent : null;
               
               const isDraggedElement = isDragging && selectedElementId === element.id;
               const isResizingElement = isResizing && selectedElementId === element.id;
@@ -605,6 +614,65 @@ export function EditorCanvas() {
                   </div>
                 ));
               };
+
+              // Rendu des formes
+              const renderShape = () => {
+                if (!shapeContent) return null;
+                
+                const shapeStyle: React.CSSProperties = {
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: shapeContent.backgroundColor === 'transparent' ? 'transparent' : shapeContent.backgroundColor,
+                  opacity: shapeContent.backgroundOpacity / 100,
+                  transform: shapeContent.rotation ? `rotate(${shapeContent.rotation}deg)` : undefined,
+                  ...(shapeContent.border.enabled && {
+                    border: `${shapeContent.border.width}px solid ${shapeContent.border.color}`
+                  }),
+                  borderRadius: shapeContent.shapeType === 'circle' || shapeContent.shapeType === 'ellipse' 
+                    ? '50%' 
+                    : shapeContent.cornerRadius,
+                };
+
+                if (shapeContent.shapeType === 'line') {
+                  return (
+                    <div 
+                      className="w-full flex items-center justify-center"
+                      style={{ height: '100%' }}
+                    >
+                      <div 
+                        style={{ 
+                          width: '100%',
+                          height: shapeContent.border.width || 2,
+                          backgroundColor: shapeContent.border.color || shapeContent.backgroundColor 
+                        }} 
+                      />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={shapeStyle} className="relative">
+                    {shapeContent.innerContent?.text && (
+                      <div 
+                        className="absolute inset-0 flex"
+                        style={{
+                          padding: shapeContent.innerContent.padding,
+                          justifyContent: { left: 'flex-start', center: 'center', right: 'flex-end' }[shapeContent.innerContent.alignment.horizontal],
+                          alignItems: { top: 'flex-start', center: 'center', bottom: 'flex-end' }[shapeContent.innerContent.alignment.vertical]
+                        }}
+                      >
+                        <span style={{ 
+                          fontSize: `${shapeContent.innerContent.text.fontSize * 0.4}px`,
+                          color: shapeContent.innerContent.text.color,
+                          fontWeight: shapeContent.innerContent.text.bold ? 'bold' : 'normal'
+                        }}>
+                          {shapeContent.innerContent.text.content}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              };
               
               return (
                 <div
@@ -612,7 +680,7 @@ export function EditorCanvas() {
                   className={cn(
                     "absolute rounded-sm",
                     !isDragging && !isResizing && "transition-all duration-150",
-                    isEditable && !element.isDynamic ? "cursor-grab" : "cursor-pointer",
+                    isEditable && !element.isDynamic && !(shapeContent?.isLocked) ? "cursor-grab" : "cursor-pointer",
                     isDraggedElement && "cursor-grabbing opacity-80 shadow-lg scale-[1.02]",
                     isResizingElement && "ring-2 ring-primary",
                     isSelected 
@@ -665,14 +733,14 @@ export function EditorCanvas() {
                     </div>
                   )}
 
+                  {isShapeElement && renderShape()}
+
                   {/* Indicateur de sélection */}
                   {isSelected && (
                     <div className="absolute -top-1 -left-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                      {isTextElement ? (
-                        <Type className="h-2.5 w-2.5" />
-                      ) : (
-                        <ImageIcon className="h-2.5 w-2.5" />
-                      )}
+                      {isTextElement ? <Type className="h-2.5 w-2.5" /> : 
+                       isShapeElement ? <Square className="h-2.5 w-2.5" /> :
+                       <ImageIcon className="h-2.5 w-2.5" />}
                     </div>
                   )}
 
