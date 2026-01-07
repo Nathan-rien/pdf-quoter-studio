@@ -510,6 +510,8 @@ export function ElementProperties() {
             <Separator />
           </>
         )}
+
+        {selectedElement.type === 'text' && textContent && (
           <>
             {/* Contenu texte */}
             <div className="space-y-2">
