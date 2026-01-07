@@ -125,8 +125,10 @@ export function EditorCanvas() {
       const x = ((e.clientX - canvasRect.left - dragOffset.x) / canvasRect.width) * CANVAS_SCALE.width;
       const y = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * CANVAS_SCALE.height;
       
-      const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - element.size.width));
-      const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - element.size.height));
+      // Limites plus souples : permettre de déplacer jusqu'aux bords du canvas
+      // avec une marge minimale de 10px
+      const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - 10));
+      const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - 10));
       
       updateElementPosition(selectedElementId, { 
         x: Math.round(clampedX), 
