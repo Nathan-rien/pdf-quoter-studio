@@ -179,11 +179,12 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
       newData[rowIndex] = { ...newData[rowIndex], [column]: value };
       
       // Auto-calculate VTN if Nb or VUN changes (EXPLICIT RULE)
+      // Arrondi à 2 décimales pour éviter les erreurs de précision floating-point
       if (column === 'nb' || column === 'vun') {
         const nb = column === 'nb' ? (value as number) : newData[rowIndex].nb;
         const vun = column === 'vun' ? (value as number) : newData[rowIndex].vun;
         if (nb !== null && vun !== null) {
-          newData[rowIndex].vtn = nb * vun;
+          newData[rowIndex].vtn = Math.round(nb * vun * 100) / 100;
         }
       }
       

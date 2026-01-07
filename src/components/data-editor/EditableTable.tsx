@@ -114,7 +114,12 @@ export function EditableTable<T>({
                   {columns.map((col) => {
                     const cellError = getCellError(rowIndex, col.key);
                     const value = row[col.key];
-                    const displayValue = value === null || value === undefined ? '' : String(value);
+                    // Formater les nombres readonly à 2 décimales
+                    const displayValue = value === null || value === undefined 
+                      ? '' 
+                      : (col.type === 'readonly' && typeof value === 'number')
+                        ? value.toFixed(2)
+                        : String(value);
 
                     return (
                       <TableCell 
