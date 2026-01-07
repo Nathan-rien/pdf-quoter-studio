@@ -57,9 +57,11 @@ export function FicheContratEditor() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fc-gc">GC (Gestionnaire Commercial)</Label>
+            <Label htmlFor="fc-gc">GC (Gestionnaire Commercial / ADV)</Label>
             <Input
               id="fc-gc"
+              value={ficheContratData.gc || ''}
+              onChange={(e) => updateFicheContratField('gc', e.target.value || null)}
               placeholder="Nom du gestionnaire"
             />
           </div>

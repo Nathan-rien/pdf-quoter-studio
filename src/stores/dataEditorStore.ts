@@ -21,7 +21,8 @@ export interface FicheContratData {
   adresse: string | null;
   codePostal: string | null;
   ville: string | null;
-  contact: string | null;
+  contact: string | null;  // IC (Ingénieur Commercial)
+  gc: string | null;       // GC (Gestionnaire Commercial / ADV)
   telephone: string | null;
   email: string | null;
   siret: string | null;
@@ -109,6 +110,7 @@ const initialFicheContrat: FicheContratData = {
   codePostal: null,
   ville: null,
   contact: null,
+  gc: null,
   telephone: null,
   email: null,
   siret: null,

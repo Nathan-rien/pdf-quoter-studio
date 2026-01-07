@@ -241,24 +241,58 @@ function parseFicheContratSheet(sheet: XLSX.WorkSheet): { data: Partial<FicheCon
   return { data, errors };
 }
 
-function parseMatriceSheet(sheet: XLSX.WorkSheet): { rows: MatriceRow[]; errors: ExcelParseError[] } {
+function parseMatriceSheet(sheet: XLSX.WorkSheet): { 
+  rows: MatriceRow[]; 
+  clientData: Partial<FicheContratData>; 
+  errors: ExcelParseError[] 
+} {
   const rows: MatriceRow[] = [];
   const errors: ExcelParseError[] = [];
+  const clientData: Partial<FicheContratData> = {};
   
-  // Matrice est généralement une feuille de configuration
-  // Parser les données de base
   const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
   
+  // Parcourir toutes les lignes pour trouver les labels et leurs valeurs
   for (let r = range.s.r; r <= range.e.r; r++) {
+    const rowNum = r + 1;
+    
+    // Chercher dans les colonnes A, B, C, D pour les labels
+    for (let c = 0; c <= 3; c++) {
+      const colLetter = XLSX.utils.encode_col(c);
+      const cellValue = extractString(getCell(sheet, colLetter, rowNum));
+      
+      if (cellValue) {
+        const lowerValue = cellValue.toLowerCase().trim();
+        
+        // La valeur associée est généralement dans la colonne E (index 4)
+        const valueCell = getCell(sheet, 'E', rowNum);
+        const value = extractString(valueCell);
+        
+        if (lowerValue.includes('nom du client') || lowerValue === 'client') {
+          if (value) clientData.client = value;
+        } else if (lowerValue === 'commercial' || (lowerValue.includes('commercial') && !lowerValue.includes('gestionnaire'))) {
+          if (value) clientData.contact = value; // contact = IC (Commercial)
+        } else if (lowerValue === 'adv' || lowerValue.includes('adv')) {
+          if (value) clientData.gc = value; // gc = ADV
+        } else if (lowerValue.includes('durée') || lowerValue.includes('duree')) {
+          const numValue = extractNumber(valueCell);
+          if (numValue) clientData.dureeLocation = numValue;
+        } else if (lowerValue.includes('refi') || lowerValue.includes('partenaire')) {
+          if (value) clientData.partenaire = value;
+        }
+      }
+    }
+    
+    // Conserver le parsing générique pour les autres lignes
     const rowData: MatriceRow = {
       id: `matrice-${r}`,
-      rawRowIndex: r + 1,
+      rawRowIndex: rowNum,
     };
     
     // Extraire toutes les cellules de la ligne
     for (let c = range.s.c; c <= range.e.c; c++) {
       const colLetter = XLSX.utils.encode_col(c);
-      const cell = sheet[`${colLetter}${r + 1}`];
+      const cell = sheet[`${colLetter}${rowNum}`];
       if (cell) {
         rowData[`col_${colLetter}`] = cell.v;
       }
@@ -270,7 +304,7 @@ function parseMatriceSheet(sheet: XLSX.WorkSheet): { rows: MatriceRow[]; errors:
     }
   }
   
-  return { rows, errors };
+  return { rows, clientData, errors };
 }
 
 // === FONCTION PRINCIPALE DE PARSING ===
@@ -330,11 +364,13 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
       return match ? workbook.Sheets[match] : null;
     };
     
-    // Parser Matrice
+    // Parser Matrice (avec extraction des données client)
     const matriceSheet = findSheet('Matrice');
     if (matriceSheet) {
       const result = parseMatriceSheet(matriceSheet);
       data.matrice = result.rows;
+      // Fusionner les données client de Matrice vers ficheContrat
+      data.ficheContrat = { ...data.ficheContrat, ...result.clientData };
       errors.push(...result.errors);
     }
     
