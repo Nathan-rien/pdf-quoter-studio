@@ -250,20 +250,24 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.client!.email = emailMatch[1];
   }
 
-  // Totals (take the LAST match to avoid picking table/header noise)
-  const money = '(\\d{1,3}(?:[ \\.]\\d{3})*(?:,\\d{2})?)';
+  // Totals - use precise patterns to avoid overlap
+  const money = '(\\d{1,3}(?:[\\s\\.]\\d{3})*(?:,\\d{2})?)';
 
+  // Total HT: "TOTAL HT 31 644,00 €" or "TOTAL HT: 31 644,00 €"
   const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT\\s*:?\\s*${money}\\s*€`, 'gi'))];
   if (totalHTMatches.length) {
     result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
   }
 
-  const tvaMatches = [...text.matchAll(new RegExp(`\\bTVA\\b[\\s\\S]{0,40}?${money}\\s*€`, 'gi'))];
+  // TVA: "TVA 20%" or "DONT ECO-TAXE HT: ... TVA 6 328,80 €" - be specific to avoid capturing TTC
+  const tvaMatches = [...text.matchAll(new RegExp(`(?:^|\\s)TVA\\s*(?:\\d+(?:[,.]\\d+)?\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gim'))];
   if (tvaMatches.length) {
     result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
   }
 
-  const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC\\s*:?\\s*${money}\\s*€`, 'gi'))];
+  // Total TTC: "37 972,80 €" after TTC marker OR explicit "TOTAL TTC"
+  // First try explicit "TOTAL TTC"
+  const totalTTCMatches = [...text.matchAll(new RegExp(`(?:TOTAL\\s+)?TTC\\s*:?\\s*${money}\\s*€`, 'gi'))];
   if (totalTTCMatches.length) {
     result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
   }
