@@ -67,6 +67,10 @@ interface TemplateEditorStore extends TemplateEditorState {
   // Presse-papier
   copySelectedElements: () => void;
   pasteElements: () => EditableElement[];
+  
+  // Historique (Undo)
+  undo: () => boolean;
+  canUndo: () => boolean;
 
   // Ajout d'éléments
   setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape') => void;
@@ -159,6 +163,31 @@ const DEFAULT_TEMPLATE: PDFTemplate = {
 
 // Presse-papier (non persisté)
 let clipboard: EditableElement[] = [];
+
+// Historique pour undo (non persisté) - stocke les versions précédentes des pages
+interface HistoryEntry {
+  pages: TemplatePageContent[];
+  selectedElementId: string | null;
+  selectedElementIds: string[];
+}
+const MAX_HISTORY_SIZE = 50;
+let undoHistory: HistoryEntry[] = [];
+
+// Helper pour sauvegarder l'état actuel dans l'historique
+const saveToHistory = (state: TemplateEditorState) => {
+  if (!state.currentVersion) return;
+  
+  undoHistory.push({
+    pages: JSON.parse(JSON.stringify(state.currentVersion.pages)),
+    selectedElementId: state.selectedElementId,
+    selectedElementIds: [...state.selectedElementIds]
+  });
+  
+  // Limiter la taille de l'historique
+  if (undoHistory.length > MAX_HISTORY_SIZE) {
+    undoHistory.shift();
+  }
+};
 
 const initialState: TemplateEditorState = {
   // Templates
@@ -479,7 +508,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   // Édition (protégée)
   updateTextContent: (elementId, content) => {
-    const { currentVersion, selectedPageNumber } = get();
+    const state = get();
+    const { currentVersion, selectedPageNumber } = state;
     if (!currentVersion || currentVersion.status !== 'brouillon') return false;
 
     const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
@@ -490,6 +520,9 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
     const element = currentVersion.pages[pageIndex].elements[elementIndex];
     if (element.isDynamic) return false; // Protection zone dynamique
+
+    // Sauvegarder dans l'historique avant modification
+    saveToHistory(state);
 
     const updatedPages = [...currentVersion.pages];
     const updatedElements = [...updatedPages[pageIndex].elements];
@@ -654,7 +687,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   // Suppression d'un élément
   deleteElement: (elementId) => {
-    const { currentVersion, selectedPageNumber, selectedElementId } = get();
+    const state = get();
+    const { currentVersion, selectedPageNumber, selectedElementId } = state;
     if (!currentVersion || currentVersion.status !== 'brouillon') return false;
 
     const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
@@ -662,6 +696,9 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
     const element = currentVersion.pages[pageIndex].elements.find(e => e.id === elementId);
     if (!element || element.isDynamic) return false;
+
+    // Sauvegarder dans l'historique avant suppression
+    saveToHistory(state);
 
     const updatedPages = [...currentVersion.pages];
     const updatedElements = updatedPages[pageIndex].elements.filter(e => e.id !== elementId);
@@ -817,12 +854,16 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   // Supprimer tous les éléments sélectionnés
   deleteSelectedElements: () => {
-    const { currentVersion, selectedPageNumber, selectedElementIds } = get();
+    const state = get();
+    const { currentVersion, selectedPageNumber, selectedElementIds } = state;
     if (!currentVersion || currentVersion.status !== 'brouillon') return 0;
     if (selectedElementIds.length === 0) return 0;
 
     const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
     if (pageIndex === -1) return 0;
+
+    // Sauvegarder dans l'historique avant suppression
+    saveToHistory(state);
 
     const elementsToDelete = new Set(selectedElementIds);
     const updatedPages = [...currentVersion.pages];
@@ -1387,6 +1428,30 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
         hasUnsavedChanges: false
       });
     }
+    // Vider l'historique
+    undoHistory = [];
+  },
+
+  // Annuler la dernière action
+  undo: () => {
+    const { currentVersion } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+    if (undoHistory.length === 0) return false;
+
+    const previousState = undoHistory.pop()!;
+    
+    set({
+      currentVersion: { ...currentVersion, pages: previousState.pages },
+      selectedElementId: previousState.selectedElementId,
+      selectedElementIds: previousState.selectedElementIds,
+      hasUnsavedChanges: undoHistory.length > 0
+    });
+    
+    return true;
+  },
+
+  canUndo: () => {
+    return undoHistory.length > 0;
   }
 }),
     {

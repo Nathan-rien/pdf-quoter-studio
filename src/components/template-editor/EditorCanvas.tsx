@@ -58,7 +58,8 @@ export function EditorCanvas() {
     moveSelectedElements,
     copySelectedElements,
     pasteElements,
-    deleteSelectedElements
+    deleteSelectedElements,
+    undo
   } = useTemplateEditorStore();
 
   // États pour le drag & drop
@@ -110,6 +111,18 @@ export function EditorCanvas() {
       return;
     }
     
+    // Annuler (Ctrl+Z / Cmd+Z)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      if (currentVersion?.status === 'brouillon' && editorMode === 'edit') {
+        const undone = undo();
+        if (undone) {
+          toast.success('Action annulée');
+        }
+        e.preventDefault();
+      }
+      return;
+    }
+    
     // Supprimer (Delete / Backspace)
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedElementIds.length > 0 && currentVersion?.status === 'brouillon' && editorMode === 'edit') {
@@ -148,7 +161,7 @@ export function EditorCanvas() {
     if (moved) {
       e.preventDefault();
     }
-  }, [selectedElementIds, currentVersion, editorMode, moveSelectedElements, copySelectedElements, pasteElements, deleteSelectedElements]);
+  }, [selectedElementIds, currentVersion, editorMode, moveSelectedElements, copySelectedElements, pasteElements, deleteSelectedElements, undo]);
 
   // Focus sur le conteneur pour capturer les événements clavier
   useEffect(() => {
