@@ -55,7 +55,9 @@ export function EditorCanvas() {
     updateElementPosition,
     updateElementSize,
     updateDynamicZonePosition,
-    moveSelectedElements
+    moveSelectedElements,
+    copySelectedElements,
+    pasteElements
   } = useTemplateEditorStore();
 
   // États pour le drag & drop
@@ -83,8 +85,30 @@ export function EditorCanvas() {
   const MOVE_STEP_FINE = 1; // Pas de déplacement fin avec Shift (pixels)
   const LASSO_MIN_SIZE = 5; // Taille minimale du lasso pour déclencher une sélection
 
-  // Raccourcis clavier pour déplacer les éléments
+  // Raccourcis clavier pour déplacer, copier et coller les éléments
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Copier (Ctrl+C / Cmd+C)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      if (selectedElementIds.length > 0) {
+        copySelectedElements();
+        toast.success(`${selectedElementIds.length} élément(s) copié(s)`);
+        e.preventDefault();
+      }
+      return;
+    }
+    
+    // Coller (Ctrl+V / Cmd+V)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      if (currentVersion?.status === 'brouillon' && editorMode === 'edit') {
+        const pasted = pasteElements();
+        if (pasted.length > 0) {
+          toast.success(`${pasted.length} élément(s) collé(s)`);
+        }
+        e.preventDefault();
+      }
+      return;
+    }
+    
     // Vérifier qu'on a des éléments sélectionnés et qu'on est en mode édition
     if (selectedElementIds.length === 0 || !currentVersion || currentVersion.status !== 'brouillon' || editorMode !== 'edit') {
       return;
@@ -111,7 +135,7 @@ export function EditorCanvas() {
     if (moved) {
       e.preventDefault();
     }
-  }, [selectedElementIds, currentVersion, editorMode, moveSelectedElements]);
+  }, [selectedElementIds, currentVersion, editorMode, moveSelectedElements, copySelectedElements, pasteElements]);
 
   // Focus sur le conteneur pour capturer les événements clavier
   useEffect(() => {

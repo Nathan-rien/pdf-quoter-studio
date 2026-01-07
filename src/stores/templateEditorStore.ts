@@ -63,6 +63,10 @@ interface TemplateEditorStore extends TemplateEditorState {
   moveSelectedElements: (deltaX: number, deltaY: number) => boolean;
   deleteSelectedElements: () => number;
   duplicateSelectedElements: () => EditableElement[];
+  
+  // Presse-papier
+  copySelectedElements: () => void;
+  pasteElements: () => EditableElement[];
 
   // Ajout d'éléments
   setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape') => void;
@@ -152,6 +156,9 @@ const DEFAULT_TEMPLATE: PDFTemplate = {
   updatedAt: new Date('2025-01-01'),
   isActive: true
 };
+
+// Presse-papier (non persisté)
+let clipboard: EditableElement[] = [];
 
 const initialState: TemplateEditorState = {
   // Templates
@@ -887,6 +894,69 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     });
 
     return duplicatedElements;
+  },
+
+  // Copier les éléments sélectionnés dans le presse-papier
+  copySelectedElements: () => {
+    const { currentVersion, selectedPageNumber, selectedElementIds } = get();
+    if (!currentVersion || selectedElementIds.length === 0) return;
+
+    const page = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
+    if (!page) return;
+
+    // Copier les éléments non-dynamiques sélectionnés
+    clipboard = selectedElementIds
+      .map(id => page.elements.find(e => e.id === id))
+      .filter((e): e is EditableElement => e !== undefined && !e.isDynamic)
+      .map(e => ({
+        ...e,
+        content: { ...e.content }
+      }));
+  },
+
+  // Coller les éléments du presse-papier
+  pasteElements: () => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return [];
+    if (clipboard.length === 0) return [];
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return [];
+
+    const existingElements = currentVersion.pages[pageIndex].elements.filter(e => !e.isDynamic);
+    let maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+
+    const pastedElements: EditableElement[] = [];
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+
+    clipboard.forEach(element => {
+      maxZIndex++;
+      const pasted: EditableElement = {
+        ...element,
+        id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        pageNumber: selectedPageNumber,
+        position: { x: element.position.x + 20, y: element.position.y + 20 },
+        content: { ...element.content },
+        zIndex: maxZIndex
+      };
+
+      updatedElements.push(pasted);
+      pastedElements.push(pasted);
+    });
+
+    if (pastedElements.length === 0) return [];
+
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementIds: pastedElements.map(e => e.id),
+      selectedElementId: pastedElements.length > 0 ? pastedElements[0].id : null
+    });
+
+    return pastedElements;
   },
 
   // Mise à jour du contenu d'une forme
