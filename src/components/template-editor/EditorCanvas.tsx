@@ -577,6 +577,7 @@ export function EditorCanvas() {
           {/* Éléments éditables du template */}
           {pageContent?.elements
             .filter(e => !e.isDynamic)
+            .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
             .map((element) => {
               const style = getElementStyle({ ...element, type: element.type });
               const isSelected = selectedElementId === element.id;
@@ -587,9 +588,23 @@ export function EditorCanvas() {
               const isDraggedElement = isDragging && selectedElementId === element.id;
               const isResizingElement = isResizing && selectedElementId === element.id;
               
-              // Dimensions calculées pour les poignées
-              const elementWidth = (element.size.width / CANVAS_SCALE.width) * 100;
-              const elementHeight = (element.size.height / CANVAS_SCALE.height) * 100;
+              // Rendu du texte avec support des listes
+              const renderTextContent = () => {
+                if (!textContent) return null;
+                
+                const lines = textContent.text.split('\n');
+                const listType = textContent.listType || 'none';
+                const indentLevel = textContent.indentLevel || 0;
+                const indentPx = indentLevel * 12;
+                
+                return lines.map((line, i) => (
+                  <div key={i} style={{ paddingLeft: `${indentPx}px` }}>
+                    {listType === 'bullet' && '• '}
+                    {listType === 'numbered' && `${i + 1}. `}
+                    {line || '\u00A0'}
+                  </div>
+                ));
+              };
               
               return (
                 <div
@@ -601,10 +616,13 @@ export function EditorCanvas() {
                     isDraggedElement && "cursor-grabbing opacity-80 shadow-lg scale-[1.02]",
                     isResizingElement && "ring-2 ring-primary",
                     isSelected 
-                      ? "ring-1 ring-primary bg-primary/5 z-20" 
-                      : "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50 z-10",
+                      ? "ring-1 ring-primary bg-primary/5" 
+                      : "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50",
                   )}
-                  style={style}
+                  style={{
+                    ...style,
+                    zIndex: isSelected ? 20 : (element.zIndex || 0) + 10
+                  }}
                   onMouseDown={(e) => handleMouseDown(element.id, e)}
                   onClick={(e) => handleElementClick(element.id, e)}
                   title={isEditable ? "Glisser pour déplacer" : "Mode lecture seule"}
@@ -622,17 +640,21 @@ export function EditorCanvas() {
                         lineHeight: 1.2,
                       }}
                     >
-                      <span className="whitespace-pre-wrap break-words">{textContent.text}</span>
+                      <span className="whitespace-pre-wrap break-words">{renderTextContent()}</span>
                     </div>
                   )}
                   
                   {element.type === 'image' && (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-50 border border-dashed border-gray-200 rounded">
+                    <div 
+                      className="w-full h-full flex items-center justify-center bg-gray-50 border border-dashed border-gray-200 rounded"
+                      style={{ opacity: (imageContent?.opacity ?? 100) / 100 }}
+                    >
                       {imageContent?.imageUrl ? (
                         <img 
                           src={imageContent.imageUrl} 
                           alt={imageContent.alt || 'Image'} 
                           className="w-full h-full object-contain"
+                          style={{ transform: `rotate(${imageContent.rotation || 0}deg)` }}
                         />
                       ) : (
                         <div className="flex flex-col items-center gap-1 text-gray-300">
@@ -657,22 +679,18 @@ export function EditorCanvas() {
                   {/* Poignées de redimensionnement */}
                   {isSelected && isEditable && (
                     <>
-                      {/* Coin haut-gauche */}
                       <div
                         className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-nw-resize z-30 hover:scale-125 transition-transform"
                         onMouseDown={(e) => handleResizeMouseDown(element.id, 'nw', e)}
                       />
-                      {/* Coin haut-droite */}
                       <div
                         className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-ne-resize z-30 hover:scale-125 transition-transform"
                         onMouseDown={(e) => handleResizeMouseDown(element.id, 'ne', e)}
                       />
-                      {/* Coin bas-gauche */}
                       <div
                         className="absolute -bottom-1 -left-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-sw-resize z-30 hover:scale-125 transition-transform"
                         onMouseDown={(e) => handleResizeMouseDown(element.id, 'sw', e)}
                       />
-                      {/* Coin bas-droite */}
                       <div
                         className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-primary border border-white rounded-sm cursor-se-resize z-30 hover:scale-125 transition-transform"
                         onMouseDown={(e) => handleResizeMouseDown(element.id, 'se', e)}

@@ -56,6 +56,11 @@ interface TemplateEditorStore extends TemplateEditorState {
   setAddElementMode: (mode: 'none' | 'text' | 'image') => void;
   addElement: (type: 'text' | 'image', position: { x: number; y: number }) => EditableElement;
   deleteElement: (elementId: string) => boolean;
+  
+  // Gestion des calques
+  updateElementZIndex: (elementId: string, zIndex: number) => boolean;
+  bringToFront: (elementId: string) => boolean;
+  sendToBack: (elementId: string) => boolean;
 
   // Protection des zones dynamiques
   isElementEditable: (elementId: string) => boolean;
@@ -506,6 +511,15 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       throw new Error('Cannot add element to non-draft version');
     }
 
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) {
+      throw new Error('Page not found');
+    }
+
+    // Calculer le zIndex maximum actuel sur la page
+    const existingElements = currentVersion.pages[pageIndex].elements.filter(e => !e.isDynamic);
+    const maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+
     const newElement: EditableElement = {
       id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
@@ -514,14 +528,25 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       position,
       size: type === 'text' ? { width: 150, height: 30 } : { width: 100, height: 80 },
       content: type === 'text' 
-        ? { text: 'Nouveau texte', fontFamily: 'DM Sans', fontSize: 12, color: '#1f2937', bold: false, italic: false, underline: false }
-        : { imageUrl: '', alt: 'Nouvelle image' }
+        ? { 
+            text: 'Nouveau texte', 
+            fontFamily: 'DM Sans', 
+            fontSize: 12, 
+            color: '#1f2937', 
+            bold: false, 
+            italic: false, 
+            underline: false,
+            listType: 'none',
+            indentLevel: 0
+          }
+        : { 
+            imageUrl: '', 
+            alt: 'Nouvelle image',
+            rotation: 0,
+            opacity: 100
+          },
+      zIndex: maxZIndex + 1
     };
-
-    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
-    if (pageIndex === -1) {
-      throw new Error('Page not found');
-    }
 
     const updatedPages = [...currentVersion.pages];
     const updatedElements = [...updatedPages[pageIndex].elements, newElement];
@@ -556,6 +581,86 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       currentVersion: { ...currentVersion, pages: updatedPages },
       hasUnsavedChanges: true,
       selectedElementId: selectedElementId === elementId ? null : selectedElementId
+    });
+    return true;
+  },
+
+  // Gestion des calques (z-index)
+  updateElementZIndex: (elementId, zIndex) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic) return false;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    updatedElements[elementIndex] = { ...element, zIndex };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
+
+  bringToFront: (elementId) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elements = currentVersion.pages[pageIndex].elements;
+    const element = elements.find(e => e.id === elementId);
+    if (!element || element.isDynamic) return false;
+
+    // Trouver le zIndex maximum
+    const maxZIndex = elements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+    
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = updatedPages[pageIndex].elements.map(el => 
+      el.id === elementId ? { ...el, zIndex: maxZIndex + 1 } : el
+    );
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
+
+  sendToBack: (elementId) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elements = currentVersion.pages[pageIndex].elements;
+    const element = elements.find(e => e.id === elementId);
+    if (!element || element.isDynamic) return false;
+
+    // Trouver le zIndex minimum
+    const minZIndex = elements.reduce((min, el) => Math.min(min, el.zIndex || 0), 0);
+    
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = updatedPages[pageIndex].elements.map(el => 
+      el.id === elementId ? { ...el, zIndex: minZIndex - 1 } : el
+    );
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
     });
     return true;
   },
