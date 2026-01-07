@@ -13,9 +13,11 @@ import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
-import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus } from "lucide-react";
+import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus, Sparkles } from "lucide-react";
+import { icons } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
-import type { TextContent, ImageContent, ShapeContent } from "@/types/template-editor";
+import type { TextContent, ImageContent, ShapeContent, IconContent } from "@/types/template-editor";
 import { toast } from "sonner";
 
 // Configuration des zones dynamiques (positions simulées pour le rendu visuel)
@@ -44,6 +46,7 @@ export function EditorCanvas() {
     selectedDynamicZoneId,
     addElementMode,
     selectedShapeType,
+    selectedIconName,
     selectElement,
     toggleElementSelection,
     selectMultipleElements,
@@ -51,6 +54,7 @@ export function EditorCanvas() {
     selectDynamicZone,
     addElement,
     addShape,
+    addIcon,
     setAddElementMode,
     updateElementPosition,
     updateElementSize,
@@ -567,7 +571,10 @@ export function EditorCanvas() {
       const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SCALE.height;
       
       try {
-        if (addElementMode === 'shape' && selectedShapeType) {
+        if (addElementMode === 'icon' && selectedIconName) {
+          const newElement = addIcon(selectedIconName, { x: Math.round(x), y: Math.round(y) });
+          toast.success(`Icône ajoutée`);
+        } else if (addElementMode === 'shape' && selectedShapeType) {
           const newElement = addShape(selectedShapeType, { x: Math.round(x), y: Math.round(y) });
           toast.success(`Forme ajoutée`);
         } else if (addElementMode === 'text' || addElementMode === 'image') {
@@ -630,7 +637,7 @@ export function EditorCanvas() {
           {isAddMode && (
             <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between">
               <p className="text-sm text-primary">
-                Cliquez sur le canvas pour placer {addElementMode === 'image' ? 'l\'image' : 'le texte'}
+                Cliquez sur le canvas pour placer {addElementMode === 'icon' ? 'l\'icône' : addElementMode === 'image' ? 'l\'image' : addElementMode === 'shape' ? 'la forme' : 'le texte'}
               </p>
               <Button variant="ghost" size="sm" onClick={handleCancelAddMode}>
                 Annuler
@@ -756,9 +763,11 @@ export function EditorCanvas() {
               const isPrimarySelected = selectedElementId === element.id;
               const isTextElement = element.type === 'text';
               const isShapeElement = element.type === 'shape';
+              const isIconElement = element.type === 'icon';
               const textContent = isTextElement ? element.content as TextContent : null;
               const imageContent = element.type === 'image' ? element.content as ImageContent : null;
               const shapeContent = isShapeElement ? element.content as ShapeContent : null;
+              const iconContent = isIconElement ? element.content as IconContent : null;
               
               const isDraggedElement = isDragging && isSelected;
               const isResizingElement = isResizing && selectedElementId === element.id;
@@ -839,7 +848,33 @@ export function EditorCanvas() {
                   </div>
                 );
               };
-              
+
+              // Rendu des icônes
+              const renderIcon = () => {
+                if (!iconContent) return null;
+                
+                const IconComponent = (icons as Record<string, LucideIcon>)[iconContent.iconName];
+                if (!IconComponent) {
+                  return (
+                    <div className="w-full h-full flex items-center justify-center bg-muted/30 rounded">
+                      <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div 
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ transform: iconContent.rotation ? `rotate(${iconContent.rotation}deg)` : undefined }}
+                  >
+                    <IconComponent 
+                      size={iconContent.size * 0.6}
+                      color={iconContent.color}
+                      strokeWidth={iconContent.strokeWidth}
+                    />
+                  </div>
+                );
+              };
               return (
                 <div
                   key={element.id}
@@ -905,11 +940,14 @@ export function EditorCanvas() {
 
                   {isShapeElement && renderShape()}
 
+                  {isIconElement && renderIcon()}
+
                   {/* Indicateur de sélection */}
                   {isSelected && (
                     <div className="absolute -top-1 -left-1 bg-primary text-primary-foreground rounded-full p-0.5">
                       {isTextElement ? <Type className="h-2.5 w-2.5" /> : 
                        isShapeElement ? <Square className="h-2.5 w-2.5" /> :
+                       isIconElement ? <Sparkles className="h-2.5 w-2.5" /> :
                        <ImageIcon className="h-2.5 w-2.5" />}
                     </div>
                   )}

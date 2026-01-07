@@ -9,7 +9,7 @@ import type { PDFPageNumber, DynamicZone } from './pdf-template';
 export type TemplateVersionStatus = 'brouillon' | 'publie' | 'archive';
 
 // Types d'éléments éditables
-export type EditableElementType = 'text' | 'image' | 'block' | 'shape' | 'group';
+export type EditableElementType = 'text' | 'image' | 'block' | 'shape' | 'group' | 'icon';
 
 // Types de formes disponibles
 export type ShapeType = 'rectangle' | 'square' | 'rounded-rectangle' | 'circle' | 'ellipse' | 'line';
@@ -112,6 +112,15 @@ export interface GroupContent {
   elementIds: string[]; // IDs des éléments groupés
 }
 
+// Contenu icône (nouvel élément)
+export interface IconContent {
+  iconName: string;  // Nom de l'icône Lucide (PascalCase)
+  size: number;      // 16-128px
+  color: string;     // Couleur depuis palette
+  strokeWidth: number; // 1-4
+  rotation: number;  // 0, 90, 180, 270
+}
+
 // Élément éditable
 export interface EditableElement {
   id: string;
@@ -120,7 +129,7 @@ export interface EditableElement {
   isDynamic: boolean; // Si true = LECTURE SEULE absolue
   position: { x: number; y: number };
   size: { width: number; height: number };
-  content: TextContent | ImageContent | BlockContent | ShapeContent | GroupContent;
+  content: TextContent | ImageContent | BlockContent | ShapeContent | GroupContent | IconContent;
   dynamicZoneId?: string; // Référence vers la zone dynamique si isDynamic
   zIndex?: number; // Ordre d'empilement (0 = fond, plus haut = devant)
 }
@@ -193,6 +202,7 @@ export interface TemplateEditorState {
   selectedPageNumber: PDFPageNumber;
   editorMode: 'view' | 'edit';
   hasUnsavedChanges: boolean;
-  addElementMode: 'none' | 'text' | 'image' | 'shape';
+  addElementMode: 'none' | 'text' | 'image' | 'shape' | 'icon';
   selectedShapeType: ShapeType | null;
+  selectedIconName: string | null;
 }

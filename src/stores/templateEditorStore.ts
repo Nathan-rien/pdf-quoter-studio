@@ -16,7 +16,8 @@ import type {
   ShapeInnerContent,
   TemplatePageContent,
   PublishValidationResult,
-  PDFTemplate
+  PDFTemplate,
+  IconContent
 } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZone } from '@/types/pdf-template';
 import { PDF_TEMPLATE_CONTRACT } from '@/lib/pdf-template-contract';
@@ -73,10 +74,12 @@ interface TemplateEditorStore extends TemplateEditorState {
   canUndo: () => boolean;
 
   // Ajout d'éléments
-  setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape') => void;
+  setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape' | 'icon') => void;
   setSelectedShapeType: (type: ShapeType | null) => void;
+  setSelectedIconName: (name: string | null) => void;
   addElement: (type: 'text' | 'image', position: { x: number; y: number }) => EditableElement;
   addShape: (shapeType: ShapeType, position: { x: number; y: number }) => EditableElement;
+  addIcon: (iconName: string, position: { x: number; y: number }) => EditableElement;
   deleteElement: (elementId: string) => boolean;
   duplicateElement: (elementId: string) => EditableElement | null;
   
@@ -85,6 +88,9 @@ interface TemplateEditorStore extends TemplateEditorState {
   updateShapeInnerContent: (elementId: string, innerContent: Partial<ShapeInnerContent>) => boolean;
   toggleAspectRatioLock: (elementId: string) => boolean;
   toggleElementLock: (elementId: string) => boolean;
+  
+  // Actions spécifiques aux icônes
+  updateIconContent: (elementId: string, content: Partial<IconContent>) => boolean;
   
   // Gestion des calques
   updateElementZIndex: (elementId: string, zIndex: number) => boolean;
@@ -205,7 +211,8 @@ const initialState: TemplateEditorState = {
   editorMode: 'view',
   hasUnsavedChanges: false,
   addElementMode: 'none',
-  selectedShapeType: null
+  selectedShapeType: null,
+  selectedIconName: null
 };
 
 // Helper pour convertir les strings en dates lors de la désérialisation
@@ -620,11 +627,15 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   // Mode ajout d'éléments
   setAddElementMode: (mode) => {
-    set({ addElementMode: mode, selectedShapeType: mode === 'shape' ? null : null });
+    set({ addElementMode: mode, selectedShapeType: mode === 'shape' ? null : null, selectedIconName: mode === 'icon' ? null : null });
   },
 
   setSelectedShapeType: (type) => {
     set({ selectedShapeType: type });
+  },
+
+  setSelectedIconName: (name) => {
+    set({ selectedIconName: name });
   },
 
   // Ajout d'un nouvel élément
@@ -763,7 +774,58 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       hasUnsavedChanges: true,
       selectedElementId: newElement.id,
       addElementMode: 'none',
-      selectedShapeType: null
+      selectedShapeType: null,
+      selectedIconName: null
+    });
+
+    return newElement;
+  },
+
+  // Ajout d'une icône
+  addIcon: (iconName, position) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      throw new Error('Cannot add icon to non-draft version');
+    }
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) {
+      throw new Error('Page not found');
+    }
+
+    const existingElements = currentVersion.pages[pageIndex].elements.filter(e => !e.isDynamic);
+    const maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+
+    const defaultContent: IconContent = {
+      iconName,
+      size: 32,
+      color: '#1f2937',
+      strokeWidth: 2,
+      rotation: 0
+    };
+
+    const newElement: EditableElement = {
+      id: `icon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'icon',
+      pageNumber: selectedPageNumber,
+      isDynamic: false,
+      position,
+      size: { width: 48, height: 48 },
+      content: defaultContent,
+      zIndex: maxZIndex + 1
+    };
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements, newElement];
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementId: newElement.id,
+      selectedElementIds: [newElement.id],
+      addElementMode: 'none',
+      selectedIconName: null
     });
 
     return newElement;
@@ -1134,7 +1196,34 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     return true;
   },
 
-  // Gestion des calques (z-index)
+  // Modification du contenu d'une icône
+  updateIconContent: (elementId, content) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic || element.type !== 'icon') return false;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    updatedElements[elementIndex] = {
+      ...element,
+      content: { ...(element.content as IconContent), ...content }
+    };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
+  },
   updateElementZIndex: (elementId, zIndex) => {
     const { currentVersion, selectedPageNumber } = get();
     if (!currentVersion || currentVersion.status !== 'brouillon') return false;
