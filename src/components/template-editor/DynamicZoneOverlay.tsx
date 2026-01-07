@@ -23,6 +23,8 @@ interface DynamicZoneOverlayProps {
   zone: DynamicZone;
   style?: React.CSSProperties;
   className?: string;
+  isSelected?: boolean;
+  isEditable?: boolean;
 }
 
 const ZONE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -31,52 +33,59 @@ const ZONE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   'options_block': Settings,
 };
 
-export function DynamicZoneOverlay({ zone, style, className }: DynamicZoneOverlayProps) {
+export function DynamicZoneOverlay({ zone, style, className, isSelected, isEditable }: DynamicZoneOverlayProps) {
   const [showDialog, setShowDialog] = useState(false);
   
   const Icon = ZONE_ICONS[zone.type] || Table;
   const error = blockDynamicZoneEdit(zone.id);
 
-  const handleClick = () => {
-    setShowDialog(true);
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isEditable) {
+      setShowDialog(true);
+    }
   };
 
   return (
     <>
       <div
         className={cn(
-          "bg-warning/10 border-2 border-warning border-dashed rounded-lg",
-          "cursor-not-allowed transition-colors hover:bg-warning/20",
-          "flex flex-col",
+          "h-full w-full bg-warning/10 border-2 border-warning border-dashed rounded-lg",
+          "transition-colors",
+          isEditable ? "cursor-grab hover:bg-warning/20" : "cursor-not-allowed hover:bg-warning/15",
+          isSelected && "bg-warning/20 border-solid",
           className
         )}
         style={style}
         onClick={handleClick}
-        title="Zone dynamique protégée - Cliquez pour plus d'informations"
+        title={isEditable ? "Glisser pour déplacer la zone" : "Zone dynamique protégée - Cliquez pour plus d'informations"}
       >
         {/* Header de la zone */}
-        <div className="flex items-center gap-2 p-2 bg-warning/90 text-warning-foreground rounded-t-md">
+        <div className={cn(
+          "flex items-center gap-2 p-2 text-warning-foreground rounded-t-md",
+          isSelected ? "bg-primary" : "bg-warning/90"
+        )}>
           <Lock className="h-3 w-3" />
           <span className="text-xs font-medium truncate flex-1">
-            Zone dynamique
+            {isEditable ? "Zone déplaçable" : "Zone dynamique"}
           </span>
           <Badge variant="outline" className="text-[10px] h-4 bg-background/20 border-warning-foreground/30">
-            Lecture seule
+            {isEditable ? "Glisser" : "Lecture seule"}
           </Badge>
         </div>
         
         {/* Contenu de la zone */}
-        <div className="flex-1 flex flex-col items-center justify-center p-3 text-center">
-          <Icon className="h-8 w-8 text-warning/60 mb-2" />
-          <p className="text-xs font-medium text-warning-foreground/80 mb-1">
+        <div className="flex-1 flex flex-col items-center justify-center p-3 text-center min-h-0">
+          <Icon className="h-6 w-6 text-warning/60 mb-1" />
+          <p className="text-[10px] font-medium text-warning-foreground/80 line-clamp-2">
             {zone.description}
           </p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[8px] text-muted-foreground mt-1">
             Source : <span className="font-mono">{zone.sourceSheet}</span>
           </p>
           {zone.isRequired && (
-            <Badge variant="destructive" className="mt-2 text-[10px]">
-              Requis pour l'export
+            <Badge variant="destructive" className="mt-1 text-[8px] h-4">
+              Requis
             </Badge>
           )}
         </div>

@@ -20,6 +20,8 @@ export interface DynamicZone {
   sourceSheet: string;
   isRequired: boolean; // true = export bloqué si vide
   description: string;
+  // Position personnalisable (optionnelle, en pourcentage)
+  position?: { top: number; height: number };
 }
 
 // Configuration d'une page

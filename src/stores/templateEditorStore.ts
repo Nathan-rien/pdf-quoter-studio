@@ -60,6 +60,11 @@ interface TemplateEditorStore extends TemplateEditorState {
   // Protection des zones dynamiques
   isElementEditable: (elementId: string) => boolean;
   attemptEditDynamicZone: (zoneId: string) => { blocked: true; error: ReturnType<typeof blockDynamicZoneEdit> };
+  
+  // Position des zones dynamiques
+  updateDynamicZonePosition: (zoneId: string, position: { top: number; height: number }) => boolean;
+  selectedDynamicZoneId: string | null;
+  selectDynamicZone: (zoneId: string | null) => void;
 
   // Versioning
   loadVersion: (version: TemplateVersion) => void;
@@ -132,6 +137,7 @@ const initialState: TemplateEditorState = {
   currentVersion: null,
   allVersions: [createPublishedDemoVersion(DEFAULT_TEMPLATE.id)],
   selectedElementId: null,
+  selectedDynamicZoneId: null,
   selectedPageNumber: 1,
   editorMode: 'view',
   hasUnsavedChanges: false,
@@ -567,6 +573,36 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       blocked: true,
       error: blockDynamicZoneEdit(zoneId)
     };
+  },
+
+  // Sélection et déplacement des zones dynamiques
+  selectDynamicZone: (zoneId) => {
+    set({ selectedDynamicZoneId: zoneId, selectedElementId: null });
+  },
+
+  updateDynamicZonePosition: (zoneId, position) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) return false;
+
+    const zoneIndex = currentVersion.pages[pageIndex].dynamicZones.findIndex(z => z.id === zoneId);
+    if (zoneIndex === -1) return false;
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedZones = [...updatedPages[pageIndex].dynamicZones];
+    updatedZones[zoneIndex] = {
+      ...updatedZones[zoneIndex],
+      position: { top: position.top, height: position.height }
+    };
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], dynamicZones: updatedZones };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+    return true;
   },
 
   // Versioning

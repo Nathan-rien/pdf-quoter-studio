@@ -40,15 +40,19 @@ export function EditorCanvas() {
     currentVersion,
     editorMode,
     selectedElementId,
+    selectedDynamicZoneId,
     addElementMode,
     selectElement,
+    selectDynamicZone,
     addElement,
     setAddElementMode,
-    updateElementPosition
+    updateElementPosition,
+    updateDynamicZonePosition
   } = useTemplateEditorStore();
 
   // États pour le drag & drop
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingZone, setIsDraggingZone] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -56,8 +60,9 @@ export function EditorCanvas() {
     p => p.pageNumber === selectedPageNumber
   );
   
-  const dynamicZones = getDynamicZonesForPage(selectedPageNumber as PDFPageNumber);
+  // Utiliser les zones dynamiques depuis la version courante (avec positions personnalisées)
   const pageContent = currentVersion?.pages.find(p => p.pageNumber === selectedPageNumber);
+  const dynamicZones = pageContent?.dynamicZones || [];
   
   const isEditable = currentVersion?.status === 'brouillon' && editorMode === 'edit';
   const isAddMode = addElementMode !== 'none';
@@ -97,34 +102,74 @@ export function EditorCanvas() {
   }, [isEditable, isAddMode, pageContent, selectElement]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !selectedElementId || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     
-    const element = pageContent?.elements.find(el => el.id === selectedElementId);
-    if (!element) return;
+    // Drag d'un élément normal
+    if (isDragging && selectedElementId) {
+      const element = pageContent?.elements.find(el => el.id === selectedElementId);
+      if (!element) return;
+      
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const x = ((e.clientX - canvasRect.left - dragOffset.x) / canvasRect.width) * CANVAS_SCALE.width;
+      const y = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * CANVAS_SCALE.height;
+      
+      const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - element.size.width));
+      const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - element.size.height));
+      
+      updateElementPosition(selectedElementId, { 
+        x: Math.round(clampedX), 
+        y: Math.round(clampedY) 
+      });
+    }
     
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = ((e.clientX - canvasRect.left - dragOffset.x) / canvasRect.width) * CANVAS_SCALE.width;
-    const y = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * CANVAS_SCALE.height;
-    
-    // Clamper aux limites du canvas
-    const clampedX = Math.max(0, Math.min(x, CANVAS_SCALE.width - element.size.width));
-    const clampedY = Math.max(0, Math.min(y, CANVAS_SCALE.height - element.size.height));
-    
-    updateElementPosition(selectedElementId, { 
-      x: Math.round(clampedX), 
-      y: Math.round(clampedY) 
-    });
-  }, [isDragging, selectedElementId, dragOffset, pageContent, updateElementPosition]);
+    // Drag d'une zone dynamique
+    if (isDraggingZone && selectedDynamicZoneId) {
+      const zone = dynamicZones.find(z => z.id === selectedDynamicZoneId);
+      if (!zone) return;
+      
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const yPercent = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * 100;
+      
+      const defaultPosition = ZONE_POSITIONS[zone.id] || { top: '30%', height: '40%' };
+      const currentHeight = zone.position?.height || parseFloat(defaultPosition.height);
+      
+      // Clamper entre 5% et (100% - height)
+      const clampedTop = Math.max(5, Math.min(yPercent, 95 - currentHeight));
+      
+      updateDynamicZonePosition(selectedDynamicZoneId, {
+        top: Math.round(clampedTop),
+        height: currentHeight
+      });
+    }
+  }, [isDragging, isDraggingZone, selectedElementId, selectedDynamicZoneId, dragOffset, pageContent, dynamicZones, updateElementPosition, updateDynamicZonePosition]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
+    setIsDraggingZone(false);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    if (isDragging) {
+    if (isDragging || isDraggingZone) {
       setIsDragging(false);
+      setIsDraggingZone(false);
     }
-  }, [isDragging]);
+  }, [isDragging, isDraggingZone]);
+
+  // Handler pour démarrer le drag d'une zone dynamique
+  const handleZoneMouseDown = useCallback((zoneId: string, e: React.MouseEvent) => {
+    if (!isEditable || isAddMode) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: 0,
+      y: e.clientY - rect.top
+    });
+    setIsDraggingZone(true);
+    selectDynamicZone(zoneId);
+  }, [isEditable, isAddMode, selectDynamicZone]);
 
   const handleElementClick = (elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -142,7 +187,7 @@ export function EditorCanvas() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging) return;
+    if (isDragging || isDraggingZone) return;
     
     // Mode ajout d'élément
     if (isAddMode && isEditable) {
@@ -160,6 +205,7 @@ export function EditorCanvas() {
     }
     
     selectElement(null);
+    selectDynamicZone(null);
   };
 
   const handleCancelAddMode = () => {
@@ -216,7 +262,7 @@ export function EditorCanvas() {
             "border-2",
             isEditable ? "border-primary/30" : "border-border",
             isAddMode && "cursor-crosshair",
-            isDragging && "cursor-grabbing"
+            (isDragging || isDraggingZone) && "cursor-grabbing"
           )}
           style={{
             width: '100%',
@@ -236,19 +282,36 @@ export function EditorCanvas() {
 
           {/* Zones dynamiques (affichées en premier pour être en fond) */}
           {dynamicZones.map((zone) => {
-            const position = ZONE_POSITIONS[zone.id] || { top: '30%', height: '40%' };
+            const defaultPosition = ZONE_POSITIONS[zone.id] || { top: '30%', height: '40%' };
+            const customPosition = zone.position;
+            const topValue = customPosition ? `${customPosition.top}%` : defaultPosition.top;
+            const heightValue = customPosition ? `${customPosition.height}%` : defaultPosition.height;
+            const isZoneSelected = selectedDynamicZoneId === zone.id;
+            const isZoneDragged = isDraggingZone && selectedDynamicZoneId === zone.id;
+            
             return (
-              <DynamicZoneOverlay 
+              <div
                 key={zone.id}
-                zone={zone}
+                className={cn(
+                  "absolute transition-all",
+                  isEditable && "cursor-grab",
+                  isZoneDragged && "cursor-grabbing opacity-90 shadow-xl z-30",
+                  isZoneSelected && !isZoneDragged && "ring-2 ring-primary ring-offset-2 z-20"
+                )}
                 style={{
-                  position: 'absolute',
                   left: '4%',
                   right: '4%',
-                  top: position.top,
-                  height: position.height,
+                  top: topValue,
+                  height: heightValue,
                 }}
-              />
+                onMouseDown={(e) => handleZoneMouseDown(zone.id, e)}
+              >
+                <DynamicZoneOverlay 
+                  zone={zone}
+                  isSelected={isZoneSelected}
+                  isEditable={isEditable}
+                />
+              </div>
             );
           })}
 
@@ -294,7 +357,7 @@ export function EditorCanvas() {
                         lineHeight: 1.3,
                       }}
                     >
-                      <span className="line-clamp-4">{textContent.text}</span>
+                      <span className="whitespace-pre-wrap break-words">{textContent.text}</span>
                     </div>
                   )}
                   
