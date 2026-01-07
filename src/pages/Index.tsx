@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuoteStore } from "@/stores/quoteStore";
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppSidebar, ViewType } from "@/components/layout/AppSidebar";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateSelection } from "@/components/steps/TemplateSelection";
@@ -12,12 +12,11 @@ import { QuotePreview } from "@/components/steps/QuotePreview";
 import { ExportView } from "@/components/steps/ExportView";
 import { WorkflowProgress } from "@/components/workflow/WorkflowProgress";
 import { TemplateEditorLayout } from "@/components/template-editor";
+import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import { Button } from "@/components/ui/button";
 import { WorkflowStep, StepStatus, ServiceOption } from "@/types/quote";
 import { parseOptionsServicesSheet } from "@/lib/options-parser";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-type ViewType = 'dashboard' | 'workflow' | 'history' | 'template-editor';
 
 const workflowStepsConfig: { step: WorkflowStep; label: string }[] = [
   { step: 'template', label: 'Template' },
@@ -272,6 +271,8 @@ export default function Index() {
         return <HistoryView />;
       case 'template-editor':
         return <TemplateEditorLayout />;
+      case 'options-admin':
+        return <OptionsServicesAdmin />;
       case 'workflow':
         return (
           <div className="space-y-6">
