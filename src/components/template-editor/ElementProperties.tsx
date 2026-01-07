@@ -26,7 +26,7 @@ import {
   ALLOWED_BORDER_WIDTHS,
   ALLOWED_CORNER_RADII
 } from "@/lib/template-styles";
-import type { TextContent, ImageContent, ShapeContent, TextPresetStyle, ListType, ShapeType } from "@/types/template-editor";
+import type { TextContent, ImageContent, ShapeContent, TextPresetStyle, ListType, ShapeType, TextAlign } from "@/types/template-editor";
 import { 
   Type, 
   Image, 
@@ -59,7 +59,11 @@ import {
   Unlock,
   Link2,
   Link2Off,
-  Palette
+  Palette,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -253,6 +257,12 @@ export function ElementProperties() {
       const currentIndent = textContent.indentLevel || 0;
       const newIndent = Math.max(0, Math.min(4, currentIndent + delta));
       updateTextContent(selectedElement.id, { indentLevel: newIndent });
+    }
+  };
+
+  const handleTextAlignChange = (align: TextAlign) => {
+    if (isEditable && textContent) {
+      updateTextContent(selectedElement.id, { textAlign: align });
     }
   };
 
@@ -571,6 +581,49 @@ export function ElementProperties() {
                   aria-label="Souligné"
                 >
                   <Underline className="h-4 w-4" />
+                </Toggle>
+              </div>
+            </div>
+
+            {/* Alignement du texte */}
+            <div className="space-y-2">
+              <Label>Alignement</Label>
+              <div className="flex items-center gap-1">
+                <Toggle
+                  size="sm"
+                  pressed={textContent.textAlign === 'left' || !textContent.textAlign}
+                  onPressedChange={() => handleTextAlignChange('left')}
+                  disabled={!isEditable}
+                  aria-label="Aligner à gauche"
+                >
+                  <AlignLeft className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={textContent.textAlign === 'center'}
+                  onPressedChange={() => handleTextAlignChange('center')}
+                  disabled={!isEditable}
+                  aria-label="Centrer"
+                >
+                  <AlignCenter className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={textContent.textAlign === 'right'}
+                  onPressedChange={() => handleTextAlignChange('right')}
+                  disabled={!isEditable}
+                  aria-label="Aligner à droite"
+                >
+                  <AlignRight className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={textContent.textAlign === 'justify'}
+                  onPressedChange={() => handleTextAlignChange('justify')}
+                  disabled={!isEditable}
+                  aria-label="Justifier"
+                >
+                  <AlignJustify className="h-4 w-4" />
                 </Toggle>
               </div>
             </div>

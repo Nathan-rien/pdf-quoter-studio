@@ -23,6 +23,9 @@ export type AllowedFontSize = 9 | 10 | 11 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 3
 // Type de liste
 export type ListType = 'none' | 'bullet' | 'numbered';
 
+// Type d'alignement de texte
+export type TextAlign = 'left' | 'center' | 'right' | 'justify';
+
 // Styles prédéfinis
 export type TextPresetStyle = 'titre' | 'sousTitre' | 'texte' | 'note';
 
@@ -39,6 +42,7 @@ export interface TextContent {
   listType?: ListType;
   indentLevel?: number; // 0-4 niveaux d'indentation
   presetStyle?: TextPresetStyle;
+  textAlign?: TextAlign; // Alignement du texte (défaut: 'left')
 }
 
 // Contenu image

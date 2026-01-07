@@ -814,7 +814,7 @@ export function EditorCanvas() {
                 >
                   {isTextElement && textContent && (
                     <div 
-                      className="px-0.5 py-px inline-block"
+                      className="px-0.5 py-px"
                       style={{
                         fontFamily: ALLOWED_FONTS.find(f => f.name === textContent.fontFamily)?.value || textContent.fontFamily,
                         fontSize: `${Math.max(textContent.fontSize * 0.4, 6)}px`,
@@ -823,6 +823,8 @@ export function EditorCanvas() {
                         fontStyle: textContent.italic ? 'italic' : 'normal',
                         textDecoration: textContent.underline ? 'underline' : 'none',
                         lineHeight: 1.2,
+                        textAlign: textContent.textAlign || 'left',
+                        width: '100%',
                       }}
                     >
                       <span className="whitespace-pre-wrap break-words">{renderTextContent()}</span>
