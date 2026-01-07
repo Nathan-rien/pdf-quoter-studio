@@ -24,7 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type ViewType = 'dashboard' | 'rental-proposal' | 'workflow' | 'history' | 'template-editor' | 'options-admin';
+export type ViewType = 'dashboard' | 'rental-proposal' | 'rental-workflow' | 'workflow' | 'history' | 'template-editor' | 'options-admin';
 
 interface AppSidebarProps {
   currentView: ViewType;
