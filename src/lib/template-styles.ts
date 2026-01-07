@@ -3,6 +3,8 @@
  * Aucun style personnalisé n'est permis en dehors de ces définitions
  */
 
+import type { AllowedFontSize, TextPresetStyle } from '@/types/template-editor';
+
 // Palette couleurs autorisée
 export const ALLOWED_COLORS = [
   { name: 'Primary', value: '#1e3a5f' },      // Navy
@@ -24,6 +26,39 @@ export const ALLOWED_FONTS = [
 
 // Tailles autorisées
 export const ALLOWED_FONT_SIZES = [9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32] as const;
+
+// Styles de texte prédéfinis
+export const TEXT_PRESET_STYLES: Record<TextPresetStyle, {
+  fontSize: AllowedFontSize;
+  bold: boolean;
+  italic?: boolean;
+  color: string;
+}> = {
+  titre: {
+    fontSize: 24,
+    bold: true,
+    color: '#1e3a5f', // Primary
+  },
+  sousTitre: {
+    fontSize: 18,
+    bold: true,
+    color: '#1f2937', // Text
+  },
+  texte: {
+    fontSize: 12,
+    bold: false,
+    color: '#1f2937', // Text
+  },
+  note: {
+    fontSize: 10,
+    bold: false,
+    italic: true,
+    color: '#6b7280', // Muted
+  },
+} as const;
+
+// Rotations autorisées pour les images
+export const ALLOWED_ROTATIONS = [0, 90, 180, 270] as const;
 
 // Validation qu'une couleur est autorisée
 export function isAllowedColor(color: string): boolean {

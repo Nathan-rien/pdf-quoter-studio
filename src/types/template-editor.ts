@@ -17,6 +17,12 @@ export type AllowedFont = 'Garet' | 'DM Sans' | 'Inter' | 'Roboto';
 // Tailles autorisées (liste fermée)
 export type AllowedFontSize = 9 | 10 | 11 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
 
+// Type de liste
+export type ListType = 'none' | 'bullet' | 'numbered';
+
+// Styles prédéfinis
+export type TextPresetStyle = 'titre' | 'sousTitre' | 'texte' | 'note';
+
 // Contenu texte avec styles
 export interface TextContent {
   text: string;
@@ -26,12 +32,19 @@ export interface TextContent {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  // Nouveaux champs pour les listes et styles prédéfinis
+  listType?: ListType;
+  indentLevel?: number; // 0-4 niveaux d'indentation
+  presetStyle?: TextPresetStyle;
 }
 
 // Contenu image
 export interface ImageContent {
   imageUrl: string;
   alt: string;
+  // Nouveaux champs pour rotation et opacité
+  rotation?: number; // 0, 90, 180, 270 degrés
+  opacity?: number; // 0-100%
 }
 
 // Contenu bloc (conteneur d'éléments)
@@ -49,6 +62,7 @@ export interface EditableElement {
   size: { width: number; height: number };
   content: TextContent | ImageContent | BlockContent;
   dynamicZoneId?: string; // Référence vers la zone dynamique si isDynamic
+  zIndex?: number; // Ordre d'empilement (0 = fond, plus haut = devant)
 }
 
 // Contenu d'une page du template

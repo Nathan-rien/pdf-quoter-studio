@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ALLOWED_COLORS, ALLOWED_FONTS, ALLOWED_FONT_SIZES } from "@/lib/template-styles";
-import type { TextContent, ImageContent } from "@/types/template-editor";
+import { Slider } from "@/components/ui/slider";
+import { ALLOWED_COLORS, ALLOWED_FONTS, ALLOWED_FONT_SIZES, TEXT_PRESET_STYLES, ALLOWED_ROTATIONS } from "@/lib/template-styles";
+import type { TextContent, ImageContent, TextPresetStyle, ListType } from "@/types/template-editor";
 import { 
   Type, 
   Image, 
@@ -30,7 +31,16 @@ import {
   Eye,
   AlertTriangle,
   Upload,
-  Trash2
+  Trash2,
+  List,
+  ListOrdered,
+  Minus,
+  IndentIncrease,
+  IndentDecrease,
+  RotateCw,
+  ArrowUp,
+  ArrowDown,
+  Layers
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -47,7 +57,9 @@ export function ElementProperties() {
     updateElementSize,
     deleteElement,
     createNewVersion,
-    getSelectedElement
+    getSelectedElement,
+    bringToFront,
+    sendToBack
   } = useTemplateEditorStore();
 
   const selectedElement = getSelectedElement();
@@ -117,6 +129,33 @@ export function ElementProperties() {
     }
   };
 
+  const handlePresetStyleChange = (preset: TextPresetStyle) => {
+    if (isEditable && textContent) {
+      const presetStyle = TEXT_PRESET_STYLES[preset];
+      updateTextContent(selectedElement.id, {
+        presetStyle: preset,
+        fontSize: presetStyle.fontSize,
+        bold: presetStyle.bold,
+        italic: presetStyle.italic || false,
+        color: presetStyle.color
+      });
+    }
+  };
+
+  const handleListTypeChange = (listType: ListType) => {
+    if (isEditable && textContent) {
+      updateTextContent(selectedElement.id, { listType });
+    }
+  };
+
+  const handleIndentChange = (delta: number) => {
+    if (isEditable && textContent) {
+      const currentIndent = textContent.indentLevel || 0;
+      const newIndent = Math.max(0, Math.min(4, currentIndent + delta));
+      updateTextContent(selectedElement.id, { indentLevel: newIndent });
+    }
+  };
+
   const handlePositionChange = (axis: 'x' | 'y', value: number) => {
     if (isEditable && selectedElement) {
       updateElementPosition(selectedElement.id, {
@@ -174,6 +213,18 @@ export function ElementProperties() {
     }
   };
 
+  const handleRotationChange = (rotation: number) => {
+    if (isEditable && selectedElement) {
+      updateImageContent(selectedElement.id, { rotation });
+    }
+  };
+
+  const handleOpacityChange = (opacity: number) => {
+    if (isEditable && selectedElement) {
+      updateImageContent(selectedElement.id, { opacity });
+    }
+  };
+
   const handleDeleteElement = () => {
     if (isEditable && selectedElement) {
       deleteElement(selectedElement.id);
@@ -181,8 +232,22 @@ export function ElementProperties() {
     }
   };
 
+  const handleBringToFront = () => {
+    if (isEditable && selectedElement) {
+      bringToFront(selectedElement.id);
+      toast.success("Élément mis au premier plan");
+    }
+  };
+
+  const handleSendToBack = () => {
+    if (isEditable && selectedElement) {
+      sendToBack(selectedElement.id);
+      toast.success("Élément mis en arrière-plan");
+    }
+  };
+
   return (
-    <Card className="h-full">
+    <Card className="h-full overflow-auto">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <CardTitle className="text-sm flex items-center gap-2 shrink-0">
@@ -209,14 +274,13 @@ export function ElementProperties() {
                 value={textContent.text}
                 onChange={(e) => handleTextChange({ text: e.target.value })}
                 onKeyDown={(e) => {
-                  // Permettre Shift+Enter pour les retours à la ligne
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.stopPropagation();
                   }
                 }}
                 disabled={!isEditable}
-                className="min-h-[120px] resize-y font-mono text-sm leading-relaxed whitespace-pre-wrap"
-                placeholder="Saisissez le texte...&#10;(Utilisez Entrée pour les retours à la ligne)"
+                className="min-h-[100px] resize-y font-mono text-sm leading-relaxed whitespace-pre-wrap"
+                placeholder="Saisissez le texte..."
               />
               <p className="text-xs text-muted-foreground">
                 Appuyez sur Entrée pour un retour à la ligne
@@ -225,9 +289,92 @@ export function ElementProperties() {
 
             <Separator />
 
+            {/* Style prédéfini */}
+            <div className="space-y-2">
+              <Label>Style prédéfini</Label>
+              <div className="grid grid-cols-4 gap-1">
+                {(['titre', 'sousTitre', 'texte', 'note'] as TextPresetStyle[]).map((preset) => (
+                  <Button
+                    key={preset}
+                    variant={textContent.presetStyle === preset ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePresetStyleChange(preset)}
+                    disabled={!isEditable}
+                    className="text-xs"
+                  >
+                    {preset === 'sousTitre' ? 'S-titre' : preset === 'titre' ? 'Titre' : preset === 'texte' ? 'Texte' : 'Note'}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Listes */}
+            <div className="space-y-2">
+              <Label>Liste</Label>
+              <div className="flex items-center gap-1">
+                <Toggle
+                  size="sm"
+                  pressed={textContent.listType === 'none' || !textContent.listType}
+                  onPressedChange={() => handleListTypeChange('none')}
+                  disabled={!isEditable}
+                  aria-label="Aucune liste"
+                >
+                  <Minus className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={textContent.listType === 'bullet'}
+                  onPressedChange={() => handleListTypeChange('bullet')}
+                  disabled={!isEditable}
+                  aria-label="Liste à puces"
+                >
+                  <List className="h-4 w-4" />
+                </Toggle>
+                <Toggle
+                  size="sm"
+                  pressed={textContent.listType === 'numbered'}
+                  onPressedChange={() => handleListTypeChange('numbered')}
+                  disabled={!isEditable}
+                  aria-label="Liste numérotée"
+                >
+                  <ListOrdered className="h-4 w-4" />
+                </Toggle>
+                <div className="flex-1" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleIndentChange(-1)}
+                  disabled={!isEditable || (textContent.indentLevel || 0) <= 0}
+                  aria-label="Diminuer l'indentation"
+                  className="h-8 w-8 p-0"
+                >
+                  <IndentDecrease className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleIndentChange(1)}
+                  disabled={!isEditable || (textContent.indentLevel || 0) >= 4}
+                  aria-label="Augmenter l'indentation"
+                  className="h-8 w-8 p-0"
+                >
+                  <IndentIncrease className="h-4 w-4" />
+                </Button>
+              </div>
+              {(textContent.listType === 'bullet' || textContent.listType === 'numbered') && (
+                <p className="text-xs text-muted-foreground">
+                  Indentation : {textContent.indentLevel || 0}
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
             {/* Styles de texte */}
             <div className="space-y-3">
-              <Label>Style</Label>
+              <Label>Formatage</Label>
               <div className="flex items-center gap-1">
                 <Toggle
                   size="sm"
@@ -326,15 +473,23 @@ export function ElementProperties() {
           </>
         )}
 
-        {selectedElement.type === 'image' && (
-          <div className="space-y-4">
+        {selectedElement.type === 'image' && imageContent && (
+          <>
             {/* Prévisualisation */}
-            <div className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden border">
-              {imageContent?.imageUrl ? (
+            <div 
+              className="aspect-video rounded-lg bg-muted flex items-center justify-center overflow-hidden border"
+              style={{
+                opacity: (imageContent.opacity ?? 100) / 100
+              }}
+            >
+              {imageContent.imageUrl ? (
                 <img 
                   src={imageContent.imageUrl} 
                   alt={imageContent.alt || 'Image'} 
                   className="w-full h-full object-contain"
+                  style={{
+                    transform: `rotate(${imageContent.rotation || 0}deg)`
+                  }}
                 />
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -360,7 +515,7 @@ export function ElementProperties() {
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4 mr-2" />
-              {imageContent?.imageUrl ? 'Remplacer l\'image' : 'Ajouter une image'}
+              {imageContent.imageUrl ? 'Remplacer l\'image' : 'Ajouter une image'}
             </Button>
             
             {/* Texte alternatif */}
@@ -368,10 +523,51 @@ export function ElementProperties() {
               <Label htmlFor="image-alt">Texte alternatif</Label>
               <Input
                 id="image-alt"
-                value={imageContent?.alt || ''}
+                value={imageContent.alt || ''}
                 onChange={(e) => handleImageAltChange(e.target.value)}
                 disabled={!isEditable}
                 placeholder="Description de l'image..."
+              />
+            </div>
+            
+            <Separator />
+            
+            {/* Rotation */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <RotateCw className="h-4 w-4" />
+                Rotation
+              </Label>
+              <div className="flex items-center gap-1">
+                {ALLOWED_ROTATIONS.map((rotation) => (
+                  <Button
+                    key={rotation}
+                    variant={(imageContent.rotation || 0) === rotation ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleRotationChange(rotation)}
+                    disabled={!isEditable}
+                    className="flex-1"
+                  >
+                    {rotation}°
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Opacité */}
+            <div className="space-y-2">
+              <Label className="flex items-center justify-between">
+                <span>Opacité</span>
+                <span className="text-xs text-muted-foreground">{imageContent.opacity ?? 100}%</span>
+              </Label>
+              <Slider
+                value={[imageContent.opacity ?? 100]}
+                onValueChange={([value]) => handleOpacityChange(value)}
+                min={0}
+                max={100}
+                step={5}
+                disabled={!isEditable}
+                className="w-full"
               />
             </div>
             
@@ -400,7 +596,7 @@ export function ElementProperties() {
                 />
               </div>
             </div>
-          </div>
+          </>
         )}
 
         <Separator />
@@ -431,6 +627,41 @@ export function ElementProperties() {
                 className="h-8 text-sm"
               />
             </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Calques */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Layers className="h-3 w-3" />
+            Calques
+          </Label>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendToBack}
+              disabled={!isEditable}
+              className="flex-1"
+            >
+              <ArrowDown className="h-4 w-4 mr-1" />
+              Arrière
+            </Button>
+            <Badge variant="secondary" className="px-3">
+              {selectedElement.zIndex || 0}
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBringToFront}
+              disabled={!isEditable}
+              className="flex-1"
+            >
+              <ArrowUp className="h-4 w-4 mr-1" />
+              Avant
+            </Button>
           </div>
         </div>
 
