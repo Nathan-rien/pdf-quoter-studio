@@ -1,6 +1,6 @@
 /**
  * Panel de propriétés pour l'élément sélectionné
- * Édition des textes et images (éléments NON dynamiques uniquement)
+ * Édition des textes, images et formes (éléments NON dynamiques uniquement)
  */
 
 import { useRef } from "react";
@@ -15,8 +15,18 @@ import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { ALLOWED_COLORS, ALLOWED_FONTS, ALLOWED_FONT_SIZES, TEXT_PRESET_STYLES, ALLOWED_ROTATIONS } from "@/lib/template-styles";
-import type { TextContent, ImageContent, TextPresetStyle, ListType } from "@/types/template-editor";
+import { Switch } from "@/components/ui/switch";
+import { 
+  ALLOWED_COLORS, 
+  ALLOWED_FONTS, 
+  ALLOWED_FONT_SIZES, 
+  TEXT_PRESET_STYLES, 
+  ALLOWED_ROTATIONS,
+  SHAPE_BACKGROUND_COLORS,
+  ALLOWED_BORDER_WIDTHS,
+  ALLOWED_CORNER_RADII
+} from "@/lib/template-styles";
+import type { TextContent, ImageContent, ShapeContent, TextPresetStyle, ListType, ShapeType } from "@/types/template-editor";
 import { 
   Type, 
   Image, 
@@ -40,7 +50,16 @@ import {
   RotateCw,
   ArrowUp,
   ArrowDown,
-  Layers
+  Layers,
+  Square,
+  Circle,
+  RectangleHorizontal,
+  Copy,
+  Lock,
+  Unlock,
+  Link2,
+  Link2Off,
+  Palette
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -53,9 +72,13 @@ export function ElementProperties() {
     hasUnsavedChanges,
     updateTextContent,
     updateImageContent,
+    updateShapeContent,
     updateElementPosition,
     updateElementSize,
     deleteElement,
+    duplicateElement,
+    toggleAspectRatioLock,
+    toggleElementLock,
     createNewVersion,
     getSelectedElement,
     bringToFront,
@@ -121,6 +144,10 @@ export function ElementProperties() {
 
   const imageContent = selectedElement.type === 'image'
     ? selectedElement.content as ImageContent
+    : null;
+
+  const shapeContent = selectedElement.type === 'shape'
+    ? selectedElement.content as ShapeContent
     : null;
 
   const handleTextChange = (updates: Partial<TextContent>) => {
@@ -232,6 +259,15 @@ export function ElementProperties() {
     }
   };
 
+  const handleDuplicateElement = () => {
+    if (isEditable && selectedElement) {
+      const duplicated = duplicateElement(selectedElement.id);
+      if (duplicated) {
+        toast.success("Élément dupliqué");
+      }
+    }
+  };
+
   const handleBringToFront = () => {
     if (isEditable && selectedElement) {
       bringToFront(selectedElement.id);
@@ -246,6 +282,61 @@ export function ElementProperties() {
     }
   };
 
+  // Shape handlers
+  const handleShapeContentChange = (updates: Partial<ShapeContent>) => {
+    if (isEditable && shapeContent) {
+      updateShapeContent(selectedElement.id, updates);
+    }
+  };
+
+  const handleShapeBorderChange = (updates: Partial<ShapeContent['border']>) => {
+    if (isEditable && shapeContent) {
+      updateShapeContent(selectedElement.id, {
+        border: { ...shapeContent.border, ...updates }
+      });
+    }
+  };
+
+  const handleToggleAspectRatio = () => {
+    if (isEditable && selectedElement.type === 'shape') {
+      toggleAspectRatioLock(selectedElement.id);
+    }
+  };
+
+  const handleToggleLock = () => {
+    if (isEditable && selectedElement.type === 'shape') {
+      toggleElementLock(selectedElement.id);
+    }
+  };
+
+  const getShapeIcon = () => {
+    if (!shapeContent) return Square;
+    switch (shapeContent.shapeType) {
+      case 'circle':
+      case 'ellipse':
+        return Circle;
+      case 'line':
+        return Minus;
+      default:
+        return Square;
+    }
+  };
+
+  const getShapeLabel = () => {
+    if (!shapeContent) return 'Forme';
+    const labels: Record<ShapeType, string> = {
+      rectangle: 'Rectangle',
+      square: 'Carré',
+      'rounded-rectangle': 'Rectangle arrondi',
+      circle: 'Cercle',
+      ellipse: 'Ellipse',
+      line: 'Ligne'
+    };
+    return labels[shapeContent.shapeType];
+  };
+
+  const ShapeIcon = getShapeIcon();
+
   return (
     <Card className="h-full overflow-auto">
       <CardHeader className="pb-3">
@@ -253,12 +344,17 @@ export function ElementProperties() {
           <CardTitle className="text-sm flex items-center gap-2 shrink-0">
             {selectedElement.type === 'text' ? (
               <Type className="h-4 w-4" />
+            ) : selectedElement.type === 'shape' ? (
+              <ShapeIcon className="h-4 w-4" />
             ) : (
               <Image className="h-4 w-4" />
             )}
             <span className="truncate">
-              {selectedElement.type === 'text' ? 'Texte' : 'Image'}
+              {selectedElement.type === 'text' ? 'Texte' : selectedElement.type === 'shape' ? getShapeLabel() : 'Image'}
             </span>
+            {shapeContent?.isLocked && (
+              <Lock className="h-3 w-3 text-muted-foreground" />
+            )}
           </CardTitle>
           <StatusBadge isEditable={isEditable} hasUnsavedChanges={hasUnsavedChanges} />
         </div>
@@ -594,6 +690,268 @@ export function ElementProperties() {
                   onChange={(e) => handleSizeChange('height', parseInt(e.target.value) || 0)}
                   disabled={!isEditable}
                 />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* === SECTION FORMES === */}
+        {selectedElement.type === 'shape' && shapeContent && (
+          <>
+            {shapeContent.isLocked && (
+              <div className="p-3 rounded-lg bg-warning/10 text-sm">
+                <p className="font-medium text-warning flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Forme verrouillée
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Déverrouillez la forme pour la modifier.
+                </p>
+              </div>
+            )}
+
+            {/* Couleur de fond */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                Couleur de fond
+              </Label>
+              <div className="grid grid-cols-6 gap-1">
+                {SHAPE_BACKGROUND_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    className={cn(
+                      "w-6 h-6 rounded border-2 transition-all",
+                      color.value === 'transparent' && "bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOCIgaGVpZ2h0PSI4IiB2aWV3Qm94PSIwIDAgOCA4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNjY2MiLz48cmVjdCB4PSI0IiB5PSI0IiB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjY2NjIi8+PC9zdmc+')]",
+                      shapeContent.backgroundColor === color.value 
+                        ? "border-primary ring-2 ring-primary/30" 
+                        : "border-transparent hover:border-muted-foreground/50",
+                      (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
+                    )}
+                    style={{ backgroundColor: color.value === 'transparent' ? undefined : color.value }}
+                    onClick={() => handleShapeContentChange({ backgroundColor: color.value })}
+                    disabled={!isEditable || shapeContent.isLocked}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Opacité du fond */}
+            <div className="space-y-2">
+              <Label className="flex items-center justify-between">
+                <span>Opacité du fond</span>
+                <span className="text-xs text-muted-foreground">{shapeContent.backgroundOpacity}%</span>
+              </Label>
+              <Slider
+                value={[shapeContent.backgroundOpacity]}
+                onValueChange={([value]) => handleShapeContentChange({ backgroundOpacity: value })}
+                min={0}
+                max={100}
+                step={5}
+                disabled={!isEditable || shapeContent.isLocked}
+                className="w-full"
+              />
+            </div>
+
+            <Separator />
+
+            {/* Bordure */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  Bordure
+                </Label>
+                <Switch
+                  checked={shapeContent.border.enabled}
+                  onCheckedChange={(checked) => handleShapeBorderChange({ enabled: checked })}
+                  disabled={!isEditable || shapeContent.isLocked}
+                />
+              </div>
+
+              {shapeContent.border.enabled && (
+                <>
+                  {/* Couleur de bordure */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">Couleur</Label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {ALLOWED_COLORS.map((color) => (
+                        <button
+                          key={color.value}
+                          className={cn(
+                            "w-5 h-5 rounded border-2 transition-all",
+                            shapeContent.border.color === color.value 
+                              ? "border-primary ring-2 ring-primary/30" 
+                              : "border-transparent hover:border-muted-foreground/50",
+                            (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
+                          )}
+                          style={{ backgroundColor: color.value }}
+                          onClick={() => handleShapeBorderChange({ color: color.value })}
+                          disabled={!isEditable || shapeContent.isLocked}
+                          title={color.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Épaisseur de bordure */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">Épaisseur</Label>
+                    <div className="flex items-center gap-1">
+                      {ALLOWED_BORDER_WIDTHS.map((width) => (
+                        <Button
+                          key={width}
+                          variant={shapeContent.border.width === width ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => handleShapeBorderChange({ width })}
+                          disabled={!isEditable || shapeContent.isLocked}
+                          className="flex-1 text-xs"
+                        >
+                          {width}px
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Coins arrondis (sauf cercle, ellipse, ligne) */}
+            {!['circle', 'ellipse', 'line'].includes(shapeContent.shapeType) && (
+              <div className="space-y-2">
+                <Label className="flex items-center justify-between">
+                  <span>Coins arrondis</span>
+                  <span className="text-xs text-muted-foreground">{shapeContent.cornerRadius}px</span>
+                </Label>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {ALLOWED_CORNER_RADII.map((radius) => (
+                    <Button
+                      key={radius}
+                      variant={shapeContent.cornerRadius === radius ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleShapeContentChange({ cornerRadius: radius })}
+                      disabled={!isEditable || shapeContent.isLocked}
+                      className="text-xs h-7 px-2"
+                    >
+                      {radius}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Rotation (sauf ligne) */}
+            {shapeContent.shapeType !== 'line' && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <RotateCw className="h-4 w-4" />
+                    Rotation
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    {ALLOWED_ROTATIONS.map((rotation) => (
+                      <Button
+                        key={rotation}
+                        variant={shapeContent.rotation === rotation ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleShapeContentChange({ rotation })}
+                        disabled={!isEditable || shapeContent.isLocked}
+                        className="flex-1"
+                      >
+                        {rotation}°
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            {/* Dimensions avec verrouillage ratio */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">Dimensions</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToggleAspectRatio}
+                  disabled={!isEditable || shapeContent.isLocked}
+                  className="h-6 px-2 gap-1"
+                  title={shapeContent.aspectRatioLocked ? "Déverrouiller le ratio" : "Verrouiller le ratio"}
+                >
+                  {shapeContent.aspectRatioLocked ? (
+                    <Link2 className="h-3 w-3" />
+                  ) : (
+                    <Link2Off className="h-3 w-3" />
+                  )}
+                  <span className="text-xs">{shapeContent.aspectRatioLocked ? 'Lié' : 'Libre'}</span>
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="shape-width" className="text-xs">Largeur</Label>
+                  <Input
+                    id="shape-width"
+                    type="number"
+                    value={selectedElement.size.width}
+                    onChange={(e) => handleSizeChange('width', parseInt(e.target.value) || 0)}
+                    disabled={!isEditable || shapeContent.isLocked}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="shape-height" className="text-xs">Hauteur</Label>
+                  <Input
+                    id="shape-height"
+                    type="number"
+                    value={selectedElement.size.height}
+                    onChange={(e) => handleSizeChange('height', parseInt(e.target.value) || 0)}
+                    disabled={!isEditable || shapeContent.isLocked}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Actions forme */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Actions</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDuplicateElement}
+                  disabled={!isEditable}
+                  className="flex-1"
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Dupliquer
+                </Button>
+                <Button
+                  variant={shapeContent.isLocked ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleToggleLock}
+                  disabled={!isEditable}
+                  className="flex-1"
+                >
+                  {shapeContent.isLocked ? (
+                    <>
+                      <Lock className="h-4 w-4 mr-1" />
+                      Verrouillée
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="h-4 w-4 mr-1" />
+                      Verrouiller
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </>
