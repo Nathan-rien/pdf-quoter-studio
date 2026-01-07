@@ -68,17 +68,23 @@ export function EditorCanvas() {
   const isAddMode = addElementMode !== 'none';
 
   // Convertir position absolue en position relative canvas
-  const getElementStyle = (element: { position: { x: number; y: number }; size: { width: number; height: number } }) => {
+  const getElementStyle = (element: { position: { x: number; y: number }; size: { width: number; height: number }; type?: string }) => {
     const left = (element.position.x / CANVAS_SCALE.width) * 100;
     const top = (element.position.y / CANVAS_SCALE.height) * 100;
     const width = (element.size.width / CANVAS_SCALE.width) * 100;
-    const height = (element.size.height / CANVAS_SCALE.height) * 100;
+    
+    // Pour les éléments texte, utiliser une hauteur auto (min-height basée sur la taille stockée)
+    const isTextType = element.type === 'text';
+    const minHeight = (element.size.height / CANVAS_SCALE.height) * 100;
     
     return {
       left: `${Math.min(left, 95)}%`,
       top: `${Math.min(top, 95)}%`,
-      width: `${Math.min(width, 95)}%`,
-      height: `${Math.max(height, 2)}%`,
+      width: `${Math.min(Math.max(width, 3), 95)}%`,
+      ...(isTextType 
+        ? { minHeight: `${Math.max(minHeight, 1.5)}%`, height: 'auto' }
+        : { height: `${Math.max(minHeight, 2)}%` }
+      ),
     };
   };
 
@@ -319,7 +325,7 @@ export function EditorCanvas() {
           {pageContent?.elements
             .filter(e => !e.isDynamic)
             .map((element) => {
-              const style = getElementStyle(element);
+              const style = getElementStyle({ ...element, type: element.type });
               const isSelected = selectedElementId === element.id;
               const isTextElement = element.type === 'text';
               const textContent = isTextElement ? element.content as TextContent : null;
@@ -331,12 +337,12 @@ export function EditorCanvas() {
                 <div
                   key={element.id}
                   className={cn(
-                    "absolute overflow-hidden rounded-sm",
+                    "absolute rounded-sm",
                     !isDragging && "transition-all duration-150",
                     isEditable && !element.isDynamic ? "cursor-grab" : "cursor-pointer",
                     isDraggedElement && "cursor-grabbing opacity-80 shadow-lg scale-[1.02]",
                     isSelected 
-                      ? "ring-2 ring-primary ring-offset-1 bg-primary/5 z-20" 
+                      ? "ring-1 ring-primary bg-primary/5 z-20" 
                       : "hover:bg-primary/5 hover:ring-1 hover:ring-primary/50 z-10",
                   )}
                   style={style}
@@ -346,7 +352,7 @@ export function EditorCanvas() {
                 >
                   {isTextElement && textContent && (
                     <div 
-                      className="p-1 w-full h-full flex items-start"
+                      className="px-0.5 py-px inline-block"
                       style={{
                         fontFamily: ALLOWED_FONTS.find(f => f.name === textContent.fontFamily)?.value || textContent.fontFamily,
                         fontSize: `${Math.max(textContent.fontSize * 0.4, 6)}px`,
@@ -354,7 +360,7 @@ export function EditorCanvas() {
                         fontWeight: textContent.bold ? 'bold' : 'normal',
                         fontStyle: textContent.italic ? 'italic' : 'normal',
                         textDecoration: textContent.underline ? 'underline' : 'none',
-                        lineHeight: 1.3,
+                        lineHeight: 1.2,
                       }}
                     >
                       <span className="whitespace-pre-wrap break-words">{textContent.text}</span>
