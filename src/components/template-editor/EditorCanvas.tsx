@@ -3,7 +3,7 @@
  * Affiche les éléments réels du PDF avec sélection interactive et drag & drop
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +64,63 @@ export function EditorCanvas() {
   // Seuil de snap pour les guides (en pixels canvas)
   const SNAP_THRESHOLD = 8;
   const MIN_SIZE = 20; // Taille minimale d'un élément
+  const MOVE_STEP = 10; // Pas de déplacement normal (pixels)
+  const MOVE_STEP_FINE = 1; // Pas de déplacement fin avec Shift (pixels)
+
+  // Raccourcis clavier pour déplacer les éléments
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ne pas interférer si on est dans un input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      // Vérifier qu'on a un élément sélectionné et qu'on est en mode édition
+      if (!selectedElementId || !currentVersion || currentVersion.status !== 'brouillon' || editorMode !== 'edit') {
+        return;
+      }
+      
+      const pageContent = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
+      const element = pageContent?.elements.find(el => el.id === selectedElementId);
+      if (!element || element.isDynamic) return;
+      
+      const step = e.shiftKey ? MOVE_STEP_FINE : MOVE_STEP;
+      let newX = element.position.x;
+      let newY = element.position.y;
+      let moved = false;
+      
+      switch (e.key) {
+        case 'ArrowUp':
+          newY = Math.max(0, element.position.y - step);
+          moved = true;
+          break;
+        case 'ArrowDown':
+          newY = Math.min(CANVAS_SCALE.height - 10, element.position.y + step);
+          moved = true;
+          break;
+        case 'ArrowLeft':
+          newX = Math.max(0, element.position.x - step);
+          moved = true;
+          break;
+        case 'ArrowRight':
+          newX = Math.min(CANVAS_SCALE.width - 10, element.position.x + step);
+          moved = true;
+          break;
+        case 'Delete':
+        case 'Backspace':
+          // Supprimer l'élément (si supporté)
+          break;
+      }
+      
+      if (moved) {
+        e.preventDefault();
+        updateElementPosition(selectedElementId, { x: newX, y: newY });
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElementId, currentVersion, editorMode, selectedPageNumber, updateElementPosition]);
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
     p => p.pageNumber === selectedPageNumber
