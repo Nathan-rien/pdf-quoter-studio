@@ -1,4 +1,5 @@
 import { useDataEditorStore, SheetName } from "@/stores/dataEditorStore";
+import { useQuoteStore } from "@/stores/quoteStore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { OptionsServicesEditor } from "./sheets/OptionsServicesEditor";
 import { FicheContratEditor } from "./sheets/FicheContratEditor";
 import { MatriceEditor } from "./sheets/MatriceEditor";
 import { ExcelParseResult } from "@/lib/excel-import-parser";
+import { REQUIRED_EXCEL_SHEETS } from "@/types/quote";
 import { 
   Save, 
   RotateCcw, 
@@ -48,11 +50,57 @@ export function DataEditorLayout() {
     getSheetErrors,
     resetAllData,
     importFromExcel,
+    investData,
+    importStatus,
   } = useDataEditorStore();
+
+  const { setExcelImport, setInvestData } = useQuoteStore();
+
+  // Synchronise le DataEditorStore avec le QuoteStore
+  const syncWithQuoteStore = (fileName: string) => {
+    const state = useDataEditorStore.getState();
+    
+    // Créer un ExcelImportResult valide pour le quoteStore
+    setExcelImport({
+      fileName: fileName,
+      importDate: new Date(),
+      sheets: REQUIRED_EXCEL_SHEETS.map(name => ({
+        name,
+        required: true,
+        found: true,
+        rowCount: name === 'invest ' ? state.investData.length : 0,
+      })),
+      isValid: true,
+      errors: [],
+      sheetValidation: null,
+    });
+
+    // Créer les données Invest pour le quoteStore
+    if (state.investData.length > 0) {
+      setInvestData({
+        rows: state.investData.map((row, index) => ({
+          designation: row.designation,
+          nb: row.nb,
+          vun: row.vun,
+          vtn: row.vtn,
+          rawRowIndex: index,
+        })),
+        headerRowIndex: 0,
+        sourceSheet: 'invest ',
+        isValidated: false,
+        validationStatus: 'importe_non_valide',
+        validationErrors: [],
+      });
+    }
+  };
 
   const handleExcelImport = (result: ExcelParseResult) => {
     if (result.data) {
       importFromExcel(result.data, result.fileName);
+      
+      // Synchroniser immédiatement avec le quoteStore
+      syncWithQuoteStore(result.fileName);
+      
       toast.success(`Fichier "${result.fileName}" importé avec succès`, {
         description: `${result.parsedSheets.length} onglets parsés`,
       });
@@ -69,6 +117,11 @@ export function DataEditorLayout() {
     const isValid = validateAllSheets();
     if (isValid) {
       markAsSaved();
+      
+      // Synchroniser avec le quoteStore après sauvegarde
+      const fileName = importStatus.fileName || 'Saisie manuelle';
+      syncWithQuoteStore(fileName);
+      
       toast.success("Données sauvegardées avec succès");
     } else {
       toast.error("Erreurs de validation détectées");
