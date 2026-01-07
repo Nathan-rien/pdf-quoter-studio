@@ -71,19 +71,25 @@ export function EditorCanvas() {
   const getElementStyle = (element: { position: { x: number; y: number }; size: { width: number; height: number }; type?: string }) => {
     const left = (element.position.x / CANVAS_SCALE.width) * 100;
     const top = (element.position.y / CANVAS_SCALE.height) * 100;
-    const width = (element.size.width / CANVAS_SCALE.width) * 100;
-    
-    // Pour les éléments texte, utiliser une hauteur auto (min-height basée sur la taille stockée)
-    const isTextType = element.type === 'text';
+    const maxWidth = (element.size.width / CANVAS_SCALE.width) * 100;
     const minHeight = (element.size.height / CANVAS_SCALE.height) * 100;
+    
+    const isTextType = element.type === 'text';
     
     return {
       left: `${Math.min(left, 95)}%`,
       top: `${Math.min(top, 95)}%`,
-      width: `${Math.min(Math.max(width, 3), 95)}%`,
+      // Pour les textes: largeur auto avec max-width, pour les images: largeur fixe
       ...(isTextType 
-        ? { minHeight: `${Math.max(minHeight, 1.5)}%`, height: 'auto' }
-        : { height: `${Math.max(minHeight, 2)}%` }
+        ? { 
+            maxWidth: `${Math.min(Math.max(maxWidth, 5), 95)}%`,
+            width: 'fit-content',
+            height: 'auto'
+          }
+        : { 
+            width: `${Math.min(Math.max(maxWidth, 3), 95)}%`,
+            height: `${Math.max(minHeight, 2)}%` 
+          }
       ),
     };
   };
