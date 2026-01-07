@@ -211,14 +211,14 @@ export function TemplateEditorLayout() {
 
         <TabsContent value="editor" className="mt-6">
           {currentVersion ? (
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-4">
               {/* Sidebar gauche - Navigation pages */}
-              <div className="col-span-2">
+              <div className="col-span-3">
                 <EditorSidebar />
               </div>
 
               {/* Canvas central */}
-              <div className="col-span-7">
+              <div className="col-span-6">
                 <EditorCanvas />
               </div>
 
