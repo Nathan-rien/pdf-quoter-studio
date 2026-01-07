@@ -12,13 +12,15 @@ export default function OptionsServicesAdmin() {
 
   const filteredOptions = options.filter((opt) =>
     opt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    opt.services.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
+    opt.services.some((s) => 
+      (typeof s === 'string' ? s : s.text).toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   const handleAddNewOption = () => {
     addOption({
       title: "Nouvelle option",
-      services: ["Service à définir"],
+      services: [{ text: "Service à définir" }],
       isActive: true,
     });
   };

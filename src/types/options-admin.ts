@@ -1,10 +1,16 @@
 // Types for the Options Services Administration
 
+// Structure hiérarchique pour les services avec sous-niveaux
+export interface ServiceItem {
+  text: string;           // Texte principal du service
+  subItems?: string[];    // Sous-niveaux optionnels (précisions)
+}
+
 export interface ServiceOptionDefinition {
   id: string;
   title: string;
   subtitle?: string;
-  services: string[];
+  services: ServiceItem[];  // Tableau d'objets ServiceItem
   price?: {
     amount: number;
     unit: string;
@@ -26,6 +32,11 @@ export interface OptionsAdminState {
   addServiceToOption: (optionId: string, service: string) => void;
   updateService: (optionId: string, serviceIndex: number, newValue: string) => void;
   removeService: (optionId: string, serviceIndex: number) => void;
+  
+  // Sous-items (précisions)
+  addSubItemToService: (optionId: string, serviceIndex: number, subItem: string) => void;
+  updateSubItem: (optionId: string, serviceIndex: number, subItemIndex: number, newValue: string) => void;
+  removeSubItem: (optionId: string, serviceIndex: number, subItemIndex: number) => void;
   
   // Prix
   setOptionPrice: (optionId: string, amount: number, unit: string) => void;

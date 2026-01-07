@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ServiceOptionDefinition, OptionsAdminState } from '@/types/options-admin';
+import { ServiceOptionDefinition, OptionsAdminState, ServiceItem } from '@/types/options-admin';
 
 const generateId = () => crypto.randomUUID();
+
+// Helper pour convertir une string en ServiceItem
+const toServiceItem = (text: string): ServiceItem => ({ text });
 
 // Options pré-remplies basées sur les captures d'écran
 const defaultOptions: ServiceOptionDefinition[] = [
@@ -10,9 +13,9 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Services Inclus',
     services: [
-      'Contrat de location et gestion administrative',
-      'Optimisation des coûts et gestion budgétaire',
-      'Gestion des évolutions du parc',
+      { text: 'Contrat de location et gestion administrative' },
+      { text: 'Optimisation des coûts et gestion budgétaire' },
+      { text: 'Gestion des évolutions du parc' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -22,8 +25,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-Tection',
     services: [
-      'Assurance casse et vol du matériel',
-      'Remplacement sous 48h en cas de sinistre',
+      { text: 'Assurance casse et vol du matériel' },
+      { text: 'Remplacement sous 48h en cas de sinistre' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -34,8 +37,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     title: 'Pro-Actif',
     subtitle: 'reprise de parc',
     services: [
-      'Audit et valorisation du parc existant',
-      'Enlèvement et reprise de parc',
+      { text: 'Audit et valorisation du parc existant' },
+      { text: 'Enlèvement et reprise de parc' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -45,8 +48,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-Flex',
     services: [
-      'Flexibilité des échéances de paiement',
-      'Ajustement du contrat en cours de période',
+      { text: 'Flexibilité des échéances de paiement' },
+      { text: 'Ajustement du contrat en cours de période' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -56,8 +59,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-Spare',
     services: [
-      'Stock de matériel de remplacement',
-      'Échange standard en cas de panne',
+      { text: 'Stock de matériel de remplacement' },
+      { text: 'Échange standard en cas de panne' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -67,8 +70,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-Optimisée',
     services: [
-      'Optimisation fiscale de la location',
-      'Étude personnalisée de financement',
+      { text: 'Optimisation fiscale de la location' },
+      { text: 'Étude personnalisée de financement' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -78,8 +81,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-maintenance',
     services: [
-      'Maintenance préventive du matériel',
-      'Support technique dédié',
+      { text: 'Maintenance préventive du matériel' },
+      { text: 'Support technique dédié' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -89,8 +92,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Lease back',
     services: [
-      'Rachat de votre parc existant',
-      'Conversion en contrat de location',
+      { text: 'Rachat de votre parc existant' },
+      { text: 'Conversion en contrat de location' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -100,8 +103,8 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-duction',
     services: [
-      'Installation et déploiement sur site',
-      'Masterisation des équipements',
+      { text: 'Installation et déploiement sur site' },
+      { text: 'Masterisation des équipements' },
     ],
     isActive: true,
     createdAt: new Date(),
@@ -111,9 +114,15 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-support informatique',
     services: [
-      'Technical account manager (TAM) dédié au compte',
-      'Prise en main à distance SAV',
-      'Ouverture des tickets SAV',
+      { text: 'Technical account manager (TAM) dédié au compte' },
+      { 
+        text: 'Prise en main à distance SAV (Diagnostic et intervention)',
+        subItems: [
+          'Niveau 1 : premier diagnostic du besoin pour résolution rapide',
+          'Niveau 2 : interventions poussées sur un incident gênant voir bloquant',
+        ]
+      },
+      { text: 'Ouverture des tickets SAV' },
     ],
     price: {
       amount: 9.00,
@@ -127,14 +136,21 @@ const defaultOptions: ServiceOptionDefinition[] = [
     id: generateId(),
     title: 'Pro-license',
     services: [
-      'Gestion des licences logicielles',
-      'Suivi des renouvellements',
+      { text: 'Gestion des licences logicielles' },
+      { text: 'Suivi des renouvellements' },
     ],
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
 ];
+
+// Migration helper: convertir les anciens services (string[]) vers le nouveau format (ServiceItem[])
+const migrateServices = (services: (string | ServiceItem)[]): ServiceItem[] => {
+  return services.map(service => 
+    typeof service === 'string' ? { text: service } : service
+  );
+};
 
 export const useOptionsAdminStore = create<OptionsAdminState>()(
   persist(
@@ -174,7 +190,7 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
             opt.id === optionId
               ? {
                   ...opt,
-                  services: [...opt.services, service],
+                  services: [...migrateServices(opt.services), toServiceItem(service)],
                   updatedAt: new Date(),
                 }
               : opt
@@ -187,8 +203,8 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
             opt.id === optionId
               ? {
                   ...opt,
-                  services: opt.services.map((s, i) =>
-                    i === serviceIndex ? newValue : s
+                  services: migrateServices(opt.services).map((s, i) =>
+                    i === serviceIndex ? { ...s, text: newValue } : s
                   ),
                   updatedAt: new Date(),
                 }
@@ -202,7 +218,66 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
             opt.id === optionId
               ? {
                   ...opt,
-                  services: opt.services.filter((_, i) => i !== serviceIndex),
+                  services: migrateServices(opt.services).filter((_, i) => i !== serviceIndex),
+                  updatedAt: new Date(),
+                }
+              : opt
+          ),
+        })),
+
+      addSubItemToService: (optionId, serviceIndex, subItem) =>
+        set((state) => ({
+          options: state.options.map((opt) =>
+            opt.id === optionId
+              ? {
+                  ...opt,
+                  services: migrateServices(opt.services).map((s, i) =>
+                    i === serviceIndex
+                      ? { ...s, subItems: [...(s.subItems || []), subItem] }
+                      : s
+                  ),
+                  updatedAt: new Date(),
+                }
+              : opt
+          ),
+        })),
+
+      updateSubItem: (optionId, serviceIndex, subItemIndex, newValue) =>
+        set((state) => ({
+          options: state.options.map((opt) =>
+            opt.id === optionId
+              ? {
+                  ...opt,
+                  services: migrateServices(opt.services).map((s, i) =>
+                    i === serviceIndex && s.subItems
+                      ? {
+                          ...s,
+                          subItems: s.subItems.map((sub, si) =>
+                            si === subItemIndex ? newValue : sub
+                          ),
+                        }
+                      : s
+                  ),
+                  updatedAt: new Date(),
+                }
+              : opt
+          ),
+        })),
+
+      removeSubItem: (optionId, serviceIndex, subItemIndex) =>
+        set((state) => ({
+          options: state.options.map((opt) =>
+            opt.id === optionId
+              ? {
+                  ...opt,
+                  services: migrateServices(opt.services).map((s, i) =>
+                    i === serviceIndex && s.subItems
+                      ? {
+                          ...s,
+                          subItems: s.subItems.filter((_, si) => si !== subItemIndex),
+                        }
+                      : s
+                  ),
                   updatedAt: new Date(),
                 }
               : opt
