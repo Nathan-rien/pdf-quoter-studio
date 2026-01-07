@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { 
   TemplateVersion, 
   EditableElement, 
@@ -137,7 +138,31 @@ const initialState: TemplateEditorState = {
   addElementMode: 'none'
 };
 
-export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => ({
+// Helper pour convertir les strings en dates lors de la désérialisation
+const deserializeDates = (data: any) => {
+  if (!data?.state) return data;
+  
+  return {
+    ...data,
+    state: {
+      ...data.state,
+      allTemplates: data.state.allTemplates?.map((t: any) => ({
+        ...t,
+        createdAt: new Date(t.createdAt),
+        updatedAt: new Date(t.updatedAt),
+      })) || [],
+      allVersions: data.state.allVersions?.map((v: any) => ({
+        ...v,
+        createdAt: new Date(v.createdAt),
+        publishedAt: v.publishedAt ? new Date(v.publishedAt) : null,
+      })) || [],
+    },
+  };
+};
+
+export const useTemplateEditorStore = create<TemplateEditorStore>()(
+  persist(
+    (set, get) => ({
   ...initialState,
 
   // === Actions Templates ===
@@ -714,4 +739,22 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
       });
     }
   }
-}));
+}),
+    {
+      name: 'template-editor-storage',
+      partialize: (state) => ({
+        allTemplates: state.allTemplates,
+        allVersions: state.allVersions,
+      }),
+      storage: {
+        getItem: (name) => {
+          const str = localStorage.getItem(name);
+          if (!str) return null;
+          return deserializeDates(JSON.parse(str));
+        },
+        setItem: (name, value) => localStorage.setItem(name, JSON.stringify(value)),
+        removeItem: (name) => localStorage.removeItem(name),
+      },
+    }
+  )
+);
