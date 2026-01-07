@@ -71,6 +71,17 @@ export interface TemplateVersion {
   dynamicZonesIntact: boolean; // Validé avant publication
 }
 
+// Template PDF (collection de versions)
+export interface PDFTemplate {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: Date;
+  createdBy: string;
+  updatedAt: Date;
+  isActive: boolean; // Un seul template peut être actif à la fois
+}
+
 // Résultat de validation pour publication
 export interface PublishValidationResult {
   canPublish: boolean;
@@ -94,6 +105,12 @@ export interface PublishValidationWarning {
 
 // État de l'éditeur
 export interface TemplateEditorState {
+  // Gestion des templates
+  allTemplates: PDFTemplate[];
+  currentTemplateId: string | null;
+  viewMode: 'list' | 'editor';
+  
+  // Versions du template courant
   currentVersion: TemplateVersion | null;
   allVersions: TemplateVersion[];
   selectedElementId: string | null;

@@ -1,4 +1,7 @@
 export { TemplateEditorLayout } from './TemplateEditorLayout';
+export { TemplateListView } from './TemplateListView';
+export { DuplicateTemplateDialog } from './DuplicateTemplateDialog';
+export { CreateTemplateDialog } from './CreateTemplateDialog';
 export { EditorSidebar } from './EditorSidebar';
 export { EditorCanvas } from './EditorCanvas';
 export { DynamicZoneOverlay } from './DynamicZoneOverlay';

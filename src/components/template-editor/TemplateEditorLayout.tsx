@@ -10,6 +10,7 @@ import { EditorCanvas } from "./EditorCanvas";
 import { ElementProperties } from "./ElementProperties";
 import { VersionHistory } from "./VersionHistory";
 import { PublishValidation } from "./PublishValidation";
+import { TemplateListView } from "./TemplateListView";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,8 @@ import {
   Palette,
   Pencil,
   Type,
-  ImagePlus
+  ImagePlus,
+  ArrowLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,27 +39,25 @@ export function TemplateEditorLayout() {
     hasUnsavedChanges,
     editorMode,
     allVersions,
+    allTemplates,
+    currentTemplateId,
+    viewMode,
     addElementMode,
     createNewVersion,
     saveCurrentVersion,
     loadVersion,
     discardChanges,
     getPublishedVersions,
-    setAddElementMode
+    setAddElementMode,
+    backToList,
+    getTemplateVersions
   } = useTemplateEditorStore();
 
-  // Charger automatiquement une version au montage si aucune n'est sélectionnée
-  useEffect(() => {
-    if (!currentVersion && allVersions.length > 0) {
-      // Chercher d'abord un brouillon, sinon la dernière version publiée
-      const draft = allVersions.find(v => v.status === 'brouillon');
-      const published = allVersions.find(v => v.status === 'publie');
-      loadVersion(draft || published || allVersions[0]);
-    } else if (!currentVersion && allVersions.length === 0) {
-      // Créer une première version si aucune n'existe
-      createNewVersion();
-    }
-  }, []);
+  // Récupérer le template courant
+  const currentTemplate = allTemplates.find(t => t.id === currentTemplateId);
+  
+  // Récupérer les versions du template courant
+  const templateVersions = currentTemplateId ? getTemplateVersions(currentTemplateId) : [];
 
   const handleSave = () => {
     saveCurrentVersion();
@@ -76,18 +76,38 @@ export function TemplateEditorLayout() {
     }
   };
 
+  const handleBackToList = () => {
+    if (hasUnsavedChanges) {
+      const confirm = window.confirm("Des modifications non sauvegardées seront perdues. Continuer ?");
+      if (!confirm) return;
+    }
+    backToList();
+  };
+
+  // Afficher le listing si mode liste
+  if (viewMode === 'list') {
+    return <TemplateListView />;
+  }
+
   const publishedVersions = getPublishedVersions();
   const isEditable = currentVersion?.status === 'brouillon';
+
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={handleBackToList}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
           <div className="p-3 rounded-xl bg-primary text-primary-foreground">
             <Palette className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Éditeur de Template</h1>
+            <h1 className="text-2xl font-bold">
+              {currentTemplate?.name || 'Éditeur de Template'}
+            </h1>
             <p className="text-sm text-muted-foreground">
               Mode administration - Modification du template PDF
             </p>
@@ -256,7 +276,7 @@ export function TemplateEditorLayout() {
 
         <TabsContent value="history" className="mt-6">
           <VersionHistory 
-            versions={allVersions}
+            versions={templateVersions}
             currentVersionId={currentVersion?.id || null}
             onSelectVersion={loadVersion}
             onCreateVersion={handleCreateVersion}
