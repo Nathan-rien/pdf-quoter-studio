@@ -11,15 +11,31 @@ import type {
   TextContent,
   ImageContent,
   TemplatePageContent,
-  PublishValidationResult
+  PublishValidationResult,
+  PDFTemplate
 } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZone } from '@/types/pdf-template';
 import { PDF_TEMPLATE_CONTRACT } from '@/lib/pdf-template-contract';
 import { validateTemplateForPublication } from '@/lib/template-validation';
-import { blockDynamicZoneEdit, getDynamicZonesForPage } from '@/lib/template-protection';
+import { blockDynamicZoneEdit } from '@/lib/template-protection';
 import { PDF_TEMPLATE_ELEMENTS } from '@/lib/pdf-template-elements';
 
 interface TemplateEditorStore extends TemplateEditorState {
+  // Actions templates
+  loadTemplateList: () => void;
+  selectTemplate: (templateId: string) => void;
+  createNewTemplate: (name: string, description?: string) => PDFTemplate | null;
+  duplicateTemplate: (templateId: string, newName: string, description?: string, includeAllVersions?: boolean) => PDFTemplate | null;
+  renameTemplate: (templateId: string, newName: string) => void;
+  deleteTemplate: (templateId: string) => boolean;
+  setTemplateActive: (templateId: string) => void;
+  backToList: () => void;
+  
+  // Getters templates
+  getActiveTemplate: () => PDFTemplate | null;
+  getTemplateVersions: (templateId: string) => TemplateVersion[];
+  getTemplateLatestVersion: (templateId: string) => TemplateVersion | null;
+
   // Actions de navigation
   setSelectedPage: (pageNumber: PDFPageNumber) => void;
   selectElement: (elementId: string | null) => void;
@@ -61,7 +77,7 @@ interface TemplateEditorStore extends TemplateEditorState {
 }
 
 // Créer une version initiale basée sur le contrat avec les éléments réels du PDF
-function createInitialVersion(): TemplateVersion {
+function createInitialVersion(templateId: string): TemplateVersion {
   const pages: TemplatePageContent[] = PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
     pageNumber: pageConfig.pageNumber,
     elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
@@ -70,7 +86,7 @@ function createInitialVersion(): TemplateVersion {
 
   return {
     id: `version-${Date.now()}`,
-    templateId: PDF_TEMPLATE_CONTRACT.id,
+    templateId,
     versionNumber: 1,
     status: 'brouillon',
     createdAt: new Date(),
@@ -81,9 +97,9 @@ function createInitialVersion(): TemplateVersion {
   };
 }
 
-// Version publiée de démo
-function createPublishedDemoVersion(): TemplateVersion {
-  const version = createInitialVersion();
+// Version publiée de démo pour le template par défaut
+function createPublishedDemoVersion(templateId: string): TemplateVersion {
+  const version = createInitialVersion(templateId);
   return {
     ...version,
     id: 'version-published-v1',
@@ -94,9 +110,26 @@ function createPublishedDemoVersion(): TemplateVersion {
   };
 }
 
+// Template par défaut
+const DEFAULT_TEMPLATE: PDFTemplate = {
+  id: 'cybertek-pro-default',
+  name: 'Proposition Commerciale CybertekPro',
+  description: 'Template par défaut pour les propositions commerciales',
+  createdAt: new Date('2025-01-01'),
+  createdBy: 'system',
+  updatedAt: new Date('2025-01-01'),
+  isActive: true
+};
+
 const initialState: TemplateEditorState = {
+  // Templates
+  allTemplates: [DEFAULT_TEMPLATE],
+  currentTemplateId: null,
+  viewMode: 'list',
+  
+  // Versions
   currentVersion: null,
-  allVersions: [createPublishedDemoVersion()],
+  allVersions: [createPublishedDemoVersion(DEFAULT_TEMPLATE.id)],
   selectedElementId: null,
   selectedPageNumber: 1,
   editorMode: 'view',
@@ -106,6 +139,188 @@ const initialState: TemplateEditorState = {
 
 export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => ({
   ...initialState,
+
+  // === Actions Templates ===
+  
+  loadTemplateList: () => {
+    set({ viewMode: 'list', currentTemplateId: null, currentVersion: null });
+  },
+
+  selectTemplate: (templateId) => {
+    const { allVersions, allTemplates } = get();
+    const template = allTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    // Charger les versions de ce template
+    const templateVersions = allVersions.filter(v => v.templateId === templateId);
+    
+    // Sélectionner la version la plus récente (publiée en priorité, sinon brouillon)
+    const publishedVersions = templateVersions.filter(v => v.status === 'publie');
+    const latestVersion = publishedVersions.length > 0 
+      ? publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+      : templateVersions.length > 0 
+        ? templateVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+        : createInitialVersion(templateId);
+
+    set({
+      viewMode: 'editor',
+      currentTemplateId: templateId,
+      currentVersion: latestVersion,
+      selectedPageNumber: 1,
+      selectedElementId: null,
+      editorMode: latestVersion.status === 'brouillon' ? 'edit' : 'view'
+    });
+  },
+
+  createNewTemplate: (name, description = '') => {
+    const newTemplate: PDFTemplate = {
+      id: `template-${Date.now()}`,
+      name,
+      description,
+      createdAt: new Date(),
+      createdBy: 'user',
+      updatedAt: new Date(),
+      isActive: false
+    };
+
+    const initialVersion = createInitialVersion(newTemplate.id);
+
+    set(state => ({
+      allTemplates: [...state.allTemplates, newTemplate],
+      allVersions: [...state.allVersions, initialVersion]
+    }));
+
+    return newTemplate;
+  },
+
+  duplicateTemplate: (templateId, newName, description, includeAllVersions = false) => {
+    const { allTemplates, allVersions } = get();
+    const sourceTemplate = allTemplates.find(t => t.id === templateId);
+    if (!sourceTemplate) return null;
+
+    const newTemplateId = `template-${Date.now()}`;
+    const newTemplate: PDFTemplate = {
+      id: newTemplateId,
+      name: newName,
+      description: description ?? sourceTemplate.description,
+      createdAt: new Date(),
+      createdBy: 'user',
+      updatedAt: new Date(),
+      isActive: false
+    };
+
+    // Récupérer les versions à dupliquer
+    const sourceVersions = allVersions.filter(v => v.templateId === templateId);
+    let versionsToDuplicate: TemplateVersion[];
+
+    if (includeAllVersions) {
+      versionsToDuplicate = sourceVersions;
+    } else {
+      // Seulement la dernière version publiée, ou la dernière version
+      const publishedVersions = sourceVersions.filter(v => v.status === 'publie');
+      const latestVersion = publishedVersions.length > 0
+        ? publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+        : sourceVersions.length > 0
+          ? sourceVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+          : null;
+      versionsToDuplicate = latestVersion ? [latestVersion] : [];
+    }
+
+    // Cloner les versions avec nouveaux IDs
+    const duplicatedVersions: TemplateVersion[] = versionsToDuplicate.map((v, index) => ({
+      ...v,
+      id: `version-${Date.now()}-${index}`,
+      templateId: newTemplateId,
+      versionNumber: index + 1,
+      status: 'brouillon' as const,
+      createdAt: new Date(),
+      publishedAt: null,
+      pages: v.pages.map(page => ({
+        ...page,
+        elements: page.elements.map(el => ({
+          ...el,
+          id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          position: { ...el.position },
+          size: { ...el.size },
+          content: el.content ? { ...el.content } : el.content
+        })),
+        dynamicZones: page.dynamicZones.map(zone => ({ ...zone }))
+      }))
+    }));
+
+    // Si aucune version n'a été dupliquée, créer une version initiale
+    if (duplicatedVersions.length === 0) {
+      duplicatedVersions.push(createInitialVersion(newTemplateId));
+    }
+
+    set(state => ({
+      allTemplates: [...state.allTemplates, newTemplate],
+      allVersions: [...state.allVersions, ...duplicatedVersions]
+    }));
+
+    return newTemplate;
+  },
+
+  renameTemplate: (templateId, newName) => {
+    set(state => ({
+      allTemplates: state.allTemplates.map(t =>
+        t.id === templateId ? { ...t, name: newName, updatedAt: new Date() } : t
+      )
+    }));
+  },
+
+  deleteTemplate: (templateId) => {
+    const { allTemplates, currentTemplateId } = get();
+    const template = allTemplates.find(t => t.id === templateId);
+    
+    // Ne pas supprimer le template actif
+    if (!template || template.isActive) return false;
+
+    set(state => ({
+      allTemplates: state.allTemplates.filter(t => t.id !== templateId),
+      allVersions: state.allVersions.filter(v => v.templateId !== templateId),
+      currentTemplateId: currentTemplateId === templateId ? null : currentTemplateId,
+      currentVersion: currentTemplateId === templateId ? null : state.currentVersion,
+      viewMode: currentTemplateId === templateId ? 'list' : state.viewMode
+    }));
+
+    return true;
+  },
+
+  setTemplateActive: (templateId) => {
+    set(state => ({
+      allTemplates: state.allTemplates.map(t => ({
+        ...t,
+        isActive: t.id === templateId
+      }))
+    }));
+  },
+
+  backToList: () => {
+    set({ viewMode: 'list', currentTemplateId: null, currentVersion: null });
+  },
+
+  // Getters templates
+  getActiveTemplate: () => {
+    return get().allTemplates.find(t => t.isActive) || null;
+  },
+
+  getTemplateVersions: (templateId) => {
+    return get().allVersions.filter(v => v.templateId === templateId);
+  },
+
+  getTemplateLatestVersion: (templateId) => {
+    const versions = get().allVersions.filter(v => v.templateId === templateId);
+    if (versions.length === 0) return null;
+    
+    const publishedVersions = versions.filter(v => v.status === 'publie');
+    if (publishedVersions.length > 0) {
+      return publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
+    }
+    return versions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
+  },
+
+  // === Actions Navigation (existantes) ===
 
   // Getter dynamique pour l'élément sélectionné
   getSelectedElement: () => {
@@ -341,8 +556,11 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
   },
 
   createNewVersion: () => {
-    const { allVersions, currentVersion, selectedElementId } = get();
-    const maxVersion = Math.max(...allVersions.map(v => v.versionNumber), 0);
+    const { allVersions, currentVersion, selectedElementId, currentTemplateId } = get();
+    if (!currentTemplateId) return null;
+    
+    const templateVersions = allVersions.filter(v => v.templateId === currentTemplateId);
+    const maxVersion = Math.max(...templateVersions.map(v => v.versionNumber), 0);
     
     // Clone profond de la version courante si elle existe, sinon version initiale
     const baseVersion = currentVersion 
@@ -359,11 +577,12 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
             dynamicZones: page.dynamicZones.map(zone => ({ ...zone }))
           }))
         }
-      : createInitialVersion();
+      : createInitialVersion(currentTemplateId);
 
     const newVersion: TemplateVersion = {
       ...baseVersion,
       id: `version-${Date.now()}`,
+      templateId: currentTemplateId,
       versionNumber: maxVersion + 1,
       status: 'brouillon',
       createdAt: new Date(),
@@ -384,21 +603,27 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
   },
 
   saveCurrentVersion: () => {
-    const { currentVersion, allVersions } = get();
+    const { currentVersion, allVersions, allTemplates, currentTemplateId } = get();
     if (!currentVersion || currentVersion.status !== 'brouillon') return;
 
     const updatedVersions = allVersions.map(v =>
       v.id === currentVersion.id ? currentVersion : v
     );
 
+    // Mettre à jour la date de modification du template
+    const updatedTemplates = allTemplates.map(t =>
+      t.id === currentTemplateId ? { ...t, updatedAt: new Date() } : t
+    );
+
     set({
       allVersions: updatedVersions,
+      allTemplates: updatedTemplates,
       hasUnsavedChanges: false
     });
   },
 
   publishVersion: () => {
-    const { currentVersion, allVersions } = get();
+    const { currentVersion, allVersions, allTemplates, currentTemplateId } = get();
     if (!currentVersion || currentVersion.status !== 'brouillon') {
       return { canPublish: false, errors: [{ type: 'page_count', message: 'Version non modifiable' }], warnings: [] };
     }
@@ -422,8 +647,14 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
       v.id === currentVersion.id ? publishedVersion : v
     );
 
+    // Mettre à jour la date de modification du template
+    const updatedTemplates = allTemplates.map(t =>
+      t.id === currentTemplateId ? { ...t, updatedAt: new Date() } : t
+    );
+
     set({
       allVersions: updatedVersions,
+      allTemplates: updatedTemplates,
       currentVersion: publishedVersion,
       hasUnsavedChanges: false,
       editorMode: 'view'
@@ -466,7 +697,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>((set, get) => 
   },
 
   getPublishedVersions: () => {
-    return get().allVersions.filter(v => v.status === 'publie');
+    const { allVersions, currentTemplateId } = get();
+    return allVersions.filter(v => v.templateId === currentTemplateId && v.status === 'publie');
   },
 
   discardChanges: () => {
