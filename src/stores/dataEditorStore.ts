@@ -30,6 +30,14 @@ export interface FicheContratData {
   referenceDevis: string | null;
   dureeLocation: number | null;
   partenaire: string | null;
+  // Paramètres financiers (depuis Excel)
+  investissements: number | null;
+  echeancesMensuelles: number | null;
+  echeancesTrimestrielles: number | null;
+  marge: number | null;
+  margeInvestissements: number | null;
+  facturationRefi: number | null;
+  facturationLoyerIntermediaire: number | null;
 }
 
 export type SheetName = 'matrice' | 'ficheContrat' | 'invest' | 'devis' | 'optionsServices' | 'baseTaux';
@@ -119,6 +127,13 @@ const initialFicheContrat: FicheContratData = {
   referenceDevis: null,
   dureeLocation: null,
   partenaire: null,
+  investissements: null,
+  echeancesMensuelles: null,
+  echeancesTrimestrielles: null,
+  marge: null,
+  margeInvestissements: null,
+  facturationRefi: null,
+  facturationLoyerIntermediaire: null,
 };
 
 const initialImportStatus: ImportStatus = {

@@ -90,7 +90,11 @@ export function FicheContratEditor() {
           <div className="space-y-2">
             <Label>Investissements</Label>
             <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-              <span className="font-mono text-lg font-medium">— €</span>
+              <span className="font-mono text-lg font-medium">
+                {ficheContratData.investissements !== null 
+                  ? `${ficheContratData.investissements.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` 
+                  : '— €'}
+              </span>
               <Badge variant="outline" className="text-xs ml-auto">Onglet invest</Badge>
             </div>
           </div>
@@ -110,16 +114,24 @@ export function FicheContratEditor() {
           <div className="space-y-2">
             <Label>Échéances mensuelles</Label>
             <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-              <span className="font-mono">— € HT</span>
-              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+              <span className="font-mono">
+                {ficheContratData.echeancesMensuelles !== null 
+                  ? `${ficheContratData.echeancesMensuelles.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT` 
+                  : '— € HT'}
+              </span>
+              <Badge variant="outline" className="text-xs ml-auto">Excel</Badge>
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Échéances trimestrielles</Label>
             <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-              <span className="font-mono">— € HT</span>
-              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+              <span className="font-mono">
+                {ficheContratData.echeancesTrimestrielles !== null 
+                  ? `${ficheContratData.echeancesTrimestrielles.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT` 
+                  : '— € HT'}
+              </span>
+              <Badge variant="outline" className="text-xs ml-auto">Excel</Badge>
             </div>
           </div>
 
@@ -136,32 +148,48 @@ export function FicheContratEditor() {
           <div className="space-y-2">
             <Label>Marge</Label>
             <div className="flex items-center gap-2 px-3 py-2 bg-success/10 text-success rounded-md">
-              <span className="font-mono font-medium">— €</span>
-              <Badge variant="outline" className="text-xs ml-auto border-success/30">Calculé</Badge>
+              <span className="font-mono font-medium">
+                {ficheContratData.marge !== null 
+                  ? `${ficheContratData.marge.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` 
+                  : '— €'}
+              </span>
+              <Badge variant="outline" className="text-xs ml-auto border-success/30">Excel</Badge>
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Marge / Investissements</Label>
             <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-              <span className="font-mono">— %</span>
-              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+              <span className="font-mono">
+                {ficheContratData.margeInvestissements !== null 
+                  ? `${ficheContratData.margeInvestissements.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} %` 
+                  : '— %'}
+              </span>
+              <Badge variant="outline" className="text-xs ml-auto">Excel</Badge>
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Facturation refi</Label>
             <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-              <span className="font-mono">— €</span>
-              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+              <span className="font-mono">
+                {ficheContratData.facturationRefi !== null 
+                  ? `${ficheContratData.facturationRefi.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` 
+                  : '— €'}
+              </span>
+              <Badge variant="outline" className="text-xs ml-auto">Excel</Badge>
             </div>
           </div>
 
           <div className="space-y-2 sm:col-span-2">
             <Label>Facturation loyer intermédiaire</Label>
             <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
-              <span className="font-mono">0.00 €</span>
-              <Badge variant="outline" className="text-xs ml-auto">Calculé</Badge>
+              <span className="font-mono">
+                {ficheContratData.facturationLoyerIntermediaire !== null 
+                  ? `${ficheContratData.facturationLoyerIntermediaire.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` 
+                  : '0.00 €'}
+              </span>
+              <Badge variant="outline" className="text-xs ml-auto">Excel</Badge>
             </div>
           </div>
         </CardContent>
