@@ -84,6 +84,7 @@ interface DataEditorActions {
   deleteBaseTauxRow: (rowIndex: number) => void;
   addOptionsServiceRow: () => void;
   deleteOptionsServiceRow: (rowIndex: number) => void;
+  addOptionsServiceFromAdmin: (title: string, services: string[], price?: number) => void;
   
   // Validation
   validateSheet: (sheet: SheetName) => ValidationError[];
@@ -324,6 +325,24 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
     modifiedSheets.add('optionsServices');
     set({ 
       optionsServicesData: newData, 
+      hasUnsavedChanges: true,
+      modifiedSheets: new Set(modifiedSheets)
+    });
+  },
+
+  addOptionsServiceFromAdmin: (title, services, price) => {
+    const { optionsServicesData, modifiedSheets } = get();
+    const newRow: OptionsServiceRow = {
+      id: `opt-admin-${Date.now()}`,
+      name: title,
+      description: services.join(' | '),
+      selected: false,
+      category: null,
+      price: price ?? null,
+    };
+    modifiedSheets.add('optionsServices');
+    set({ 
+      optionsServicesData: [...optionsServicesData, newRow], 
       hasUnsavedChanges: true,
       modifiedSheets: new Set(modifiedSheets)
     });

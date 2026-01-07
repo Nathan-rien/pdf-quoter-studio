@@ -384,13 +384,17 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
       errors.push(...result.errors);
     }
     
-    // Parser Fiche Contrat
-    const ficheContratSheet = findSheet('Fiche Contrat');
-    if (ficheContratSheet) {
-      const result = parseFicheContratSheet(ficheContratSheet);
-      data.ficheContrat = result.data;
-      errors.push(...result.errors);
-    }
+  // Parser Fiche Contrat
+  const ficheContratSheet = findSheet('Fiche Contrat');
+  if (ficheContratSheet) {
+    const result = parseFicheContratSheet(ficheContratSheet);
+    // Fusionner au lieu d'écraser - priorité aux données Matrice (client, contact, gc)
+    data.ficheContrat = { 
+      ...result.data,           // Données de Fiche Contrat en base
+      ...data.ficheContrat,     // Données de Matrice prioritaires
+    };
+    errors.push(...result.errors);
+  }
     
     // Parser invest
     const investSheet = findSheet('invest ');
