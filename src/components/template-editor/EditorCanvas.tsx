@@ -159,23 +159,25 @@ export function EditorCanvas() {
     e.preventDefault();
     e.stopPropagation();
     
+    // Multi-sélection avec Ctrl ou Cmd - ne pas démarrer le drag
+    if (e.ctrlKey || e.metaKey) {
+      toggleElementSelection(elementId);
+      return; // Ne pas démarrer le drag pour la multi-sélection
+    }
+    
+    // Si l'élément n'est pas déjà dans la sélection, le sélectionner seul
+    if (!selectedElementIds.includes(elementId)) {
+      selectElement(elementId);
+    }
+    // Sinon, garder la multi-sélection actuelle pour pouvoir déplacer le groupe
+    
+    // Démarrer le drag uniquement pour un clic simple
     const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
     });
     setIsDragging(true);
-    
-    // Multi-sélection avec Ctrl ou Cmd
-    if (e.ctrlKey || e.metaKey) {
-      toggleElementSelection(elementId);
-    } else {
-      // Si l'élément n'est pas déjà dans la sélection, le sélectionner seul
-      if (!selectedElementIds.includes(elementId)) {
-        selectElement(elementId);
-      }
-      // Sinon, garder la multi-sélection actuelle pour pouvoir déplacer le groupe
-    }
   }, [isEditable, isAddMode, pageContent, selectElement, toggleElementSelection, selectedElementIds]);
 
   // Handler pour démarrer le resize
