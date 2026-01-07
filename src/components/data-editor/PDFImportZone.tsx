@@ -46,12 +46,11 @@ export function PDFImportZone({
     try {
       const result = await parsePDF(file);
       
-      if (result.source === 'unknown') {
-        const error = 'Format PDF non reconnu. Seuls les devis Cybertek Pro et GrosBill Pro sont supportés.';
-        setImportResult({ success: false, fileName: file.name, error });
-        onImportError?.(error);
-        return;
-      }
+      // Accept all PDFs - user can fill in data manually if extraction fails
+      const hasExtractedData = result.lignes.length > 0 || 
+        result.client.nom || 
+        result.devis.reference ||
+        result.totaux.totalHT;
 
       setImportResult({
         success: true,
@@ -61,6 +60,14 @@ export function PDFImportZone({
       });
       
       onImportSuccess(result, file.name);
+      
+      // Log extraction info for debugging
+      console.log('PDF Import Result:', {
+        source: result.source,
+        hasExtractedData,
+        lignesCount: result.lignes.length,
+        rawTextLength: result.rawText?.length || 0,
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la lecture du PDF';
       setImportResult({ success: false, fileName: file.name, error: errorMessage });

@@ -46,10 +46,21 @@ export interface PDFParseResult {
 
 function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | 'unknown' {
   const lowerName = filename.toLowerCase();
-  if (lowerName.includes('cybertek')) {
+  if (lowerName.includes('cybertek') || lowerName.includes('kedge')) {
     return 'cybertek';
   }
-  if (lowerName.includes('grosbill') || lowerName.match(/devis_\d+_\d+/)) {
+  if (lowerName.includes('grosbill') || /devis_\d+_\d+/i.test(lowerName)) {
+    return 'grosbill';
+  }
+  return 'unknown';
+}
+
+function detectSourceFromText(text: string): 'cybertek' | 'grosbill' | 'unknown' {
+  const lowerText = text.toLowerCase();
+  if (lowerText.includes('cybertek') || lowerText.includes('groupe cybertek')) {
+    return 'cybertek';
+  }
+  if (lowerText.includes('grosbill')) {
     return 'grosbill';
   }
   return 'unknown';
@@ -177,10 +188,15 @@ async function extractBasicPDFInfo(file: File): Promise<string> {
 
 export async function parsePDF(file: File): Promise<PDFParseResult> {
   // Detect source from filename first
-  const source = detectSourceFromFilename(file.name);
+  let source = detectSourceFromFilename(file.name);
   
   // Try to extract basic text
   const rawText = await extractBasicPDFInfo(file);
+  
+  // If source unknown from filename, try from text content
+  if (source === 'unknown' && rawText.length > 20) {
+    source = detectSourceFromText(rawText);
+  }
   
   // Create base result
   const baseResult: PDFParseResult = {
@@ -194,6 +210,10 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
     rawText,
   };
   
+  // Log for debugging
+  console.log('PDF Parser - Source detected:', source, 'Raw text length:', rawText.length);
+  console.log('PDF Parser - Raw text sample:', rawText.substring(0, 500));
+  
   // If we got some text, try to parse it
   if (rawText.length > 50) {
     let parsedData: Partial<PDFParseResult> = {};
@@ -204,14 +224,17 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
       parsedData = parseGrosbillText(rawText);
     }
     
+    console.log('PDF Parser - Parsed data:', parsedData);
+    
     return {
       ...baseResult,
       ...parsedData,
-      source, // Keep the detected source
+      source,
     };
   }
   
   // Return result with source detected from filename
   // User will need to fill in details manually
+  console.log('PDF Parser - No text extracted, manual entry required');
   return baseResult;
 }
