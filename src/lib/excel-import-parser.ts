@@ -221,22 +221,79 @@ function parseFicheContratSheet(sheet: XLSX.WorkSheet): { data: Partial<FicheCon
   const data: Partial<FicheContratData> = {};
   const errors: ExcelParseError[] = [];
   
-  // Mapping basé sur les positions habituelles de Fiche Contrat
-  // Ces positions peuvent varier selon le fichier source
-  data.client = extractString(getCell(sheet, 'B', 3)) || extractString(getCell(sheet, 'C', 3));
-  data.adresse = extractString(getCell(sheet, 'B', 4)) || extractString(getCell(sheet, 'C', 4));
-  data.codePostal = extractString(getCell(sheet, 'B', 5)) || extractString(getCell(sheet, 'C', 5));
-  data.ville = extractString(getCell(sheet, 'B', 6)) || extractString(getCell(sheet, 'C', 6));
-  data.contact = extractString(getCell(sheet, 'B', 8)) || extractString(getCell(sheet, 'C', 8));
-  data.telephone = extractString(getCell(sheet, 'B', 9)) || extractString(getCell(sheet, 'C', 9));
-  data.email = extractString(getCell(sheet, 'B', 10)) || extractString(getCell(sheet, 'C', 10));
-  data.siret = extractString(getCell(sheet, 'B', 7)) || extractString(getCell(sheet, 'C', 7));
-  data.referenceDevis = extractString(getCell(sheet, 'B', 12)) || extractString(getCell(sheet, 'C', 12));
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
   
-  const duree = extractNumber(getCell(sheet, 'B', 14)) || extractNumber(getCell(sheet, 'C', 14));
-  if (duree) data.dureeLocation = duree;
-  
-  data.partenaire = extractString(getCell(sheet, 'B', 15)) || extractString(getCell(sheet, 'C', 15));
+  // Recherche par labels dans toute la feuille
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const rowNum = r + 1;
+    
+    // Chercher les labels dans les colonnes A, B
+    for (let c = 0; c <= 1; c++) {
+      const colLetter = XLSX.utils.encode_col(c);
+      const cellValue = extractString(getCell(sheet, colLetter, rowNum));
+      
+      if (cellValue) {
+        const lowerValue = cellValue.toLowerCase().trim();
+        
+        // Chercher la valeur dans les colonnes suivantes
+        let stringValue: string | null = null;
+        let numValue: number | null = null;
+        
+        for (let valCol = c + 1; valCol <= 4; valCol++) {
+          const testColLetter = XLSX.utils.encode_col(valCol);
+          const testCell = getCell(sheet, testColLetter, rowNum);
+          if (testCell) {
+            const sv = extractString(testCell);
+            const nv = extractNumber(testCell);
+            if (sv && sv.trim() !== '') stringValue = sv;
+            if (nv !== null) numValue = nv;
+            if (stringValue || numValue !== null) break;
+          }
+        }
+        
+        // Mapping des labels vers les champs
+        if (lowerValue.includes('client') && !lowerValue.includes('code')) {
+          if (stringValue) data.client = stringValue;
+        } else if (lowerValue.includes('adresse')) {
+          if (stringValue) data.adresse = stringValue;
+        } else if (lowerValue.includes('code postal') || lowerValue.includes('cp')) {
+          if (stringValue) data.codePostal = stringValue;
+        } else if (lowerValue.includes('ville')) {
+          if (stringValue) data.ville = stringValue;
+        } else if (lowerValue.includes('contact') || lowerValue === 'ic') {
+          if (stringValue) data.contact = stringValue;
+        } else if (lowerValue.includes('téléphone') || lowerValue.includes('telephone') || lowerValue.includes('tel')) {
+          if (stringValue) data.telephone = stringValue;
+        } else if (lowerValue.includes('email') || lowerValue.includes('mail')) {
+          if (stringValue) data.email = stringValue;
+        } else if (lowerValue.includes('siret')) {
+          if (stringValue) data.siret = stringValue;
+        } else if (lowerValue.includes('référence') || lowerValue.includes('reference') || lowerValue.includes('devis')) {
+          if (stringValue) data.referenceDevis = stringValue;
+        } else if (lowerValue.includes('durée') || lowerValue.includes('duree')) {
+          if (numValue !== null) data.dureeLocation = numValue;
+        } else if (lowerValue.includes('refinanceur') || lowerValue.includes('partenaire') || lowerValue.includes('refi')) {
+          if (stringValue) data.partenaire = stringValue;
+        }
+        // Paramètres financiers
+        else if (lowerValue.includes('investissement') && !lowerValue.includes('marge')) {
+          if (numValue !== null) data.investissements = numValue;
+        } else if (lowerValue.includes('échéance') && lowerValue.includes('mensuel')) {
+          if (numValue !== null) data.echeancesMensuelles = numValue;
+        } else if (lowerValue.includes('échéance') && lowerValue.includes('trimestriel')) {
+          if (numValue !== null) data.echeancesTrimestrielles = numValue;
+        } else if (lowerValue.includes('marge') && lowerValue.includes('invest')) {
+          if (numValue !== null) data.margeInvestissements = numValue;
+        } else if (lowerValue === 'marge' || (lowerValue.includes('marge') && !lowerValue.includes('invest'))) {
+          if (numValue !== null) data.marge = numValue;
+        } else if (lowerValue.includes('facturation') && lowerValue.includes('refi')) {
+          if (numValue !== null) data.facturationRefi = numValue;
+        } else if (lowerValue.includes('facturation') && (lowerValue.includes('loyer') || lowerValue.includes('intermédiaire'))) {
+          if (numValue !== null) data.facturationLoyerIntermediaire = numValue;
+        }
+      }
+    }
+  }
   
   return { data, errors };
 }
