@@ -46,6 +46,7 @@ export function EditorCanvas() {
     selectedShapeType,
     selectElement,
     toggleElementSelection,
+    selectMultipleElements,
     clearSelection,
     selectDynamicZone,
     addElement,
@@ -65,6 +66,12 @@ export function EditorCanvas() {
   const [resizeStart, setResizeStart] = useState<{ x: number; y: number; width: number; height: number; posX: number; posY: number } | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [alignmentGuides, setAlignmentGuides] = useState<{ x?: number; y?: number; centerX?: boolean; centerY?: boolean }>({});
+  
+  // États pour la sélection lasso
+  const [isLassoing, setIsLassoing] = useState(false);
+  const [lassoStart, setLassoStart] = useState<{ x: number; y: number } | null>(null);
+  const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
+  
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +80,7 @@ export function EditorCanvas() {
   const MIN_SIZE = 20; // Taille minimale d'un élément
   const MOVE_STEP = 10; // Pas de déplacement normal (pixels)
   const MOVE_STEP_FINE = 1; // Pas de déplacement fin avec Shift (pixels)
+  const LASSO_MIN_SIZE = 5; // Taille minimale du lasso pour déclencher une sélection
 
   // Raccourcis clavier pour déplacer les éléments
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -359,19 +367,66 @@ export function EditorCanvas() {
         height: currentHeight
       });
     }
-  }, [isDragging, isDraggingZone, isResizing, selectedElementId, selectedDynamicZoneId, dragOffset, resizeStart, resizeHandle, pageContent, dynamicZones, updateElementPosition, updateElementSize, updateDynamicZonePosition]);
+    
+    // Mise à jour du lasso
+    if (isLassoing && lassoStart) {
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const x = ((e.clientX - canvasRect.left) / canvasRect.width) * CANVAS_SCALE.width;
+      const y = ((e.clientY - canvasRect.top) / canvasRect.height) * CANVAS_SCALE.height;
+      setLassoEnd({ x, y });
+    }
+  }, [isDragging, isDraggingZone, isResizing, isLassoing, lassoStart, selectedElementId, selectedDynamicZoneId, dragOffset, resizeStart, resizeHandle, pageContent, dynamicZones, updateElementPosition, updateElementSize, updateDynamicZonePosition]);
 
   const handleMouseUp = useCallback(() => {
+    // Finaliser le lasso et sélectionner les éléments
+    if (isLassoing && lassoStart && lassoEnd && pageContent) {
+      const lassoWidth = Math.abs(lassoEnd.x - lassoStart.x);
+      const lassoHeight = Math.abs(lassoEnd.y - lassoStart.y);
+      
+      // Ne sélectionner que si le lasso est assez grand
+      if (lassoWidth > LASSO_MIN_SIZE || lassoHeight > LASSO_MIN_SIZE) {
+        const minX = Math.min(lassoStart.x, lassoEnd.x);
+        const maxX = Math.max(lassoStart.x, lassoEnd.x);
+        const minY = Math.min(lassoStart.y, lassoEnd.y);
+        const maxY = Math.max(lassoStart.y, lassoEnd.y);
+        
+        // Trouver les éléments qui intersectent avec le rectangle de sélection
+        const intersectingIds = pageContent.elements
+          .filter(el => {
+            if (el.isDynamic) return false;
+            
+            const elLeft = el.position.x;
+            const elRight = el.position.x + el.size.width;
+            const elTop = el.position.y;
+            const elBottom = el.position.y + el.size.height;
+            
+            // Vérifier l'intersection
+            return !(elRight < minX || elLeft > maxX || elBottom < minY || elTop > maxY);
+          })
+          .map(el => el.id);
+        
+        if (intersectingIds.length > 0) {
+          selectMultipleElements(intersectingIds);
+        }
+      }
+    }
+    
+    setIsLassoing(false);
+    setLassoStart(null);
+    setLassoEnd(null);
     setIsDragging(false);
     setIsDraggingZone(false);
     setIsResizing(false);
     setResizeHandle(null);
     setResizeStart(null);
     setAlignmentGuides({});
-  }, []);
+  }, [isLassoing, lassoStart, lassoEnd, pageContent, selectMultipleElements]);
 
   const handleMouseLeave = useCallback(() => {
-    if (isDragging || isDraggingZone || isResizing) {
+    if (isDragging || isDraggingZone || isResizing || isLassoing) {
+      setIsLassoing(false);
+      setLassoStart(null);
+      setLassoEnd(null);
       setIsDragging(false);
       setIsDraggingZone(false);
       setIsResizing(false);
@@ -379,7 +434,24 @@ export function EditorCanvas() {
       setResizeStart(null);
       setAlignmentGuides({});
     }
-  }, [isDragging, isDraggingZone, isResizing]);
+  }, [isDragging, isDraggingZone, isResizing, isLassoing]);
+
+  // Handler pour démarrer le lasso sur le canvas
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Ne pas démarrer le lasso si on clique sur un élément ou en mode ajout
+    if (isAddMode || !isEditable) return;
+    
+    // Vérifier qu'on clique bien sur le canvas et non sur un élément
+    if (e.target !== canvasRef.current) return;
+    
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * CANVAS_SCALE.width;
+    const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SCALE.height;
+    
+    setLassoStart({ x, y });
+    setLassoEnd({ x, y });
+    setIsLassoing(true);
+  }, [isAddMode, isEditable]);
 
   // Handler pour démarrer le drag d'une zone dynamique
   const handleZoneMouseDown = useCallback((zoneId: string, e: React.MouseEvent) => {
@@ -506,7 +578,8 @@ export function EditorCanvas() {
               isEditable ? "border-primary/30" : "border-border",
               isAddMode && "cursor-crosshair",
               (isDragging || isDraggingZone) && "cursor-grabbing",
-              isResizing && "cursor-nwse-resize"
+              isResizing && "cursor-nwse-resize",
+              isLassoing && "cursor-crosshair"
             )}
             style={{
               width: '100%',
@@ -514,10 +587,23 @@ export function EditorCanvas() {
               aspectRatio: '210 / 297', // A4 ratio
             }}
             onClick={handleCanvasClick}
+            onMouseDown={handleCanvasMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
           >
+          {/* Rectangle de sélection lasso */}
+          {isLassoing && lassoStart && lassoEnd && (
+            <div
+              className="absolute border-2 border-primary bg-primary/10 pointer-events-none z-50"
+              style={{
+                left: `${(Math.min(lassoStart.x, lassoEnd.x) / CANVAS_SCALE.width) * 100}%`,
+                top: `${(Math.min(lassoStart.y, lassoEnd.y) / CANVAS_SCALE.height) * 100}%`,
+                width: `${(Math.abs(lassoEnd.x - lassoStart.x) / CANVAS_SCALE.width) * 100}%`,
+                height: `${(Math.abs(lassoEnd.y - lassoStart.y) / CANVAS_SCALE.height) * 100}%`,
+              }}
+            />
+          )}
           {/* Guides d'alignement */}
           {isDragging && alignmentGuides.x !== undefined && (
             <div 
