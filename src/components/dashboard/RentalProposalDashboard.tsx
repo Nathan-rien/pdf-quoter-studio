@@ -4,13 +4,13 @@ import {
   Plus, 
   History, 
   ChevronRight,
-  Sparkles,
-  FileText
+  FileText,
+  FileUp
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useQuoteStore } from "@/stores/quoteStore";
+import { useRentalProposalStore } from "@/stores/rentalProposalStore";
 
 interface RentalProposalDashboardProps {
   onNewProposal: () => void;
@@ -19,10 +19,9 @@ interface RentalProposalDashboardProps {
 }
 
 export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onViewHistory }: RentalProposalDashboardProps) {
-  const { template, excelImport, csvImport, auditLogs } = useQuoteStore();
+  const { pdfImportStatus, lignesData, isActive } = useRentalProposalStore();
   
-  const hasActiveProposal = template || excelImport;
-  const recentLogs = auditLogs.slice(0, 5);
+  const hasActiveProposal = isActive && pdfImportStatus.isImported;
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -137,24 +136,12 @@ export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onVie
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm font-medium">Template</span>
+                <FileUp className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium">PDF Devis</span>
               </div>
-              {template ? (
-                <Badge variant="success">{template.name}</Badge>
-              ) : (
-                <Badge variant="pending">Non sélectionné</Badge>
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm font-medium">Fichier Excel</span>
-              </div>
-              {excelImport ? (
-                <Badge variant={excelImport.isValid ? "success" : "error"}>
-                  {excelImport.fileName}
+              {pdfImportStatus.isImported ? (
+                <Badge variant="success">
+                  {pdfImportStatus.source === 'cybertek' ? 'Cybertek Pro' : 'GrosBill Pro'}
                 </Badge>
               ) : (
                 <Badge variant="pending">Non importé</Badge>
@@ -164,50 +151,54 @@ export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onVie
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm font-medium">Tarifs CSV</span>
+                <span className="text-sm font-medium">Fichier source</span>
               </div>
-              {csvImport ? (
-                <Badge variant={csvImport.isValid ? "success" : "error"}>
-                  Mis à jour {new Date(csvImport.importDate).toLocaleDateString('fr-FR')}
+              {pdfImportStatus.fileName ? (
+                <Badge variant="secondary" className="max-w-[180px] truncate">
+                  {pdfImportStatus.fileName}
                 </Badge>
               ) : (
-                <Badge variant="pending">Non importé</Badge>
+                <Badge variant="pending">-</Badge>
               )}
+            </div>
+            
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium">Lignes de produit</span>
+              </div>
+              <Badge variant={lignesData.length > 0 ? "success" : "pending"}>
+                {lignesData.length} ligne(s)
+              </Badge>
             </div>
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
+        {/* Info Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Activité récente</CardTitle>
-            <CardDescription>Dernières actions effectuées</CardDescription>
+            <CardTitle className="text-lg">Workflow Proposition Location</CardTitle>
+            <CardDescription>4 étapes pour créer votre proposition</CardDescription>
           </CardHeader>
           <CardContent>
-            {recentLogs.length > 0 ? (
-              <div className="space-y-3">
-                {recentLogs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-3 text-sm">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full mt-1.5 shrink-0",
-                      log.status === 'success' && "bg-success",
-                      log.status === 'warning' && "bg-warning",
-                      log.status === 'error' && "bg-destructive",
-                    )} />
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate">{log.message}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(log.timestamp).toLocaleString('fr-FR')}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">1</div>
+                <span>Import PDF (Cybertek Pro / GrosBill Pro)</span>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Aucune activité récente
-              </p>
-            )}
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">2</div>
+                <span>Édition des données extraites</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">3</div>
+                <span>Aperçu de la proposition</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">4</div>
+                <span>Export du document final</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

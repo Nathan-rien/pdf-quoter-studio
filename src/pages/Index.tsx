@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuoteStore } from "@/stores/quoteStore";
+import { useRentalProposalStore } from "@/stores/rentalProposalStore";
 import { AppSidebar, ViewType } from "@/components/layout/AppSidebar";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { RentalProposalDashboard } from "@/components/dashboard/RentalProposalDashboard";
@@ -11,6 +12,7 @@ import { QuotePreview } from "@/components/steps/QuotePreview";
 import { ExportView } from "@/components/steps/ExportView";
 import { WorkflowProgress } from "@/components/workflow/WorkflowProgress";
 import { TemplateEditorLayout } from "@/components/template-editor";
+import { RentalWorkflow } from "@/components/rental-proposal/RentalWorkflow";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import { Button } from "@/components/ui/button";
 import { WorkflowStep, StepStatus } from "@/types/quote";
@@ -208,11 +210,16 @@ export default function Index() {
       case 'rental-proposal':
         return (
           <RentalProposalDashboard 
-            onNewProposal={handleStartNewQuote}
-            onResumeProposal={handleResumeQuote}
+            onNewProposal={() => {
+              useRentalProposalStore.getState().startNewProposal();
+              setCurrentView('rental-workflow');
+            }}
+            onResumeProposal={() => setCurrentView('rental-workflow')}
             onViewHistory={() => setCurrentView('history')}
           />
         );
+      case 'rental-workflow':
+        return <RentalWorkflow />;
       case 'history':
         return <HistoryView />;
       case 'template-editor':
