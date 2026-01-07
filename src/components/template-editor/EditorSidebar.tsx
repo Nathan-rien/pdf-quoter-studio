@@ -36,7 +36,7 @@ export function EditorSidebar() {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-2">
-        <ScrollArea className="h-[500px]">
+        <ScrollArea className="h-[600px]">
           <div className="space-y-1">
             {pages.map((page) => {
               const isSelected = selectedPageNumber === page.pageNumber;
@@ -66,7 +66,7 @@ export function EditorSidebar() {
                     <div className="flex-1 text-left min-w-0">
                       <div className="flex items-center gap-2">
                         <Icon className="h-3 w-3 shrink-0" />
-                        <span className="text-xs font-medium truncate">
+                        <span className="text-xs font-medium">
                           {page.title}
                         </span>
                       </div>
