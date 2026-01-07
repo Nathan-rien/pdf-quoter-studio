@@ -25,10 +25,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+export type ViewType = 'dashboard' | 'workflow' | 'history' | 'template-editor' | 'options-admin';
+
 interface AppSidebarProps {
-  currentView: 'dashboard' | 'workflow' | 'history' | 'template-editor';
+  currentView: ViewType;
   currentStep: WorkflowStep;
-  onNavigate: (view: 'dashboard' | 'workflow' | 'history' | 'template-editor') => void;
+  onNavigate: (view: ViewType) => void;
   onStepNavigate: (step: WorkflowStep) => void;
   canNavigateTo: (step: WorkflowStep) => boolean;
   isWorkflowActive: boolean;
@@ -117,6 +119,14 @@ export function AppSidebar({
           >
             <Palette className="h-4 w-4" />
             Éditeur de Template
+          </Button>
+          <Button
+            variant={currentView === 'options-admin' ? 'secondary' : 'ghost'}
+            className="w-full justify-start gap-3"
+            onClick={() => onNavigate('options-admin')}
+          >
+            <Settings className="h-4 w-4" />
+            Options Services
           </Button>
         </div>
 
