@@ -1,264 +1,205 @@
-// Données Base Taux fixes - provenant de l'Excel Matrice_Location
-// Ces données ne changent jamais et sont utilisées pour le lookup du coefficient
-// IMPORTANT: La durée est en TRIMESTRES (pas en mois)
+// Données Base Taux extraites du fichier Excel Matrice_Location_V1_4_1.xlsx
+// Onglet "Base Taux" - 136 entrées exactes
+// Durées en TRIMESTRES (ex: 12 trimestres = 36 mois)
 
 export interface BaseTauxEntry {
   partenaire: string;
   montantMin: number;
   montantMax: number;
-  dureeTrimestres: number; // en trimestres (ex: 8 trimestres = 24 mois)
+  dureeTrimestres: number; // en trimestres
   taux: number;
 }
 
-// Données extraites de l'onglet "Base Taux" du fichier Excel Matrice_Location_V14.xlsx
-// Durées disponibles: 4, 8, 12, 16, 20 trimestres (= 12, 24, 36, 48, 60 mois)
 export const BASE_TAUX_DATA: BaseTauxEntry[] = [
-  // Lixxbail 1
-  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 9.054 },
-  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.807 },
-  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.0051 },
-  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.3468 },
-  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 1.9570 },
-  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 9.054 },
-  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.807 },
-  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.0051 },
-  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.3468 },
-  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 1.9570 },
-  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 9.054 },
-  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.807 },
-  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.0051 },
-  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.3468 },
-  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 1.9570 },
-  { partenaire: 'Lixxbail 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 9.054 },
-  { partenaire: 'Lixxbail 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.807 },
-  { partenaire: 'Lixxbail 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.0051 },
-  { partenaire: 'Lixxbail 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.3468 },
-  { partenaire: 'Lixxbail 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 1.9570 },
-  
-  // Grenke
-  { partenaire: 'Grenke', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 9.12 },
-  { partenaire: 'Grenke', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.81 },
-  { partenaire: 'Grenke', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.38 },
-  { partenaire: 'Grenke', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.67 },
-  { partenaire: 'Grenke', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.25 },
-  { partenaire: 'Grenke', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 9.12 },
-  { partenaire: 'Grenke', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.81 },
-  { partenaire: 'Grenke', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.38 },
-  { partenaire: 'Grenke', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.67 },
-  { partenaire: 'Grenke', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.25 },
-  { partenaire: 'Grenke', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 9.12 },
-  { partenaire: 'Grenke', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.81 },
-  { partenaire: 'Grenke', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.38 },
-  { partenaire: 'Grenke', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.67 },
-  { partenaire: 'Grenke', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.25 },
-  { partenaire: 'Grenke', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 9.12 },
-  { partenaire: 'Grenke', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.81 },
-  { partenaire: 'Grenke', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.38 },
-  { partenaire: 'Grenke', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.67 },
-  { partenaire: 'Grenke', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.25 },
-  
-  // Franfinance
-  { partenaire: 'Franfinance', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 9.30 },
-  { partenaire: 'Franfinance', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.90 },
-  { partenaire: 'Franfinance', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.45 },
-  { partenaire: 'Franfinance', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.72 },
-  { partenaire: 'Franfinance', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.29 },
-  { partenaire: 'Franfinance', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 9.30 },
-  { partenaire: 'Franfinance', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.90 },
-  { partenaire: 'Franfinance', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.45 },
-  { partenaire: 'Franfinance', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.72 },
-  { partenaire: 'Franfinance', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.29 },
-  { partenaire: 'Franfinance', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 9.30 },
-  { partenaire: 'Franfinance', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.90 },
-  { partenaire: 'Franfinance', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.45 },
-  { partenaire: 'Franfinance', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.72 },
-  { partenaire: 'Franfinance', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.29 },
-  { partenaire: 'Franfinance', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 9.30 },
-  { partenaire: 'Franfinance', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.90 },
-  { partenaire: 'Franfinance', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.45 },
-  { partenaire: 'Franfinance', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.72 },
-  { partenaire: 'Franfinance', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.29 },
-  
-  // Olinn
-  { partenaire: 'Olinn', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 8.96 },
-  { partenaire: 'Olinn', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.72 },
-  { partenaire: 'Olinn', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.32 },
-  { partenaire: 'Olinn', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.62 },
-  { partenaire: 'Olinn', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.21 },
-  { partenaire: 'Olinn', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 8.96 },
-  { partenaire: 'Olinn', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.72 },
-  { partenaire: 'Olinn', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.32 },
-  { partenaire: 'Olinn', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.62 },
-  { partenaire: 'Olinn', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.21 },
-  { partenaire: 'Olinn', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 8.96 },
-  { partenaire: 'Olinn', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.72 },
-  { partenaire: 'Olinn', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.32 },
-  { partenaire: 'Olinn', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.62 },
-  { partenaire: 'Olinn', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.21 },
-  { partenaire: 'Olinn', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 8.96 },
-  { partenaire: 'Olinn', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.72 },
-  { partenaire: 'Olinn', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.32 },
-  { partenaire: 'Olinn', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.62 },
-  { partenaire: 'Olinn', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.21 },
-  
-  // BNP VR
-  { partenaire: 'BNP VR', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 8.80 },
-  { partenaire: 'BNP VR', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.64 },
-  { partenaire: 'BNP VR', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.26 },
-  { partenaire: 'BNP VR', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.57 },
-  { partenaire: 'BNP VR', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.17 },
-  { partenaire: 'BNP VR', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 8.80 },
-  { partenaire: 'BNP VR', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.64 },
-  { partenaire: 'BNP VR', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.26 },
-  { partenaire: 'BNP VR', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.57 },
-  { partenaire: 'BNP VR', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.17 },
-  { partenaire: 'BNP VR', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 8.80 },
-  { partenaire: 'BNP VR', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.64 },
-  { partenaire: 'BNP VR', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.26 },
-  { partenaire: 'BNP VR', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.57 },
-  { partenaire: 'BNP VR', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.17 },
-  { partenaire: 'BNP VR', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 8.80 },
-  { partenaire: 'BNP VR', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.64 },
-  { partenaire: 'BNP VR', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.26 },
-  { partenaire: 'BNP VR', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.57 },
-  { partenaire: 'BNP VR', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.17 },
-  
-  // BNP CréditBail
-  { partenaire: 'BNP CréditBail', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 8.85 },
-  { partenaire: 'BNP CréditBail', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.67 },
-  { partenaire: 'BNP CréditBail', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.28 },
-  { partenaire: 'BNP CréditBail', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.59 },
-  { partenaire: 'BNP CréditBail', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.18 },
-  { partenaire: 'BNP CréditBail', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 8.85 },
-  { partenaire: 'BNP CréditBail', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.67 },
-  { partenaire: 'BNP CréditBail', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.28 },
-  { partenaire: 'BNP CréditBail', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.59 },
-  { partenaire: 'BNP CréditBail', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.18 },
-  { partenaire: 'BNP CréditBail', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 8.85 },
-  { partenaire: 'BNP CréditBail', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.67 },
-  { partenaire: 'BNP CréditBail', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.28 },
-  { partenaire: 'BNP CréditBail', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.59 },
-  { partenaire: 'BNP CréditBail', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.18 },
-  { partenaire: 'BNP CréditBail', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 8.85 },
-  { partenaire: 'BNP CréditBail', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.67 },
-  { partenaire: 'BNP CréditBail', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.28 },
-  { partenaire: 'BNP CréditBail', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.59 },
-  { partenaire: 'BNP CréditBail', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.18 },
-  
-  // Olinn 2 PC Leno/HP/Dell
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 8.50 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.48 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.15 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.49 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.10 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 8.50 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.48 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.15 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.49 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.10 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 8.50 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.48 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.15 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.49 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.10 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 8.50 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.48 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.15 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.49 },
-  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.10 },
-  
-  // Olinn 2 PC autre marque
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 9.10 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.80 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.37 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.66 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.24 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 9.10 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.80 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.37 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.66 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.24 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 9.10 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.80 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.37 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.66 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.24 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 9.10 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.80 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.37 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.66 },
-  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.24 },
-  
-  // Olinn 2 serveurs
-  { partenaire: 'Olinn 2 serveurs', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 9.50 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 5.01 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.52 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.78 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.34 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 9.50 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 5.01 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.52 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.78 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.34 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 9.50 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 5.01 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.52 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.78 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.34 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 9.50 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 5.01 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.52 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.78 },
-  { partenaire: 'Olinn 2 serveurs', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.34 },
-  
-  // Olinn 1 3D dental
-  { partenaire: 'Olinn 1 3D dental', montantMin: 1000, montantMax: 5000, dureeTrimestres: 4, taux: 8.60 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.53 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.19 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.52 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 2.12 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 5001, montantMax: 20000, dureeTrimestres: 4, taux: 8.60 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 5001, montantMax: 20000, dureeTrimestres: 8, taux: 4.53 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 5001, montantMax: 20000, dureeTrimestres: 12, taux: 3.19 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 5001, montantMax: 20000, dureeTrimestres: 16, taux: 2.52 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 5001, montantMax: 20000, dureeTrimestres: 20, taux: 2.12 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 20001, montantMax: 50000, dureeTrimestres: 4, taux: 8.60 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 20001, montantMax: 50000, dureeTrimestres: 8, taux: 4.53 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 20001, montantMax: 50000, dureeTrimestres: 12, taux: 3.19 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 20001, montantMax: 50000, dureeTrimestres: 16, taux: 2.52 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 20001, montantMax: 50000, dureeTrimestres: 20, taux: 2.12 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 50001, montantMax: 500000, dureeTrimestres: 4, taux: 8.60 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.53 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.19 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.52 },
-  { partenaire: 'Olinn 1 3D dental', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.12 },
+  // ========== Lixxbail 1 (16 lignes) ==========
+  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 8, taux: 4.4232 },
+  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 10000, dureeTrimestres: 8, taux: 4.405633 },
+  { partenaire: 'Lixxbail 1', montantMin: 10001, montantMax: 20000, dureeTrimestres: 8, taux: 4.398633 },
+  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 500000, dureeTrimestres: 8, taux: 4.377433 },
+  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 12, taux: 3.054 },
+  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 10000, dureeTrimestres: 12, taux: 3.035233333 },
+  { partenaire: 'Lixxbail 1', montantMin: 10001, montantMax: 20000, dureeTrimestres: 12, taux: 3.0277 },
+  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 500000, dureeTrimestres: 12, taux: 3.0051 },
+  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 16, taux: 2.3738 },
+  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 10000, dureeTrimestres: 16, taux: 2.354133333 },
+  { partenaire: 'Lixxbail 1', montantMin: 10001, montantMax: 20000, dureeTrimestres: 16, taux: 2.3463 },
+  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 500000, dureeTrimestres: 16, taux: 2.3227 },
+  { partenaire: 'Lixxbail 1', montantMin: 1000, montantMax: 5000, dureeTrimestres: 20, taux: 1.968533333 },
+  { partenaire: 'Lixxbail 1', montantMin: 5001, montantMax: 10000, dureeTrimestres: 20, taux: 1.9482 },
+  { partenaire: 'Lixxbail 1', montantMin: 10001, montantMax: 20000, dureeTrimestres: 20, taux: 1.940066667 },
+  { partenaire: 'Lixxbail 1', montantMin: 20001, montantMax: 500000, dureeTrimestres: 20, taux: 1.9157 },
+
+  // ========== Grenke 1 (35 lignes) ==========
+  { partenaire: 'Grenke 1', montantMin: 500, montantMax: 2500, dureeTrimestres: 6, taux: 5.8939 },
+  { partenaire: 'Grenke 1', montantMin: 2501, montantMax: 5000, dureeTrimestres: 6, taux: 5.8939 },
+  { partenaire: 'Grenke 1', montantMin: 5001, montantMax: 12500, dureeTrimestres: 6, taux: 5.8939 },
+  { partenaire: 'Grenke 1', montantMin: 12501, montantMax: 25000, dureeTrimestres: 6, taux: 5.8939 },
+  { partenaire: 'Grenke 1', montantMin: 25001, montantMax: 37500, dureeTrimestres: 6, taux: 5.8939 },
+  { partenaire: 'Grenke 1', montantMin: 37501, montantMax: 50000, dureeTrimestres: 6, taux: 5.8939 },
+  { partenaire: 'Grenke 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 6, taux: 5.8939 },
+  { partenaire: 'Grenke 1', montantMin: 500, montantMax: 2500, dureeTrimestres: 8, taux: 4.5643 },
+  { partenaire: 'Grenke 1', montantMin: 2501, montantMax: 5000, dureeTrimestres: 8, taux: 4.5643 },
+  { partenaire: 'Grenke 1', montantMin: 5001, montantMax: 12500, dureeTrimestres: 8, taux: 4.5643 },
+  { partenaire: 'Grenke 1', montantMin: 12501, montantMax: 25000, dureeTrimestres: 8, taux: 4.5643 },
+  { partenaire: 'Grenke 1', montantMin: 25001, montantMax: 37500, dureeTrimestres: 8, taux: 4.5643 },
+  { partenaire: 'Grenke 1', montantMin: 37501, montantMax: 50000, dureeTrimestres: 8, taux: 4.5643 },
+  { partenaire: 'Grenke 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 8, taux: 4.5643 },
+  { partenaire: 'Grenke 1', montantMin: 1, montantMax: 2500, dureeTrimestres: 12, taux: 3.1701 },
+  { partenaire: 'Grenke 1', montantMin: 2501, montantMax: 5000, dureeTrimestres: 12, taux: 3.1701 },
+  { partenaire: 'Grenke 1', montantMin: 5001, montantMax: 12500, dureeTrimestres: 12, taux: 3.1701 },
+  { partenaire: 'Grenke 1', montantMin: 12501, montantMax: 25000, dureeTrimestres: 12, taux: 3.1701 },
+  { partenaire: 'Grenke 1', montantMin: 25001, montantMax: 37500, dureeTrimestres: 12, taux: 3.1701 },
+  { partenaire: 'Grenke 1', montantMin: 37501, montantMax: 50000, dureeTrimestres: 12, taux: 3.1701 },
+  { partenaire: 'Grenke 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 12, taux: 3.1701 },
+  { partenaire: 'Grenke 1', montantMin: 500, montantMax: 2500, dureeTrimestres: 16, taux: 2.4713 },
+  { partenaire: 'Grenke 1', montantMin: 2501, montantMax: 5000, dureeTrimestres: 16, taux: 2.4713 },
+  { partenaire: 'Grenke 1', montantMin: 5001, montantMax: 12500, dureeTrimestres: 16, taux: 2.4713 },
+  { partenaire: 'Grenke 1', montantMin: 12501, montantMax: 25000, dureeTrimestres: 16, taux: 2.4713 },
+  { partenaire: 'Grenke 1', montantMin: 25001, montantMax: 37500, dureeTrimestres: 16, taux: 2.4713 },
+  { partenaire: 'Grenke 1', montantMin: 37501, montantMax: 50000, dureeTrimestres: 16, taux: 2.4713 },
+  { partenaire: 'Grenke 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 16, taux: 2.4713 },
+  { partenaire: 'Grenke 1', montantMin: 500, montantMax: 2500, dureeTrimestres: 20, taux: 2.0551 },
+  { partenaire: 'Grenke 1', montantMin: 2501, montantMax: 5000, dureeTrimestres: 20, taux: 2.0551 },
+  { partenaire: 'Grenke 1', montantMin: 5001, montantMax: 12500, dureeTrimestres: 20, taux: 2.0551 },
+  { partenaire: 'Grenke 1', montantMin: 12501, montantMax: 25000, dureeTrimestres: 20, taux: 2.0551 },
+  { partenaire: 'Grenke 1', montantMin: 25001, montantMax: 37500, dureeTrimestres: 20, taux: 2.0551 },
+  { partenaire: 'Grenke 1', montantMin: 37501, montantMax: 50000, dureeTrimestres: 20, taux: 2.0551 },
+  { partenaire: 'Grenke 1', montantMin: 50001, montantMax: 500000, dureeTrimestres: 20, taux: 2.0551 },
+
+  // ========== Franfinance 1 (12 lignes) ==========
+  { partenaire: 'Franfinance 1', montantMin: 1500, montantMax: 19999, dureeTrimestres: 8, taux: 4.4765 },
+  { partenaire: 'Franfinance 1', montantMin: 20000, montantMax: 49999, dureeTrimestres: 8, taux: 4.4765 },
+  { partenaire: 'Franfinance 1', montantMin: 50000, montantMax: 149999, dureeTrimestres: 8, taux: 4.4765 },
+  { partenaire: 'Franfinance 1', montantMin: 1500, montantMax: 19999, dureeTrimestres: 12, taux: 3.0949 },
+  { partenaire: 'Franfinance 1', montantMin: 20000, montantMax: 49999, dureeTrimestres: 12, taux: 3.0949 },
+  { partenaire: 'Franfinance 1', montantMin: 50000, montantMax: 149999, dureeTrimestres: 12, taux: 3.0949 },
+  { partenaire: 'Franfinance 1', montantMin: 1500, montantMax: 19999, dureeTrimestres: 16, taux: 2.4053 },
+  { partenaire: 'Franfinance 1', montantMin: 20000, montantMax: 49999, dureeTrimestres: 16, taux: 2.4053 },
+  { partenaire: 'Franfinance 1', montantMin: 50000, montantMax: 149999, dureeTrimestres: 16, taux: 2.4053 },
+  { partenaire: 'Franfinance 1', montantMin: 1500, montantMax: 19999, dureeTrimestres: 20, taux: 1.9949 },
+  { partenaire: 'Franfinance 1', montantMin: 20000, montantMax: 49999, dureeTrimestres: 20, taux: 1.9949 },
+  { partenaire: 'Franfinance 1', montantMin: 50000, montantMax: 149999, dureeTrimestres: 20, taux: 1.9949 },
+
+  // ========== Olinn 2 (16 lignes) ==========
+  { partenaire: 'Olinn 2', montantMin: 5001, montantMax: 10000, dureeTrimestres: 8, taux: 4.4533 },
+  { partenaire: 'Olinn 2', montantMin: 10001, montantMax: 25000, dureeTrimestres: 8, taux: 4.4433 },
+  { partenaire: 'Olinn 2', montantMin: 25001, montantMax: 50000, dureeTrimestres: 8, taux: 4.43 },
+  { partenaire: 'Olinn 2', montantMin: 50001, montantMax: 100000, dureeTrimestres: 8, taux: 4.4167 },
+  { partenaire: 'Olinn 2', montantMin: 5001, montantMax: 10000, dureeTrimestres: 12, taux: 3.0717 },
+  { partenaire: 'Olinn 2', montantMin: 10001, montantMax: 25000, dureeTrimestres: 12, taux: 3.0617 },
+  { partenaire: 'Olinn 2', montantMin: 25001, montantMax: 50000, dureeTrimestres: 12, taux: 3.0483 },
+  { partenaire: 'Olinn 2', montantMin: 50001, montantMax: 100000, dureeTrimestres: 12, taux: 3.035 },
+  { partenaire: 'Olinn 2', montantMin: 5001, montantMax: 10000, dureeTrimestres: 16, taux: 2.3833 },
+  { partenaire: 'Olinn 2', montantMin: 10001, montantMax: 25000, dureeTrimestres: 16, taux: 2.3733 },
+  { partenaire: 'Olinn 2', montantMin: 25001, montantMax: 50000, dureeTrimestres: 16, taux: 2.36 },
+  { partenaire: 'Olinn 2', montantMin: 50001, montantMax: 100000, dureeTrimestres: 16, taux: 2.3467 },
+  { partenaire: 'Olinn 2', montantMin: 5001, montantMax: 10000, dureeTrimestres: 20, taux: 1.9733 },
+  { partenaire: 'Olinn 2', montantMin: 10001, montantMax: 25000, dureeTrimestres: 20, taux: 1.9633 },
+  { partenaire: 'Olinn 2', montantMin: 25001, montantMax: 50000, dureeTrimestres: 20, taux: 1.95 },
+  { partenaire: 'Olinn 2', montantMin: 50001, montantMax: 100000, dureeTrimestres: 20, taux: 1.9367 },
+
+  // ========== BNP VR 2 (4 lignes) ==========
+  { partenaire: 'BNP VR 2', montantMin: 1000, montantMax: 500000, dureeTrimestres: 8, taux: 4.3867 },
+  { partenaire: 'BNP VR 2', montantMin: 1000, montantMax: 500000, dureeTrimestres: 12, taux: 3.01 },
+  { partenaire: 'BNP VR 2', montantMin: 1000, montantMax: 500000, dureeTrimestres: 16, taux: 2.3283 },
+  { partenaire: 'BNP VR 2', montantMin: 1000, montantMax: 500000, dureeTrimestres: 20, taux: 1.92 },
+
+  // ========== BNP Credit Bail 1 (3 lignes) ==========
+  { partenaire: 'BNP Credit Bail 1', montantMin: 1000, montantMax: 500000, dureeTrimestres: 12, taux: 3.0183 },
+  { partenaire: 'BNP Credit Bail 1', montantMin: 1000, montantMax: 500000, dureeTrimestres: 16, taux: 2.3367 },
+  { partenaire: 'BNP Credit Bail 1', montantMin: 1000, montantMax: 500000, dureeTrimestres: 20, taux: 1.9283 },
+
+  // ========== Olinn 2 PC Leno/HP/Dell (8 lignes) ==========
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 25001, montantMax: 50000, dureeTrimestres: 8, taux: 4.3917 },
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 100000, dureeTrimestres: 8, taux: 4.3783 },
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 25001, montantMax: 50000, dureeTrimestres: 12, taux: 3.0233 },
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 100000, dureeTrimestres: 12, taux: 3.01 },
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 25001, montantMax: 50000, dureeTrimestres: 16, taux: 2.3433 },
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 100000, dureeTrimestres: 16, taux: 2.33 },
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 25001, montantMax: 50000, dureeTrimestres: 20, taux: 1.9383 },
+  { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 50001, montantMax: 100000, dureeTrimestres: 20, taux: 1.925 },
+
+  // ========== Olinn 2 PC autre marque (8 lignes) ==========
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 25001, montantMax: 50000, dureeTrimestres: 8, taux: 4.4167 },
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 100000, dureeTrimestres: 8, taux: 4.4033 },
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 25001, montantMax: 50000, dureeTrimestres: 12, taux: 3.0383 },
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 100000, dureeTrimestres: 12, taux: 3.025 },
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 25001, montantMax: 50000, dureeTrimestres: 16, taux: 2.355 },
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 100000, dureeTrimestres: 16, taux: 2.3417 },
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 25001, montantMax: 50000, dureeTrimestres: 20, taux: 1.9467 },
+  { partenaire: 'Olinn 2 PC autre marque', montantMin: 50001, montantMax: 100000, dureeTrimestres: 20, taux: 1.9333 },
+
+  // ========== Olinn 2 Serveurs (8 lignes) ==========
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 25001, montantMax: 50000, dureeTrimestres: 8, taux: 4.4383 },
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 50001, montantMax: 100000, dureeTrimestres: 8, taux: 4.425 },
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 25001, montantMax: 50000, dureeTrimestres: 12, taux: 3.055 },
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 50001, montantMax: 100000, dureeTrimestres: 12, taux: 3.0417 },
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 25001, montantMax: 50000, dureeTrimestres: 16, taux: 2.3667 },
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 50001, montantMax: 100000, dureeTrimestres: 16, taux: 2.3533 },
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 25001, montantMax: 50000, dureeTrimestres: 20, taux: 1.9567 },
+  { partenaire: 'Olinn 2 Serveurs', montantMin: 50001, montantMax: 100000, dureeTrimestres: 20, taux: 1.9433 },
+
+  // ========== Olinn 1 3D dental (8 lignes) ==========
+  { partenaire: 'Olinn 1 3D dental', montantMin: 10000, montantMax: 25000, dureeTrimestres: 8, taux: 4.195 },
+  { partenaire: 'Olinn 1 3D dental', montantMin: 25001, montantMax: 75000, dureeTrimestres: 8, taux: 4.1817 },
+  { partenaire: 'Olinn 1 3D dental', montantMin: 10000, montantMax: 25000, dureeTrimestres: 12, taux: 2.8917 },
+  { partenaire: 'Olinn 1 3D dental', montantMin: 25001, montantMax: 75000, dureeTrimestres: 12, taux: 2.8783 },
+  { partenaire: 'Olinn 1 3D dental', montantMin: 10000, montantMax: 25000, dureeTrimestres: 16, taux: 2.2383 },
+  { partenaire: 'Olinn 1 3D dental', montantMin: 25001, montantMax: 75000, dureeTrimestres: 16, taux: 2.225 },
+  { partenaire: 'Olinn 1 3D dental', montantMin: 10000, montantMax: 25000, dureeTrimestres: 20, taux: 1.8517 },
+  { partenaire: 'Olinn 1 3D dental', montantMin: 25001, montantMax: 75000, dureeTrimestres: 20, taux: 1.8383 },
+
+  // ========== Realease 2 (18 lignes) ==========
+  { partenaire: 'Realease 2', montantMin: 2500, montantMax: 4999, dureeTrimestres: 12, taux: 3.0993 },
+  { partenaire: 'Realease 2', montantMin: 5000, montantMax: 9999, dureeTrimestres: 12, taux: 3.0993 },
+  { partenaire: 'Realease 2', montantMin: 10000, montantMax: 29999, dureeTrimestres: 12, taux: 3.0993 },
+  { partenaire: 'Realease 2', montantMin: 30000, montantMax: 49999, dureeTrimestres: 12, taux: 3.0993 },
+  { partenaire: 'Realease 2', montantMin: 50000, montantMax: 74999, dureeTrimestres: 12, taux: 3.0993 },
+  { partenaire: 'Realease 2', montantMin: 75000, montantMax: 100000, dureeTrimestres: 12, taux: 3.0993 },
+  { partenaire: 'Realease 2', montantMin: 2500, montantMax: 4999, dureeTrimestres: 16, taux: 2.4059 },
+  { partenaire: 'Realease 2', montantMin: 5000, montantMax: 9999, dureeTrimestres: 16, taux: 2.4059 },
+  { partenaire: 'Realease 2', montantMin: 10000, montantMax: 29999, dureeTrimestres: 16, taux: 2.4059 },
+  { partenaire: 'Realease 2', montantMin: 30000, montantMax: 49999, dureeTrimestres: 16, taux: 2.4059 },
+  { partenaire: 'Realease 2', montantMin: 50000, montantMax: 74999, dureeTrimestres: 16, taux: 2.4059 },
+  { partenaire: 'Realease 2', montantMin: 75000, montantMax: 100000, dureeTrimestres: 16, taux: 2.4059 },
+  { partenaire: 'Realease 2', montantMin: 2500, montantMax: 4999, dureeTrimestres: 20, taux: 1.9954 },
+  { partenaire: 'Realease 2', montantMin: 5000, montantMax: 9999, dureeTrimestres: 20, taux: 1.9954 },
+  { partenaire: 'Realease 2', montantMin: 10000, montantMax: 29999, dureeTrimestres: 20, taux: 1.9954 },
+  { partenaire: 'Realease 2', montantMin: 30000, montantMax: 49999, dureeTrimestres: 20, taux: 1.9954 },
+  { partenaire: 'Realease 2', montantMin: 50000, montantMax: 74999, dureeTrimestres: 20, taux: 1.9954 },
+  { partenaire: 'Realease 2', montantMin: 75000, montantMax: 100000, dureeTrimestres: 20, taux: 1.9954 },
 ];
 
-// Liste des partenaires uniques pour le dropdown
+// Liste des partenaires uniques
 export const PARTENAIRES = [
   'Lixxbail 1',
-  'Grenke',
-  'Franfinance',
-  'Olinn',
-  'BNP VR',
-  'BNP CréditBail',
+  'Grenke 1',
+  'Franfinance 1',
+  'Olinn 2',
+  'BNP VR 2',
+  'BNP Credit Bail 1',
   'Olinn 2 PC Leno/HP/Dell',
   'Olinn 2 PC autre marque',
-  'Olinn 2 serveurs',
+  'Olinn 2 Serveurs',
   'Olinn 1 3D dental',
+  'Realease 2',
 ] as const;
 
 export type Partenaire = typeof PARTENAIRES[number];
 
 // Durées disponibles en trimestres
-export const DUREES_TRIMESTRES = [4, 8, 12, 16, 20] as const;
+export const DUREES_TRIMESTRES = [6, 8, 12, 16, 20] as const;
 
-// Convertit les mois en trimestres
+/**
+ * Convertit une durée en mois vers trimestres
+ */
 export function moisEnTrimestres(mois: number): number {
-  return Math.floor(mois / 3);
+  return Math.round(mois / 3);
 }
 
-// Convertit les trimestres en mois
+/**
+ * Convertit une durée en trimestres vers mois
+ */
 export function trimestresEnMois(trimestres: number): number {
   return trimestres * 3;
 }
