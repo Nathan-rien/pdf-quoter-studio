@@ -348,7 +348,6 @@ export function RentalDataEditor() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Condition</Label>
                   {matriceData.refinanceur ? (
                     <Badge 
                       variant={getConditionFinContrat(matriceData.refinanceur) === 'Reprise obligatoire loueur' ? 'destructive' : 'default'}
