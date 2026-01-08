@@ -66,8 +66,27 @@ function detectSourceFromText(text: string): 'cybertek' | 'grosbill' | 'unknown'
 
 function parseNumber(value: string | null | undefined): number | null {
   if (!value) return null;
-  const cleaned = value.replace(/\s/g, '').replace(',', '.').replace('€', '').replace(/[^\d.-]/g, '');
-  const num = parseFloat(cleaned);
+
+  const raw = value.replace(/\s/g, '').replace('€', '');
+
+  // Handle common French/European formats:
+  // - "37 972,80" (space thousands + comma decimals)
+  // - "37.972,80" (dot thousands + comma decimals)
+  // - "37972.80" (dot decimals)
+  let normalized = raw;
+
+  // If we have both '.' and ',', assume '.' are thousands separators and ',' is decimal
+  if (normalized.includes('.') && normalized.includes(',')) {
+    normalized = normalized.replace(/\./g, '').replace(',', '.');
+  } else if (normalized.includes(',')) {
+    // Comma decimal
+    normalized = normalized.replace(',', '.');
+  }
+
+  // Keep only digits, minus and dot
+  normalized = normalized.replace(/[^\d.-]/g, '');
+
+  const num = parseFloat(normalized);
   return isNaN(num) ? null : Math.round(num * 100) / 100;
 }
 
@@ -250,25 +269,66 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.client!.email = emailMatch[1];
   }
 
-  // Totals - use precise patterns to avoid overlap
-  const money = '(\\d{1,3}(?:[\\s\\.]\\d{3})*(?:,\\d{2})?)';
+  // Totals - Grosbill often renders a header row then a values row.
+  // We avoid any calculation: values must come from the PDF.
+  const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
+  const moneyRe = new RegExp(money, 'g');
+  const extractMoneyValues = (line: string) => [...line.matchAll(moneyRe)].map((m) => m[1]);
 
-  // Total HT: "TOTAL HT 31 644,00 €" or "TOTAL HT: 31 644,00 €"
-  const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT\\s*:?\\s*${money}\\s*€`, 'gi'))];
-  if (totalHTMatches.length) {
-    result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
+  let totalsFound = false;
+
+  // 1) Best-effort: find a line containing >=3 monetary values and check the nearby context for the totals headers
+  for (let i = 0; i < lines.length; i++) {
+    const vals = extractMoneyValues(lines[i]);
+    if (vals.length < 3) continue;
+
+    const ctx = lines.slice(Math.max(0, i - 5), i).join(' ');
+    const hasHeaders = /TOTAL\\s*HT/i.test(ctx) && /TVA\\s*20/i.test(ctx) && /TOTAL\\s*TTC/i.test(ctx);
+    if (!hasHeaders) continue;
+
+    const last3 = vals.slice(-3);
+    result.totaux!.totalHT = parseNumber(last3[0]);
+    result.totaux!.tva = parseNumber(last3[1]);
+    result.totaux!.totalTTC = parseNumber(last3[2]);
+    totalsFound = true;
+    break;
   }
 
-  // TVA 20%: "TVA 20% 6 328,80 €" - look for TVA with percentage marker
-  const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\n]*${money}\\s*€`, 'gi'))];
-  if (tvaMatches.length) {
-    result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
+  // 2) Alternate: locate a header line containing all 3 labels, then parse the next line
+  if (!totalsFound) {
+    const totalsHeaderIdx = lines.findIndex(
+      (l) => /TOTAL\\s*HT/i.test(l) && /TVA\\s*20/i.test(l) && /TOTAL\\s*TTC/i.test(l)
+    );
+
+    if (totalsHeaderIdx !== -1) {
+      const valuesLine = lines[totalsHeaderIdx + 1] ?? '';
+      const vals = extractMoneyValues(valuesLine);
+      if (vals.length >= 3) {
+        const last3 = vals.slice(-3);
+        result.totaux!.totalHT = parseNumber(last3[0]);
+        result.totaux!.tva = parseNumber(last3[1]);
+        result.totaux!.totalTTC = parseNumber(last3[2]);
+        totalsFound = true;
+      }
+    }
   }
 
-  // Total TTC: "TOTAL TTC 37 972,80 €" - TOTAL is mandatory to avoid false matches
-  const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\n]*${money}\\s*€`, 'gi'))];
-  if (totalTTCMatches.length) {
-    result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
+  // 3) Fallback: explicit labels (older layouts)
+  if (!totalsFound) {
+    const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT\\s*:?\\s*${money}\\s*€`, 'gi'))];
+    if (totalHTMatches.length) {
+      result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
+    }
+
+    const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\n]*${money}\\s*€`, 'gi'))];
+    if (tvaMatches.length) {
+      result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
+    }
+
+    const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\n]*${money}\\s*€`, 'gi'))];
+    if (totalTTCMatches.length) {
+      result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
+    }
   }
 
   // Parse product lines (works best when extractTextWithPdfJs outputs line-like text)
