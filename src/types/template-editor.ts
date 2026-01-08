@@ -206,4 +206,5 @@ export interface TemplateEditorState {
   addElementMode: 'none' | 'text' | 'image' | 'shape' | 'icon';
   selectedShapeType: ShapeType | null;
   selectedIconName: string | null;
+  inlineEditingElementId: string | null; // Élément en cours d'édition inline
 }
