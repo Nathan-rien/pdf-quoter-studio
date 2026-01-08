@@ -275,41 +275,60 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   const moneyRe = new RegExp(money, 'g');
   const extractMoneyValues = (line: string) => [...line.matchAll(moneyRe)].map((m) => m[1]);
 
+  const isLikelyTotalsTriplet = (a: number | null, b: number | null, c: number | null) => {
+    if (a === null || b === null || c === null) return false;
+    if (a <= 0 || b <= 0 || c <= 0) return false;
+    // Basic sanity (no derivation): TTC should be the biggest value
+    if (c <= a) return false;
+    if (c <= b) return false;
+    return true;
+  };
+
   let totalsFound = false;
 
-  // 1) Best-effort: find a line containing >=3 monetary values and check the nearby context for the totals headers
-  for (let i = 0; i < lines.length; i++) {
-    const vals = extractMoneyValues(lines[i]);
-    if (vals.length < 3) continue;
+  // 1) Locate a header line containing all 3 labels, then scan forward a few lines for the 3 amounts
+  const totalsHeaderIdx = lines.findIndex(
+    (l) => /TOTAL\\s*HT/i.test(l) && /TVA\\s*20/i.test(l) && /TOTAL\\s*TTC/i.test(l)
+  );
+  if (totalsHeaderIdx !== -1) {
+    for (let j = totalsHeaderIdx + 1; j <= totalsHeaderIdx + 8 && j < lines.length; j++) {
+      const vals = extractMoneyValues(lines[j]);
+      if (vals.length < 3) continue;
+      const last3 = vals.slice(-3);
+      const a = parseNumber(last3[0]);
+      const b = parseNumber(last3[1]);
+      const c = parseNumber(last3[2]);
+      if (!isLikelyTotalsTriplet(a, b, c)) continue;
 
-    const ctx = lines.slice(Math.max(0, i - 5), i).join(' ');
-    const hasHeaders = /TOTAL\\s*HT/i.test(ctx) && /TVA\\s*20/i.test(ctx) && /TOTAL\\s*TTC/i.test(ctx);
-    if (!hasHeaders) continue;
-
-    const last3 = vals.slice(-3);
-    result.totaux!.totalHT = parseNumber(last3[0]);
-    result.totaux!.tva = parseNumber(last3[1]);
-    result.totaux!.totalTTC = parseNumber(last3[2]);
-    totalsFound = true;
-    break;
+      result.totaux!.totalHT = a;
+      result.totaux!.tva = b;
+      result.totaux!.totalTTC = c;
+      totalsFound = true;
+      break;
+    }
   }
 
-  // 2) Alternate: locate a header line containing all 3 labels, then parse the next line
+  // 2) Best-effort: find a line containing >=3 amounts and check nearby context for the totals headers
   if (!totalsFound) {
-    const totalsHeaderIdx = lines.findIndex(
-      (l) => /TOTAL\\s*HT/i.test(l) && /TVA\\s*20/i.test(l) && /TOTAL\\s*TTC/i.test(l)
-    );
+    for (let i = 0; i < lines.length; i++) {
+      const vals = extractMoneyValues(lines[i]);
+      if (vals.length < 3) continue;
 
-    if (totalsHeaderIdx !== -1) {
-      const valuesLine = lines[totalsHeaderIdx + 1] ?? '';
-      const vals = extractMoneyValues(valuesLine);
-      if (vals.length >= 3) {
-        const last3 = vals.slice(-3);
-        result.totaux!.totalHT = parseNumber(last3[0]);
-        result.totaux!.tva = parseNumber(last3[1]);
-        result.totaux!.totalTTC = parseNumber(last3[2]);
-        totalsFound = true;
-      }
+      const ctx = lines.slice(Math.max(0, i - 25), i).join(' ');
+      const hasHeaders = /TOTAL\\s*HT/i.test(ctx) && /TVA\\s*20/i.test(ctx) && /TOTAL\\s*TTC/i.test(ctx);
+      if (!hasHeaders) continue;
+
+      const last3 = vals.slice(-3);
+      const a = parseNumber(last3[0]);
+      const b = parseNumber(last3[1]);
+      const c = parseNumber(last3[2]);
+      if (!isLikelyTotalsTriplet(a, b, c)) continue;
+
+      result.totaux!.totalHT = a;
+      result.totaux!.tva = b;
+      result.totaux!.totalTTC = c;
+      totalsFound = true;
+      break;
     }
   }
 
