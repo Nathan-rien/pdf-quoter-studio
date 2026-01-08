@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { PDFImportZone } from '@/components/data-editor/PDFImportZone';
 import { RentalDataEditor } from './RentalDataEditor';
 import { RentalProposalPreview } from './RentalProposalPreview';
+import { RentalProposalExport } from './RentalProposalExport';
 import { TemplateListView } from '@/components/template-editor/TemplateListView';
 import { useRentalProposalStore, RentalWorkflowStep } from '@/stores/rentalProposalStore';
 import { cn } from '@/lib/utils';
@@ -110,26 +111,7 @@ export function RentalWorkflow() {
         return <RentalProposalPreview />;
 
       case 'export':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Exporter la proposition</CardTitle>
-              <CardDescription>
-                Générez et téléchargez le document final.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="min-h-[300px] flex items-center justify-center">
-              <div className="text-center space-y-4">
-                <Download className="h-12 w-12 mx-auto text-primary" />
-                <p className="font-medium">Proposition prête à l'export</p>
-                <Button size="lg">
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger le PDF
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <RentalProposalExport />;
 
       default:
         return null;
