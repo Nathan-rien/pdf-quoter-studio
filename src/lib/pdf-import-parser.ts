@@ -259,15 +259,14 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
   }
 
-  // TVA: "TVA 20%" or "DONT ECO-TAXE HT: ... TVA 6 328,80 €" - be specific to avoid capturing TTC
-  const tvaMatches = [...text.matchAll(new RegExp(`(?:^|\\s)TVA\\s*(?:\\d+(?:[,.]\\d+)?\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gim'))];
+  // TVA 20%: "TVA 20% 6 328,80 €" - look for TVA with percentage marker
+  const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\n]*${money}\\s*€`, 'gi'))];
   if (tvaMatches.length) {
     result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
   }
 
-  // Total TTC: "37 972,80 €" after TTC marker OR explicit "TOTAL TTC"
-  // First try explicit "TOTAL TTC"
-  const totalTTCMatches = [...text.matchAll(new RegExp(`(?:TOTAL\\s+)?TTC\\s*:?\\s*${money}\\s*€`, 'gi'))];
+  // Total TTC: "TOTAL TTC 37 972,80 €" - TOTAL is mandatory to avoid false matches
+  const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\n]*${money}\\s*€`, 'gi'))];
   if (totalTTCMatches.length) {
     result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
   }

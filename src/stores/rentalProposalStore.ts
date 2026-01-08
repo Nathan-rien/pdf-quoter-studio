@@ -70,6 +70,7 @@ interface RentalProposalActions {
   updateDevisField: (field: keyof DevisData, value: string) => void;
   updateCommercialField: (field: keyof CommercialData, value: string) => void;
   updateLocationField: (field: keyof LocationData, value: number | null) => void;
+  updateTotauxField: (field: keyof TotauxData, value: number | null) => void;
   updateLigne: (index: number, updates: Partial<PDFProductLine>) => void;
   addLigne: () => void;
   deleteLigne: (index: number) => void;
@@ -207,6 +208,13 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
   updateLocationField: (field, value) => {
     set(state => ({
       locationData: { ...state.locationData, [field]: value },
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  updateTotauxField: (field, value) => {
+    set(state => ({
+      totauxData: { ...state.totauxData, [field]: value },
       hasUnsavedChanges: true,
     }));
   },

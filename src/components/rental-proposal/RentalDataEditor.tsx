@@ -22,6 +22,7 @@ export function RentalDataEditor() {
     updateDevisField,
     updateCommercialField,
     updateLocationField,
+    updateTotauxField,
     updateLigne,
     addLigne,
     deleteLigne,
@@ -304,31 +305,50 @@ export function RentalDataEditor() {
                 </Table>
               </div>
 
-              {/* Totaux */}
-              {lignesData.length > 0 && (
-                <div className="mt-4 flex justify-end">
-                  <div className="w-64 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Total HT</span>
-                      <span className="font-medium">
-                        {formatNumber(totauxData.totalHT ?? lignesData.reduce((sum, l) => sum + l.totalHT, 0))} €
-                      </span>
+              {/* Totaux - always visible and editable */}
+              <div className="mt-4 flex justify-end">
+                <div className="w-72 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">Total HT</span>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={totauxData.totalHT ?? ''}
+                        onChange={(e) => updateTotauxField('totalHT', e.target.value ? parseFloat(e.target.value) : null)}
+                        className="h-8 w-32 text-right"
+                      />
+                      <span className="text-sm">€</span>
                     </div>
-                    {totauxData.tva !== null && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">TVA (20%)</span>
-                        <span>{formatNumber(totauxData.tva)} €</span>
-                      </div>
-                    )}
-                    {totauxData.totalTTC !== null && (
-                      <div className="flex justify-between border-t pt-2">
-                        <span className="font-medium">Total TTC</span>
-                        <span className="font-bold">{formatNumber(totauxData.totalTTC)} €</span>
-                      </div>
-                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">TVA 20%</span>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={totauxData.tva ?? ''}
+                        onChange={(e) => updateTotauxField('tva', e.target.value ? parseFloat(e.target.value) : null)}
+                        className="h-8 w-32 text-right"
+                      />
+                      <span className="text-sm">€</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 border-t pt-2">
+                    <span className="font-medium">Total TTC</span>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={totauxData.totalTTC ?? ''}
+                        onChange={(e) => updateTotauxField('totalTTC', e.target.value ? parseFloat(e.target.value) : null)}
+                        className="h-8 w-32 text-right font-bold"
+                      />
+                      <span className="text-sm font-bold">€</span>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
