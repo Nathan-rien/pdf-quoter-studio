@@ -54,6 +54,7 @@ export function FloatingToolbar({
 }: FloatingToolbarProps) {
   return (
     <div
+      data-floating-toolbar="true"
       className="absolute z-50 flex items-center gap-1 p-1.5 rounded-lg bg-popover border shadow-lg"
       style={{
         left: `${position.x}px`,
