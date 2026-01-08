@@ -1,15 +1,12 @@
 // Fonctions de calcul pour le workflow Proposition
 // Basées sur les formules Excel de Matrice_Location
 
-import { BASE_TAUX_DATA, moisEnTrimestres } from '@/data/base-taux';
+import { BASE_TAUX_DATA } from '@/data/base-taux';
 import { getFraisDossier } from '@/data/frais-dossier';
 
 /**
  * Lookup du coefficient dans la table Base Taux
- * Réplique la formule Excel: =INDEX('Base Taux'!$E:$E;EQUIV(1;('Base Taux'!$A:$A=C22)*('Base Taux'!$B:$B<='Base Taux'!H4)*('Base Taux'!$C:$C>'Base Taux'!H4)*('Base Taux'!$D:$D*3>=C21);0))
- * 
- * La durée dans Base Taux est en TRIMESTRES (pas en mois)
- * Ex: 36 mois = 12 trimestres
+ * La durée dans Base Taux est maintenant en MOIS (comparaison directe)
  */
 export function lookupCoefficient(
   partenaire: string | null,
@@ -20,15 +17,12 @@ export function lookupCoefficient(
     return null;
   }
 
-  // Convertir les mois en trimestres pour le lookup
-  const dureeTrimestres = moisEnTrimestres(dureeMois);
-
-  // Chercher la ligne correspondante dans Base Taux
+  // Chercher la ligne correspondante dans Base Taux (comparaison directe en mois)
   const match = BASE_TAUX_DATA.find(row =>
     row.partenaire === partenaire &&
     row.montantMin <= montant &&
     row.montantMax > montant &&
-    row.dureeTrimestres === dureeTrimestres
+    row.dureeMois === dureeMois
   );
 
   return match?.taux ?? null;
@@ -123,7 +117,8 @@ export function calculateCoutContrat(
 
 /**
  * Calcule le coût locatif annuel en pourcentage
- * Formule: (Somme des Loyers / Nb Années) / Montant Investissement * 100
+ * Formule: ((Coût du contrat / Montant Investissement) * 100) / Nombre d'années
+ * Où Coût du contrat = Somme Loyers - Montant Investissement
  */
 export function calculateCoutLocatifAnnuel(
   sommeLoyers: number | null,
@@ -135,8 +130,11 @@ export function calculateCoutLocatifAnnuel(
   }
   const nbAnnees = duree / 12;
   if (nbAnnees === 0) return null;
-  const coutAnnuel = sommeLoyers / nbAnnees;
-  const pourcentage = (coutAnnuel / montantInvestissement) * 100;
+  
+  // Coût du contrat = Somme Loyers - Montant Investissement
+  const coutContrat = sommeLoyers - montantInvestissement;
+  // ((Coût du contrat / Montant Investissement) * 100) / Nombre d'années
+  const pourcentage = ((coutContrat / montantInvestissement) * 100) / nbAnnees;
   return Math.round(pourcentage * 100) / 100;
 }
 
