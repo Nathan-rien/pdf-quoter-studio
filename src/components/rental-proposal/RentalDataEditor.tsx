@@ -479,7 +479,7 @@ export function RentalDataEditor() {
                         <TableCell>{row.partenaire}</TableCell>
                         <TableCell className="text-right">{row.montantMin.toLocaleString()} €</TableCell>
                         <TableCell className="text-right">{row.montantMax.toLocaleString()} €</TableCell>
-                        <TableCell className="text-right">{row.dureeLocation} mois</TableCell>
+                        <TableCell className="text-right">{row.dureeTrimestres} trim.</TableCell>
                         <TableCell className="text-right">{row.taux}</TableCell>
                       </TableRow>
                     ))}
