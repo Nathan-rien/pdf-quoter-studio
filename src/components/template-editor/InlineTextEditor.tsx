@@ -3,7 +3,7 @@
  * Utilise contentEditable pour permettre l'édition directe
  */
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useState } from "react";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
 import type { TextContent, TextAlign } from "@/types/template-editor";
 
@@ -22,25 +22,32 @@ export function InlineTextEditor({
 }: InlineTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialContentRef = useRef<string>("");
+  const [isActive, setIsActive] = useState(false);
 
-  // Initialiser le contenu
+  // Initialiser le contenu avec un délai pour éviter le blur immédiat
   useEffect(() => {
-    if (editorRef.current) {
-      const htmlContent = content.htmlContent || content.text;
-      editorRef.current.innerHTML = htmlContent;
-      initialContentRef.current = htmlContent;
-      
-      // Focus et sélectionner tout le texte
-      editorRef.current.focus();
-      
-      // Placer le curseur à la fin
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(editorRef.current);
-      range.collapse(false);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    }
+    const initTimeout = setTimeout(() => {
+      if (editorRef.current) {
+        const htmlContent = content.htmlContent || content.text;
+        editorRef.current.innerHTML = htmlContent;
+        initialContentRef.current = htmlContent;
+        
+        // Focus et placer le curseur à la fin
+        editorRef.current.focus();
+        
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        
+        // Marquer comme actif après initialisation
+        setIsActive(true);
+      }
+    }, 50);
+
+    return () => clearTimeout(initTimeout);
   }, []);
 
   // Gérer les changements de contenu
@@ -93,6 +100,29 @@ export function InlineTextEditor({
     }
   }, [onExit, handleInput]);
 
+  // Gérer le blur avec vérification
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // Ne pas fermer si pas encore actif (initialisation en cours)
+    if (!isActive) return;
+    
+    // Vérifier immédiatement si le focus va vers un élément de la toolbar
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    if (relatedTarget?.closest('[data-floating-toolbar]')) {
+      // Refocus l'éditeur après interaction avec la toolbar
+      setTimeout(() => editorRef.current?.focus(), 10);
+      return;
+    }
+
+    // Délai pour permettre d'autres interactions
+    setTimeout(() => {
+      const activeElement = document.activeElement;
+      const isToolbarElement = activeElement?.closest('[data-floating-toolbar]');
+      if (!isToolbarElement) {
+        onExit();
+      }
+    }, 200);
+  }, [isActive, onExit]);
+
   // Style du texte
   const fontFamily = ALLOWED_FONTS.find(f => f.name === content.fontFamily)?.value || content.fontFamily;
 
@@ -120,17 +150,8 @@ export function InlineTextEditor({
       }}
       onInput={handleInput}
       onKeyDown={handleKeyDown}
-      onBlur={() => {
-        // Petit délai pour permettre aux boutons de la toolbar de fonctionner
-        setTimeout(() => {
-          // Vérifier si le focus est passé à un élément de la toolbar
-          const activeElement = document.activeElement;
-          const isToolbarElement = activeElement?.closest('[data-floating-toolbar]');
-          if (!isToolbarElement) {
-            onExit();
-          }
-        }, 100);
-      }}
+      onBlur={handleBlur}
+      onMouseDown={(e) => e.stopPropagation()}
     />
   );
 }

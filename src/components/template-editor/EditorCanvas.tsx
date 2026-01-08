@@ -660,11 +660,11 @@ export function EditorCanvas() {
     // Si on vient de finir un lasso avec sélection, ne pas clear
     if (justFinishedLassoRef.current) return;
     
-    // Si en édition inline, clic sur canvas = sortir de l'édition
+    // Si en édition inline, vérifier où on clique
     if (isInlineEditing) {
-      // Ne pas fermer si on clique sur la toolbar
       const target = e.target as HTMLElement;
-      if (target.closest('[data-floating-toolbar]')) return;
+      // Ne pas fermer si on clique sur la toolbar ou l'éditeur inline
+      if (target.closest('[data-floating-toolbar]') || target.closest('[contenteditable]')) return;
       handleExitInlineEditing();
       return;
     }
