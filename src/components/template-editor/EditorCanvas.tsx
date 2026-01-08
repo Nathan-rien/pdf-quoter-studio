@@ -596,16 +596,21 @@ export function EditorCanvas() {
     // Calculer la position de la toolbar (au-dessus de l'élément, mais visible)
     if (canvasRef.current) {
       const canvasRect = canvasRef.current.getBoundingClientRect();
-      const elementX = (element.position.x / CANVAS_SCALE.width) * canvasRect.width;
-      const elementY = (element.position.y / CANVAS_SCALE.height) * canvasRect.height;
-      const elementWidth = (element.size.width / CANVAS_SCALE.width) * canvasRect.width;
-      
-      // Si l'élément est trop haut, positionner la toolbar en dessous
-      const toolbarY = elementY > 50 ? elementY - 45 : elementY + 30;
-      
+      const targetRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+      // Position relative au canvas (px)
+      const centerX = targetRect.left - canvasRect.left + targetRect.width / 2;
+      const aboveY = targetRect.top - canvasRect.top - 44; // hauteur estimée de la toolbar + marge
+      const belowY = targetRect.bottom - canvasRect.top + 8;
+
+      // Garde-fou pour éviter que la toolbar ne sorte à gauche/droite
+      const safeMarginX = 140;
+      const x = Math.max(safeMarginX, Math.min(centerX, canvasRect.width - safeMarginX));
+      const y = aboveY >= 8 ? aboveY : belowY;
+
       setToolbarPosition({
-        x: Math.max(100, Math.min(elementX + elementWidth / 2, canvasRect.width - 100)),
-        y: Math.max(10, toolbarY),
+        x,
+        y: Math.max(8, y),
       });
     }
     
