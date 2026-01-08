@@ -485,7 +485,7 @@ export function RentalDataEditor() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Désignation</TableHead>
-                      <TableHead className="w-20 text-right">Nb</TableHead>
+                      <TableHead className="w-24 text-right">Nb</TableHead>
                       <TableHead className="w-28 text-right">VUN</TableHead>
                       <TableHead className="w-28 text-right">VTN</TableHead>
                       <TableHead className="w-12"></TableHead>
