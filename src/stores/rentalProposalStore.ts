@@ -3,7 +3,7 @@ import { PDFParseResult, PDFProductLine } from '@/lib/pdf-import-parser';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
 
-export type RentalWorkflowStep = 'import' | 'data' | 'preview' | 'export';
+export type RentalWorkflowStep = 'import' | 'data' | 'template' | 'preview' | 'export';
 
 interface ClientData {
   nom: string;
@@ -285,7 +285,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
 
   canNavigateToStep: (step) => {
     const state = get();
-    const stepOrder: RentalWorkflowStep[] = ['import', 'data', 'preview', 'export'];
+    const stepOrder: RentalWorkflowStep[] = ['import', 'data', 'template', 'preview', 'export'];
     const currentIndex = stepOrder.indexOf(state.currentStep);
     const targetIndex = stepOrder.indexOf(step);
 
@@ -299,6 +299,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
     switch (step) {
       case 'data':
         return state.pdfImportStatus.isImported;
+      case 'template':
+        return state.pdfImportStatus.isImported && state.lignesData.length > 0;
       case 'preview':
         return state.pdfImportStatus.isImported && state.lignesData.length > 0;
       case 'export':
