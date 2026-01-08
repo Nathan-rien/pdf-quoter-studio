@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "./RichTextEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
@@ -513,24 +514,28 @@ export function ElementProperties() {
 
         {selectedElement.type === 'text' && textContent && (
           <>
-            {/* Contenu texte */}
+            {/* Contenu texte avec éditeur riche */}
             <div className="space-y-2">
-              <Label htmlFor="text-content">Texte</Label>
-              <Textarea
-                id="text-content"
-                value={textContent.text}
-                onChange={(e) => handleTextChange({ text: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.stopPropagation();
-                  }
+              <Label>Texte</Label>
+              <RichTextEditor
+                value={textContent.htmlContent || textContent.text}
+                onChange={(html) => {
+                  // Extraire le texte brut du HTML pour fallback
+                  const tempDiv = document.createElement('div');
+                  tempDiv.innerHTML = html;
+                  const plainText = tempDiv.textContent || tempDiv.innerText || '';
+                  handleTextChange({ 
+                    htmlContent: html,
+                    text: plainText
+                  });
                 }}
                 disabled={!isEditable}
-                className="min-h-[100px] resize-y font-mono text-sm leading-relaxed whitespace-pre-wrap"
-                placeholder="Saisissez le texte..."
+                fontFamily={textContent.fontFamily}
+                fontSize={textContent.fontSize}
+                color={textContent.color}
               />
               <p className="text-xs text-muted-foreground">
-                Appuyez sur Entrée pour un retour à la ligne
+                Sélectionnez du texte puis cliquez sur B, I ou U pour le formater
               </p>
             </div>
 
