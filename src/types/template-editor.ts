@@ -32,6 +32,7 @@ export type TextPresetStyle = 'titre' | 'sousTitre' | 'texte' | 'note';
 // Contenu texte avec styles
 export interface TextContent {
   text: string;
+  htmlContent?: string; // Contenu HTML enrichi pour mise en forme partielle
   fontFamily: AllowedFont;
   fontSize: AllowedFontSize;
   color: string; // Depuis palette définie

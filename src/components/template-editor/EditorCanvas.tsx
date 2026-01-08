@@ -772,15 +772,26 @@ export function EditorCanvas() {
               const isDraggedElement = isDragging && isSelected;
               const isResizingElement = isResizing && selectedElementId === element.id;
               
-              // Rendu du texte avec support des listes
+              // Rendu du texte avec support du contenu HTML enrichi
               const renderTextContent = () => {
                 if (!textContent) return null;
                 
-                const lines = textContent.text.split('\n');
                 const listType = textContent.listType || 'none';
                 const indentLevel = textContent.indentLevel || 0;
                 const indentPx = indentLevel * 12;
                 
+                // Si contenu HTML enrichi, l'utiliser directement
+                if (textContent.htmlContent) {
+                  return (
+                    <div 
+                      style={{ paddingLeft: `${indentPx}px` }}
+                      dangerouslySetInnerHTML={{ __html: textContent.htmlContent }}
+                    />
+                  );
+                }
+                
+                // Fallback sur le texte brut avec support des listes
+                const lines = textContent.text.split('\n');
                 return lines.map((line, i) => (
                   <div key={i} style={{ paddingLeft: `${indentPx}px` }}>
                     {listType === 'bullet' && '• '}
