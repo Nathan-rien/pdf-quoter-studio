@@ -1,5 +1,5 @@
-import React from 'react';
-import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,10 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStore';
+import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { BASE_TAUX_DATA } from '@/data/base-taux';
 
 export function RentalDataEditor() {
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
+
   const {
     clientData,
     matriceData,
@@ -31,7 +37,39 @@ export function RentalDataEditor() {
     getCalculatedValues,
   } = useRentalProposalStore();
 
+  const { options: adminOptions } = useOptionsAdminStore();
+  const activeAdminOptions = adminOptions.filter(opt => opt.isActive);
+
   const calculatedValues = getCalculatedValues();
+
+  const toggleAdminOption = (optionId: string) => {
+    setSelectedAdminOptions(prev => 
+      prev.includes(optionId) 
+        ? prev.filter(id => id !== optionId)
+        : [...prev, optionId]
+    );
+  };
+
+  const handleImportSelected = () => {
+    selectedAdminOptions.forEach(optionId => {
+      const option = activeAdminOptions.find(opt => opt.id === optionId);
+      if (option) {
+        // Concaténer les services pour la description
+        const descriptionParts = option.services.map(s => {
+          const text = typeof s === 'string' ? s : s.text;
+          const subItems = typeof s === 'string' ? [] : (s.subItems || []);
+          if (subItems.length > 0) {
+            return `${text}\n  - ${subItems.join('\n  - ')}`;
+          }
+          return text;
+        });
+        const description = descriptionParts.join(', ');
+        addOptionService(option.title, description, option.price?.amount ?? null);
+      }
+    });
+    setSelectedAdminOptions([]);
+    setIsPopoverOpen(false);
+  };
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
@@ -335,10 +373,56 @@ export function RentalDataEditor() {
                 <CardTitle className="text-lg">Options services</CardTitle>
                 <CardDescription>Services inclus dans le loyer</CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => addOptionService('', '', null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter
-              </Button>
+              <div className="flex gap-2">
+                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={activeAdminOptions.length === 0}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Importer depuis Admin
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-3">
+                      <div className="font-medium text-sm">Options disponibles</div>
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {activeAdminOptions.map((option) => (
+                          <label
+                            key={option.id}
+                            className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={selectedAdminOptions.includes(option.id)}
+                              onCheckedChange={() => toggleAdminOption(option.id)}
+                              className="mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{option.title}</div>
+                              {option.price && (
+                                <div className="text-xs text-muted-foreground">
+                                  {option.price.amount} {option.price.unit}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        disabled={selectedAdminOptions.length === 0}
+                        onClick={handleImportSelected}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter {selectedAdminOptions.length > 0 && `(${selectedAdminOptions.length})`}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button variant="outline" size="sm" onClick={() => addOptionService('', '', null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
