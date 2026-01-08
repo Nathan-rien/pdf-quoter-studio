@@ -163,25 +163,83 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     result.location!.loyerMensuel = parseNumber(loyerMatch[1]);
   }
 
-  // Parse product lines - look for REF patterns followed by designation and price
-  const productLineRegex = /([A-Z]{2,3}-[A-Z0-9-]+)\s+(.+?)\s+(\d+)\s+([\d\s,]+)\s*€/gi;
-  let match;
-  while ((match = productLineRegex.exec(text)) !== null) {
-    const totalHT = parseNumber(match[4]) || 0;
-    const quantite = parseInt(match[3]) || 1;
+  // Parse product lines (table can span multiple lines per row)
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
+
+  const tableStartIdx = lines.findIndex(
+    (l) => /\bREF\b/i.test(l) && /DESIGNATION/i.test(l) && /QTE/i.test(l)
+  );
+
+  const stopRe = /^(Offre\s+Locative|TOTAL\s*HT|Total\s*HT|TVA|Total\s*TTC)/i;
+
+  const rowsSource = tableStartIdx !== -1 ? lines.slice(tableStartIdx + 1) : lines;
+
+  const rowBufferToLine = (buf: string) => buf.replace(/\s+/g, ' ').trim();
+  const rowRegex = new RegExp(`^(.*?)\\s+(\\d+)\\s+${money}\\s*€$`, 'i');
+
+  let buffer = '';
+  for (const l of rowsSource) {
+    if (stopRe.test(l)) break;
+
+    // Skip eco-tax lines (they are not products)
+    if (/Dont\s+eco-?taxe/i.test(l)) continue;
+
+    buffer = buffer ? `${buffer} ${l}` : l;
+    const normalized = rowBufferToLine(buffer);
+
+    const m = normalized.match(rowRegex);
+    if (!m) continue;
+
+    const quantite = parseInt(m[2], 10) || 1;
+    const totalHT = parseNumber(m[3]) || 0;
+
+    // Split "ref" and designation from the left part
+    const left = m[1].trim();
+    const parts = left.split(/\s+/).filter(Boolean);
+
+    let reference: string | null = null;
+    let designation = '';
+
+    if (parts.length === 0) {
+      reference = null;
+      designation = '';
+    } else {
+      // Handle "Frais de livraison" style refs
+      if (/^[A-Za-zÀ-ÿ]+$/.test(parts[0]) && parts[1] === 'de' && parts[2]) {
+        reference = `${parts[0]} ${parts[1]} ${parts[2]}`;
+        designation = parts.slice(3).join(' ');
+      } else {
+        reference = parts[0];
+        designation = parts.slice(1).join(' ');
+      }
+    }
+
     result.lignes!.push({
-      reference: match[1],
-      designation: match[2].trim(),
+      reference,
+      designation: designation.trim(),
       quantite,
       totalHT,
+      // Cybertek: unit price is approximated from total / qty
       prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
     });
+
+    buffer = '';
   }
 
-  // Calculate totals from product lines
-  if (result.lignes!.length > 0) {
-    result.totaux!.totalHT = result.lignes!.reduce((sum, l) => sum + l.totalHT, 0);
-  }
+  // Totals (from PDF, no calculation)
+  const totalHTMatch = [...text.matchAll(new RegExp(`Total\\s*HT\\s*:?\\s*${money}\\s*€`, 'gi'))].at(-1);
+  if (totalHTMatch) result.totaux!.totalHT = parseNumber(totalHTMatch[1]);
+
+  const tvaMatch = [...text.matchAll(new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gi'))].at(-1);
+  if (tvaMatch) result.totaux!.tva = parseNumber(tvaMatch[1]);
+
+  const totalTTCMatch = [...text.matchAll(new RegExp(`Total\\s*TTC\\s*:?\\s*${money}\\s*€`, 'gi'))].at(-1);
+  if (totalTTCMatch) result.totaux!.totalTTC = parseNumber(totalTTCMatch[1]);
 
   return result;
 }
