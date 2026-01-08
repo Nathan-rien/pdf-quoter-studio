@@ -172,15 +172,33 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
 
   const tableStartIdx = lines.findIndex(
-    (l) => /\bREF\b/i.test(l) && /DESIGNATION/i.test(l) && /QTE/i.test(l)
+    (l) =>
+      /\bREF\b/i.test(l) &&
+      /DESIGNATION/i.test(l) &&
+      /QTE/i.test(l) &&
+      /(vente\s*HT|PRIX\s+TOTAL|TOTAL\s+DE\s+VENTE)/i.test(l)
   );
 
   const stopRe = /^(Offre\s+Locative|TOTAL\s*HT|Total\s*HT|TVA|Total\s*TTC)/i;
-
   const rowsSource = tableStartIdx !== -1 ? lines.slice(tableStartIdx + 1) : lines;
 
   const rowBufferToLine = (buf: string) => buf.replace(/\s+/g, ' ').trim();
   const rowRegex = new RegExp(`^(.*?)\\s+(\\d+)\\s+${money}\\s*€$`, 'i');
+
+  const isBannedHeaderRef = (ref: string) =>
+    /^(Devis|SIEGE|SOCIAL|ADRESSE|FACTURATION|LIVRAISON)$/i.test(ref);
+
+  const isValidProductRef = (ref: string | null) => {
+    if (!ref) return false;
+    if (ref === 'Frais de livraison') return true;
+    if (/^Installation$/i.test(ref)) return true;
+    if (isBannedHeaderRef(ref)) return false;
+    // Cybertek product refs are typically like "SY-D4EC-2666-16G" (contain at least one dash)
+    return ref.includes('-');
+  };
+
+  const isBannedDesignation = (designation: string) =>
+    /(ADRESSE\s+DE\s+LIVRAISON|ADRESSE\s+DE\s+FACTURATION|SIEGE\s+SOCIAL|AU\s+CAPITAL)/i.test(designation);
 
   let buffer = '';
   for (const l of rowsSource) {
@@ -210,13 +228,23 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       designation = '';
     } else {
       // Handle "Frais de livraison" style refs
-      if (/^[A-Za-zÀ-ÿ]+$/.test(parts[0]) && parts[1] === 'de' && parts[2]) {
-        reference = `${parts[0]} ${parts[1]} ${parts[2]}`;
+      if (
+        /^Frais$/i.test(parts[0]) &&
+        parts[1]?.toLowerCase() === 'de' &&
+        parts[2]?.toLowerCase() === 'livraison'
+      ) {
+        reference = 'Frais de livraison';
         designation = parts.slice(3).join(' ');
       } else {
         reference = parts[0];
         designation = parts.slice(1).join(' ');
       }
+    }
+
+    // Avoid picking header/address lines as products
+    if (!isValidProductRef(reference) || isBannedDesignation(designation)) {
+      buffer = '';
+      continue;
     }
 
     result.lignes!.push({
@@ -232,14 +260,53 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   }
 
   // Totals (from PDF, no calculation)
-  const totalHTMatch = [...text.matchAll(new RegExp(`Total\\s*HT\\s*:?\\s*${money}\\s*€`, 'gi'))].at(-1);
-  if (totalHTMatch) result.totaux!.totalHT = parseNumber(totalHTMatch[1]);
+  const totalHTMatch = [...text.matchAll(
+    new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+  )].at(-1);
+  if (totalHTMatch) {
+    const v = parseNumber(totalHTMatch[1]);
+    if (v !== null && Math.abs(v) >= 100) result.totaux!.totalHT = v;
+  }
 
-  const tvaMatch = [...text.matchAll(new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gi'))].at(-1);
-  if (tvaMatch) result.totaux!.tva = parseNumber(tvaMatch[1]);
+  const tvaMatch = [...text.matchAll(
+    new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gi')
+  )].at(-1);
+  if (tvaMatch) {
+    const v = parseNumber(tvaMatch[1]);
+    if (v !== null && Math.abs(v) >= 100) result.totaux!.tva = v;
+  }
 
-  const totalTTCMatch = [...text.matchAll(new RegExp(`Total\\s*TTC\\s*:?\\s*${money}\\s*€`, 'gi'))].at(-1);
-  if (totalTTCMatch) result.totaux!.totalTTC = parseNumber(totalTTCMatch[1]);
+  const totalTTCMatch = [...text.matchAll(
+    new RegExp(`Total(?:\\s+de\\s+vente)?\\s*TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+  )].at(-1);
+  if (totalTTCMatch) {
+    const v = parseNumber(totalTTCMatch[1]);
+    if (v !== null && Math.abs(v) >= 100) result.totaux!.totalTTC = v;
+  }
+
+  // Fallback when totals are shown as a 3-line amount block (no labels next to each amount)
+  if (result.totaux!.totalHT === null || result.totaux!.tva === null || result.totaux!.totalTTC === null) {
+    const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
+    const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines;
+
+    const moneyOnly = tail
+      .map((l) => l.match(new RegExp(`^${money}\\s*€$`, 'i'))?.[1] ?? null)
+      .filter((v): v is string => Boolean(v));
+
+    const nums = moneyOnly
+      .map((v) => parseNumber(v))
+      .filter((n): n is number => n !== null && n >= 1000);
+
+    if (nums.length >= 3) {
+      const last3 = nums.slice(-3);
+      // Just a sanity ordering check to avoid eco-taxes (no calculation)
+      if (last3[2] > last3[0] && last3[2] > last3[1]) {
+        if (result.totaux!.totalHT === null) result.totaux!.totalHT = last3[0];
+        if (result.totaux!.tva === null) result.totaux!.tva = last3[1];
+        if (result.totaux!.totalTTC === null) result.totaux!.totalTTC = last3[2];
+      }
+    }
+  }
 
   return result;
 }
