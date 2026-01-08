@@ -163,7 +163,12 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     result.location!.loyerMensuel = parseNumber(loyerMatch[1]);
   }
 
-  // Parse product lines (table can span multiple lines per row)
+  // Parse product lines - Cybertek PDFs have multi-line structure:
+  // Line 1: SY-XXX (first REF with SY- prefix)
+  // Line 2: XXX (second REF without prefix - THIS is what we want)
+  // Line 3+: Designation text (can span multiple lines)
+  // Last line of product: ends with QTE and Total HT (e.g. "... 4 2 176,00 €")
+  
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -175,136 +180,177 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     (l) =>
       /\bREF\b/i.test(l) &&
       /DESIGNATION/i.test(l) &&
-      /QTE/i.test(l) &&
-      /(vente\s*HT|PRIX\s+TOTAL|TOTAL\s+DE\s+VENTE)/i.test(l)
+      /QTE/i.test(l)
   );
 
-  const stopRe = /^(Offre\s+Locative|TOTAL\s*HT|Total\s*HT|TVA|Total\s*TTC)/i;
+  const stopRe = /^(Offre\s+Locative|TOTAL\s*HT|Total\s*HT|TVA\s*20|Total\s*TTC|CONDITIONS)/i;
   const rowsSource = tableStartIdx !== -1 ? lines.slice(tableStartIdx + 1) : lines;
 
-  const rowBufferToLine = (buf: string) => buf.replace(/\s+/g, ' ').trim();
-  const rowRegex = new RegExp(`^(.*?)\\s+(\\d+)\\s+${money}\\s*€$`, 'i');
+  // Pattern for the end of a product row: QTE followed by Total HT amount
+  const rowEndRegex = new RegExp(`(\\d+)\\s+${money}\\s*€\\s*$`, 'i');
+  
+  // Pattern for SY- prefix refs (start of a new product block)
+  const syRefPattern = /^SY-[A-Z0-9-]+$/i;
+  
+  // Pattern for the short ref (2nd line, without SY- prefix)
+  const shortRefPattern = /^[A-Z0-9]+-[A-Z0-9-]+$|^[A-Z0-9]{4,}$/i;
+  
+  // Special refs without dash
+  const specialRefs = ['Installation', 'Frais de livraison'];
 
-  const isBannedHeaderRef = (ref: string) =>
-    /^(Devis|SIEGE|SOCIAL|ADRESSE|FACTURATION|LIVRAISON)$/i.test(ref);
+  const isBannedLine = (line: string) =>
+    /(ADRESSE\s+DE\s+LIVRAISON|ADRESSE\s+DE\s+FACTURATION|SIEGE\s+SOCIAL|AU\s+CAPITAL|GROUPE\s+KEDGE|N°\s*client)/i.test(line);
 
-  const isValidProductRef = (ref: string | null) => {
-    if (!ref) return false;
-    if (ref === 'Frais de livraison') return true;
-    if (/^Installation$/i.test(ref)) return true;
-    if (isBannedHeaderRef(ref)) return false;
-    // Cybertek product refs are typically like "SY-D4EC-2666-16G" (contain at least one dash)
-    return ref.includes('-');
-  };
+  // State machine to parse multi-line product blocks
+  let currentProduct: { syRef: string | null; shortRef: string | null; designationParts: string[] } | null = null;
 
-  const isBannedDesignation = (designation: string) =>
-    /(ADRESSE\s+DE\s+LIVRAISON|ADRESSE\s+DE\s+FACTURATION|SIEGE\s+SOCIAL|AU\s+CAPITAL)/i.test(designation);
-
-  let buffer = '';
-  for (const l of rowsSource) {
+  for (let i = 0; i < rowsSource.length; i++) {
+    const l = rowsSource[i];
+    
     if (stopRe.test(l)) break;
-
-    // Skip eco-tax lines (they are not products)
     if (/Dont\s+eco-?taxe/i.test(l)) continue;
+    if (isBannedLine(l)) continue;
 
-    buffer = buffer ? `${buffer} ${l}` : l;
-    const normalized = rowBufferToLine(buffer);
-
-    const m = normalized.match(rowRegex);
-    if (!m) continue;
-
-    const quantite = parseInt(m[2], 10) || 1;
-    const totalHT = parseNumber(m[3]) || 0;
-
-    // Split "ref" and designation from the left part
-    const left = m[1].trim();
-    const parts = left.split(/\s+/).filter(Boolean);
-
-    let reference: string | null = null;
-    let designation = '';
-
-    if (parts.length === 0) {
-      reference = null;
-      designation = '';
-    } else {
-      // Handle "Frais de livraison" style refs
-      if (
-        /^Frais$/i.test(parts[0]) &&
-        parts[1]?.toLowerCase() === 'de' &&
-        parts[2]?.toLowerCase() === 'livraison'
-      ) {
-        reference = 'Frais de livraison';
-        designation = parts.slice(3).join(' ');
-      } else {
-        reference = parts[0];
-        designation = parts.slice(1).join(' ');
+    // Check for special refs first (Installation, Frais de livraison)
+    const specialRefMatch = specialRefs.find(sr => l.toLowerCase().startsWith(sr.toLowerCase()));
+    if (specialRefMatch) {
+      // Close previous product if any
+      currentProduct = null;
+      
+      // Look ahead for the row end pattern in this or following lines
+      let buffer = l;
+      let j = i;
+      while (j < rowsSource.length - 1) {
+        const endMatch = buffer.match(rowEndRegex);
+        if (endMatch) {
+          const quantite = parseInt(endMatch[1], 10) || 1;
+          const totalHT = parseNumber(endMatch[2]) || 0;
+          const leftPart = buffer.slice(0, buffer.lastIndexOf(endMatch[0])).trim();
+          const designation = leftPart.replace(new RegExp(`^${specialRefMatch}`, 'i'), '').trim();
+          
+          result.lignes!.push({
+            reference: specialRefMatch,
+            designation,
+            quantite,
+            totalHT,
+            prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
+          });
+          i = j;
+          break;
+        }
+        j++;
+        if (stopRe.test(rowsSource[j])) break;
+        buffer = buffer + ' ' + rowsSource[j];
       }
-    }
-
-    // Avoid picking header/address lines as products
-    if (!isValidProductRef(reference) || isBannedDesignation(designation)) {
-      buffer = '';
       continue;
     }
 
-    result.lignes!.push({
-      reference,
-      designation: designation.trim(),
-      quantite,
-      totalHT,
-      // Cybertek: unit price is approximated from total / qty
-      prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
-    });
+    // Check for SY- prefix ref (start of new product block)
+    if (syRefPattern.test(l)) {
+      currentProduct = { syRef: l, shortRef: null, designationParts: [] };
+      continue;
+    }
 
-    buffer = '';
-  }
+    // If we're in a product block, check for short ref (2nd line)
+    if (currentProduct && currentProduct.shortRef === null && shortRefPattern.test(l)) {
+      currentProduct.shortRef = l;
+      continue;
+    }
 
-  // Totals (from PDF, no calculation)
-  const totalHTMatch = [...text.matchAll(
-    new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
-  )].at(-1);
-  if (totalHTMatch) {
-    const v = parseNumber(totalHTMatch[1]);
-    if (v !== null && Math.abs(v) >= 100) result.totaux!.totalHT = v;
-  }
-
-  const tvaMatch = [...text.matchAll(
-    new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gi')
-  )].at(-1);
-  if (tvaMatch) {
-    const v = parseNumber(tvaMatch[1]);
-    if (v !== null && Math.abs(v) >= 100) result.totaux!.tva = v;
-  }
-
-  const totalTTCMatch = [...text.matchAll(
-    new RegExp(`Total(?:\\s+de\\s+vente)?\\s*TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
-  )].at(-1);
-  if (totalTTCMatch) {
-    const v = parseNumber(totalTTCMatch[1]);
-    if (v !== null && Math.abs(v) >= 100) result.totaux!.totalTTC = v;
-  }
-
-  // Fallback when totals are shown as a 3-line amount block (no labels next to each amount)
-  if (result.totaux!.totalHT === null || result.totaux!.tva === null || result.totaux!.totalTTC === null) {
-    const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
-    const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines;
-
-    const moneyOnly = tail
-      .map((l) => l.match(new RegExp(`^${money}\\s*€$`, 'i'))?.[1] ?? null)
-      .filter((v): v is string => Boolean(v));
-
-    const nums = moneyOnly
-      .map((v) => parseNumber(v))
-      .filter((n): n is number => n !== null && n >= 1000);
-
-    if (nums.length >= 3) {
-      const last3 = nums.slice(-3);
-      // Just a sanity ordering check to avoid eco-taxes (no calculation)
-      if (last3[2] > last3[0] && last3[2] > last3[1]) {
-        if (result.totaux!.totalHT === null) result.totaux!.totalHT = last3[0];
-        if (result.totaux!.tva === null) result.totaux!.tva = last3[1];
-        if (result.totaux!.totalTTC === null) result.totaux!.totalTTC = last3[2];
+    // Check if this line ends a product (has QTE + amount at the end)
+    const endMatch = l.match(rowEndRegex);
+    if (endMatch && currentProduct) {
+      const quantite = parseInt(endMatch[1], 10) || 1;
+      const totalHT = parseNumber(endMatch[2]) || 0;
+      
+      // Extract designation from what's left on this line before QTE
+      const leftPart = l.slice(0, l.lastIndexOf(endMatch[0])).trim();
+      if (leftPart) {
+        currentProduct.designationParts.push(leftPart);
       }
+      
+      const designation = currentProduct.designationParts.join(' ').trim();
+      const reference = currentProduct.shortRef || currentProduct.syRef;
+      
+      if (reference) {
+        result.lignes!.push({
+          reference,
+          designation,
+          quantite,
+          totalHT,
+          prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
+        });
+      }
+      
+      currentProduct = null;
+      continue;
+    }
+
+    // Otherwise, this line is part of the designation
+    if (currentProduct) {
+      currentProduct.designationParts.push(l);
+    }
+  }
+
+  // Totals extraction - Cybertek shows totals as a block after the table
+  // Look for the section after "Offre Locative" or after product table ends
+  const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
+  const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines.slice(-30);
+
+  // Extract all monetary amounts from the tail section
+  const moneyPattern = new RegExp(`${money}\\s*€`, 'gi');
+  const allAmounts: number[] = [];
+  
+  for (const line of tail) {
+    const matches = [...line.matchAll(moneyPattern)];
+    for (const m of matches) {
+      const v = parseNumber(m[1]);
+      if (v !== null) allAmounts.push(v);
+    }
+  }
+
+  // Filter for significant amounts (>= 100 to exclude eco-taxes)
+  const significantAmounts = allAmounts.filter(n => n >= 100);
+
+  // Take the last 3 significant amounts as Total HT, TVA 20%, Total TTC
+  if (significantAmounts.length >= 3) {
+    const last3 = significantAmounts.slice(-3);
+    // Sanity check: TTC should be > HT and > TVA
+    if (last3[2] > last3[0] && last3[2] > last3[1]) {
+      result.totaux!.totalHT = last3[0];
+      result.totaux!.tva = last3[1];
+      result.totaux!.totalTTC = last3[2];
+    }
+  }
+
+  // Fallback: try explicit label patterns if block extraction failed
+  if (result.totaux!.totalHT === null) {
+    const totalHTMatch = [...text.matchAll(
+      new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+    )].at(-1);
+    if (totalHTMatch) {
+      const v = parseNumber(totalHTMatch[1]);
+      if (v !== null && v >= 100) result.totaux!.totalHT = v;
+    }
+  }
+
+  if (result.totaux!.tva === null) {
+    const tvaMatch = [...text.matchAll(
+      new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gi')
+    )].at(-1);
+    if (tvaMatch) {
+      const v = parseNumber(tvaMatch[1]);
+      if (v !== null && v >= 100) result.totaux!.tva = v;
+    }
+  }
+
+  if (result.totaux!.totalTTC === null) {
+    const totalTTCMatch = [...text.matchAll(
+      new RegExp(`Total(?:\\s+de\\s+vente)?\\s*TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+    )].at(-1);
+    if (totalTTCMatch) {
+      const v = parseNumber(totalTTCMatch[1]);
+      if (v !== null && v >= 100) result.totaux!.totalTTC = v;
     }
   }
 
