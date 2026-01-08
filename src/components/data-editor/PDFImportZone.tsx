@@ -18,6 +18,11 @@ interface ImportResult {
   fileName: string;
   source?: 'cybertek' | 'grosbill' | 'unknown';
   lignesCount?: number;
+  totals?: {
+    totalHT: number | null;
+    tva: number | null;
+    totalTTC: number | null;
+  };
   error?: string;
 }
 
@@ -57,6 +62,11 @@ export function PDFImportZone({
         fileName: file.name,
         source: result.source,
         lignesCount: result.lignes.length,
+        totals: {
+          totalHT: result.totaux.totalHT,
+          tva: result.totaux.tva,
+          totalTTC: result.totaux.totalTTC,
+        },
       });
       
       onImportSuccess(result, file.name);
@@ -136,9 +146,16 @@ export function PDFImportZone({
                   )}
                 </div>
                 {importResult.success ? (
-                  <p className="text-sm text-muted-foreground">
-                    {importResult.lignesCount} ligne(s) de produit détectée(s)
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">
+                      {importResult.lignesCount} ligne(s) de produit détectée(s)
+                    </p>
+                    {importResult.totals && (
+                      <p className="text-xs text-muted-foreground">
+                        Totaux extraits — HT: {importResult.totals.totalHT ?? '—'} | TVA: {importResult.totals.tva ?? '—'} | TTC: {importResult.totals.totalTTC ?? '—'}
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm text-destructive">{importResult.error}</p>
                 )}

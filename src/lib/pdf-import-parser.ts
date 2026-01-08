@@ -269,66 +269,47 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.client!.email = emailMatch[1];
   }
 
-  // Totals - Grosbill often renders a header row then a values row.
+  // Totals - Grosbill often renders the labels on one line and the values on the next.
   // We avoid any calculation: values must come from the PDF.
   const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
-  const moneyRe = new RegExp(money, 'g');
-  const extractMoneyValues = (line: string) => [...line.matchAll(moneyRe)].map((m) => m[1]);
-
-  const isLikelyTotalsTriplet = (a: number | null, b: number | null, c: number | null) => {
-    if (a === null || b === null || c === null) return false;
-    if (a <= 0 || b <= 0 || c <= 0) return false;
-    // Basic sanity (no derivation): TTC should be the biggest value
-    if (c <= a) return false;
-    if (c <= b) return false;
-    return true;
-  };
 
   let totalsFound = false;
 
-  // 1) Locate a header line containing all 3 labels, then scan forward a few lines for the 3 amounts
-  const totalsHeaderIdx = lines.findIndex(
-    (l) => /TOTAL\\s*HT/i.test(l) && /TVA\\s*20/i.test(l) && /TOTAL\\s*TTC/i.test(l)
-  );
-  if (totalsHeaderIdx !== -1) {
-    for (let j = totalsHeaderIdx + 1; j <= totalsHeaderIdx + 8 && j < lines.length; j++) {
-      const vals = extractMoneyValues(lines[j]);
-      if (vals.length < 3) continue;
-      const last3 = vals.slice(-3);
-      const a = parseNumber(last3[0]);
-      const b = parseNumber(last3[1]);
-      const c = parseNumber(last3[2]);
-      if (!isLikelyTotalsTriplet(a, b, c)) continue;
+  // Preferred: locate the "TOTAL HT ... TVA 20% ... TOTAL TTC" header (last occurrence),
+  // then read the first 3 monetary amounts that follow.
+  const headerMatches = [...text.matchAll(
+    new RegExp(`TOTAL\\s*HT[\\s\\S]{0,160}?TVA\\s*20\\s*%?[\\s\\S]{0,160}?TOTAL\\s*TTC`, 'gi')
+  )];
 
-      result.totaux!.totalHT = a;
-      result.totaux!.tva = b;
-      result.totaux!.totalTTC = c;
+  if (headerMatches.length) {
+    const header = headerMatches.at(-1)!;
+    const start = header.index ?? 0;
+    const slice = text.slice(start, Math.min(text.length, start + 1400));
+    const vals = [...slice.matchAll(new RegExp(`${money}\\s*€`, 'g'))].map((m) => m[1]);
+
+    if (vals.length >= 3) {
+      result.totaux!.totalHT = parseNumber(vals[0]);
+      result.totaux!.tva = parseNumber(vals[1]);
+      result.totaux!.totalTTC = parseNumber(vals[2]);
       totalsFound = true;
-      break;
     }
   }
 
-  // 2) Best-effort: find a line containing >=3 amounts and check nearby context for the totals headers
+  // Fallback: explicit label → amount patterns (older layouts / different line breaks)
   if (!totalsFound) {
-    for (let i = 0; i < lines.length; i++) {
-      const vals = extractMoneyValues(lines[i]);
-      if (vals.length < 3) continue;
+    const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    if (totalHTMatches.length) {
+      result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
+    }
 
-      const ctx = lines.slice(Math.max(0, i - 25), i).join(' ');
-      const hasHeaders = /TOTAL\\s*HT/i.test(ctx) && /TVA\\s*20/i.test(ctx) && /TOTAL\\s*TTC/i.test(ctx);
-      if (!hasHeaders) continue;
+    const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    if (tvaMatches.length) {
+      result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
+    }
 
-      const last3 = vals.slice(-3);
-      const a = parseNumber(last3[0]);
-      const b = parseNumber(last3[1]);
-      const c = parseNumber(last3[2]);
-      if (!isLikelyTotalsTriplet(a, b, c)) continue;
-
-      result.totaux!.totalHT = a;
-      result.totaux!.tva = b;
-      result.totaux!.totalTTC = c;
-      totalsFound = true;
-      break;
+    const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    if (totalTTCMatches.length) {
+      result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
     }
   }
 
