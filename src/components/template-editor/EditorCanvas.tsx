@@ -231,12 +231,18 @@ export function EditorCanvas() {
 
   // Drag & Drop handlers
   const handleMouseDown = useCallback((elementId: string, e: React.MouseEvent) => {
-    if (!isEditable || isAddMode) return;
+    if (!isEditable || isAddMode || isInlineEditing) return;
     
     const element = pageContent?.elements.find(el => el.id === elementId);
     if (!element || element.isDynamic) return;
     
-    e.preventDefault();
+    // Ne pas démarrer le drag si c'est un potentiel double-clic
+    // On vérifie si l'élément texte vient d'être cliqué
+    if (element.type === 'text' && e.detail === 1) {
+      // Simple clic - ne pas démarrer le drag tout de suite
+      // Le drag sera activé si l'utilisateur bouge la souris
+    }
+    
     e.stopPropagation();
     
     // Multi-sélection avec Ctrl ou Cmd - ne pas démarrer le drag
@@ -573,7 +579,12 @@ export function EditorCanvas() {
   // Double-clic pour l'édition inline du texte
   const handleElementDoubleClick = useCallback((elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isEditable) return;
+    e.preventDefault();
+    
+    if (!isEditable) {
+      toast.info("Passez en mode édition pour modifier le texte", { id: 'edit-mode-hint' });
+      return;
+    }
     
     const element = pageContent?.elements.find(el => el.id === elementId);
     if (!element || element.isDynamic || element.type !== 'text') return;
@@ -582,18 +593,23 @@ export function EditorCanvas() {
     selectElement(elementId);
     setInlineEditing(elementId);
     
-    // Calculer la position de la toolbar (au-dessus de l'élément)
+    // Calculer la position de la toolbar (au-dessus de l'élément, mais visible)
     if (canvasRef.current) {
       const canvasRect = canvasRef.current.getBoundingClientRect();
       const elementX = (element.position.x / CANVAS_SCALE.width) * canvasRect.width;
       const elementY = (element.position.y / CANVAS_SCALE.height) * canvasRect.height;
       const elementWidth = (element.size.width / CANVAS_SCALE.width) * canvasRect.width;
       
+      // Si l'élément est trop haut, positionner la toolbar en dessous
+      const toolbarY = elementY > 50 ? elementY - 45 : elementY + 30;
+      
       setToolbarPosition({
-        x: elementX + elementWidth / 2,
-        y: elementY - 45, // 45px au-dessus de l'élément
+        x: Math.max(100, Math.min(elementX + elementWidth / 2, canvasRect.width - 100)),
+        y: Math.max(10, toolbarY),
       });
     }
+    
+    toast.success("Mode édition activé - modifiez le texte directement", { id: 'inline-edit', duration: 2000 });
   }, [isEditable, pageContent, selectElement, setInlineEditing]);
 
   // Fermer l'édition inline
@@ -764,7 +780,6 @@ export function EditorCanvas() {
           {/* Barre d'outils flottante pour l'édition inline */}
           {isInlineEditing && inlineTextContent && toolbarPosition && (
             <FloatingToolbar
-              data-floating-toolbar
               position={toolbarPosition}
               fontSize={inlineTextContent.fontSize}
               textAlign={inlineTextContent.textAlign || 'left'}
