@@ -1,10 +1,11 @@
 import React from 'react';
-import { FileUp, Table, Eye, Download, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { FileUp, Table, Eye, Download, Check, ChevronRight, ChevronLeft, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PDFImportZone } from '@/components/data-editor/PDFImportZone';
 import { RentalDataEditor } from './RentalDataEditor';
+import { TemplateListView } from '@/components/template-editor/TemplateListView';
 import { useRentalProposalStore, RentalWorkflowStep } from '@/stores/rentalProposalStore';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,7 @@ interface WorkflowStepConfig {
 const WORKFLOW_STEPS: WorkflowStepConfig[] = [
   { id: 'import', label: 'Import PDF', icon: FileUp },
   { id: 'data', label: 'Données', icon: Table },
+  { id: 'template', label: 'Template', icon: FileText },
   { id: 'preview', label: 'Aperçu', icon: Eye },
   { id: 'export', label: 'Export', icon: Download },
 ];
@@ -87,6 +89,21 @@ export function RentalWorkflow() {
 
       case 'data':
         return <RentalDataEditor />;
+
+      case 'template':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sélection du template</CardTitle>
+              <CardDescription>
+                Choisissez le template à utiliser pour générer la proposition.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TemplateListView />
+            </CardContent>
+          </Card>
+        );
 
       case 'preview':
         return (
