@@ -1,28 +1,34 @@
 // Fonctions de calcul pour le workflow Proposition
 // Basées sur les formules Excel de Matrice_Location
 
-import { BASE_TAUX_DATA, BaseTauxEntry } from '@/data/base-taux';
+import { BASE_TAUX_DATA, moisEnTrimestres } from '@/data/base-taux';
 import { getFraisDossier } from '@/data/frais-dossier';
 
 /**
  * Lookup du coefficient dans la table Base Taux
  * Réplique la formule Excel: =INDEX('Base Taux'!$E:$E;EQUIV(1;('Base Taux'!$A:$A=C22)*('Base Taux'!$B:$B<='Base Taux'!H4)*('Base Taux'!$C:$C>'Base Taux'!H4)*('Base Taux'!$D:$D*3>=C21);0))
+ * 
+ * La durée dans Base Taux est en TRIMESTRES (pas en mois)
+ * Ex: 36 mois = 12 trimestres
  */
 export function lookupCoefficient(
   partenaire: string | null,
   montant: number | null,
-  duree: number | null
+  dureeMois: number | null
 ): number | null {
-  if (!partenaire || montant === null || duree === null) {
+  if (!partenaire || montant === null || dureeMois === null) {
     return null;
   }
+
+  // Convertir les mois en trimestres pour le lookup
+  const dureeTrimestres = moisEnTrimestres(dureeMois);
 
   // Chercher la ligne correspondante dans Base Taux
   const match = BASE_TAUX_DATA.find(row =>
     row.partenaire === partenaire &&
     row.montantMin <= montant &&
     row.montantMax > montant &&
-    row.dureeLocation === duree
+    row.dureeTrimestres === dureeTrimestres
   );
 
   return match?.taux ?? null;
