@@ -201,23 +201,41 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   const isBannedLine = (line: string) =>
     /(ADRESSE\s+DE\s+LIVRAISON|ADRESSE\s+DE\s+FACTURATION|SIEGE\s+SOCIAL|AU\s+CAPITAL|GROUPE\s+KEDGE|N°\s*client)/i.test(line);
 
-  // State machine to parse multi-line product blocks
-  let currentProduct: { syRef: string | null; shortRef: string | null; designationParts: string[] } | null = null;
+  const isGarantieLine = (line: string) => /^Garantie\s*:/i.test(line);
 
+  const findSyRefIndexBackwards = (fromIdx: number) => {
+    for (let j = fromIdx; j >= 0 && j >= fromIdx - 8; j--) {
+      const v = rowsSource[j];
+      if (syRefPattern.test(v)) return j;
+      if (stopRe.test(v)) break;
+    }
+    return -1;
+  };
+
+  const findShortRefForward = (fromIdx: number) => {
+    for (let k = fromIdx + 1; k < rowsSource.length && k <= fromIdx + 6; k++) {
+      const v = rowsSource[k];
+      if (stopRe.test(v) || syRefPattern.test(v)) break;
+      if (isBannedLine(v) || isGarantieLine(v)) continue;
+      if (shortRefPattern.test(v) && !/^SY-/i.test(v)) return v;
+    }
+    return null;
+  };
+
+  // Cybertek: we parse rows by detecting the *end* of a product line ("QTE + Total HT")
+  // then we look around it to recover:
+  // - REF: the short ref line (without SY-) that often comes AFTER the end line
+  // - DESIGNATION: lines around the SY- ref and the end line
   for (let i = 0; i < rowsSource.length; i++) {
     const l = rowsSource[i];
-    
+
     if (stopRe.test(l)) break;
     if (/Dont\s+eco-?taxe/i.test(l)) continue;
-    if (isBannedLine(l)) continue;
+    if (isBannedLine(l) || isGarantieLine(l)) continue;
 
-    // Check for special refs first (Installation, Frais de livraison)
-    const specialRefMatch = specialRefs.find(sr => l.toLowerCase().startsWith(sr.toLowerCase()));
+    // Special refs first (Installation, Frais de livraison)
+    const specialRefMatch = specialRefs.find((sr) => l.toLowerCase().startsWith(sr.toLowerCase()));
     if (specialRefMatch) {
-      // Close previous product if any
-      currentProduct = null;
-      
-      // Look ahead for the row end pattern in this or following lines
       let buffer = l;
       let j = i;
       while (j < rowsSource.length - 1) {
@@ -227,7 +245,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
           const totalHT = parseNumber(endMatch[2]) || 0;
           const leftPart = buffer.slice(0, buffer.lastIndexOf(endMatch[0])).trim();
           const designation = leftPart.replace(new RegExp(`^${specialRefMatch}`, 'i'), '').trim();
-          
+
           result.lignes!.push({
             reference: specialRefMatch,
             designation,
@@ -235,6 +253,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
             totalHT,
             prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
           });
+
           i = j;
           break;
         }
@@ -245,62 +264,74 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       continue;
     }
 
-    // Check for SY- prefix ref (start of new product block)
-    if (syRefPattern.test(l)) {
-      currentProduct = { syRef: l, shortRef: null, designationParts: [] };
-      continue;
-    }
-
-    // If we're in a product block, check for short ref (2nd line)
-    if (currentProduct && currentProduct.shortRef === null && shortRefPattern.test(l)) {
-      currentProduct.shortRef = l;
-      continue;
-    }
-
-    // Check if this line ends a product (has QTE + amount at the end)
+    // Standard products: detect end of row
     const endMatch = l.match(rowEndRegex);
-    if (endMatch && currentProduct) {
-      const quantite = parseInt(endMatch[1], 10) || 1;
-      const totalHT = parseNumber(endMatch[2]) || 0;
-      
-      // Extract designation from what's left on this line before QTE
-      const leftPart = l.slice(0, l.lastIndexOf(endMatch[0])).trim();
-      if (leftPart) {
-        currentProduct.designationParts.push(leftPart);
-      }
-      
-      const designation = currentProduct.designationParts.join(' ').trim();
-      const reference = currentProduct.shortRef || currentProduct.syRef;
-      
-      if (reference) {
-        result.lignes!.push({
-          reference,
-          designation,
-          quantite,
-          totalHT,
-          prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
-        });
-      }
-      
-      currentProduct = null;
-      continue;
+    if (!endMatch) continue;
+
+    const syIdx = findSyRefIndexBackwards(i);
+    if (syIdx === -1) continue;
+
+    const quantite = parseInt(endMatch[1], 10) || 1;
+    const totalHT = parseNumber(endMatch[2]) || 0;
+
+    const syRef = rowsSource[syIdx];
+    const shortRef = findShortRefForward(i);
+
+    // Build designation around the SY- ref and the end line
+    const designationParts: string[] = [];
+
+    // Often the first designation line is just before the SY- ref
+    const beforeSy = rowsSource[syIdx - 1];
+    if (
+      beforeSy &&
+      !stopRe.test(beforeSy) &&
+      !isBannedLine(beforeSy) &&
+      !isGarantieLine(beforeSy) &&
+      !syRefPattern.test(beforeSy) &&
+      !(shortRefPattern.test(beforeSy) && !/^SY-/i.test(beforeSy))
+    ) {
+      designationParts.push(beforeSy);
     }
 
-    // Otherwise, this line is part of the designation
-    if (currentProduct) {
-      currentProduct.designationParts.push(l);
+    for (let j = syIdx + 1; j <= i; j++) {
+      const v = rowsSource[j];
+      if (isBannedLine(v) || isGarantieLine(v)) continue;
+      if (/Dont\s+eco-?taxe/i.test(v)) continue;
+      if (syRefPattern.test(v)) continue;
+      if (shortRefPattern.test(v) && !/^SY-/i.test(v)) continue;
+
+      if (j === i) {
+        const leftPart = v.slice(0, v.lastIndexOf(endMatch[0])).trim();
+        if (leftPart) designationParts.push(leftPart);
+      } else {
+        designationParts.push(v);
+      }
     }
+
+    const designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
+
+    // Prefer short ref (2nd line) as requested; fallback to extracting from designation; else strip SY-
+    const extractedFromDesignation = designation.match(/\b([A-Z0-9]{2,}-[A-Z0-9-]{2,})\b/i)?.[1] ?? null;
+    const reference = shortRef ?? extractedFromDesignation ?? (syRef ? syRef.replace(/^SY-/i, '') : null);
+
+    result.lignes!.push({
+      reference,
+      designation,
+      quantite,
+      totalHT,
+      prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
+    });
   }
 
   // Totals extraction - Cybertek shows totals as a block after the table
-  // Look for the section after "Offre Locative" or after product table ends
+  // Look for the section after "Offre Locative" / totals labels. We prefer amounts >= 1000 to avoid catching the monthly rent.
   const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
-  const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines.slice(-30);
+  const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines.slice(-60);
 
-  // Extract all monetary amounts from the tail section
-  const moneyPattern = new RegExp(`${money}\\s*€`, 'gi');
+  // Extract all monetary amounts from the tail section (sometimes the € is separated)
+  const moneyPattern = new RegExp(`${money}(?:\\s*€|\\s*EUR)?`, 'gi');
   const allAmounts: number[] = [];
-  
+
   for (const line of tail) {
     const matches = [...line.matchAll(moneyPattern)];
     for (const m of matches) {
@@ -309,13 +340,12 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Filter for significant amounts (>= 100 to exclude eco-taxes)
-  const significantAmounts = allAmounts.filter(n => n >= 100);
+  // Keep only significant amounts (>= 1000) so we don't pick the monthly rent (e.g. 463,62 €)
+  const significantAmounts = allAmounts.filter((n) => n >= 1000);
 
   // Take the last 3 significant amounts as Total HT, TVA 20%, Total TTC
   if (significantAmounts.length >= 3) {
     const last3 = significantAmounts.slice(-3);
-    // Sanity check: TTC should be > HT and > TVA
     if (last3[2] > last3[0] && last3[2] > last3[1]) {
       result.totaux!.totalHT = last3[0];
       result.totaux!.tva = last3[1];
