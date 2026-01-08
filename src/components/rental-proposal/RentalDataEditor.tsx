@@ -1,36 +1,46 @@
 import React from 'react';
-import { User, FileText, Package, Clock, Trash2, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useRentalProposalStore } from '@/stores/rentalProposalStore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStore';
+import { BASE_TAUX_DATA } from '@/data/base-taux';
 
 export function RentalDataEditor() {
   const {
     clientData,
-    devisData,
-    commercialData,
+    matriceData,
     lignesData,
-    locationData,
-    totauxData,
+    optionsServices,
     pdfImportStatus,
     updateClientField,
-    updateDevisField,
-    updateCommercialField,
-    updateLocationField,
-    updateTotauxField,
+    updateMatriceField,
     updateLigne,
     addLigne,
     deleteLigne,
+    addOptionService,
+    updateOptionService,
+    deleteOptionService,
+    toggleOptionService,
+    getCalculatedValues,
   } = useRentalProposalStore();
 
+  const calculatedValues = getCalculatedValues();
+
   const formatNumber = (value: number | null) => {
-    if (value === null) return '';
+    if (value === null) return '-';
     return value.toFixed(2);
+  };
+
+  const formatPercent = (value: number | null) => {
+    if (value === null) return '-';
+    return `${value.toFixed(2)} %`;
   };
 
   return (
@@ -58,25 +68,29 @@ export function RentalDataEditor() {
       </Card>
 
       <Tabs defaultValue="client" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="client" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Client
           </TabsTrigger>
-          <TabsTrigger value="devis" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Devis
+          <TabsTrigger value="matrice" className="flex items-center gap-2">
+            <Calculator className="h-4 w-4" />
+            Matrice
           </TabsTrigger>
-          <TabsTrigger value="produits" className="flex items-center gap-2">
+          <TabsTrigger value="options" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Options
+          </TabsTrigger>
+          <TabsTrigger value="invest" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Produits
+            Invest
             {lignesData.length > 0 && (
               <Badge variant="secondary" className="ml-1">{lignesData.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="location" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Location
+          <TabsTrigger value="basetaux" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Base Taux
           </TabsTrigger>
         </TabsList>
 
@@ -144,86 +158,235 @@ export function RentalDataEditor() {
           </Card>
         </TabsContent>
 
-        {/* Devis Tab */}
-        <TabsContent value="devis" className="mt-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Informations devis</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        {/* Matrice Tab */}
+        <TabsContent value="matrice" className="mt-4 space-y-6">
+          {/* Encart Location */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Location</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="devis-ref">Référence devis</Label>
+                  <Label htmlFor="duree">Durée (mois)</Label>
                   <Input
-                    id="devis-ref"
-                    value={devisData.reference}
-                    onChange={(e) => updateDevisField('reference', e.target.value)}
+                    id="duree"
+                    type="number"
+                    min="12"
+                    step="12"
+                    value={matriceData.duree ?? ''}
+                    onChange={(e) => updateMatriceField('duree', e.target.value ? parseInt(e.target.value) : null)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="devis-client">N° Client</Label>
+                  <Label htmlFor="montant-invest">Montant investissement HT</Label>
                   <Input
-                    id="devis-client"
-                    value={devisData.numeroClient}
-                    onChange={(e) => updateDevisField('numeroClient', e.target.value)}
+                    id="montant-invest"
+                    type="number"
+                    step="0.01"
+                    value={matriceData.montantInvestissement ?? ''}
+                    onChange={(e) => updateMatriceField('montantInvestissement', e.target.value ? parseFloat(e.target.value) : null)}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="devis-date">Date</Label>
-                    <Input
-                      id="devis-date"
-                      value={devisData.date}
-                      onChange={(e) => updateDevisField('date', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="devis-validite">Validité</Label>
-                    <Input
-                      id="devis-validite"
-                      value={devisData.validite}
-                      onChange={(e) => updateDevisField('validite', e.target.value)}
-                    />
+                <div className="space-y-2">
+                  <Label>Loyer mensuel HT</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span className="font-medium">{formatNumber(calculatedValues.loyerMensuel)} €</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Coût locatif annuel</Label>
+                    <Switch
+                      checked={matriceData.showCoutLocatifAnnuel}
+                      onCheckedChange={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span className="font-medium">{formatPercent(calculatedValues.coutLocatifAnnuel)}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Contact commercial</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          {/* Encart Matrice */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Matrice</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="commercial-nom">Nom</Label>
+                  <Label>Montant investissement</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Invest margé</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(calculatedValues.investMarge)} € HT</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Services inclus loyers</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(calculatedValues.servicesInclusLoyers)} €</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Loyer Services Inclus</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(calculatedValues.loyerServicesInclus)} €</span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>Durée</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{matriceData.duree ?? '-'} mois</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="refinanceur">Refinanceur</Label>
+                  <Select
+                    value={matriceData.refinanceur ?? ''}
+                    onValueChange={(value) => updateMatriceField('refinanceur', value as any)}
+                  >
+                    <SelectTrigger id="refinanceur">
+                      <SelectValue placeholder="Sélectionner..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PARTENAIRES.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Coefficient</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{calculatedValues.coefficient ?? '-'}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Coût du contrat</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(calculatedValues.coutContrat)} €</span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="marge-appliquee">Marge appliquée (%)</Label>
                   <Input
-                    id="commercial-nom"
-                    value={commercialData.nom}
-                    onChange={(e) => updateCommercialField('nom', e.target.value)}
+                    id="marge-appliquee"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={matriceData.margeAppliquee}
+                    onChange={(e) => updateMatriceField('margeAppliquee', parseFloat(e.target.value) || 0)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="commercial-email">Email</Label>
-                  <Input
-                    id="commercial-email"
-                    type="email"
-                    value={commercialData.email}
-                    onChange={(e) => updateCommercialField('email', e.target.value)}
-                  />
+                  <Label>Marge Loc</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(calculatedValues.margeLoc)} €</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Encart Condition fin de contrat */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Condition fin de contrat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Reprise obligatoire loueur</Label>
+                  <Badge variant="secondary">Selon Bailleur/Loueur</Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label>Cession client possible</Label>
+                  <Badge variant="secondary">Selon Bailleur/Loueur</Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label>Frais de dossier</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span className="font-medium">{calculatedValues.fraisDossier ?? '-'} €</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Produits Tab */}
-        <TabsContent value="produits" className="mt-4">
+        {/* Options Tab */}
+        <TabsContent value="options" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Lignes de produits</CardTitle>
+              <div>
+                <CardTitle className="text-lg">Options services</CardTitle>
+                <CardDescription>Services inclus dans le loyer</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => addOptionService('', '', null)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {optionsServices.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Aucune option service</p>
+                ) : (
+                  optionsServices.map((opt) => (
+                    <div key={opt.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <Switch checked={opt.selected} onCheckedChange={() => toggleOptionService(opt.id)} />
+                      <Input
+                        placeholder="Nom"
+                        value={opt.name}
+                        onChange={(e) => updateOptionService(opt.id, { name: e.target.value })}
+                        className="flex-1"
+                      />
+                      <Input
+                        placeholder="Description"
+                        value={opt.description}
+                        onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Prix"
+                        value={opt.price ?? ''}
+                        onChange={(e) => updateOptionService(opt.id, { price: e.target.value ? parseFloat(e.target.value) : null })}
+                        className="w-24"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Invest Tab */}
+        <TabsContent value="invest" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Lignes produits (Invest)</CardTitle>
               <Button variant="outline" size="sm" onClick={addLigne}>
                 <Plus className="h-4 w-4 mr-2" />
-                Ajouter une ligne
+                Ajouter
               </Button>
             </CardHeader>
             <CardContent>
@@ -231,31 +394,23 @@ export function RentalDataEditor() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[120px]">Référence</TableHead>
                       <TableHead>Désignation</TableHead>
-                      <TableHead className="w-[100px] text-right">Prix unit. HT</TableHead>
-                      <TableHead className="w-[100px] text-right">Qté</TableHead>
-                      <TableHead className="w-[120px] text-right">Total HT</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead className="w-20 text-right">Nb</TableHead>
+                      <TableHead className="w-28 text-right">VUN</TableHead>
+                      <TableHead className="w-28 text-right">VTN</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {lignesData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           Aucune ligne de produit
                         </TableCell>
                       </TableRow>
                     ) : (
                       lignesData.map((ligne, index) => (
                         <TableRow key={index}>
-                          <TableCell>
-                            <Input
-                              value={ligne.reference || ''}
-                              onChange={(e) => updateLigne(index, { reference: e.target.value || null })}
-                              className="h-8"
-                            />
-                          </TableCell>
                           <TableCell>
                             <Input
                               value={ligne.designation}
@@ -266,22 +421,18 @@ export function RentalDataEditor() {
                           <TableCell>
                             <Input
                               type="number"
-                              step="0.01"
-                              value={ligne.prixUnitaire ?? ''}
-                              onChange={(e) => updateLigne(index, { 
-                                prixUnitaire: e.target.value ? parseFloat(e.target.value) : null 
-                              })}
+                              min="1"
+                              value={ligne.quantite}
+                              onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
                               className="h-8 text-right"
                             />
                           </TableCell>
                           <TableCell>
                             <Input
                               type="number"
-                              min="1"
-                              value={ligne.quantite}
-                              onChange={(e) => updateLigne(index, { 
-                                quantite: parseInt(e.target.value) || 1 
-                              })}
+                              step="0.01"
+                              value={ligne.prixUnitaire ?? ''}
+                              onChange={(e) => updateLigne(index, { prixUnitaire: e.target.value ? parseFloat(e.target.value) : null })}
                               className="h-8 text-right"
                             />
                           </TableCell>
@@ -289,13 +440,8 @@ export function RentalDataEditor() {
                             {formatNumber(ligne.totalHT)} €
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => deleteLigne(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteLigne(index)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -304,94 +450,45 @@ export function RentalDataEditor() {
                   </TableBody>
                 </Table>
               </div>
-
-              {/* Totaux - always visible and editable */}
-              <div className="mt-4 flex justify-end">
-                <div className="w-72 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">Total HT</span>
-                    <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={totauxData.totalHT ?? ''}
-                        onChange={(e) => updateTotauxField('totalHT', e.target.value ? parseFloat(e.target.value) : null)}
-                        className="h-8 w-32 text-right"
-                      />
-                      <span className="text-sm">€</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">TVA 20%</span>
-                    <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={totauxData.tva ?? ''}
-                        onChange={(e) => updateTotauxField('tva', e.target.value ? parseFloat(e.target.value) : null)}
-                        className="h-8 w-32 text-right"
-                      />
-                      <span className="text-sm">€</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 border-t pt-2">
-                    <span className="font-medium">Total TTC</span>
-                    <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={totauxData.totalTTC ?? ''}
-                        onChange={(e) => updateTotauxField('totalTTC', e.target.value ? parseFloat(e.target.value) : null)}
-                        className="h-8 w-32 text-right font-bold"
-                      />
-                      <span className="text-sm font-bold">€</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Location Tab */}
-        <TabsContent value="location" className="mt-4">
+        {/* Base Taux Tab */}
+        <TabsContent value="basetaux" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Conditions de location</CardTitle>
+              <CardTitle className="text-lg">Base Taux</CardTitle>
+              <CardDescription>Données fixes (lecture seule)</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location-duree">Durée (mois)</Label>
-                  <Input
-                    id="location-duree"
-                    type="number"
-                    min="1"
-                    value={locationData.duree ?? ''}
-                    onChange={(e) => updateLocationField('duree', e.target.value ? parseInt(e.target.value) : null)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location-loyer">Loyer mensuel HT (€)</Label>
-                  <Input
-                    id="location-loyer"
-                    type="number"
-                    step="0.01"
-                    value={locationData.loyerMensuel ?? ''}
-                    onChange={(e) => updateLocationField('loyerMensuel', e.target.value ? parseFloat(e.target.value) : null)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location-total">Montant total (€)</Label>
-                  <Input
-                    id="location-total"
-                    type="number"
-                    step="0.01"
-                    value={locationData.montantTotal ?? ''}
-                    onChange={(e) => updateLocationField('montantTotal', e.target.value ? parseFloat(e.target.value) : null)}
-                  />
-                </div>
+            <CardContent>
+              <div className="rounded-md border max-h-96 overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Partenaire</TableHead>
+                      <TableHead className="text-right">Montant Min</TableHead>
+                      <TableHead className="text-right">Montant Max</TableHead>
+                      <TableHead className="text-right">Durée</TableHead>
+                      <TableHead className="text-right">Taux</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {BASE_TAUX_DATA.slice(0, 50).map((row, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{row.partenaire}</TableCell>
+                        <TableCell className="text-right">{row.montantMin.toLocaleString()} €</TableCell>
+                        <TableCell className="text-right">{row.montantMax.toLocaleString()} €</TableCell>
+                        <TableCell className="text-right">{row.dureeLocation} mois</TableCell>
+                        <TableCell className="text-right">{row.taux}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Affichage limité à 50 lignes. Total : {BASE_TAUX_DATA.length} entrées.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

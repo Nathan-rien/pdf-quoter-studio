@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { PDFParseResult, PDFProductLine } from '@/lib/pdf-import-parser';
+import { calculateAllMatriceValues } from '@/lib/rental-calculations';
+import { PARTENAIRES, Partenaire } from '@/data/base-taux';
 
 export type RentalWorkflowStep = 'import' | 'data' | 'preview' | 'export';
 
@@ -12,28 +14,26 @@ interface ClientData {
   email: string;
 }
 
-interface DevisData {
-  reference: string;
-  date: string;
-  validite: string;
-  numeroClient: string;
+interface MatriceData {
+  // Encart Location - Champs modifiables
+  duree: number | null;                    // Modifiable directement (mois)
+  montantInvestissement: number | null;    // = Total HT du PDF OU saisi manuellement
+  
+  // Encart Matrice - Champs modifiables
+  refinanceur: Partenaire | null;          // Sélection parmi liste fixe
+  margeAppliquee: number;                  // Modifiable (défaut 6%)
+  
+  // Toggle affichage
+  showCoutLocatifAnnuel: boolean;
 }
 
-interface CommercialData {
-  nom: string;
-  email: string;
-}
-
-interface LocationData {
-  duree: number | null;
-  loyerMensuel: number | null;
-  montantTotal: number | null;
-}
-
-interface TotauxData {
-  totalHT: number | null;
-  tva: number | null;
-  totalTTC: number | null;
+// Options service pour le calcul des services inclus
+interface OptionService {
+  id: string;
+  name: string;
+  description: string;
+  price: number | null;
+  selected: boolean;
 }
 
 interface PDFImportStatus {
@@ -47,13 +47,17 @@ interface RentalProposalState {
   // Import status
   pdfImportStatus: PDFImportStatus;
   
-  // Extracted data
+  // Client data
   clientData: ClientData;
-  devisData: DevisData;
-  commercialData: CommercialData;
+  
+  // Matrice data (replaces devis, location, etc.)
+  matriceData: MatriceData;
+  
+  // Lignes produits (Invest tab)
   lignesData: PDFProductLine[];
-  locationData: LocationData;
-  totauxData: TotauxData;
+  
+  // Options services
+  optionsServices: OptionService[];
   
   // Workflow
   currentStep: RentalWorkflowStep;
@@ -65,15 +69,26 @@ interface RentalProposalActions {
   // Import
   importFromPDF: (result: PDFParseResult, fileName: string) => void;
   
-  // Update data
+  // Client data
   updateClientField: (field: keyof ClientData, value: string) => void;
-  updateDevisField: (field: keyof DevisData, value: string) => void;
-  updateCommercialField: (field: keyof CommercialData, value: string) => void;
-  updateLocationField: (field: keyof LocationData, value: number | null) => void;
-  updateTotauxField: (field: keyof TotauxData, value: number | null) => void;
+  
+  // Matrice data
+  updateMatriceField: <K extends keyof MatriceData>(field: K, value: MatriceData[K]) => void;
+  
+  // Lignes produits
   updateLigne: (index: number, updates: Partial<PDFProductLine>) => void;
   addLigne: () => void;
   deleteLigne: (index: number) => void;
+  
+  // Options services
+  addOptionService: (name: string, description: string, price: number | null) => void;
+  updateOptionService: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
+  deleteOptionService: (id: string) => void;
+  toggleOptionService: (id: string) => void;
+  
+  // Computed values (getters)
+  getCalculatedValues: () => ReturnType<typeof calculateAllMatriceValues>;
+  getSelectedOptionsPrices: () => (number | null)[];
   
   // Workflow
   setCurrentStep: (step: RentalWorkflowStep) => void;
@@ -94,28 +109,12 @@ const initialClientData: ClientData = {
   email: '',
 };
 
-const initialDevisData: DevisData = {
-  reference: '',
-  date: '',
-  validite: '',
-  numeroClient: '',
-};
-
-const initialCommercialData: CommercialData = {
-  nom: '',
-  email: '',
-};
-
-const initialLocationData: LocationData = {
-  duree: null,
-  loyerMensuel: null,
-  montantTotal: null,
-};
-
-const initialTotauxData: TotauxData = {
-  totalHT: null,
-  tva: null,
-  totalTTC: null,
+const initialMatriceData: MatriceData = {
+  duree: 36,
+  montantInvestissement: null,
+  refinanceur: 'Lixxbail 1',
+  margeAppliquee: 6,
+  showCoutLocatifAnnuel: true,
 };
 
 const initialPDFImportStatus: PDFImportStatus = {
@@ -128,11 +127,9 @@ const initialPDFImportStatus: PDFImportStatus = {
 const initialState: RentalProposalState = {
   pdfImportStatus: initialPDFImportStatus,
   clientData: initialClientData,
-  devisData: initialDevisData,
-  commercialData: initialCommercialData,
+  matriceData: initialMatriceData,
   lignesData: [],
-  locationData: initialLocationData,
-  totauxData: initialTotauxData,
+  optionsServices: [],
   currentStep: 'import',
   hasUnsavedChanges: false,
   isActive: false,
@@ -142,6 +139,9 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
   ...initialState,
 
   importFromPDF: (result, fileName) => {
+    // Calculer le montant investissement depuis Total HT du PDF
+    const montantInvestissement = result.totaux.totalHT;
+    
     set({
       pdfImportStatus: {
         isImported: true,
@@ -157,27 +157,13 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         telephone: result.client.telephone || '',
         email: result.client.email || '',
       },
-      devisData: {
-        reference: result.devis.reference || '',
-        date: result.devis.date || '',
-        validite: result.devis.validite || '',
-        numeroClient: result.devis.numeroClient || '',
-      },
-      commercialData: {
-        nom: result.commercial.nom || '',
-        email: result.commercial.email || '',
+      matriceData: {
+        ...initialMatriceData,
+        montantInvestissement,
+        // Extraire la durée du PDF si disponible
+        duree: result.location.duree ?? 36,
       },
       lignesData: result.lignes,
-      locationData: {
-        duree: result.location.duree,
-        loyerMensuel: result.location.loyerMensuel,
-        montantTotal: result.location.montantTotal,
-      },
-      totauxData: {
-        totalHT: result.totaux.totalHT,
-        tva: result.totaux.tva,
-        totalTTC: result.totaux.totalTTC,
-      },
       currentStep: 'data',
       hasUnsavedChanges: true,
       isActive: true,
@@ -191,30 +177,9 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
     }));
   },
 
-  updateDevisField: (field, value) => {
+  updateMatriceField: (field, value) => {
     set(state => ({
-      devisData: { ...state.devisData, [field]: value },
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  updateCommercialField: (field, value) => {
-    set(state => ({
-      commercialData: { ...state.commercialData, [field]: value },
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  updateLocationField: (field, value) => {
-    set(state => ({
-      locationData: { ...state.locationData, [field]: value },
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  updateTotauxField: (field, value) => {
-    set(state => ({
-      totauxData: { ...state.totauxData, [field]: value },
+      matriceData: { ...state.matriceData, [field]: value },
       hasUnsavedChanges: true,
     }));
   },
@@ -251,6 +216,64 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       lignesData: state.lignesData.filter((_, i) => i !== index),
       hasUnsavedChanges: true,
     }));
+  },
+
+  addOptionService: (name, description, price) => {
+    const id = `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    set(state => ({
+      optionsServices: [
+        ...state.optionsServices,
+        { id, name, description, price, selected: true },
+      ],
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  updateOptionService: (id, updates) => {
+    set(state => ({
+      optionsServices: state.optionsServices.map(opt =>
+        opt.id === id ? { ...opt, ...updates } : opt
+      ),
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  deleteOptionService: (id) => {
+    set(state => ({
+      optionsServices: state.optionsServices.filter(opt => opt.id !== id),
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  toggleOptionService: (id) => {
+    set(state => ({
+      optionsServices: state.optionsServices.map(opt =>
+        opt.id === id ? { ...opt, selected: !opt.selected } : opt
+      ),
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  getSelectedOptionsPrices: () => {
+    const state = get();
+    return state.optionsServices
+      .filter(opt => opt.selected)
+      .map(opt => opt.price);
+  },
+
+  getCalculatedValues: () => {
+    const state = get();
+    const optionsPrices = state.optionsServices
+      .filter(opt => opt.selected)
+      .map(opt => opt.price);
+    
+    return calculateAllMatriceValues(
+      state.matriceData.montantInvestissement,
+      state.matriceData.duree,
+      state.matriceData.refinanceur,
+      state.matriceData.margeAppliquee,
+      optionsPrices
+    );
   },
 
   setCurrentStep: (step) => {
@@ -300,3 +323,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
     });
   },
 }));
+
+// Export partenaires for use in components
+export { PARTENAIRES };
+export type { Partenaire };
