@@ -276,7 +276,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   let totalsFound = false;
 
   // Preferred: locate the "TOTAL HT ... TVA 20% ... TOTAL TTC" header (last occurrence),
-  // then read the first 3 monetary amounts that follow.
+  // then read the first 3 *significant* monetary amounts that follow.
   const headerMatches = [...text.matchAll(
     new RegExp(`TOTAL\\s*HT[\\s\\S]{0,160}?TVA\\s*20\\s*%?[\\s\\S]{0,160}?TOTAL\\s*TTC`, 'gi')
   )];
@@ -284,13 +284,18 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   if (headerMatches.length) {
     const header = headerMatches.at(-1)!;
     const start = header.index ?? 0;
-    const slice = text.slice(start, Math.min(text.length, start + 1400));
-    const vals = [...slice.matchAll(new RegExp(`${money}\\s*€`, 'g'))].map((m) => m[1]);
+    const slice = text.slice(start, Math.min(text.length, start + 2000));
 
-    if (vals.length >= 3) {
-      result.totaux!.totalHT = parseNumber(vals[0]);
-      result.totaux!.tva = parseNumber(vals[1]);
-      result.totaux!.totalTTC = parseNumber(vals[2]);
+    const rawVals = [...slice.matchAll(new RegExp(`${money}\\s*€`, 'g'))].map((m) => m[1]);
+    const parsedVals = rawVals
+      .map((v) => parseNumber(v))
+      // Filter out tiny amounts like eco-taxes that can appear near the totals block
+      .filter((n): n is number => n !== null && Math.abs(n) >= 100);
+
+    if (parsedVals.length >= 3) {
+      result.totaux!.totalHT = parsedVals[0];
+      result.totaux!.tva = parsedVals[1];
+      result.totaux!.totalTTC = parsedVals[2];
       totalsFound = true;
     }
   }
@@ -299,37 +304,29 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   if (!totalsFound) {
     const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
     if (totalHTMatches.length) {
-      result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
+      const v = parseNumber(totalHTMatches.at(-1)![1]);
+      if (v !== null && Math.abs(v) >= 100) result.totaux!.totalHT = v;
     }
 
     const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
     if (tvaMatches.length) {
-      result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
+      const v = parseNumber(tvaMatches.at(-1)![1]);
+      if (v !== null && Math.abs(v) >= 100) result.totaux!.tva = v;
     }
 
     const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
     if (totalTTCMatches.length) {
-      result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
+      const v = parseNumber(totalTTCMatches.at(-1)![1]);
+      if (v !== null && Math.abs(v) >= 100) result.totaux!.totalTTC = v;
     }
+
+    // Mark as found only if we got all three totals from the PDF.
+    totalsFound =
+      result.totaux!.totalHT !== null &&
+      result.totaux!.tva !== null &&
+      result.totaux!.totalTTC !== null;
   }
 
-  // 3) Fallback: explicit labels (older layouts)
-  if (!totalsFound) {
-    const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT\\s*:?\\s*${money}\\s*€`, 'gi'))];
-    if (totalHTMatches.length) {
-      result.totaux!.totalHT = parseNumber(totalHTMatches.at(-1)![1]);
-    }
-
-    const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\n]*${money}\\s*€`, 'gi'))];
-    if (tvaMatches.length) {
-      result.totaux!.tva = parseNumber(tvaMatches.at(-1)![1]);
-    }
-
-    const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\n]*${money}\\s*€`, 'gi'))];
-    if (totalTTCMatches.length) {
-      result.totaux!.totalTTC = parseNumber(totalTTCMatches.at(-1)![1]);
-    }
-  }
 
   // Parse product lines - accept codes with 5+ digits (some products like 18829, 98802 have short codes)
   const lineRegex = new RegExp(`^(\\d{5,})\\s+(.+?)\\s+${money}\\s*€\\s+(\\d+)\\s+${money}\\s*€$`, 'i');
