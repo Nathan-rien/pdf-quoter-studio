@@ -514,28 +514,11 @@ export function ElementProperties() {
 
         {selectedElement.type === 'text' && textContent && (
           <>
-            {/* Contenu texte avec éditeur riche */}
-            <div className="space-y-2">
-              <Label>Texte</Label>
-              <RichTextEditor
-                value={textContent.htmlContent || textContent.text}
-                onChange={(html) => {
-                  // Extraire le texte brut du HTML pour fallback
-                  const tempDiv = document.createElement('div');
-                  tempDiv.innerHTML = html;
-                  const plainText = tempDiv.textContent || tempDiv.innerText || '';
-                  handleTextChange({ 
-                    htmlContent: html,
-                    text: plainText
-                  });
-                }}
-                disabled={!isEditable}
-                fontFamily={textContent.fontFamily}
-                fontSize={textContent.fontSize}
-                color={textContent.color}
-              />
-              <p className="text-xs text-muted-foreground">
-                Sélectionnez du texte puis cliquez sur B, I ou U pour le formater
+            {/* Info édition inline */}
+            <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <p className="flex items-center gap-2">
+                <Edit3 className="h-4 w-4" />
+                Double-cliquez sur le texte dans le canvas pour l'éditer
               </p>
             </div>
 
