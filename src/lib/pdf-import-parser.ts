@@ -331,8 +331,8 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Parse product lines (works best when extractTextWithPdfJs outputs line-like text)
-  const lineRegex = new RegExp(`^(\\d{8,})\\s+(.+?)\\s+${money}\\s*€\\s+(\\d+)\\s+${money}\\s*€$`, 'i');
+  // Parse product lines - accept codes with 5+ digits (some products like 18829, 98802 have short codes)
+  const lineRegex = new RegExp(`^(\\d{5,})\\s+(.+?)\\s+${money}\\s*€\\s+(\\d+)\\s+${money}\\s*€$`, 'i');
   for (const line of text.split(/\r?\n/)) {
     const m = line.trim().match(lineRegex);
     if (!m) continue;
