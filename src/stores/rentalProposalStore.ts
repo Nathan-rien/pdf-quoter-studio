@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { PDFParseResult, PDFProductLine } from '@/lib/pdf-import-parser';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
@@ -15,11 +16,11 @@ interface ClientData {
 }
 
 interface MatriceData {
-  // Encart Location - Champs modifiables
+  // Encart Saisie - Champs modifiables
   duree: number | null;                    // Modifiable directement (mois)
   montantInvestissement: number | null;    // = Total HT du PDF OU saisi manuellement
   
-  // Encart Matrice - Champs modifiables
+  // Encart Données - Champs modifiables
   refinanceur: Partenaire | null;          // Sélection parmi liste fixe
   margeAppliquee: number;                  // Modifiable (défaut 6%)
   
@@ -40,7 +41,7 @@ interface PDFImportStatus {
   isImported: boolean;
   fileName: string | null;
   source: 'cybertek' | 'grosbill' | 'unknown' | null;
-  importDate: Date | null;
+  importDate: string | null; // Changed to string for JSON serialization
 }
 
 interface RentalProposalState {
@@ -135,196 +136,212 @@ const initialState: RentalProposalState = {
   isActive: false,
 };
 
-export const useRentalProposalStore = create<RentalProposalState & RentalProposalActions>((set, get) => ({
-  ...initialState,
-
-  importFromPDF: (result, fileName) => {
-    // Calculer le montant investissement depuis Total HT du PDF
-    const montantInvestissement = result.totaux.totalHT;
-    
-    set({
-      pdfImportStatus: {
-        isImported: true,
-        fileName,
-        source: result.source,
-        importDate: new Date(),
-      },
-      clientData: {
-        nom: result.client.nom || '',
-        adresse: result.client.adresse || '',
-        codePostal: result.client.codePostal || '',
-        ville: result.client.ville || '',
-        telephone: result.client.telephone || '',
-        email: result.client.email || '',
-      },
-      matriceData: {
-        ...initialMatriceData,
-        montantInvestissement,
-        // Extraire la durée du PDF si disponible
-        duree: result.location.duree ?? 36,
-      },
-      lignesData: result.lignes,
-      currentStep: 'data',
-      hasUnsavedChanges: true,
-      isActive: true,
-    });
-  },
-
-  updateClientField: (field, value) => {
-    set(state => ({
-      clientData: { ...state.clientData, [field]: value },
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  updateMatriceField: (field, value) => {
-    set(state => ({
-      matriceData: { ...state.matriceData, [field]: value },
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  updateLigne: (index, updates) => {
-    set(state => {
-      const newLignes = [...state.lignesData];
-      if (newLignes[index]) {
-        newLignes[index] = { ...newLignes[index], ...updates };
-        // Recalculate totalHT if quantity or unit price changed
-        if (updates.quantite !== undefined || updates.prixUnitaire !== undefined) {
-          const ligne = newLignes[index];
-          if (ligne.prixUnitaire !== null) {
-            ligne.totalHT = Math.round(ligne.prixUnitaire * ligne.quantite * 100) / 100;
-          }
-        }
-      }
-      return { lignesData: newLignes, hasUnsavedChanges: true };
-    });
-  },
-
-  addLigne: () => {
-    set(state => ({
-      lignesData: [
-        ...state.lignesData,
-        { reference: null, designation: '', prixUnitaire: null, quantite: 1, totalHT: 0 },
-      ],
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  deleteLigne: (index) => {
-    set(state => ({
-      lignesData: state.lignesData.filter((_, i) => i !== index),
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  addOptionService: (name, description, price) => {
-    const id = `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    set(state => ({
-      optionsServices: [
-        ...state.optionsServices,
-        { id, name, description, price, selected: true },
-      ],
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  updateOptionService: (id, updates) => {
-    set(state => ({
-      optionsServices: state.optionsServices.map(opt =>
-        opt.id === id ? { ...opt, ...updates } : opt
-      ),
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  deleteOptionService: (id) => {
-    set(state => ({
-      optionsServices: state.optionsServices.filter(opt => opt.id !== id),
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  toggleOptionService: (id) => {
-    set(state => ({
-      optionsServices: state.optionsServices.map(opt =>
-        opt.id === id ? { ...opt, selected: !opt.selected } : opt
-      ),
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  getSelectedOptionsPrices: () => {
-    const state = get();
-    return state.optionsServices
-      .filter(opt => opt.selected)
-      .map(opt => opt.price);
-  },
-
-  getCalculatedValues: () => {
-    const state = get();
-    const optionsPrices = state.optionsServices
-      .filter(opt => opt.selected)
-      .map(opt => opt.price);
-    
-    return calculateAllMatriceValues(
-      state.matriceData.montantInvestissement,
-      state.matriceData.duree,
-      state.matriceData.refinanceur,
-      state.matriceData.margeAppliquee,
-      optionsPrices
-    );
-  },
-
-  setCurrentStep: (step) => {
-    const state = get();
-    if (state.canNavigateToStep(step)) {
-      set({ currentStep: step });
-    }
-  },
-
-  canNavigateToStep: (step) => {
-    const state = get();
-    const stepOrder: RentalWorkflowStep[] = ['import', 'data', 'template', 'preview', 'export'];
-    const currentIndex = stepOrder.indexOf(state.currentStep);
-    const targetIndex = stepOrder.indexOf(step);
-
-    // Can always go back
-    if (targetIndex < currentIndex) return true;
-
-    // Cannot skip steps
-    if (targetIndex > currentIndex + 1) return false;
-
-    // Specific conditions
-    switch (step) {
-      case 'data':
-        return state.pdfImportStatus.isImported;
-      case 'template':
-        return state.pdfImportStatus.isImported && state.lignesData.length > 0;
-      case 'preview':
-        return state.pdfImportStatus.isImported && state.lignesData.length > 0;
-      case 'export':
-        return state.pdfImportStatus.isImported && state.lignesData.length > 0;
-      default:
-        return true;
-    }
-  },
-
-  markAsSaved: () => {
-    set({ hasUnsavedChanges: false });
-  },
-
-  resetAll: () => {
-    set(initialState);
-  },
-
-  startNewProposal: () => {
-    set({
+export const useRentalProposalStore = create<RentalProposalState & RentalProposalActions>()(
+  persist(
+    (set, get) => ({
       ...initialState,
-      isActive: true,
-    });
-  },
-}));
+
+      importFromPDF: (result, fileName) => {
+        // Calculer le montant investissement depuis Total HT du PDF
+        const montantInvestissement = result.totaux.totalHT;
+        
+        set({
+          pdfImportStatus: {
+            isImported: true,
+            fileName,
+            source: result.source,
+            importDate: new Date().toISOString(),
+          },
+          clientData: {
+            nom: result.client.nom || '',
+            adresse: result.client.adresse || '',
+            codePostal: result.client.codePostal || '',
+            ville: result.client.ville || '',
+            telephone: result.client.telephone || '',
+            email: result.client.email || '',
+          },
+          matriceData: {
+            ...initialMatriceData,
+            montantInvestissement,
+            // Extraire la durée du PDF si disponible
+            duree: result.location.duree ?? 36,
+          },
+          lignesData: result.lignes,
+          currentStep: 'data',
+          hasUnsavedChanges: true,
+          isActive: true,
+        });
+      },
+
+      updateClientField: (field, value) => {
+        set(state => ({
+          clientData: { ...state.clientData, [field]: value },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateMatriceField: (field, value) => {
+        set(state => ({
+          matriceData: { ...state.matriceData, [field]: value },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateLigne: (index, updates) => {
+        set(state => {
+          const newLignes = [...state.lignesData];
+          if (newLignes[index]) {
+            newLignes[index] = { ...newLignes[index], ...updates };
+            // Recalculate totalHT if quantity or unit price changed
+            if (updates.quantite !== undefined || updates.prixUnitaire !== undefined) {
+              const ligne = newLignes[index];
+              if (ligne.prixUnitaire !== null) {
+                ligne.totalHT = Math.round(ligne.prixUnitaire * ligne.quantite * 100) / 100;
+              }
+            }
+          }
+          return { lignesData: newLignes, hasUnsavedChanges: true };
+        });
+      },
+
+      addLigne: () => {
+        set(state => ({
+          lignesData: [
+            ...state.lignesData,
+            { reference: null, designation: '', prixUnitaire: null, quantite: 1, totalHT: 0 },
+          ],
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      deleteLigne: (index) => {
+        set(state => ({
+          lignesData: state.lignesData.filter((_, i) => i !== index),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      addOptionService: (name, description, price) => {
+        const id = `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        set(state => ({
+          optionsServices: [
+            ...state.optionsServices,
+            { id, name, description, price, selected: true },
+          ],
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateOptionService: (id, updates) => {
+        set(state => ({
+          optionsServices: state.optionsServices.map(opt =>
+            opt.id === id ? { ...opt, ...updates } : opt
+          ),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      deleteOptionService: (id) => {
+        set(state => ({
+          optionsServices: state.optionsServices.filter(opt => opt.id !== id),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      toggleOptionService: (id) => {
+        set(state => ({
+          optionsServices: state.optionsServices.map(opt =>
+            opt.id === id ? { ...opt, selected: !opt.selected } : opt
+          ),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      getSelectedOptionsPrices: () => {
+        const state = get();
+        return state.optionsServices
+          .filter(opt => opt.selected)
+          .map(opt => opt.price);
+      },
+
+      getCalculatedValues: () => {
+        const state = get();
+        const optionsPrices = state.optionsServices
+          .filter(opt => opt.selected)
+          .map(opt => opt.price);
+        
+        return calculateAllMatriceValues(
+          state.matriceData.montantInvestissement,
+          state.matriceData.duree,
+          state.matriceData.refinanceur,
+          state.matriceData.margeAppliquee,
+          optionsPrices
+        );
+      },
+
+      setCurrentStep: (step) => {
+        const state = get();
+        if (state.canNavigateToStep(step)) {
+          set({ currentStep: step });
+        }
+      },
+
+      canNavigateToStep: (step) => {
+        const state = get();
+        const stepOrder: RentalWorkflowStep[] = ['import', 'data', 'template', 'preview', 'export'];
+        const currentIndex = stepOrder.indexOf(state.currentStep);
+        const targetIndex = stepOrder.indexOf(step);
+
+        // Can always go back
+        if (targetIndex < currentIndex) return true;
+
+        // Cannot skip steps
+        if (targetIndex > currentIndex + 1) return false;
+
+        // Specific conditions
+        switch (step) {
+          case 'data':
+            return state.pdfImportStatus.isImported;
+          case 'template':
+            return state.pdfImportStatus.isImported && state.lignesData.length > 0;
+          case 'preview':
+            return state.pdfImportStatus.isImported && state.lignesData.length > 0;
+          case 'export':
+            return state.pdfImportStatus.isImported && state.lignesData.length > 0;
+          default:
+            return true;
+        }
+      },
+
+      markAsSaved: () => {
+        set({ hasUnsavedChanges: false });
+      },
+
+      resetAll: () => {
+        set(initialState);
+      },
+
+      startNewProposal: () => {
+        set({
+          ...initialState,
+          isActive: true,
+        });
+      },
+    }),
+    {
+      name: 'rental-proposal-storage',
+      partialize: (state) => ({
+        pdfImportStatus: state.pdfImportStatus,
+        clientData: state.clientData,
+        matriceData: state.matriceData,
+        lignesData: state.lignesData,
+        optionsServices: state.optionsServices,
+        currentStep: state.currentStep,
+        isActive: state.isActive,
+      }),
+    }
+  )
+);
 
 // Export partenaires for use in components
 export { PARTENAIRES };
