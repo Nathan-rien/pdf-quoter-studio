@@ -50,6 +50,9 @@ interface TemplateEditorStore extends TemplateEditorState {
   clearSelection: () => void;
   getSelectedElements: () => EditableElement[];
   setEditorMode: (mode: 'view' | 'edit') => void;
+  
+  // Édition inline
+  setInlineEditing: (elementId: string | null) => void;
 
   // Getter pour l'élément sélectionné (dynamique)
   getSelectedElement: () => EditableElement | null;
@@ -212,7 +215,8 @@ const initialState: TemplateEditorState = {
   hasUnsavedChanges: false,
   addElementMode: 'none',
   selectedShapeType: null,
-  selectedIconName: null
+  selectedIconName: null,
+  inlineEditingElementId: null
 };
 
 // Helper pour convertir les strings en dates lors de la désérialisation
@@ -511,6 +515,11 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   setEditorMode: (mode) => {
     set({ editorMode: mode });
+  },
+
+  // Édition inline
+  setInlineEditing: (elementId) => {
+    set({ inlineEditingElementId: elementId });
   },
 
   // Édition (protégée)

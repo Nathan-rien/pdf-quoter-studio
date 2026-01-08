@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DynamicZoneOverlay } from "./DynamicZoneOverlay";
+import { FloatingToolbar } from "./FloatingToolbar";
+import { InlineTextEditor } from "./InlineTextEditor";
 import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
@@ -17,7 +19,7 @@ import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, M
 import { icons } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
-import type { TextContent, ImageContent, ShapeContent, IconContent } from "@/types/template-editor";
+import type { TextContent, ImageContent, ShapeContent, IconContent, TextAlign, AllowedFontSize } from "@/types/template-editor";
 import { toast } from "sonner";
 
 // Configuration des zones dynamiques (positions simulées pour le rendu visuel)
@@ -47,6 +49,7 @@ export function EditorCanvas() {
     addElementMode,
     selectedShapeType,
     selectedIconName,
+    inlineEditingElementId,
     selectElement,
     toggleElementSelection,
     selectMultipleElements,
@@ -56,8 +59,10 @@ export function EditorCanvas() {
     addShape,
     addIcon,
     setAddElementMode,
+    setInlineEditing,
     updateElementPosition,
     updateElementSize,
+    updateTextContent,
     updateDynamicZonePosition,
     moveSelectedElements,
     copySelectedElements,
@@ -80,6 +85,9 @@ export function EditorCanvas() {
   const [lassoStart, setLassoStart] = useState<{ x: number; y: number } | null>(null);
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
   const justFinishedLassoRef = useRef(false);
+  
+  // État pour la position de la toolbar flottante
+  const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -184,6 +192,15 @@ export function EditorCanvas() {
   
   const isEditable = currentVersion?.status === 'brouillon' && editorMode === 'edit';
   const isAddMode = addElementMode !== 'none';
+  const isInlineEditing = inlineEditingElementId !== null;
+
+  // Élément en édition inline
+  const inlineEditingElement = inlineEditingElementId 
+    ? pageContent?.elements.find(e => e.id === inlineEditingElementId)
+    : null;
+  const inlineTextContent = inlineEditingElement?.type === 'text' 
+    ? inlineEditingElement.content as TextContent 
+    : null;
 
   // Convertir position absolue en position relative canvas
   const getElementStyle = (element: { position: { x: number; y: number }; size: { width: number; height: number }; type?: string }) => {
@@ -535,7 +552,7 @@ export function EditorCanvas() {
 
   const handleElementClick = (elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDragging) return;
+    if (isDragging || isInlineEditing) return;
     
     // Multi-sélection avec Ctrl ou Cmd
     if (e.ctrlKey || e.metaKey) {
@@ -553,12 +570,88 @@ export function EditorCanvas() {
     }
   };
 
+  // Double-clic pour l'édition inline du texte
+  const handleElementDoubleClick = useCallback((elementId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isEditable) return;
+    
+    const element = pageContent?.elements.find(el => el.id === elementId);
+    if (!element || element.isDynamic || element.type !== 'text') return;
+    
+    // Activer l'édition inline
+    selectElement(elementId);
+    setInlineEditing(elementId);
+    
+    // Calculer la position de la toolbar (au-dessus de l'élément)
+    if (canvasRef.current) {
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const elementX = (element.position.x / CANVAS_SCALE.width) * canvasRect.width;
+      const elementY = (element.position.y / CANVAS_SCALE.height) * canvasRect.height;
+      const elementWidth = (element.size.width / CANVAS_SCALE.width) * canvasRect.width;
+      
+      setToolbarPosition({
+        x: elementX + elementWidth / 2,
+        y: elementY - 45, // 45px au-dessus de l'élément
+      });
+    }
+  }, [isEditable, pageContent, selectElement, setInlineEditing]);
+
+  // Fermer l'édition inline
+  const handleExitInlineEditing = useCallback(() => {
+    setInlineEditing(null);
+    setToolbarPosition(null);
+  }, [setInlineEditing]);
+
+  // Mettre à jour le contenu du texte depuis l'éditeur inline
+  const handleInlineContentChange = useCallback((html: string, plainText: string) => {
+    if (inlineEditingElementId) {
+      updateTextContent(inlineEditingElementId, { 
+        htmlContent: html,
+        text: plainText 
+      });
+    }
+  }, [inlineEditingElementId, updateTextContent]);
+
+  // Actions de la toolbar flottante
+  const handleToolbarBold = useCallback(() => {
+    document.execCommand('bold', false);
+  }, []);
+
+  const handleToolbarItalic = useCallback(() => {
+    document.execCommand('italic', false);
+  }, []);
+
+  const handleToolbarUnderline = useCallback(() => {
+    document.execCommand('underline', false);
+  }, []);
+
+  const handleToolbarAlignChange = useCallback((align: TextAlign) => {
+    if (inlineEditingElementId) {
+      updateTextContent(inlineEditingElementId, { textAlign: align });
+    }
+  }, [inlineEditingElementId, updateTextContent]);
+
+  const handleToolbarFontSizeChange = useCallback((size: AllowedFontSize) => {
+    if (inlineEditingElementId) {
+      updateTextContent(inlineEditingElementId, { fontSize: size });
+    }
+  }, [inlineEditingElementId, updateTextContent]);
+
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Ne pas réagir au click si on vient de terminer un lasso ou un drag
     if (isDragging || isDraggingZone || isResizing) return;
     
     // Si on vient de finir un lasso avec sélection, ne pas clear
     if (justFinishedLassoRef.current) return;
+    
+    // Si en édition inline, clic sur canvas = sortir de l'édition
+    if (isInlineEditing) {
+      // Ne pas fermer si on clique sur la toolbar
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-floating-toolbar]')) return;
+      handleExitInlineEditing();
+      return;
+    }
     
     // Si on a cliqué sur un élément, laisser handleElementClick gérer
     const target = e.target as HTMLElement;
@@ -572,13 +665,13 @@ export function EditorCanvas() {
       
       try {
         if (addElementMode === 'icon' && selectedIconName) {
-          const newElement = addIcon(selectedIconName, { x: Math.round(x), y: Math.round(y) });
+          addIcon(selectedIconName, { x: Math.round(x), y: Math.round(y) });
           toast.success(`Icône ajoutée`);
         } else if (addElementMode === 'shape' && selectedShapeType) {
-          const newElement = addShape(selectedShapeType, { x: Math.round(x), y: Math.round(y) });
+          addShape(selectedShapeType, { x: Math.round(x), y: Math.round(y) });
           toast.success(`Forme ajoutée`);
         } else if (addElementMode === 'text' || addElementMode === 'image') {
-          const newElement = addElement(addElementMode, { x: Math.round(x), y: Math.round(y) });
+          addElement(addElementMode, { x: Math.round(x), y: Math.round(y) });
           toast.success(`${addElementMode === 'image' ? 'Image' : 'Texte'} ajouté(e)`);
         }
       } catch (error) {
@@ -668,6 +761,23 @@ export function EditorCanvas() {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
           >
+          {/* Barre d'outils flottante pour l'édition inline */}
+          {isInlineEditing && inlineTextContent && toolbarPosition && (
+            <FloatingToolbar
+              data-floating-toolbar
+              position={toolbarPosition}
+              fontSize={inlineTextContent.fontSize}
+              textAlign={inlineTextContent.textAlign || 'left'}
+              onFontSizeChange={handleToolbarFontSizeChange}
+              onAlignChange={handleToolbarAlignChange}
+              onBold={handleToolbarBold}
+              onItalic={handleToolbarItalic}
+              onUnderline={handleToolbarUnderline}
+              onConfirm={handleExitInlineEditing}
+              onCancel={handleExitInlineEditing}
+            />
+          )}
+
           {/* Rectangle de sélection lasso */}
           {isLassoing && lassoStart && lassoEnd && (
             <div
@@ -889,10 +999,11 @@ export function EditorCanvas() {
               return (
                 <div
                   key={element.id}
+                  data-element-id={element.id}
                   className={cn(
                     "absolute rounded-sm",
                     !isDragging && !isResizing && "transition-all duration-150",
-                    isEditable && !element.isDynamic && !(shapeContent?.isLocked) ? "cursor-grab" : "cursor-pointer",
+                    isEditable && !element.isDynamic && !(shapeContent?.isLocked) && !isInlineEditing ? "cursor-grab" : "cursor-pointer",
                     isDraggedElement && "cursor-grabbing opacity-80 shadow-lg scale-[1.02]",
                     isResizingElement && "ring-2 ring-primary",
                     isSelected 
@@ -905,11 +1016,19 @@ export function EditorCanvas() {
                     ...style,
                     zIndex: isSelected ? 20 : (element.zIndex || 0) + 10
                   }}
-                  onMouseDown={(e) => handleMouseDown(element.id, e)}
+                  onMouseDown={(e) => !isInlineEditing && handleMouseDown(element.id, e)}
                   onClick={(e) => handleElementClick(element.id, e)}
-                  title={isEditable ? (selectedElementIds.length > 1 ? "Ctrl+clic pour modifier la sélection" : "Glisser pour déplacer, Ctrl+clic pour multi-sélection") : "Mode lecture seule"}
+                  onDoubleClick={(e) => handleElementDoubleClick(element.id, e)}
+                  title={isEditable ? (isTextElement ? "Double-clic pour éditer" : "Glisser pour déplacer") : "Mode lecture seule"}
                 >
-                  {isTextElement && textContent && (
+                  {/* Édition inline du texte */}
+                  {isTextElement && textContent && inlineEditingElementId === element.id ? (
+                    <InlineTextEditor
+                      content={textContent}
+                      onContentChange={handleInlineContentChange}
+                      onExit={handleExitInlineEditing}
+                    />
+                  ) : isTextElement && textContent ? (
                     <div 
                       className="px-0.5 py-px"
                       style={{
@@ -926,7 +1045,7 @@ export function EditorCanvas() {
                     >
                       <span className="whitespace-pre-wrap break-words">{renderTextContent()}</span>
                     </div>
-                  )}
+                  ) : null}
                   
                   {element.type === 'image' && (
                     <div 
