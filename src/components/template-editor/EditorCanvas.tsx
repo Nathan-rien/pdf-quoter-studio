@@ -641,6 +641,14 @@ export function EditorCanvas() {
     document.execCommand('underline', false);
   }, []);
 
+  const handleToolbarBulletList = useCallback(() => {
+    document.execCommand('insertUnorderedList', false);
+  }, []);
+
+  const handleToolbarNumberedList = useCallback(() => {
+    document.execCommand('insertOrderedList', false);
+  }, []);
+
   const handleToolbarAlignChange = useCallback((align: TextAlign) => {
     if (inlineEditingElementId) {
       updateTextContent(inlineEditingElementId, { textAlign: align });
@@ -788,6 +796,8 @@ export function EditorCanvas() {
               onBold={handleToolbarBold}
               onItalic={handleToolbarItalic}
               onUnderline={handleToolbarUnderline}
+              onBulletList={handleToolbarBulletList}
+              onNumberedList={handleToolbarNumberedList}
               onConfirm={handleExitInlineEditing}
               onCancel={handleExitInlineEditing}
             />
