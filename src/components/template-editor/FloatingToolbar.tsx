@@ -20,6 +20,8 @@ import {
   AlignCenter, 
   AlignRight, 
   AlignJustify,
+  List,
+  ListOrdered,
   Check,
   X
 } from "lucide-react";
@@ -36,6 +38,8 @@ interface FloatingToolbarProps {
   onBold: () => void;
   onItalic: () => void;
   onUnderline: () => void;
+  onBulletList: () => void;
+  onNumberedList: () => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -49,6 +53,8 @@ export function FloatingToolbar({
   onBold,
   onItalic,
   onUnderline,
+  onBulletList,
+  onNumberedList,
   onConfirm,
   onCancel,
 }: FloatingToolbarProps) {
@@ -64,7 +70,7 @@ export function FloatingToolbar({
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => {
         e.stopPropagation();
-        e.preventDefault(); // Empêcher le blur de l'éditeur
+        e.preventDefault();
       }}
     >
       {/* Formatage Gras / Italique / Souligné */}
@@ -94,6 +100,28 @@ export function FloatingToolbar({
         title="Souligné (Ctrl+U)"
       >
         <Underline className="h-4 w-4" />
+      </Button>
+
+      <Separator orientation="vertical" className="h-5 mx-1" />
+
+      {/* Listes */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={onBulletList}
+        title="Liste à puces"
+      >
+        <List className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={onNumberedList}
+        title="Liste numérotée"
+      >
+        <ListOrdered className="h-4 w-4" />
       </Button>
 
       <Separator orientation="vertical" className="h-5 mx-1" />
