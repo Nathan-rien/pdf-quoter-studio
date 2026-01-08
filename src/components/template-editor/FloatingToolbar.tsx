@@ -62,7 +62,10 @@ export function FloatingToolbar({
         transform: 'translateX(-50%)',
       }}
       onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        e.preventDefault(); // Empêcher le blur de l'éditeur
+      }}
     >
       {/* Formatage Gras / Italique / Souligné */}
       <Button
