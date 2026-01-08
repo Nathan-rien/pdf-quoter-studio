@@ -23,6 +23,10 @@ interface ImportResult {
     tva: number | null;
     totalTTC: number | null;
   };
+  debug?: {
+    snippet: string;
+    candidates: string[];
+  };
   error?: string;
 }
 
@@ -57,6 +61,16 @@ export function PDFImportZone({
         result.devis.reference ||
         result.totaux.totalHT;
 
+      // Lightweight debug (helps diagnose totals extraction without opening devtools)
+      const raw = result.rawText ?? '';
+      const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
+      const headerMatches = [...raw.matchAll(
+        new RegExp(`TOTAL\\s*HT[\\s\\S]{0,160}?TVA\\s*20\\s*%?[\\s\\S]{0,160}?TOTAL\\s*TTC`, 'gi')
+      )];
+      const start = headerMatches.length ? (headerMatches.at(-1)!.index ?? 0) : Math.max(0, raw.lastIndexOf('TOTAL HT'));
+      const snippet = raw.slice(start, Math.min(raw.length, start + 800));
+      const candidates = [...snippet.matchAll(new RegExp(`${money}\\s*€`, 'g'))].map((m) => m[1]).slice(0, 12);
+
       setImportResult({
         success: true,
         fileName: file.name,
@@ -67,6 +81,7 @@ export function PDFImportZone({
           tva: result.totaux.tva,
           totalTTC: result.totaux.totalTTC,
         },
+        debug: { snippet, candidates },
       });
       
       onImportSuccess(result, file.name);
@@ -146,7 +161,7 @@ export function PDFImportZone({
                   )}
                 </div>
                 {importResult.success ? (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       {importResult.lignesCount} ligne(s) de produit détectée(s)
                     </p>
@@ -154,6 +169,19 @@ export function PDFImportZone({
                       <p className="text-xs text-muted-foreground">
                         Totaux extraits — HT: {importResult.totals.totalHT ?? '—'} | TVA: {importResult.totals.tva ?? '—'} | TTC: {importResult.totals.totalTTC ?? '—'}
                       </p>
+                    )}
+                    {importResult.debug?.snippet && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-muted-foreground">Voir debug</summary>
+                        {importResult.debug.candidates.length > 0 && (
+                          <div className="mt-2 text-muted-foreground">
+                            Candidats détectés: {importResult.debug.candidates.join(' | ')}
+                          </div>
+                        )}
+                        <pre className="mt-2 max-h-64 overflow-auto rounded-md border bg-muted p-2 text-[11px] leading-snug text-foreground">
+{importResult.debug.snippet}
+                        </pre>
+                      </details>
                     )}
                   </div>
                 ) : (
