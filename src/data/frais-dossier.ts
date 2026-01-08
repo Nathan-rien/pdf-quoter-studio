@@ -13,7 +13,7 @@ export const FRAIS_DOSSIER: Record<string, number> = {
   'Olinn 2 PC autre marque': 135,
   'Olinn 2 Serveurs': 135,
   'Olinn 1 3D dental': 135,
-  'Realease 2': 0, // Nouveau partenaire - frais à confirmer
+  'Realease 2': 0,
 };
 
 /**
@@ -24,4 +24,32 @@ export const FRAIS_DOSSIER: Record<string, number> = {
 export function getFraisDossier(refinanceur: string | null): number | null {
   if (!refinanceur) return null;
   return FRAIS_DOSSIER[refinanceur] ?? null;
+}
+
+// Mapping des conditions de fin de contrat par refinanceur
+export const CONDITION_FIN_CONTRAT: Record<string, string> = {
+  // Reprise obligatoire loueur
+  'Olinn 2': 'Reprise obligatoire loueur',
+  'BNP VR 2': 'Reprise obligatoire loueur',
+  'Olinn 2 PC Leno/HP/Dell': 'Reprise obligatoire loueur',
+  'Olinn 2 PC autre marque': 'Reprise obligatoire loueur',
+  'Olinn 2 Serveurs': 'Reprise obligatoire loueur',
+  'Realease 2': 'Reprise obligatoire loueur',
+  
+  // Cession client possible
+  'Lixxbail 1': 'Cession client possible',
+  'Grenke 1': 'Cession client possible',
+  'Franfinance 1': 'Cession client possible',
+  'BNP Credit Bail 1': 'Cession client possible',
+  'Olinn 1 3D dental': 'Cession client possible',
+};
+
+/**
+ * Récupère la condition de fin de contrat pour un refinanceur donné
+ * @param refinanceur Le nom du refinanceur
+ * @returns La condition de fin de contrat, ou null si non trouvé
+ */
+export function getConditionFinContrat(refinanceur: string | null): string | null {
+  if (!refinanceur) return null;
+  return CONDITION_FIN_CONTRAT[refinanceur] ?? null;
 }

@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { BASE_TAUX_DATA } from '@/data/base-taux';
+import { getConditionFinContrat } from '@/data/frais-dossier';
 
 export function RentalDataEditor() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -198,13 +199,23 @@ export function RentalDataEditor() {
 
         {/* Matrice Tab */}
         <TabsContent value="matrice" className="mt-4 space-y-6">
-          {/* Encart Location */}
+          {/* Encart Saisie (anciennement Location) */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Location</CardTitle>
+              <CardTitle className="text-lg">Saisie</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="montant-invest">Montant investissement HT</Label>
+                  <Input
+                    id="montant-invest"
+                    type="number"
+                    step="0.01"
+                    value={matriceData.montantInvestissement ?? ''}
+                    onChange={(e) => updateMatriceField('montantInvestissement', e.target.value ? parseFloat(e.target.value) : null)}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="duree">Durée (mois)</Label>
                   <Input
@@ -217,41 +228,41 @@ export function RentalDataEditor() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="montant-invest">Montant investissement HT</Label>
+                  <Label htmlFor="refinanceur">Refinanceur</Label>
+                  <Select
+                    value={matriceData.refinanceur ?? ''}
+                    onValueChange={(value) => updateMatriceField('refinanceur', value as any)}
+                  >
+                    <SelectTrigger id="refinanceur">
+                      <SelectValue placeholder="Sélectionner..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PARTENAIRES.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="marge-appliquee">Marge appliquée (%)</Label>
                   <Input
-                    id="montant-invest"
+                    id="marge-appliquee"
                     type="number"
-                    step="0.01"
-                    value={matriceData.montantInvestissement ?? ''}
-                    onChange={(e) => updateMatriceField('montantInvestissement', e.target.value ? parseFloat(e.target.value) : null)}
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={matriceData.margeAppliquee}
+                    onChange={(e) => updateMatriceField('margeAppliquee', parseFloat(e.target.value) || 0)}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Loyer mensuel HT</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span className="font-medium">{formatNumber(calculatedValues.loyerMensuel)} €</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Coût locatif annuel</Label>
-                    <Switch
-                      checked={matriceData.showCoutLocatifAnnuel}
-                      onCheckedChange={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
-                    />
-                  </div>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span className="font-medium">{formatPercent(calculatedValues.coutLocatifAnnuel)}</span>
-                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Encart Matrice */}
+          {/* Encart Données (anciennement Matrice) */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Matrice</CardTitle>
+              <CardTitle className="text-lg">Données</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-4 gap-4">
@@ -288,46 +299,36 @@ export function RentalDataEditor() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="refinanceur">Refinanceur</Label>
-                  <Select
-                    value={matriceData.refinanceur ?? ''}
-                    onValueChange={(value) => updateMatriceField('refinanceur', value as any)}
-                  >
-                    <SelectTrigger id="refinanceur">
-                      <SelectValue placeholder="Sélectionner..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PARTENAIRES.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label>Coefficient</Label>
                   <div className="flex items-center h-10 px-3 bg-muted rounded-md">
                     <span>{calculatedValues.coefficient ?? '-'}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Coût du contrat</Label>
+                  <Label>Loyer mensuel HT</Label>
                   <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(calculatedValues.coutContrat)} €</span>
+                    <span className="font-medium">{formatNumber(calculatedValues.loyerMensuel)} €</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Coût locatif annuel</Label>
+                    <Switch
+                      checked={matriceData.showCoutLocatifAnnuel}
+                      onCheckedChange={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span className="font-medium">{formatPercent(calculatedValues.coutLocatifAnnuel)}</span>
                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="marge-appliquee">Marge appliquée (%)</Label>
-                  <Input
-                    id="marge-appliquee"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    value={matriceData.margeAppliquee}
-                    onChange={(e) => updateMatriceField('margeAppliquee', parseFloat(e.target.value) || 0)}
-                  />
+                  <Label>Coût du contrat</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(calculatedValues.coutContrat)} €</span>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Marge Loc</Label>
@@ -345,14 +346,19 @@ export function RentalDataEditor() {
               <CardTitle className="text-lg">Condition fin de contrat</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Reprise obligatoire loueur</Label>
-                  <Badge variant="secondary">Selon Bailleur/Loueur</Badge>
-                </div>
-                <div className="space-y-2">
-                  <Label>Cession client possible</Label>
-                  <Badge variant="secondary">Selon Bailleur/Loueur</Badge>
+                  <Label>Condition</Label>
+                  {matriceData.refinanceur ? (
+                    <Badge 
+                      variant={getConditionFinContrat(matriceData.refinanceur) === 'Reprise obligatoire loueur' ? 'destructive' : 'default'}
+                      className="text-sm"
+                    >
+                      {getConditionFinContrat(matriceData.refinanceur) ?? 'Non définie'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-sm">Sélectionnez un refinanceur</Badge>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Frais de dossier</Label>
@@ -563,7 +569,7 @@ export function RentalDataEditor() {
                         <TableCell>{row.partenaire}</TableCell>
                         <TableCell className="text-right">{row.montantMin.toLocaleString()} €</TableCell>
                         <TableCell className="text-right">{row.montantMax.toLocaleString()} €</TableCell>
-                        <TableCell className="text-right">{row.dureeTrimestres} trim.</TableCell>
+                        <TableCell className="text-right">{row.dureeMois} mois</TableCell>
                         <TableCell className="text-right">{row.taux}</TableCell>
                       </TableRow>
                     ))}
