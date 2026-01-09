@@ -21,7 +21,7 @@ export function lookupCoefficient(
   const match = BASE_TAUX_DATA.find(row =>
     row.partenaire === partenaire &&
     row.montantMin <= montant &&
-    row.montantMax > montant &&
+    row.montantMax >= montant &&
     row.dureeMois === dureeMois
   );
 
