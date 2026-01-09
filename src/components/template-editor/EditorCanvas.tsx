@@ -1073,7 +1073,7 @@ export function EditorCanvas() {
                         width: '100%',
                       }}
                     >
-                      <span className="whitespace-pre-wrap break-words">{renderTextContent()}</span>
+                      <div className="whitespace-pre-wrap break-words">{renderTextContent()}</div>
                     </div>
                   ) : null}
                   
