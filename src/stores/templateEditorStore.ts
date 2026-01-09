@@ -1554,17 +1554,53 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 }),
     {
       name: 'template-editor-storage',
+      // Ne persister que les métadonnées légères, pas les pages complètes
+      // Les données complètes sont maintenant dans le cloud
       partialize: (state) => ({
-        allTemplates: state.allTemplates,
-        allVersions: state.allVersions,
+        allTemplates: state.allTemplates.map(t => ({
+          ...t,
+          // Garder uniquement les infos essentielles
+        })),
+        // Ne pas persister toutes les versions, seulement les IDs pour référence
+        // Les données complètes seront chargées depuis le cloud
+        allVersions: state.allVersions.map(v => ({
+          id: v.id,
+          templateId: v.templateId,
+          versionNumber: v.versionNumber,
+          status: v.status,
+          createdAt: v.createdAt,
+          createdBy: v.createdBy,
+          publishedAt: v.publishedAt,
+          dynamicZonesIntact: v.dynamicZonesIntact,
+          // Exclure les pages qui sont volumineuses
+          pages: [] // Les pages seront rechargées depuis le cloud
+        })),
       }),
       storage: {
         getItem: (name) => {
-          const str = localStorage.getItem(name);
-          if (!str) return null;
-          return deserializeDates(JSON.parse(str));
+          try {
+            const str = localStorage.getItem(name);
+            if (!str) return null;
+            return deserializeDates(JSON.parse(str));
+          } catch (error) {
+            console.error('Erreur lecture localStorage:', error);
+            localStorage.removeItem(name);
+            return null;
+          }
         },
-        setItem: (name, value) => localStorage.setItem(name, JSON.stringify(value)),
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch (error) {
+            console.error('Erreur écriture localStorage (quota dépassé?):', error);
+            // En cas de quota dépassé, vider le cache local
+            try {
+              localStorage.removeItem(name);
+            } catch (e) {
+              // Ignorer
+            }
+          }
+        },
         removeItem: (name) => localStorage.removeItem(name),
       },
     }
