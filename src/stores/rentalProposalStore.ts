@@ -339,6 +339,36 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         currentStep: state.currentStep,
         isActive: state.isActive,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Error rehydrating rental proposal store:', error);
+          // Clear corrupted storage
+          try {
+            localStorage.removeItem('rental-proposal-storage');
+          } catch (e) {
+            console.error('Failed to clear corrupted storage:', e);
+          }
+        }
+        // Validate rehydrated state
+        if (state) {
+          // Ensure required fields exist with fallbacks
+          if (!state.clientData) {
+            state.clientData = initialClientData;
+          }
+          if (!state.matriceData) {
+            state.matriceData = initialMatriceData;
+          }
+          if (!state.pdfImportStatus) {
+            state.pdfImportStatus = initialPDFImportStatus;
+          }
+          if (!Array.isArray(state.lignesData)) {
+            state.lignesData = [];
+          }
+          if (!Array.isArray(state.optionsServices)) {
+            state.optionsServices = [];
+          }
+        }
+      },
     }
   )
 );
