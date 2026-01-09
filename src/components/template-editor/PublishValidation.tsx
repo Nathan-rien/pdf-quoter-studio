@@ -1,10 +1,11 @@
 /**
  * Dialog de validation avant publication du template
- * Vérifie l'intégrité des zones dynamiques
+ * Vérifie l'intégrité des zones dynamiques et synchronise avec le cloud
  */
 
 import { useState } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,8 @@ import {
   XCircle, 
   Loader2,
   Save,
-  AlertCircle
+  AlertCircle,
+  Cloud
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,34 +39,85 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
   const [isPublishing, setIsPublishing] = useState(false);
   
   const { 
-    currentVersion, 
+    currentVersion,
+    currentTemplateId,
+    allTemplates,
     validateDynamicZonesIntegrity,
     publishVersion 
   } = useTemplateEditorStore();
 
   const validationResult = currentVersion ? validateDynamicZonesIntegrity() : null;
+  const currentTemplate = allTemplates.find(t => t.id === currentTemplateId);
 
   const handlePublish = async () => {
-    if (!validationResult?.canPublish) return;
+    if (!validationResult?.canPublish || !currentVersion || !currentTemplate) return;
 
     setIsPublishing(true);
     
-    // Simuler un délai de publication
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const result = publishVersion();
-    
-    setIsPublishing(false);
-    
-    if (result.canPublish) {
-      toast.success("Template sauvegardé", {
-        description: `Version ${currentVersion?.versionNumber} maintenant disponible pour les devis.`
+    try {
+      // 1. Publier localement
+      const result = publishVersion();
+      
+      if (!result.canPublish) {
+        toast.error("Échec de la sauvegarde", {
+          description: result.errors[0]?.message || "Une erreur est survenue."
+        });
+        return;
+      }
+
+      // 2. Sauvegarder le template dans le cloud
+      const { error: templateError } = await supabase
+        .from('pdf_templates')
+        .upsert({
+          id: currentTemplate.id,
+          name: currentTemplate.name,
+          description: currentTemplate.description || null,
+          is_active: currentTemplate.isActive
+        }, { onConflict: 'id' });
+
+      if (templateError) {
+        console.error('Erreur sauvegarde template:', templateError);
+        toast.error("Erreur de synchronisation cloud", {
+          description: "Le template a été sauvegardé localement mais pas dans le cloud."
+        });
+        onOpenChange(false);
+        return;
+      }
+
+      // 3. Sauvegarder la version dans le cloud
+      const publishedVersion = useTemplateEditorStore.getState().currentVersion;
+      if (publishedVersion) {
+        const { error: versionError } = await supabase
+          .from('template_versions')
+          .upsert({
+            id: publishedVersion.id,
+            template_id: publishedVersion.templateId,
+            version_number: publishedVersion.versionNumber,
+            status: publishedVersion.status,
+            pages: publishedVersion.pages as any,
+            created_by: publishedVersion.createdBy || null,
+            published_at: publishedVersion.publishedAt?.toISOString() || null
+          });
+
+        if (versionError) {
+          console.error('Erreur sauvegarde version:', versionError);
+          toast.error("Erreur de synchronisation cloud", {
+            description: "La version a été sauvegardée localement mais pas dans le cloud."
+          });
+          onOpenChange(false);
+          return;
+        }
+      }
+
+      toast.success("Template sauvegardé et synchronisé", {
+        description: `Version ${currentVersion?.versionNumber} disponible sur tous les appareils.`
       });
       onOpenChange(false);
-    } else {
-      toast.error("Échec de la sauvegarde", {
-        description: result.errors[0]?.message || "Une erreur est survenue."
-      });
+    } catch (error) {
+      console.error('Erreur publication:', error);
+      toast.error("Erreur lors de la sauvegarde");
+    } finally {
+      setIsPublishing(false);
     }
   };
 
