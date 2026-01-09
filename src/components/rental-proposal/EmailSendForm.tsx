@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Send, CheckCircle, Paperclip } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EmailSendFormProps {
   clientName: string;
@@ -18,6 +19,7 @@ interface EmailSendFormProps {
   linesCount: number;
   optionsCount: number;
   templateName?: string;
+  pdfHtmlContent?: string;
 }
 
 export function EmailSendForm({
@@ -30,10 +32,12 @@ export function EmailSendForm({
   contractCost,
   linesCount,
   optionsCount,
-  templateName
+  templateName,
+  pdfHtmlContent
 }: EmailSendFormProps) {
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [attachPdf, setAttachPdf] = useState(true);
   const [formData, setFormData] = useState({
     to: clientEmail || '',
     cc: '',
@@ -51,6 +55,12 @@ export function EmailSendForm({
     const emails = email.split(',').map(e => e.trim());
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emails.every(e => e === '' || emailRegex.test(e));
+  };
+
+  const generatePdfFileName = () => {
+    const safeName = clientName.replace(/[^a-zA-Z0-9]/g, '_') || 'Proposition';
+    const date = new Date().toISOString().split('T')[0];
+    return `Proposition_${safeName}_${date}.html`;
   };
 
   const handleSendEmail = async () => {
@@ -85,6 +95,16 @@ export function EmailSendForm({
     setIsSending(true);
 
     try {
+      // Prepare PDF attachment if enabled and content available
+      let pdfBase64: string | undefined;
+      let pdfFileName: string | undefined;
+      
+      if (attachPdf && pdfHtmlContent) {
+        // Convert HTML to base64 for attachment
+        pdfBase64 = btoa(unescape(encodeURIComponent(pdfHtmlContent)));
+        pdfFileName = generatePdfFileName();
+      }
+
       const { data, error } = await supabase.functions.invoke('send-proposal-email', {
         body: {
           to: formData.to,
@@ -100,7 +120,9 @@ export function EmailSendForm({
           contractCost,
           linesCount,
           optionsCount,
-          templateName
+          templateName,
+          pdfBase64,
+          pdfFileName
         }
       });
 
@@ -109,7 +131,7 @@ export function EmailSendForm({
       setIsSent(true);
       toast({
         title: "Email envoyé !",
-        description: `La proposition a été envoyée à ${formData.to}`,
+        description: `La proposition a été envoyée à ${formData.to}${attachPdf ? ' avec la pièce jointe' : ''}`,
       });
 
     } catch (error: any) {
@@ -175,6 +197,24 @@ export function EmailSendForm({
           rows={4}
         />
       </div>
+
+      {pdfHtmlContent && (
+        <div className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+          <Checkbox
+            id="attach-pdf"
+            checked={attachPdf}
+            onCheckedChange={(checked) => setAttachPdf(checked === true)}
+            disabled={isSending}
+          />
+          <Label 
+            htmlFor="attach-pdf" 
+            className="flex items-center gap-2 cursor-pointer text-sm"
+          >
+            <Paperclip className="h-4 w-4 text-muted-foreground" />
+            Joindre la proposition en pièce jointe (HTML)
+          </Label>
+        </div>
+      )}
 
       <Button
         onClick={handleSendEmail}
