@@ -52,20 +52,19 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
   const handlePublish = async () => {
     if (!validationResult?.canPublish || !currentVersion || !currentTemplate) return;
 
+    // Vérifier que la version est bien en brouillon
+    if (currentVersion.status !== 'brouillon') {
+      toast.error("Version non modifiable", {
+        description: "Seules les versions brouillon peuvent être sauvegardées. Créez un nouveau brouillon."
+      });
+      onOpenChange(false);
+      return;
+    }
+
     setIsPublishing(true);
     
     try {
-      // 1. Publier localement
-      const result = publishVersion();
-      
-      if (!result.canPublish) {
-        toast.error("Échec de la sauvegarde", {
-          description: result.errors[0]?.message || "Une erreur est survenue."
-        });
-        return;
-      }
-
-      // 2. Sauvegarder le template dans le cloud
+      // 1. Sauvegarder le template dans le cloud D'ABORD (avant la publication locale)
       const { error: templateError } = await supabase
         .from('pdf_templates')
         .upsert({
@@ -73,44 +72,49 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
           name: currentTemplate.name,
           description: currentTemplate.description || null,
           is_active: currentTemplate.isActive
-        }, { onConflict: 'id' });
+        });
 
       if (templateError) {
         console.error('Erreur sauvegarde template:', templateError);
         toast.error("Erreur de synchronisation cloud", {
-          description: "Le template a été sauvegardé localement mais pas dans le cloud."
+          description: "Impossible de sauvegarder le template dans le cloud."
         });
-        onOpenChange(false);
         return;
       }
 
-      // 3. Sauvegarder la version dans le cloud
-      const publishedVersion = useTemplateEditorStore.getState().currentVersion;
-      if (publishedVersion) {
-        const { error: versionError } = await supabase
-          .from('template_versions')
-          .upsert({
-            id: publishedVersion.id,
-            template_id: publishedVersion.templateId,
-            version_number: publishedVersion.versionNumber,
-            status: publishedVersion.status,
-            pages: publishedVersion.pages as any,
-            created_by: publishedVersion.createdBy || null,
-            published_at: publishedVersion.publishedAt?.toISOString() || null
-          });
+      // 2. Sauvegarder la version dans le cloud AVANT de changer le statut local
+      const versionToSave = {
+        id: currentVersion.id,
+        template_id: currentVersion.templateId,
+        version_number: currentVersion.versionNumber,
+        status: 'publie', // Marquer comme publié
+        pages: currentVersion.pages as any,
+        created_by: currentVersion.createdBy || null,
+        published_at: new Date().toISOString()
+      };
 
-        if (versionError) {
-          console.error('Erreur sauvegarde version:', versionError);
-          toast.error("Erreur de synchronisation cloud", {
-            description: "La version a été sauvegardée localement mais pas dans le cloud."
-          });
-          onOpenChange(false);
-          return;
-        }
+      const { error: versionError } = await supabase
+        .from('template_versions')
+        .upsert(versionToSave);
+
+      if (versionError) {
+        console.error('Erreur sauvegarde version:', versionError);
+        toast.error("Erreur de synchronisation cloud", {
+          description: "Impossible de sauvegarder la version dans le cloud."
+        });
+        return;
+      }
+
+      // 3. Maintenant publier localement (cela mettra à jour le store)
+      const result = publishVersion();
+      
+      if (!result.canPublish) {
+        // Même si ça échoue localement, les données sont dans le cloud
+        console.warn("Publication locale échouée, mais données sauvées dans le cloud");
       }
 
       toast.success("Template sauvegardé et synchronisé", {
-        description: `Version ${currentVersion?.versionNumber} disponible sur tous les appareils.`
+        description: `Version ${currentVersion.versionNumber} disponible sur tous les appareils.`
       });
       onOpenChange(false);
     } catch (error) {
