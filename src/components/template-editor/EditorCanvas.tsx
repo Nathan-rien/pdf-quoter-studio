@@ -3,7 +3,7 @@
  * Affiche les éléments réels du PDF avec sélection interactive et drag & drop
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -920,25 +920,31 @@ export function EditorCanvas() {
                 const indentLevel = textContent.indentLevel || 0;
                 const indentPx = indentLevel * 12;
                 
-                // Si contenu HTML enrichi, l'utiliser directement
+                // Si contenu HTML enrichi, l'utiliser directement avec une key stable
                 if (textContent.htmlContent) {
                   return (
                     <div 
+                      key={`html-${element.id}`}
                       style={{ paddingLeft: `${indentPx}px` }}
-                      dangerouslySetInnerHTML={{ __html: textContent.htmlContent }}
+                      dangerouslySetInnerHTML={{ __html: textContent.htmlContent || '' }}
                     />
                   );
                 }
                 
                 // Fallback sur le texte brut avec support des listes
-                const lines = textContent.text.split('\n');
-                return lines.map((line, i) => (
-                  <div key={i} style={{ paddingLeft: `${indentPx}px` }}>
-                    {listType === 'bullet' && '• '}
-                    {listType === 'numbered' && `${i + 1}. `}
-                    {line || '\u00A0'}
-                  </div>
-                ));
+                const text = textContent.text || '';
+                const lines = text.split('\n');
+                return (
+                  <React.Fragment key={`text-${element.id}`}>
+                    {lines.map((line, i) => (
+                      <div key={`line-${element.id}-${i}`} style={{ paddingLeft: `${indentPx}px` }}>
+                        {listType === 'bullet' && '• '}
+                        {listType === 'numbered' && `${i + 1}. `}
+                        {line || '\u00A0'}
+                      </div>
+                    ))}
+                  </React.Fragment>
+                );
               };
 
               // Rendu des formes
@@ -1051,31 +1057,37 @@ export function EditorCanvas() {
                   onDoubleClick={(e) => handleElementDoubleClick(element.id, e)}
                   title={isEditable ? (isTextElement ? "Double-clic pour éditer" : "Glisser pour déplacer") : "Mode lecture seule"}
                 >
-                  {/* Édition inline du texte */}
-                  {isTextElement && textContent && inlineEditingElementId === element.id ? (
-                    <InlineTextEditor
-                      content={textContent}
-                      onContentChange={handleInlineContentChange}
-                      onExit={handleExitInlineEditing}
-                    />
-                  ) : isTextElement && textContent ? (
-                    <div 
-                      className="px-0.5 py-px"
-                      style={{
-                        fontFamily: ALLOWED_FONTS.find(f => f.name === textContent.fontFamily)?.value || textContent.fontFamily,
-                        fontSize: `${Math.max(textContent.fontSize * 0.4, 6)}px`,
-                        color: textContent.color,
-                        fontWeight: textContent.bold ? 'bold' : 'normal',
-                        fontStyle: textContent.italic ? 'italic' : 'normal',
-                        textDecoration: textContent.underline ? 'underline' : 'none',
-                        lineHeight: 1.2,
-                        textAlign: textContent.textAlign || 'left',
-                        width: '100%',
-                      }}
-                    >
-                      <div className="whitespace-pre-wrap break-words">{renderTextContent()}</div>
+                  {/* Édition inline du texte - structure stable avec keys uniques */}
+                  {isTextElement && textContent && (
+                    <div key={`text-container-${element.id}`}>
+                      {inlineEditingElementId === element.id ? (
+                        <InlineTextEditor
+                          key={`inline-editor-${element.id}`}
+                          content={textContent}
+                          onContentChange={handleInlineContentChange}
+                          onExit={handleExitInlineEditing}
+                        />
+                      ) : (
+                        <div 
+                          key={`text-display-${element.id}`}
+                          className="px-0.5 py-px"
+                          style={{
+                            fontFamily: ALLOWED_FONTS.find(f => f.name === textContent.fontFamily)?.value || textContent.fontFamily,
+                            fontSize: `${Math.max(textContent.fontSize * 0.4, 6)}px`,
+                            color: textContent.color,
+                            fontWeight: textContent.bold ? 'bold' : 'normal',
+                            fontStyle: textContent.italic ? 'italic' : 'normal',
+                            textDecoration: textContent.underline ? 'underline' : 'none',
+                            lineHeight: 1.2,
+                            textAlign: textContent.textAlign || 'left',
+                            width: '100%',
+                          }}
+                        >
+                          <div className="whitespace-pre-wrap break-words">{renderTextContent()}</div>
+                        </div>
+                      )}
                     </div>
-                  ) : null}
+                  )}
                   
                   {element.type === 'image' && (
                     <div 

@@ -105,7 +105,7 @@ export function InlineTextEditor({
     }
   }, [onExit, handleInput]);
 
-  // Gérer le blur avec vérification
+  // Gérer le blur avec vérification et synchronisation DOM
   const handleBlur = useCallback((e: React.FocusEvent) => {
     // Ne pas fermer si pas encore actif (initialisation en cours)
     if (!isActive) return;
@@ -118,14 +118,18 @@ export function InlineTextEditor({
       return;
     }
 
-    // Délai pour permettre d'autres interactions
-    setTimeout(() => {
-      const activeElement = document.activeElement;
-      const isToolbarElement = activeElement?.closest('[data-floating-toolbar]');
-      if (!isToolbarElement) {
-        onExit();
-      }
-    }, 200);
+    // Délai plus long avec requestAnimationFrame pour synchroniser avec React
+    const exitTimeout = setTimeout(() => {
+      requestAnimationFrame(() => {
+        const activeElement = document.activeElement;
+        const isToolbarElement = activeElement?.closest('[data-floating-toolbar]');
+        if (!isToolbarElement) {
+          onExit();
+        }
+      });
+    }, 150);
+    
+    return () => clearTimeout(exitTimeout);
   }, [isActive, onExit]);
 
   // Style du texte

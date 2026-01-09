@@ -68,10 +68,11 @@ export function RentalWorkflow() {
   };
 
   const renderStepContent = () => {
+    // Key unique par étape pour forcer un remontage propre
     switch (currentStep) {
       case 'import':
         return (
-          <div className="space-y-6">
+          <div key="step-import" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Importer un devis PDF</CardTitle>
@@ -90,11 +91,11 @@ export function RentalWorkflow() {
         );
 
       case 'data':
-        return <RentalDataEditor />;
+        return <RentalDataEditor key="step-data" />;
 
       case 'template':
         return (
-          <Card>
+          <Card key="step-template">
             <CardHeader>
               <CardTitle>Sélection du template</CardTitle>
               <CardDescription>
@@ -108,10 +109,10 @@ export function RentalWorkflow() {
         );
 
       case 'preview':
-        return <RentalProposalPreview />;
+        return <RentalProposalPreview key="step-preview" />;
 
       case 'export':
-        return <RentalProposalExport />;
+        return <RentalProposalExport key="step-export" />;
 
       default:
         return null;
