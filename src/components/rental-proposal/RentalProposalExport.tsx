@@ -1,6 +1,6 @@
 /**
  * Composant d'export PDF pour la proposition de location
- * Génère un PDF téléchargeable à partir des données de la proposition
+ * Génère un PDF téléchargeable ou envoie par email
  */
 
 import React, { useState, useRef } from 'react';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Download, 
   FileText, 
@@ -17,11 +18,12 @@ import {
   Package,
   Calculator,
   Settings,
-  Clock
+  Mail
 } from 'lucide-react';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { toast } from '@/hooks/use-toast';
+import { EmailSendForm } from './EmailSendForm';
 
 // Constantes pour la pagination
 const OPTIONS_PER_PAGE = 6;
@@ -406,61 +408,91 @@ export function RentalProposalExport() {
 
         <Separator />
 
-        {/* Zone de téléchargement */}
-        <div className="text-center py-8 space-y-4">
-          {isGenerated ? (
-            <>
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-success/10 rounded-full">
-                <CheckCircle className="h-8 w-8 text-success" />
-              </div>
-              <div>
-                <p className="font-medium text-success">Document généré avec succès</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Vous pouvez télécharger à nouveau le PDF si nécessaire
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full">
-                <Download className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Proposition prête à l'export</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Cliquez sur le bouton ci-dessous pour générer le PDF
-                </p>
-              </div>
-            </>
-          )}
+        {/* Onglets Télécharger / Email */}
+        <Tabs defaultValue="download" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="download" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Télécharger
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Envoyer par email
+            </TabsTrigger>
+          </TabsList>
 
-          <Button 
-            size="lg" 
-            onClick={handleDownloadPDF}
-            disabled={isGenerating}
-            className="min-w-[200px]"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Génération en cours...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                {isGenerated ? 'Télécharger à nouveau' : 'Télécharger le PDF'}
-              </>
-            )}
-          </Button>
+          <TabsContent value="download" className="mt-6">
+            <div className="text-center py-8 space-y-4">
+              {isGenerated ? (
+                <>
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-success/10 rounded-full">
+                    <CheckCircle className="h-8 w-8 text-success" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-success">Document généré avec succès</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Vous pouvez télécharger à nouveau le PDF si nécessaire
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full">
+                    <Download className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Proposition prête à l'export</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Cliquez sur le bouton ci-dessous pour générer le PDF
+                    </p>
+                  </div>
+                </>
+              )}
 
-          <p className="text-xs text-muted-foreground">
-            Nom du fichier : {generateFileName()}
-          </p>
-        </div>
+              <Button 
+                size="lg" 
+                onClick={handleDownloadPDF}
+                disabled={isGenerating}
+                className="min-w-[200px]"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    {isGenerated ? 'Télécharger à nouveau' : 'Télécharger le PDF'}
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-muted-foreground">
+                Nom du fichier : {generateFileName()}
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="email" className="mt-6">
+            <EmailSendForm
+              clientName={clientData.nom}
+              clientEmail={clientData.email}
+              investmentAmount={matriceData.montantInvestissement}
+              duration={matriceData.duree}
+              monthlyRent={calculatedValues.loyerMensuel ?? 0}
+              rentWithServices={calculatedValues.loyerServicesInclus ?? 0}
+              contractCost={calculatedValues.coutContrat ?? 0}
+              linesCount={lignesData.length}
+              optionsCount={selectedOptions.length}
+              templateName={activeTemplate?.name}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Template utilisé */}
         {activeTemplate && (
-          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg text-sm">
+          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg text-sm mt-6">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">Template utilisé :</span>
