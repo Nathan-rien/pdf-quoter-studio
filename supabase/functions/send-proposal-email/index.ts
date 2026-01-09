@@ -8,7 +8,7 @@ const sendEmail = async (payload: {
   cc?: string[];
   subject: string;
   html: string;
-  attachments?: Array<{ filename: string; content: string }>;
+  attachments?: Array<{ filename: string; content: string; type?: string }>;
 }) => {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -25,6 +25,105 @@ const sendEmail = async (payload: {
   }
   
   return response.json();
+};
+
+// Generate PDF from HTML using a simple PDF generation approach
+const generatePdfFromHtml = async (htmlContent: string): Promise<Uint8Array> => {
+  // Use jsPDF-like approach with a PDF generation service or build PDF manually
+  // For simplicity, we'll create a basic PDF structure
+  const encoder = new TextEncoder();
+  
+  // Extract text content from HTML for PDF
+  const textContent = htmlContent
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, '\n')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&euro;/g, '€')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
+
+  // Create a simple PDF
+  const pdfContent = createSimplePdf(textContent);
+  return pdfContent;
+};
+
+// Create a minimal valid PDF
+const createSimplePdf = (text: string): Uint8Array => {
+  const lines = text.split('\n').filter(line => line.trim());
+  
+  // Build PDF content
+  let pdf = '%PDF-1.4\n';
+  
+  // Catalog
+  pdf += '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n';
+  
+  // Pages
+  pdf += '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n';
+  
+  // Page
+  pdf += '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n';
+  
+  // Font
+  pdf += '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n';
+  
+  // Build content stream with text
+  let content = 'BT\n/F1 10 Tf\n';
+  let yPos = 800;
+  const lineHeight = 14;
+  const leftMargin = 50;
+  const maxWidth = 500;
+  
+  for (const line of lines) {
+    if (yPos < 50) break; // Stop if we run out of page
+    
+    // Escape special PDF characters and encode properly
+    const escapedLine = line
+      .substring(0, 80) // Limit line length
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+      .replace(/[^\x20-\x7E€]/g, ''); // Remove non-printable chars except euro
+    
+    if (escapedLine.trim()) {
+      content += `1 0 0 1 ${leftMargin} ${yPos} Tm\n(${escapedLine}) Tj\n`;
+      yPos -= lineHeight;
+    }
+  }
+  
+  content += 'ET';
+  
+  // Content stream
+  const contentLength = content.length;
+  pdf += `4 0 obj\n<< /Length ${contentLength} >>\nstream\n${content}\nendstream\nendobj\n`;
+  
+  // Cross-reference table
+  const xrefOffset = pdf.length;
+  pdf += 'xref\n0 6\n0000000000 65535 f \n';
+  
+  let offset = 9; // After %PDF-1.4\n
+  pdf += `${offset.toString().padStart(10, '0')} 00000 n \n`;
+  offset += 52;
+  pdf += `${offset.toString().padStart(10, '0')} 00000 n \n`;
+  offset += 52;
+  pdf += `${offset.toString().padStart(10, '0')} 00000 n \n`;
+  offset += 120;
+  
+  // Calculate font object offset
+  const fontOffset = pdf.indexOf('5 0 obj');
+  pdf += `${fontOffset.toString().padStart(10, '0')} 00000 n \n`;
+  
+  // Calculate content object offset  
+  const contentOffset = pdf.indexOf('4 0 obj');
+  pdf += `${contentOffset.toString().padStart(10, '0')} 00000 n \n`;
+  
+  // Trailer
+  pdf += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  
+  return new TextEncoder().encode(pdf);
 };
 
 const corsHeaders = {
@@ -226,7 +325,7 @@ const handler = async (req: Request): Promise<Response> => {
       cc?: string[];
       subject: string;
       html: string;
-      attachments?: Array<{ filename: string; content: string }>;
+      attachments?: Array<{ filename: string; content: string; type?: string }>;
     } = {
       from: "Proposition <onboarding@resend.dev>",
       to: toRecipients,
@@ -235,14 +334,38 @@ const handler = async (req: Request): Promise<Response> => {
       html: emailHTML,
     };
     
-    // Add PDF attachment if provided
+    // Add PDF attachment if HTML content provided
     if (pdfBase64 && pdfFileName) {
-      emailPayload.attachments = [
-        {
-          filename: pdfFileName,
-          content: pdfBase64,
-        }
-      ];
+      try {
+        // Decode the HTML from base64
+        const htmlContent = decodeURIComponent(escape(atob(pdfBase64)));
+        
+        // Generate PDF from HTML
+        const pdfBytes = await generatePdfFromHtml(htmlContent);
+        
+        // Convert to base64
+        const pdfBase64Content = btoa(String.fromCharCode(...pdfBytes));
+        
+        emailPayload.attachments = [
+          {
+            filename: pdfFileName,
+            content: pdfBase64Content,
+            type: 'application/pdf',
+          }
+        ];
+        
+        console.log("PDF attachment created successfully");
+      } catch (pdfError) {
+        console.error("Error generating PDF, falling back to HTML:", pdfError);
+        // Fallback to HTML attachment if PDF generation fails
+        emailPayload.attachments = [
+          {
+            filename: pdfFileName.replace('.pdf', '.html'),
+            content: pdfBase64,
+            type: 'text/html',
+          }
+        ];
+      }
     }
 
     const emailResponse = await sendEmail(emailPayload);
