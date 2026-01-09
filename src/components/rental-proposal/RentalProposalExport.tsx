@@ -486,6 +486,7 @@ export function RentalProposalExport() {
               linesCount={lignesData.length}
               optionsCount={selectedOptions.length}
               templateName={activeTemplate?.name}
+              pdfHtmlContent={generatePDFContent()}
             />
           </TabsContent>
         </Tabs>

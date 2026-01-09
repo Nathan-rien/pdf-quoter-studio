@@ -8,6 +8,7 @@ const sendEmail = async (payload: {
   cc?: string[];
   subject: string;
   html: string;
+  attachments?: Array<{ filename: string; content: string }>;
 }) => {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -47,10 +48,12 @@ interface ProposalEmailRequest {
   linesCount: number;
   optionsCount: number;
   templateName?: string;
+  pdfBase64?: string;
+  pdfFileName?: string;
 }
 
 const formatNumber = (value: number | null) => {
-  if (value === null) return '-';
+  if (value === null || value === undefined) return '-';
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 };
 
@@ -77,7 +80,9 @@ const handler = async (req: Request): Promise<Response> => {
       contractCost,
       linesCount,
       optionsCount,
-      templateName
+      templateName,
+      pdfBase64,
+      pdfFileName
     } = data;
 
     // Validation
@@ -89,6 +94,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const date = new Date().toLocaleDateString('fr-FR');
+    
+    // Use the correct rent value for display - if rentWithServices is 0, use monthlyRent
+    const displayRent = rentWithServices > 0 ? rentWithServices : monthlyRent;
+    const hasServicesIncluded = rentWithServices > 0 && rentWithServices !== monthlyRent;
 
     // Generate email HTML content
     const emailHTML = `
@@ -111,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
           .highlight-value { font-size: 24px; font-weight: 700; color: #2563eb; }
           .message-box { background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #bbf7d0; }
           .footer { text-align: center; padding: 20px 0; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
-          .cta-button { display: inline-block; background: #2563eb; color: white !important; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 20px; }
+          .attachment-notice { background: #fef3c7; padding: 12px 16px; border-radius: 6px; margin: 20px 0; border: 1px solid #fcd34d; text-align: center; }
         </style>
       </head>
       <body>
@@ -131,6 +140,13 @@ const handler = async (req: Request): Promise<Response> => {
             ` : `
               <p>Veuillez trouver ci-dessous le récapitulatif de votre proposition de location.</p>
             `}
+            
+            ${pdfBase64 ? `
+              <div class="attachment-notice">
+                <strong>📎 Document PDF joint</strong>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #92400e;">La proposition complète est disponible en pièce jointe.</p>
+              </div>
+            ` : ''}
             
             <div class="summary-box">
               <h3 style="margin-top: 0; color: #374151;">Client</h3>
@@ -159,20 +175,29 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <div class="highlight-box">
-              <p style="color: #6b7280; margin: 0 0 8px 0;">Loyer mensuel HT (services inclus)</p>
-              <p class="highlight-value">${formatNumber(rentWithServices)} €</p>
+              <p style="color: #6b7280; margin: 0 0 8px 0;">Loyer mensuel HT${hasServicesIncluded ? ' (services inclus)' : ''}</p>
+              <p class="highlight-value">${formatNumber(displayRent)} €</p>
             </div>
             
-            <div class="summary-box">
-              <div class="summary-row">
-                <span class="summary-label">Loyer mensuel HT</span>
-                <span class="summary-value">${formatNumber(monthlyRent)} €</span>
+            ${hasServicesIncluded ? `
+              <div class="summary-box">
+                <div class="summary-row">
+                  <span class="summary-label">Loyer mensuel HT (hors services)</span>
+                  <span class="summary-value">${formatNumber(monthlyRent)} €</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Coût total du contrat</span>
+                  <span class="summary-value" style="color: #16a34a;">${formatNumber(contractCost)} €</span>
+                </div>
               </div>
-              <div class="summary-row">
-                <span class="summary-label">Coût total du contrat</span>
-                <span class="summary-value" style="color: #16a34a;">${formatNumber(contractCost)} €</span>
+            ` : `
+              <div class="summary-box">
+                <div class="summary-row">
+                  <span class="summary-label">Coût total du contrat</span>
+                  <span class="summary-value" style="color: #16a34a;">${formatNumber(contractCost)} €</span>
+                </div>
               </div>
-            </div>
+            `}
             
             <p style="color: #6b7280; font-size: 14px;">
               Cette proposition est valable 30 jours à compter de la date d'envoi.
@@ -194,13 +219,33 @@ const handler = async (req: Request): Promise<Response> => {
     const toRecipients = to.split(',').map(email => email.trim()).filter(Boolean);
     const ccRecipients = cc ? cc.split(',').map(email => email.trim()).filter(Boolean) : undefined;
 
-    const emailResponse = await sendEmail({
+    // Prepare email payload
+    const emailPayload: {
+      from: string;
+      to: string[];
+      cc?: string[];
+      subject: string;
+      html: string;
+      attachments?: Array<{ filename: string; content: string }>;
+    } = {
       from: "Proposition <onboarding@resend.dev>",
       to: toRecipients,
       cc: ccRecipients,
       subject: subject,
       html: emailHTML,
-    });
+    };
+    
+    // Add PDF attachment if provided
+    if (pdfBase64 && pdfFileName) {
+      emailPayload.attachments = [
+        {
+          filename: pdfFileName,
+          content: pdfBase64,
+        }
+      ];
+    }
+
+    const emailResponse = await sendEmail(emailPayload);
 
     console.log("Email sent successfully:", emailResponse);
 
