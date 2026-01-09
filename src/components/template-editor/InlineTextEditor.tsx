@@ -27,23 +27,28 @@ export function InlineTextEditor({
   // Initialiser le contenu avec un délai pour éviter le blur immédiat
   useEffect(() => {
     const initTimeout = setTimeout(() => {
-      if (editorRef.current) {
-        const htmlContent = content.htmlContent || content.text;
-        editorRef.current.innerHTML = htmlContent;
-        initialContentRef.current = htmlContent;
-        
-        // Focus et placer le curseur à la fin
-        editorRef.current.focus();
-        
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(editorRef.current);
-        range.collapse(false);
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-        
-        // Marquer comme actif après initialisation
-        setIsActive(true);
+      try {
+        if (editorRef.current) {
+          const htmlContent = content.htmlContent || content.text;
+          editorRef.current.innerHTML = htmlContent;
+          initialContentRef.current = htmlContent;
+          
+          // Focus et placer le curseur à la fin
+          editorRef.current.focus();
+          
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(editorRef.current);
+          range.collapse(false);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          
+          // Marquer comme actif après initialisation
+          setIsActive(true);
+        }
+      } catch (domError) {
+        console.error('Error initializing inline editor:', domError);
+        onExit();
       }
     }, 50);
 
