@@ -1375,25 +1375,37 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     const templateVersions = allVersions.filter(v => v.templateId === currentTemplateId);
     const maxVersion = Math.max(...templateVersions.map(v => v.versionNumber), 0);
     
-    // Clone profond de la version courante si elle existe, sinon version initiale
-    const baseVersion = currentVersion 
-      ? {
-          ...currentVersion,
-          pages: currentVersion.pages.map(page => ({
-            ...page,
-            elements: page.elements.map(el => ({
-              ...el,
-              position: { ...el.position },
-              size: { ...el.size },
-              content: el.content ? { ...el.content } : undefined
-            })),
-            dynamicZones: page.dynamicZones.map(zone => ({ ...zone }))
-          }))
-        }
-      : createInitialVersion(currentTemplateId);
+    // Vérifier si les pages de la version courante sont valides (non vides)
+    const hasValidPages = currentVersion?.pages && 
+      currentVersion.pages.length > 0 &&
+      currentVersion.pages.some(p => p.elements && p.elements.length > 0);
+    
+    // Clone profond de la version courante si elle existe ET a des pages valides
+    let basePages: TemplatePageContent[];
+    
+    if (currentVersion && hasValidPages) {
+      // Clone profond des pages existantes
+      basePages = currentVersion.pages.map(page => ({
+        ...page,
+        elements: (page.elements || []).map(el => ({
+          ...el,
+          position: { ...el.position },
+          size: { ...el.size },
+          content: el.content ? { ...el.content } : undefined
+        })),
+        dynamicZones: (page.dynamicZones || []).map(zone => ({ ...zone }))
+      }));
+    } else {
+      // Pages vides ou corrompues - recréer depuis le contrat PDF
+      console.log('Pages vides détectées, reconstruction depuis le contrat PDF');
+      basePages = PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
+        pageNumber: pageConfig.pageNumber as PDFPageNumber,
+        elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
+        dynamicZones: pageConfig.dynamicZones as DynamicZone[]
+      }));
+    }
 
     const newVersion: TemplateVersion = {
-      ...baseVersion,
       id: `version-${Date.now()}`,
       templateId: currentTemplateId,
       versionNumber: maxVersion + 1,
@@ -1401,6 +1413,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       createdAt: new Date(),
       createdBy: 'user',
       publishedAt: null,
+      pages: basePages,
       dynamicZonesIntact: true
     };
 
