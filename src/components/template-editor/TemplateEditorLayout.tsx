@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
+import { useTemplateSync } from "@/hooks/useTemplateSync";
 import { EditorSidebar } from "./EditorSidebar";
 import { EditorCanvas } from "./EditorCanvas";
 import { ElementProperties } from "./ElementProperties";
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Save,
   RotateCcw, 
@@ -25,13 +27,18 @@ import {
   Pencil,
   Type,
   ImagePlus,
-  ArrowLeft
+  ArrowLeft,
+  Cloud,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 
 export function TemplateEditorLayout() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor');
+  
+  // Synchronisation avec le cloud
+  const { isLoading, isSyncing } = useTemplateSync();
   
   const {
     currentVersion,
@@ -76,6 +83,30 @@ export function TemplateEditorLayout() {
     }
     backToList();
   };
+
+  // Affichage du chargement
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-slide-up">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Chargement des templates depuis le cloud...</span>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+        </div>
+      </div>
+    );
+  }
 
   // Afficher le listing si mode liste
   if (viewMode === 'list') {

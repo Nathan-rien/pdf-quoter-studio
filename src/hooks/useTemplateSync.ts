@@ -1,0 +1,272 @@
+/**
+ * Hook pour synchroniser les templates avec Lovable Cloud
+ */
+
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useTemplateEditorStore } from '@/stores/templateEditorStore';
+import type { PDFTemplate, TemplateVersion, TemplatePageContent } from '@/types/template-editor';
+import type { PDFPageNumber, DynamicZone } from '@/types/pdf-template';
+import { PDF_TEMPLATE_CONTRACT } from '@/lib/pdf-template-contract';
+import { PDF_TEMPLATE_ELEMENTS } from '@/lib/pdf-template-elements';
+import { toast } from 'sonner';
+
+// Types pour la base de données
+interface DbTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DbVersion {
+  id: string;
+  template_id: string;
+  version_number: number;
+  status: string;
+  pages: any;
+  created_at: string;
+  created_by: string | null;
+  published_at: string | null;
+}
+
+// Convertir un template DB vers le format du store
+function dbToStoreTemplate(db: DbTemplate): PDFTemplate {
+  return {
+    id: db.id,
+    name: db.name,
+    description: db.description || '',
+    createdAt: new Date(db.created_at),
+    createdBy: 'system',
+    updatedAt: new Date(db.updated_at),
+    isActive: db.is_active
+  };
+}
+
+// Convertir une version DB vers le format du store
+function dbToStoreVersion(db: DbVersion): TemplateVersion {
+  // Parse les pages depuis le JSON
+  let pages: TemplatePageContent[] = [];
+  
+  if (db.pages && Array.isArray(db.pages)) {
+    pages = db.pages.map((page: any) => ({
+      pageNumber: page.pageNumber as PDFPageNumber,
+      elements: page.elements || [],
+      dynamicZones: page.dynamicZones || []
+    }));
+  }
+  
+  return {
+    id: db.id,
+    templateId: db.template_id,
+    versionNumber: db.version_number,
+    status: db.status as 'brouillon' | 'publie' | 'archive',
+    pages,
+    createdAt: new Date(db.created_at),
+    createdBy: db.created_by || 'system',
+    publishedAt: db.published_at ? new Date(db.published_at) : null,
+    dynamicZonesIntact: true
+  };
+}
+
+// Convertir un template du store vers le format DB
+function storeToDbTemplate(template: PDFTemplate): Omit<DbTemplate, 'created_at' | 'updated_at'> {
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.description || null,
+    is_active: template.isActive
+  };
+}
+
+// Convertir une version du store vers le format DB
+function storeToDbVersion(version: TemplateVersion): Omit<DbVersion, 'created_at'> {
+  return {
+    id: version.id,
+    template_id: version.templateId,
+    version_number: version.versionNumber,
+    status: version.status,
+    pages: version.pages,
+    created_by: version.createdBy || null,
+    published_at: version.publishedAt?.toISOString() || null
+  };
+}
+
+export function useTemplateSync() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  // Charger les templates depuis la base de données
+  const loadFromDatabase = useCallback(async () => {
+    if (hasLoaded) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Récupérer les templates
+      const { data: templates, error: templatesError } = await supabase
+        .from('pdf_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (templatesError) {
+        console.error('Erreur chargement templates:', templatesError);
+        return;
+      }
+
+      // Si pas de templates en base, garder le store tel quel (avec le template par défaut)
+      if (!templates || templates.length === 0) {
+        console.log('Aucun template en base, utilisation du store local');
+        setHasLoaded(true);
+        return;
+      }
+
+      // Récupérer les versions
+      const { data: versions, error: versionsError } = await supabase
+        .from('template_versions')
+        .select('*')
+        .order('version_number', { ascending: true });
+
+      if (versionsError) {
+        console.error('Erreur chargement versions:', versionsError);
+        return;
+      }
+
+      // Convertir et mettre à jour le store
+      const storeTemplates = templates.map(dbToStoreTemplate);
+      const storeVersions = (versions || []).map(dbToStoreVersion);
+
+      // Mettre à jour le store avec les données de la base
+      useTemplateEditorStore.setState({
+        allTemplates: storeTemplates,
+        allVersions: storeVersions
+      });
+
+      setHasLoaded(true);
+      console.log(`Chargé ${storeTemplates.length} templates et ${storeVersions.length} versions depuis la base`);
+    } catch (error) {
+      console.error('Erreur sync templates:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasLoaded]);
+
+  // Sauvegarder un template dans la base de données
+  const saveTemplateToDatabase = useCallback(async (template: PDFTemplate) => {
+    try {
+      setIsSyncing(true);
+      
+      const dbTemplate = storeToDbTemplate(template);
+      
+      const { error } = await supabase
+        .from('pdf_templates')
+        .upsert(dbTemplate);
+
+      if (error) {
+        console.error('Erreur sauvegarde template:', error);
+        toast.error('Erreur lors de la sauvegarde du template');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur sauvegarde:', error);
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  // Sauvegarder une version dans la base de données
+  const saveVersionToDatabase = useCallback(async (version: TemplateVersion) => {
+    try {
+      setIsSyncing(true);
+      
+      const dbVersion = storeToDbVersion(version);
+      
+      const { error } = await supabase
+        .from('template_versions')
+        .upsert(dbVersion as any);
+
+      if (error) {
+        console.error('Erreur sauvegarde version:', error);
+        toast.error('Erreur lors de la sauvegarde de la version');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur sauvegarde version:', error);
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  // Synchroniser tout le store vers la base de données
+  const syncAllToDatabase = useCallback(async () => {
+    const state = useTemplateEditorStore.getState();
+    
+    try {
+      setIsSyncing(true);
+      
+      // Sauvegarder tous les templates
+      for (const template of state.allTemplates) {
+        await saveTemplateToDatabase(template);
+      }
+
+      // Sauvegarder toutes les versions
+      for (const version of state.allVersions) {
+        await saveVersionToDatabase(version);
+      }
+
+      toast.success('Templates synchronisés avec le cloud');
+      return true;
+    } catch (error) {
+      console.error('Erreur sync all:', error);
+      toast.error('Erreur lors de la synchronisation');
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [saveTemplateToDatabase, saveVersionToDatabase]);
+
+  // Supprimer un template de la base de données
+  const deleteTemplateFromDatabase = useCallback(async (templateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('pdf_templates')
+        .delete()
+        .eq('id', templateId);
+
+      if (error) {
+        console.error('Erreur suppression template:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erreur suppression:', error);
+      return false;
+    }
+  }, []);
+
+  // Charger au montage
+  useEffect(() => {
+    loadFromDatabase();
+  }, [loadFromDatabase]);
+
+  return {
+    isLoading,
+    isSyncing,
+    hasLoaded,
+    loadFromDatabase,
+    saveTemplateToDatabase,
+    saveVersionToDatabase,
+    syncAllToDatabase,
+    deleteTemplateFromDatabase
+  };
+}
