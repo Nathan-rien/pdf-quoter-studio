@@ -45,17 +45,40 @@ function dbToStoreTemplate(db: DbTemplate): PDFTemplate {
   };
 }
 
+// Créer les pages par défaut depuis le contrat PDF
+function createDefaultPages(): TemplatePageContent[] {
+  return PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
+    pageNumber: pageConfig.pageNumber as PDFPageNumber,
+    elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
+    dynamicZones: pageConfig.dynamicZones as DynamicZone[]
+  }));
+}
+
 // Convertir une version DB vers le format du store
 function dbToStoreVersion(db: DbVersion): TemplateVersion {
   // Parse les pages depuis le JSON
   let pages: TemplatePageContent[] = [];
   
-  if (db.pages && Array.isArray(db.pages)) {
-    pages = db.pages.map((page: any) => ({
-      pageNumber: page.pageNumber as PDFPageNumber,
-      elements: page.elements || [],
-      dynamicZones: page.dynamicZones || []
-    }));
+  if (db.pages && Array.isArray(db.pages) && db.pages.length > 0) {
+    // Vérifier que les pages ont réellement du contenu
+    const hasContent = db.pages.some((page: any) => 
+      page.elements && page.elements.length > 0
+    );
+    
+    if (hasContent) {
+      pages = db.pages.map((page: any) => ({
+        pageNumber: page.pageNumber as PDFPageNumber,
+        elements: page.elements || [],
+        dynamicZones: page.dynamicZones || []
+      }));
+    } else {
+      // Pages vides en base, utiliser les pages par défaut
+      console.log('Pages vides détectées, utilisation des pages par défaut');
+      pages = createDefaultPages();
+    }
+  } else {
+    // Pas de pages en base, utiliser les pages par défaut
+    pages = createDefaultPages();
   }
   
   return {
