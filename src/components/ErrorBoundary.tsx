@@ -24,6 +24,21 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
+    // Detect DOM manipulation errors and auto-clear cache
+    const errorMessage = error.message || '';
+    if (errorMessage.includes('removeChild') || 
+        errorMessage.includes('appendChild') ||
+        errorMessage.includes('insertBefore')) {
+      console.warn('DOM manipulation error detected, clearing cache...');
+      try {
+        localStorage.removeItem('rental-proposal-storage');
+        localStorage.removeItem('template-editor-storage');
+        localStorage.removeItem('options-admin-storage');
+      } catch (e) {
+        console.error('Failed to clear storage after DOM error:', e);
+      }
+    }
   }
 
   private handleReload = () => {

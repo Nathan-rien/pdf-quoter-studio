@@ -342,30 +342,53 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       onRehydrateStorage: () => (state, error) => {
         if (error) {
           console.error('Error rehydrating rental proposal store:', error);
-          // Clear corrupted storage
           try {
             localStorage.removeItem('rental-proposal-storage');
           } catch (e) {
             console.error('Failed to clear corrupted storage:', e);
           }
+          return;
         }
-        // Validate rehydrated state
-        if (state) {
-          // Ensure required fields exist with fallbacks
-          if (!state.clientData) {
-            state.clientData = initialClientData;
+        
+        // Validate rehydrated state with try-catch
+        try {
+          if (state) {
+            // Validate clientData
+            if (!state.clientData || typeof state.clientData !== 'object') {
+              state.clientData = initialClientData;
+            } else {
+              // Ensure all clientData fields are strings
+              for (const key of Object.keys(initialClientData) as (keyof typeof initialClientData)[]) {
+                if (typeof state.clientData[key] !== 'string') {
+                  state.clientData[key] = '';
+                }
+              }
+            }
+            
+            // Validate matriceData
+            if (!state.matriceData || typeof state.matriceData !== 'object') {
+              state.matriceData = initialMatriceData;
+            }
+            
+            // Validate pdfImportStatus
+            if (!state.pdfImportStatus || typeof state.pdfImportStatus !== 'object') {
+              state.pdfImportStatus = initialPDFImportStatus;
+            }
+            
+            // Validate arrays
+            if (!Array.isArray(state.lignesData)) {
+              state.lignesData = [];
+            }
+            if (!Array.isArray(state.optionsServices)) {
+              state.optionsServices = [];
+            }
           }
-          if (!state.matriceData) {
-            state.matriceData = initialMatriceData;
-          }
-          if (!state.pdfImportStatus) {
-            state.pdfImportStatus = initialPDFImportStatus;
-          }
-          if (!Array.isArray(state.lignesData)) {
-            state.lignesData = [];
-          }
-          if (!Array.isArray(state.optionsServices)) {
-            state.optionsServices = [];
+        } catch (validationError) {
+          console.error('State validation failed, resetting store:', validationError);
+          try {
+            localStorage.removeItem('rental-proposal-storage');
+          } catch (e) {
+            console.error('Failed to clear storage after validation error:', e);
           }
         }
       },
