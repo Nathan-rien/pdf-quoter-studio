@@ -60,7 +60,7 @@ export function EmailSendForm({
   const generatePdfFileName = () => {
     const safeName = clientName.replace(/[^a-zA-Z0-9]/g, '_') || 'Proposition';
     const date = new Date().toISOString().split('T')[0];
-    return `Proposition_${safeName}_${date}.html`;
+    return `Proposition_${safeName}_${date}.pdf`;
   };
 
   const handleSendEmail = async () => {
@@ -211,7 +211,7 @@ export function EmailSendForm({
             className="flex items-center gap-2 cursor-pointer text-sm"
           >
             <Paperclip className="h-4 w-4 text-muted-foreground" />
-            Joindre la proposition en pièce jointe (HTML)
+            Joindre la proposition en pièce jointe (PDF)
           </Label>
         </div>
       )}
