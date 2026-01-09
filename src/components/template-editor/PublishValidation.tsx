@@ -30,6 +30,23 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+// Générer un UUID valide à partir d'un ID existant
+function toValidUUID(id: string): string {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(id)) {
+    return id;
+  }
+  
+  const hash = id.split('').reduce((acc, char) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  
+  const hashStr = Math.abs(hash).toString(16).padStart(8, '0');
+  const timestamp = id.replace(/\D/g, '').slice(0, 12).padStart(12, '0');
+  
+  return `${hashStr.slice(0, 8)}-${timestamp.slice(0, 4)}-4${timestamp.slice(4, 7)}-8${timestamp.slice(7, 10)}-${timestamp}0000`.slice(0, 36);
+}
+
 interface PublishValidationProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -68,7 +85,7 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
       const { error: templateError } = await supabase
         .from('pdf_templates')
         .upsert({
-          id: currentTemplate.id,
+          id: toValidUUID(currentTemplate.id),
           name: currentTemplate.name,
           description: currentTemplate.description || null,
           is_active: currentTemplate.isActive
@@ -84,8 +101,8 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
 
       // 2. Sauvegarder la version dans le cloud AVANT de changer le statut local
       const versionToSave = {
-        id: currentVersion.id,
-        template_id: currentVersion.templateId,
+        id: toValidUUID(currentVersion.id),
+        template_id: toValidUUID(currentVersion.templateId),
         version_number: currentVersion.versionNumber,
         status: 'publie', // Marquer comme publié
         pages: currentVersion.pages as any,

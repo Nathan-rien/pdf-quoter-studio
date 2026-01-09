@@ -71,10 +71,30 @@ function dbToStoreVersion(db: DbVersion): TemplateVersion {
   };
 }
 
+// Générer un UUID valide à partir d'un ID existant
+function toValidUUID(id: string): string {
+  // Si c'est déjà un UUID valide, le retourner
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(id)) {
+    return id;
+  }
+  
+  // Sinon, créer un UUID déterministe basé sur l'ID
+  // Utiliser un hash simple pour générer un UUID v4-like
+  const hash = id.split('').reduce((acc, char) => {
+    return ((acc << 5) - acc) + char.charCodeAt(0);
+  }, 0);
+  
+  const hashStr = Math.abs(hash).toString(16).padStart(8, '0');
+  const timestamp = id.replace(/\D/g, '').slice(0, 12).padStart(12, '0');
+  
+  return `${hashStr.slice(0, 8)}-${timestamp.slice(0, 4)}-4${timestamp.slice(4, 7)}-8${timestamp.slice(7, 10)}-${timestamp}0000`.slice(0, 36);
+}
+
 // Convertir un template du store vers le format DB
 function storeToDbTemplate(template: PDFTemplate): Omit<DbTemplate, 'created_at' | 'updated_at'> {
   return {
-    id: template.id,
+    id: toValidUUID(template.id),
     name: template.name,
     description: template.description || null,
     is_active: template.isActive
@@ -84,8 +104,8 @@ function storeToDbTemplate(template: PDFTemplate): Omit<DbTemplate, 'created_at'
 // Convertir une version du store vers le format DB
 function storeToDbVersion(version: TemplateVersion): Omit<DbVersion, 'created_at'> {
   return {
-    id: version.id,
-    template_id: version.templateId,
+    id: toValidUUID(version.id),
+    template_id: toValidUUID(version.templateId),
     version_number: version.versionNumber,
     status: version.status,
     pages: version.pages,
