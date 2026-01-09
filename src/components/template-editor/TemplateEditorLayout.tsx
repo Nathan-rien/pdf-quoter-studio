@@ -29,16 +29,36 @@ import {
   ImagePlus,
   ArrowLeft,
   Cloud,
-  Loader2
+  Loader2,
+  Trash2,
+  Settings
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 export function TemplateEditorLayout() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor');
+  const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   
   // Synchronisation avec le cloud
-  const { isLoading, isSyncing } = useTemplateSync();
+  const { isLoading, isSyncing, syncAllToDatabase } = useTemplateSync();
   
   const {
     currentVersion,
@@ -67,6 +87,29 @@ export function TemplateEditorLayout() {
   const handleDiscard = () => {
     discardChanges();
     toast.info("Modifications annulées");
+  };
+
+  const handleClearCache = () => {
+    try {
+      localStorage.removeItem('template-editor-storage');
+      toast.success("Cache local effacé", {
+        description: "La page va se recharger pour appliquer les changements."
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Erreur effacement cache:', error);
+      toast.error("Erreur lors de l'effacement du cache");
+    }
+    setShowClearCacheDialog(false);
+  };
+
+  const handleSyncToCloud = async () => {
+    const success = await syncAllToDatabase();
+    if (success) {
+      toast.success("Templates synchronisés vers le cloud");
+    }
   };
 
   const handleCreateVersion = () => {
@@ -138,22 +181,47 @@ export function TemplateEditorLayout() {
           </div>
         </div>
 
-        {currentVersion && (
-          <div className="flex items-center gap-3">
-            <Badge 
-              variant={
-                currentVersion.status === 'publie' ? 'success' : 
-                currentVersion.status === 'archive' ? 'secondary' : 'pending'
-              }
-            >
-              {currentVersion.status === 'publie' ? 'Publié' : 
-               currentVersion.status === 'archive' ? 'Archivé' : 'Brouillon'}
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              v{currentVersion.versionNumber}
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {currentVersion && (
+            <>
+              <Badge 
+                variant={
+                  currentVersion.status === 'publie' ? 'success' : 
+                  currentVersion.status === 'archive' ? 'secondary' : 'pending'
+                }
+              >
+                {currentVersion.status === 'publie' ? 'Publié' : 
+                 currentVersion.status === 'archive' ? 'Archivé' : 'Brouillon'}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                v{currentVersion.versionNumber}
+              </span>
+            </>
+          )}
+          
+          {/* Menu paramètres */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleSyncToCloud} disabled={isSyncing}>
+                <Cloud className="h-4 w-4 mr-2" />
+                {isSyncing ? 'Synchronisation...' : 'Sync vers le cloud'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => setShowClearCacheDialog(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Effacer le cache local
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Warning banner */}
@@ -306,6 +374,25 @@ export function TemplateEditorLayout() {
         open={showPublishDialog}
         onOpenChange={setShowPublishDialog}
       />
+
+      {/* Dialog confirmation effacement cache */}
+      <AlertDialog open={showClearCacheDialog} onOpenChange={setShowClearCacheDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Effacer le cache local ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action va supprimer toutes les données stockées localement dans votre navigateur. 
+              Les templates sauvegardés dans le cloud ne seront pas affectés et seront rechargés automatiquement.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearCache} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Effacer le cache
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
