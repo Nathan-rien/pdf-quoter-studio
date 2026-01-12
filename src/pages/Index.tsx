@@ -6,6 +6,7 @@ import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateEditorLayout } from "@/components/template-editor";
 import { RentalWorkflow } from "@/components/rental-proposal/RentalWorkflow";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
+import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
@@ -31,6 +32,8 @@ export default function Index() {
         return <TemplateEditorLayout />;
       case 'options-admin':
         return <OptionsServicesAdmin />;
+      case 'base-taux-admin':
+        return <BaseTauxAdmin />;
       default:
         return null;
     }
