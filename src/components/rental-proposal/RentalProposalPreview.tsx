@@ -195,7 +195,7 @@ export function RentalProposalPreview() {
                 </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between font-semibold">
-                  <span>Total investissement :</span>
+                  <span>Total investissement&nbsp;:</span>
                   <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
                 </div>
               </div>
