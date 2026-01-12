@@ -164,18 +164,18 @@ export function RentalProposalPreview() {
         {/* Tableau des produits */}
         <div className="flex-1 overflow-hidden">
           <div className="border rounded-lg overflow-hidden">
-            <div className="grid grid-cols-12 gap-2 bg-muted p-2 text-xs font-medium">
-              <div className="col-span-6">Désignation</div>
-              <div className="col-span-2 text-right">Qté</div>
+            <div className="grid grid-cols-12 gap-1 bg-muted p-2 text-xs font-medium">
+              <div className="col-span-7">Désignation</div>
+              <div className="col-span-1 text-right">Qté</div>
               <div className="col-span-2 text-right">P.U. HT</div>
               <div className="col-span-2 text-right">Total HT</div>
             </div>
             
             <div className="divide-y">
               {pageLines.map((ligne, idx) => (
-                <div key={startIndex + idx} className="grid grid-cols-12 gap-2 p-2 text-xs">
-                  <div className="col-span-6 truncate">{ligne.designation || '-'}</div>
-                  <div className="col-span-2 text-right">{ligne.quantite}</div>
+                <div key={startIndex + idx} className="grid grid-cols-12 gap-1 p-2 text-xs items-start">
+                  <div className="col-span-7 break-words whitespace-normal leading-tight">{ligne.designation || '-'}</div>
+                  <div className="col-span-1 text-right">{ligne.quantite}</div>
                   <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
                   <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
                 </div>
