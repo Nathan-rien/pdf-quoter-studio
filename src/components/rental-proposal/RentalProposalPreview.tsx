@@ -189,13 +189,13 @@ export function RentalProposalPreview() {
           <div className="mt-4 pt-4 border-t">
             <div className="flex justify-end">
               <div className="bg-primary/5 rounded-lg p-4 min-w-[200px]">
-                <div className="flex justify-between text-sm mb-2">
+                <div className="flex justify-between text-sm mb-2 gap-4">
                   <span className="text-muted-foreground">Sous-total HT :</span>
                   <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
                 </div>
                 <Separator className="my-2" />
-                <div className="flex justify-between font-semibold">
-                  <span>Total investissement&nbsp;:</span>
+                <div className="flex justify-between font-semibold gap-4">
+                  <span>Total investissement :</span>
                   <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
                 </div>
               </div>
