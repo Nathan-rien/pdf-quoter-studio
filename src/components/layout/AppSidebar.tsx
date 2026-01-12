@@ -4,11 +4,12 @@ import {
   History,
   Palette,
   Building2,
-  Settings
+  Settings,
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -74,6 +75,14 @@ export function AppSidebar({
           >
             <Settings className="h-4 w-4" />
             Options Services
+          </Button>
+          <Button
+            variant={currentView === 'base-taux-admin' ? 'secondary' : 'ghost'}
+            className="w-full justify-start gap-3"
+            onClick={() => onNavigate('base-taux-admin')}
+          >
+            <Database className="h-4 w-4" />
+            Base Taux
           </Button>
         </div>
       </nav>
