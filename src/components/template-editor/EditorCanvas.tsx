@@ -600,7 +600,8 @@ export function EditorCanvas() {
 
       // Position relative au canvas (px)
       const centerX = targetRect.left - canvasRect.left + targetRect.width / 2;
-      const aboveY = targetRect.top - canvasRect.top - 44; // hauteur estimée de la toolbar + marge
+      const toolbarHeight = 90; // hauteur de la toolbar (2 lignes) + marge
+      const aboveY = targetRect.top - canvasRect.top - toolbarHeight;
       const belowY = targetRect.bottom - canvasRect.top + 8;
 
       // Garde-fou pour éviter que la toolbar ne sorte à gauche/droite
