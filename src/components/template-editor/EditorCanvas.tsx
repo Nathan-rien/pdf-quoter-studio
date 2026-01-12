@@ -593,7 +593,7 @@ export function EditorCanvas() {
     selectElement(elementId);
     setInlineEditing(elementId);
     
-    // Calculer la position de la toolbar (au-dessus de l'élément, mais visible)
+    // Calculer la position de la toolbar (au-dessus ou en-dessous de l'élément, sans le chevaucher)
     if (canvasRef.current) {
       const canvasRect = canvasRef.current.getBoundingClientRect();
       const targetRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -601,13 +601,20 @@ export function EditorCanvas() {
       // Position relative au canvas (px)
       const centerX = targetRect.left - canvasRect.left + targetRect.width / 2;
       const toolbarHeight = 90; // hauteur de la toolbar (2 lignes) + marge
-      const aboveY = targetRect.top - canvasRect.top - toolbarHeight;
-      const belowY = targetRect.bottom - canvasRect.top + 8;
+      const elementTopInCanvas = targetRect.top - canvasRect.top;
+      const elementBottomInCanvas = targetRect.bottom - canvasRect.top;
+      
+      // Priorité : placer au-dessus si possible, sinon en-dessous
+      const aboveY = elementTopInCanvas - toolbarHeight;
+      const belowY = elementBottomInCanvas + 12; // 12px de marge après l'élément
 
       // Garde-fou pour éviter que la toolbar ne sorte à gauche/droite
       const safeMarginX = 140;
       const x = Math.max(safeMarginX, Math.min(centerX, canvasRect.width - safeMarginX));
-      const y = aboveY >= 8 ? aboveY : belowY;
+      
+      // Si assez d'espace au-dessus, placer là ; sinon en-dessous
+      const canPlaceAbove = aboveY >= 8;
+      const y = canPlaceAbove ? aboveY : belowY;
 
       setToolbarPosition({
         x,
