@@ -21,8 +21,10 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/ui/loading-state';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
+import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import type { EditableElement, TextContent } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
@@ -34,6 +36,9 @@ const LINES_PER_PAGE = 12;
 export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
   
+  // Synchronisation avec le cloud pour charger les templates
+  const { isLoading, hasLoaded } = useTemplateSync();
+  
   const {
     clientData,
     matriceData,
@@ -44,6 +49,11 @@ export function RentalProposalPreview() {
   } = useRentalProposalStore();
 
   const { getActiveTemplate, getTemplateLatestVersion } = useTemplateEditorStore();
+  
+  // Afficher un état de chargement si les templates ne sont pas encore chargés
+  if (isLoading && !hasLoaded) {
+    return <LoadingState message="Chargement du template..." />;
+  }
   
   const activeTemplate = getActiveTemplate();
   const calculatedValues = getCalculatedValues();
@@ -201,7 +211,7 @@ export function RentalProposalPreview() {
         </h3>
         
         {/* Tableau des produits - compact et lisible */}
-        <div className="flex-1 overflow-hidden">
+        <div className="overflow-hidden">
           <div className="border rounded overflow-hidden">
             <div className="grid grid-cols-12 gap-0.5 bg-muted px-1 py-0.5 text-[8px] font-medium">
               <div className="col-span-6">Désignation</div>
