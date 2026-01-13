@@ -18,20 +18,29 @@ import {
   CheckCircle, 
   Clock,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  icons
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/ui/loading-state';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
-import type { EditableElement, TextContent } from '@/types/template-editor';
+import { ALLOWED_FONTS } from '@/lib/template-styles';
+import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
 
 // Constantes pour la pagination des options
 const OPTIONS_PER_PAGE = 6;
 const LINES_PER_PAGE = 12;
+
+// Constantes du canvas (identique à EditorCanvas)
+const CANVAS_SCALE = {
+  width: 500,
+  height: 707, // Ratio A4
+};
 
 export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
@@ -88,25 +97,181 @@ export function RentalProposalPreview() {
     return pageContent.elements.filter(el => !el.isDynamic);
   };
 
-  // Rendu d'un élément statique du template
+  // Rendu d'un élément du template (identique à EditorCanvas)
   const renderTemplateElement = (element: EditableElement) => {
+    // Calcul du style de position (comme EditorCanvas)
+    const getElementStyle = (): React.CSSProperties => {
+      const left = (element.position.x / CANVAS_SCALE.width) * 100;
+      const top = (element.position.y / CANVAS_SCALE.height) * 100;
+      const width = (element.size.width / CANVAS_SCALE.width) * 100;
+      const height = (element.size.height / CANVAS_SCALE.height) * 100;
+      
+      return {
+        position: 'absolute',
+        left: `${left}%`,
+        top: `${top}%`,
+        width: `${width}%`,
+        height: element.type === 'text' ? 'auto' : `${height}%`,
+        zIndex: element.zIndex || 0,
+      };
+    };
+
+    // Rendu texte
     if (element.type === 'text') {
       const content = element.content as TextContent;
+      const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
+      const fontValue = fontDef?.value || 'Outfit, sans-serif';
+      // Échelle de taille adaptée à la preview (plus petite)
+      const scaledFontSize = Math.max(content.fontSize * 0.4, 6);
+      const indentPx = (content.indentLevel || 0) * 12;
+
       return (
-        <div 
+        <div
           key={element.id}
-          className="text-[8px] leading-tight"
           style={{
+            ...getElementStyle(),
+            fontFamily: fontValue,
+            fontSize: `${scaledFontSize}px`,
+            color: content.color || '#1f2937',
             fontWeight: content.bold ? 'bold' : 'normal',
             fontStyle: content.italic ? 'italic' : 'normal',
-            color: content.color || '#1f2937',
+            textDecoration: content.underline ? 'underline' : 'none',
+            textAlign: content.textAlign || 'left',
+            paddingLeft: `${indentPx}px`,
+            lineHeight: 1.3,
           }}
-          dangerouslySetInnerHTML={{ 
-            __html: content.htmlContent || content.text.replace(/\n/g, '<br/>') 
+          dangerouslySetInnerHTML={{
+            __html: content.htmlContent || content.text.replace(/\n/g, '<br/>')
           }}
         />
       );
     }
+
+    // Rendu image
+    if (element.type === 'image') {
+      const content = element.content as ImageContent;
+      return (
+        <div
+          key={element.id}
+          style={{
+            ...getElementStyle(),
+            opacity: (content.opacity ?? 100) / 100,
+          }}
+        >
+          {content.imageUrl && (
+            <img
+              src={content.imageUrl}
+              alt={content.alt || 'Image'}
+              className="w-full h-full object-contain"
+              style={{ transform: `rotate(${content.rotation || 0}deg)` }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // Rendu forme
+    if (element.type === 'shape') {
+      const content = element.content as ShapeContent;
+      const baseStyle: React.CSSProperties = {
+        ...getElementStyle(),
+        backgroundColor: content.backgroundColor !== 'transparent' 
+          ? content.backgroundColor 
+          : undefined,
+        opacity: (content.backgroundOpacity ?? 100) / 100,
+        borderRadius: content.shapeType === 'circle' || content.shapeType === 'ellipse'
+          ? '50%'
+          : `${content.cornerRadius || 0}px`,
+        transform: `rotate(${content.rotation || 0}deg)`,
+      };
+
+      if (content.border?.enabled) {
+        baseStyle.border = `${content.border.width}px solid ${content.border.color}`;
+      }
+
+      // Ligne spéciale
+      if (content.shapeType === 'line') {
+        return (
+          <div
+            key={element.id}
+            style={{
+              ...getElementStyle(),
+              height: '2px',
+              backgroundColor: content.border?.color || '#1f2937',
+            }}
+          />
+        );
+      }
+
+      return (
+        <div key={element.id} style={baseStyle}>
+          {content.innerContent && (
+            <div
+              className="w-full h-full flex"
+              style={{
+                justifyContent: content.innerContent.alignment.horizontal === 'left' ? 'flex-start'
+                  : content.innerContent.alignment.horizontal === 'right' ? 'flex-end' : 'center',
+                alignItems: content.innerContent.alignment.vertical === 'top' ? 'flex-start'
+                  : content.innerContent.alignment.vertical === 'bottom' ? 'flex-end' : 'center',
+                padding: `${content.innerContent.padding || 0}px`,
+              }}
+            >
+              {content.innerContent.text && (
+                <span
+                  style={{
+                    fontSize: `${Math.max(content.innerContent.text.fontSize * 0.4, 6)}px`,
+                    color: content.innerContent.text.color,
+                    fontWeight: content.innerContent.text.bold ? 'bold' : 'normal',
+                    fontStyle: content.innerContent.text.italic ? 'italic' : 'normal',
+                  }}
+                >
+                  {content.innerContent.text.content}
+                </span>
+              )}
+              {content.innerContent.icon && (() => {
+                const IconComp = (icons as Record<string, LucideIcon>)[content.innerContent.icon.name];
+                if (!IconComp) return null;
+                return (
+                  <IconComp
+                    size={Math.max(content.innerContent.icon.size * 0.4, 8)}
+                    color={content.innerContent.icon.color}
+                  />
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Rendu icône
+    if (element.type === 'icon') {
+      const content = element.content as IconContent;
+      const IconComponent = (icons as Record<string, LucideIcon>)[content.iconName];
+      if (!IconComponent) return null;
+      
+      const scaledSize = Math.max(content.size * 0.4, 8);
+      
+      return (
+        <div
+          key={element.id}
+          style={{
+            ...getElementStyle(),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transform: `rotate(${content.rotation || 0}deg)`,
+          }}
+        >
+          <IconComponent
+            size={scaledSize}
+            color={content.color}
+            strokeWidth={content.strokeWidth || 2}
+          />
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -183,22 +348,13 @@ export function RentalProposalPreview() {
   // Page 2-3 - Engagements et conditions (statiques)
   const renderStaticPage = (pageNum: number, title: string) => {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
-    
+
     return (
-      <div className="aspect-[210/297] bg-muted/20 rounded-lg border p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <Badge variant="outline" className="gap-1">
-            <FileText className="h-3 w-3" />
-            Statique
-          </Badge>
-        </div>
-        
-        <div className="flex-1 overflow-auto">
+      <div className="aspect-[210/297] bg-white rounded-lg border flex flex-col relative overflow-hidden">
+        {/* Conteneur avec positionnement relatif pour les éléments absolus */}
+        <div className="flex-1 relative">
           {staticElements.length > 0 ? (
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold mb-4">{title}</h3>
-              {staticElements.map(el => renderTemplateElement(el))}
-            </div>
+            staticElements.map(el => renderTemplateElement(el))
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-muted-foreground">
@@ -209,8 +365,10 @@ export function RentalProposalPreview() {
             </div>
           )}
         </div>
-        
-        <PageFooter pageNum={pageNum} />
+
+        <div className="p-2">
+          <PageFooter pageNum={pageNum} />
+        </div>
       </div>
     );
   };
