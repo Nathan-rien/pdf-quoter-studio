@@ -225,7 +225,7 @@ export function RentalProposalPreview() {
         
         {/* Totaux sur la dernière page produits */}
         {isLastProductPage && (
-          <div className="mt-3 pt-3 border-t">
+          <div className="mt-1 pt-1 border-t">
             <div className="flex justify-end mb-3">
               <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
                 <div className="flex justify-between text-[9px] mb-1 gap-3">
