@@ -181,26 +181,39 @@ export function RentalProposalPreview() {
   );
 
   // Page 2-3 - Engagements et conditions (statiques)
-  const renderStaticPage = (pageNum: number, title: string) => (
-    <div className="aspect-[210/297] bg-muted/20 rounded-lg border p-6 flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <Badge variant="outline" className="gap-1">
-          <FileText className="h-3 w-3" />
-          Statique
-        </Badge>
-      </div>
-      
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="font-medium">{title}</p>
-          <p className="text-sm mt-2">Contenu statique du template</p>
+  const renderStaticPage = (pageNum: number, title: string) => {
+    const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
+    
+    return (
+      <div className="aspect-[210/297] bg-muted/20 rounded-lg border p-6 flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <Badge variant="outline" className="gap-1">
+            <FileText className="h-3 w-3" />
+            Statique
+          </Badge>
         </div>
+        
+        <div className="flex-1 overflow-auto">
+          {staticElements.length > 0 ? (
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold mb-4">{title}</h3>
+              {staticElements.map(el => renderTemplateElement(el))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">{title}</p>
+                <p className="text-sm mt-2">Aucun contenu dans le template</p>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <PageFooter pageNum={pageNum} />
       </div>
-      
-      <PageFooter pageNum={pageNum} />
-    </div>
-  );
+    );
+  };
 
   // Pages produits (dynamiques)
   const renderProductPage = (pageIndex: number) => {
