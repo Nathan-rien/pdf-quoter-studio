@@ -161,21 +161,21 @@ export function RentalProposalPreview() {
           {pageIndex === 0 ? 'Détail du matériel' : `Détail du matériel (suite ${pageIndex + 1})`}
         </h3>
         
-        {/* Tableau des produits - largeur réduite, aligné à droite */}
-        <div className="flex-1 overflow-hidden flex justify-end">
-          <div className="border rounded-lg overflow-hidden w-[85%]">
-            <div className="grid grid-cols-12 gap-1 bg-muted p-2 text-xs font-medium">
-              <div className="col-span-7">Désignation</div>
-              <div className="col-span-1 text-right">Qté</div>
+        {/* Tableau des produits - largeur réduite, centré */}
+        <div className="flex-1 overflow-hidden flex justify-center">
+          <div className="border rounded-lg overflow-hidden w-[60%]">
+            <div className="grid grid-cols-12 gap-1 bg-muted p-1.5 text-[10px] font-medium">
+              <div className="col-span-6">Désignation</div>
+              <div className="col-span-2 text-center">Qté</div>
               <div className="col-span-2 text-right">P.U. HT</div>
               <div className="col-span-2 text-right">Total HT</div>
             </div>
             
             <div className="divide-y">
               {pageLines.map((ligne, idx) => (
-                <div key={startIndex + idx} className="grid grid-cols-12 gap-1 p-2 text-xs items-start">
-                  <div className="col-span-7 break-words whitespace-normal leading-tight">{ligne.designation || '-'}</div>
-                  <div className="col-span-1 text-right">{ligne.quantite}</div>
+                <div key={startIndex + idx} className="grid grid-cols-12 gap-1 p-1.5 text-[10px] items-start">
+                  <div className="col-span-6 break-words whitespace-normal leading-tight">{ligne.designation || '-'}</div>
+                  <div className="col-span-2 text-center">{ligne.quantite}</div>
                   <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
                   <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
                 </div>
