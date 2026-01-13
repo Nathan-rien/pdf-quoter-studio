@@ -110,6 +110,15 @@ export function RentalProposalPreview() {
     return null;
   };
 
+  // Composant de pagination en bas à droite de chaque page
+  const PageFooter = ({ pageNum }: { pageNum: number }) => (
+    <div className="flex justify-end mt-auto pt-2">
+      <span className="text-[9px] text-muted-foreground">
+        Page {pageNum}/{totalPages}
+      </span>
+    </div>
+  );
+
   const renderPageIndicator = () => (
     <div className="flex items-center justify-between px-4 py-2 bg-muted/50 rounded-lg">
       <Button
@@ -161,9 +170,12 @@ export function RentalProposalPreview() {
         </div>
       </div>
       
-      <div className="text-center text-xs text-muted-foreground pt-4 border-t">
-        <p>Document généré le {new Date().toLocaleDateString('fr-FR')}</p>
-        {activeTemplate && <p className="mt-1">Template : {activeTemplate.name}</p>}
+      <div className="flex items-end justify-between pt-4 border-t">
+        <div className="text-center text-xs text-muted-foreground flex-1">
+          <p>Document généré le {new Date().toLocaleDateString('fr-FR')}</p>
+          {activeTemplate && <p className="mt-1">Template : {activeTemplate.name}</p>}
+        </div>
+        <PageFooter pageNum={1} />
       </div>
     </div>
   );
@@ -176,7 +188,6 @@ export function RentalProposalPreview() {
           <FileText className="h-3 w-3" />
           Statique
         </Badge>
-        <span className="text-xs text-muted-foreground">Page {pageNum}/{totalPages}</span>
       </div>
       
       <div className="flex-1 flex items-center justify-center">
@@ -186,6 +197,8 @@ export function RentalProposalPreview() {
           <p className="text-sm mt-2">Contenu statique du template</p>
         </div>
       </div>
+      
+      <PageFooter pageNum={pageNum} />
     </div>
   );
 
@@ -203,7 +216,6 @@ export function RentalProposalPreview() {
             <Package className="h-3 w-3" />
             Dynamique
           </Badge>
-          <span className="text-xs text-muted-foreground">Page {pageNum}/{totalPages}</span>
         </div>
         
         <h3 className="text-lg font-bold mb-4">
@@ -262,6 +274,8 @@ export function RentalProposalPreview() {
             </div>
           </div>
         )}
+        
+        <PageFooter pageNum={pageNum} />
       </div>
     );
   };
@@ -280,7 +294,6 @@ export function RentalProposalPreview() {
             <Settings className="h-3 w-3" />
             Options
           </Badge>
-          <span className="text-xs text-muted-foreground">Page {pageNum}/{totalPages}</span>
         </div>
         
         <h3 className="text-lg font-bold mb-2">
@@ -331,6 +344,7 @@ export function RentalProposalPreview() {
           )}
         </div>
         
+        <PageFooter pageNum={pageNum} />
       </div>
     );
   };
@@ -346,7 +360,6 @@ export function RentalProposalPreview() {
             <Calculator className="h-3 w-3" />
             Récapitulatif
           </Badge>
-          <span className="text-xs text-muted-foreground">Page {pageNum}/{totalPages}</span>
         </div>
         
         <h3 className="text-lg font-bold mb-4">Récapitulatif de votre offre</h3>
@@ -415,6 +428,7 @@ export function RentalProposalPreview() {
           )}
         </div>
         
+        <PageFooter pageNum={pageNum} />
       </div>
     );
   };
@@ -427,13 +441,12 @@ export function RentalProposalPreview() {
           <FileText className="h-3 w-3" />
           Signature
         </Badge>
-        <span className="text-xs text-muted-foreground">Page {totalPages}/{totalPages}</span>
       </div>
       
       <h3 className="text-lg font-bold mb-4">Conditions et signature</h3>
       
       <div className="flex-1 flex flex-col">
-        <div className="space-y-4 text-sm text-muted-foreground flex-1">
+        <div className="space-y-4 text-sm text-muted-foreground">
           <p>
             Le présent document constitue une proposition de location financière.
             Les conditions définitives seront précisées dans le contrat de location.
@@ -443,7 +456,7 @@ export function RentalProposalPreview() {
           </p>
         </div>
         
-        <div className="grid grid-cols-2 gap-8 pt-8 border-t mt-auto">
+        <div className="grid grid-cols-2 gap-8 pt-8 border-t mt-4">
           <div>
             <p className="text-sm font-medium mb-2">Le client</p>
             <p className="text-xs text-muted-foreground mb-4">
@@ -470,6 +483,8 @@ export function RentalProposalPreview() {
           </div>
         </div>
       </div>
+      
+      <PageFooter pageNum={totalPages} />
     </div>
   );
 
