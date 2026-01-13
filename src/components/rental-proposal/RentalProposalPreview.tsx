@@ -161,9 +161,9 @@ export function RentalProposalPreview() {
           {pageIndex === 0 ? 'Détail du matériel' : `Détail du matériel (suite ${pageIndex + 1})`}
         </h3>
         
-        {/* Tableau des produits */}
-        <div className="flex-1 overflow-hidden">
-          <div className="border rounded-lg overflow-hidden">
+        {/* Tableau des produits - largeur réduite, aligné à droite */}
+        <div className="flex-1 overflow-hidden flex justify-end">
+          <div className="border rounded-lg overflow-hidden w-[85%]">
             <div className="grid grid-cols-12 gap-1 bg-muted p-2 text-xs font-medium">
               <div className="col-span-7">Désignation</div>
               <div className="col-span-1 text-right">Qté</div>
@@ -271,29 +271,6 @@ export function RentalProposalPreview() {
           )}
         </div>
         
-        {/* Résumé financier sur la première page d'options */}
-        {isFirstOptionsPage && selectedOptions.length > 0 && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-muted/30 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <Clock className="h-4 w-4" />
-                  Durée du contrat
-                </div>
-                <span className="font-semibold">{matriceData.duree} mois</span>
-              </div>
-              <div className="bg-muted/30 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <Calculator className="h-4 w-4" />
-                  Loyer mensuel
-                </div>
-                <span className="font-semibold text-primary">
-                  {formatNumber(calculatedValues.loyerServicesInclus)} € HT
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -326,10 +303,6 @@ export function RentalProposalPreview() {
                 <span className="text-muted-foreground">Montant total HT :</span>
                 <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Nombre de lignes :</span>
-                <span>{lignesData.length}</span>
-              </div>
             </div>
           </div>
           
@@ -343,14 +316,6 @@ export function RentalProposalPreview() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Durée :</span>
                 <span className="font-medium">{matriceData.duree} mois</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Refinanceur :</span>
-                <span>{matriceData.refinanceur}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Coefficient :</span>
-                <span>{calculatedValues.coefficient ?? '-'}</span>
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between font-semibold">
@@ -390,11 +355,6 @@ export function RentalProposalPreview() {
           )}
         </div>
         
-        <div className="mt-4 p-4 bg-success/10 rounded-lg border border-success/30 text-center">
-          <p className="text-sm font-medium text-success">
-            Coût total du contrat : {formatNumber(calculatedValues.coutContrat)} €
-          </p>
-        </div>
       </div>
     );
   };
