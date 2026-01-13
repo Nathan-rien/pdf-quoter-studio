@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/button';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { cn } from '@/lib/utils';
+import type { EditableElement, TextContent } from '@/types/template-editor';
+import type { PDFPageNumber } from '@/types/pdf-template';
 
 // Constantes pour la pagination des options
 const OPTIONS_PER_PAGE = 6;
@@ -59,6 +61,43 @@ export function RentalProposalPreview() {
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
     return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  };
+
+  // Helper pour obtenir les éléments statiques d'une page du template
+  const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
+    const template = getActiveTemplate();
+    if (!template) return [];
+    
+    const version = getTemplateLatestVersion(template.id);
+    if (!version) return [];
+    
+    const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
+    if (!pageContent) return [];
+    
+    // Retourner uniquement les éléments non-dynamiques (texte/image statiques)
+    return pageContent.elements.filter(el => !el.isDynamic);
+  };
+
+  // Rendu d'un élément statique du template
+  const renderTemplateElement = (element: EditableElement) => {
+    if (element.type === 'text') {
+      const content = element.content as TextContent;
+      return (
+        <div 
+          key={element.id}
+          className="text-[8px] leading-tight"
+          style={{
+            fontWeight: content.bold ? 'bold' : 'normal',
+            fontStyle: content.italic ? 'italic' : 'normal',
+            color: content.color || '#1f2937',
+          }}
+          dangerouslySetInnerHTML={{ 
+            __html: content.htmlContent || content.text.replace(/\n/g, '<br/>') 
+          }}
+        />
+      );
+    }
+    return null;
   };
 
   const renderPageIndicator = () => (
@@ -186,19 +225,30 @@ export function RentalProposalPreview() {
         
         {/* Totaux sur la dernière page produits */}
         {isLastProductPage && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex justify-end">
-              <div className="bg-primary/5 rounded-lg p-4 min-w-[200px]">
-                <div className="flex justify-between text-sm mb-2 gap-4">
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex justify-end mb-3">
+              <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
+                <div className="flex justify-between text-[9px] mb-1 gap-3">
                   <span className="text-muted-foreground">Sous-total HT :</span>
                   <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
                 </div>
-                <Separator className="my-2" />
-                <div className="flex justify-between font-semibold gap-4">
+                <Separator className="my-1" />
+                <div className="flex justify-between font-semibold text-[9px] gap-3">
                   <span>Total investissement :</span>
                   <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
                 </div>
               </div>
+            </div>
+            
+            {/* Éléments statiques du template (Avantages, Conditions) */}
+            <div className="space-y-2 mt-2">
+              {getStaticPageElements(4 as PDFPageNumber)
+                .filter(el => {
+                  const elId = el.id.toLowerCase();
+                  return elId.includes('avantage') || elId.includes('condition');
+                })
+                .map(el => renderTemplateElement(el))
+              }
             </div>
           </div>
         )}
