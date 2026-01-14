@@ -191,40 +191,40 @@ export default function BaseTauxAdmin() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Database className="h-5 w-5 text-primary" />
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Database className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Gestion Base Taux</h2>
-            <p className="text-muted-foreground text-sm">
-              Importez un fichier Excel pour mettre à jour les coefficients par partenaire, montant et durée.
+            <h2 className="text-lg font-semibold">Gestion Base Taux</h2>
+            <p className="text-muted-foreground text-xs">
+              Importez un fichier Excel pour mettre à jour les coefficients.
             </p>
           </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Total entrées</CardDescription>
-            <CardTitle className="text-2xl">{baseTauxData.length}</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardDescription className="text-xs">Total entrées</CardDescription>
+            <CardTitle className="text-xl">{baseTauxData.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Partenaires</CardDescription>
-            <CardTitle className="text-2xl">{uniquePartners.length}</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardDescription className="text-xs">Partenaires</CardDescription>
+            <CardTitle className="text-xl">{uniquePartners.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Durées disponibles</CardDescription>
-            <CardTitle className="text-2xl">{uniqueDurees.map(d => `${d}m`).join(", ")}</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardDescription className="text-xs">Durées disponibles</CardDescription>
+            <CardTitle className="text-lg">{uniqueDurees.map(d => `${d}m`).join(", ")}</CardTitle>
           </CardHeader>
         </Card>
       </div>

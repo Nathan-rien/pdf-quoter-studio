@@ -28,64 +28,64 @@ export default function OptionsServicesAdmin() {
   const activeCount = options.filter((o) => o.isActive).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Settings className="h-5 w-5 text-primary" />
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Settings className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Gestion des Options Services</h2>
-            <p className="text-muted-foreground text-sm">
-              Définissez les options de service disponibles pour vos devis. Ces options seront affichées sur la page 6 du PDF.
+            <h2 className="text-lg font-semibold">Gestion des Options Services</h2>
+            <p className="text-muted-foreground text-xs">
+              Options de service disponibles pour vos devis (page 6 du PDF).
             </p>
           </div>
         </div>
       </div>
 
       {/* Stats summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Total options</CardDescription>
-            <CardTitle className="text-2xl">{options.length}</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardDescription className="text-xs">Total options</CardDescription>
+            <CardTitle className="text-xl">{options.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Options actives</CardDescription>
-            <CardTitle className="text-2xl text-success">{activeCount}</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardDescription className="text-xs">Options actives</CardDescription>
+            <CardTitle className="text-xl text-success">{activeCount}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="py-3">
-            <CardDescription>Options avec prix</CardDescription>
-            <CardTitle className="text-2xl">{options.filter((o) => o.price).length}</CardTitle>
+          <CardHeader className="py-2 px-3">
+            <CardDescription className="text-xs">Options avec prix</CardDescription>
+            <CardTitle className="text-xl">{options.filter((o) => o.price).length}</CardTitle>
           </CardHeader>
         </Card>
       </div>
 
       {/* Actions bar */}
-      <div className="flex items-center gap-4">
-        <Button onClick={handleAddNewOption} className="gap-2">
-          <Plus className="h-4 w-4" />
+      <div className="flex items-center gap-3">
+        <Button onClick={handleAddNewOption} className="gap-2" size="sm">
+          <Plus className="h-3.5 w-3.5" />
           Nouvelle option
         </Button>
         <div className="flex-1" />
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Rechercher..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 w-64"
+            className="pl-8 w-56 h-8 text-sm"
           />
         </div>
       </div>
 
       {/* Options list */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredOptions.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">

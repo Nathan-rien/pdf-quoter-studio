@@ -120,7 +120,7 @@ export function RentalWorkflow() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Progress bar */}
       <div className="flex items-center justify-between">
         {WORKFLOW_STEPS.map((step, index) => {
@@ -133,7 +133,7 @@ export function RentalWorkflow() {
                 onClick={() => canNavigateToStep(step.id) && setCurrentStep(step.id)}
                 disabled={!canNavigateToStep(step.id)}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg transition-all',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-sm',
                   status === 'active' && 'bg-primary text-primary-foreground',
                   status === 'complete' && 'bg-success/10 text-success hover:bg-success/20 cursor-pointer',
                   status === 'pending' && 'bg-muted text-muted-foreground hover:bg-muted/80 cursor-pointer',
@@ -141,13 +141,13 @@ export function RentalWorkflow() {
                 )}
               >
                 {status === 'complete' ? (
-                  <Check className="h-4 w-4" />
+                  <Check className="h-3.5 w-3.5" />
                 ) : (
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5" />
                 )}
                 <span className="font-medium hidden sm:inline">{step.label}</span>
                 {status === 'active' && hasUnsavedChanges && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
+                  <Badge variant="secondary" className="ml-1 text-[10px]">
                     Non sauvegardé
                   </Badge>
                 )}
@@ -155,7 +155,7 @@ export function RentalWorkflow() {
               
               {index < WORKFLOW_STEPS.length - 1 && (
                 <div className={cn(
-                  'flex-1 h-0.5 mx-2',
+                  'flex-1 h-0.5 mx-1.5',
                   index < currentStepIndex ? 'bg-success' : 'bg-muted'
                 )} />
               )}
@@ -168,7 +168,7 @@ export function RentalWorkflow() {
       {renderStepContent()}
 
       {/* Navigation buttons */}
-      <div className="flex items-center justify-between pt-4 border-t">
+      <div className="flex items-center justify-between pt-3 border-t">
         <Button
           variant="outline"
           onClick={handlePrevious}

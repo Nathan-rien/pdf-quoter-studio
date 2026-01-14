@@ -83,22 +83,22 @@ export function RentalDataEditor() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with source info */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="font-medium">Structure PDF - Matrice_Location</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-sm">Structure PDF - Matrice_Location</p>
+                <p className="text-xs text-muted-foreground">
                   Source : {pdfImportStatus.fileName || 'Aucun fichier'}
                 </p>
               </div>
             </div>
             {pdfImportStatus.source && (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="text-xs">
                 {pdfImportStatus.source === 'cybertek' ? 'Cybertek Pro' : 'GrosBill Pro'}
               </Badge>
             )}

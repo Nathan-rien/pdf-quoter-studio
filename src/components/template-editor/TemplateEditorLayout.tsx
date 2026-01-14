@@ -160,22 +160,22 @@ export function TemplateEditorLayout() {
   const isEditable = currentVersion?.status === 'brouillon';
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-3 animate-slide-up">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={handleBackToList}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={handleBackToList} className="h-8">
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             Retour
           </Button>
-          <div className="p-3 rounded-xl bg-primary text-primary-foreground">
-            <Palette className="h-6 w-6" />
+          <div className="p-2 rounded-lg bg-primary text-primary-foreground">
+            <Palette className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-xl font-bold">
               {currentTemplate?.name || 'Éditeur de Template'}
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Mode administration - Modification du template PDF
             </p>
           </div>
@@ -226,11 +226,10 @@ export function TemplateEditorLayout() {
 
       {/* Warning banner */}
       <Card variant="warning" className="border-warning/50 bg-warning/10">
-        <CardContent className="p-4 flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-warning" />
-          <p className="text-sm">
-            <strong>Mode Administration</strong> — Les zones dynamiques (tableaux Invest, options services) 
-            sont protégées et ne peuvent pas être modifiées. Seuls les textes et images statiques sont éditables.
+        <CardContent className="p-2 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-warning shrink-0" />
+          <p className="text-xs">
+            <strong>Mode Administration</strong> — Zones dynamiques protégées. Seuls les textes et images statiques sont éditables.
           </p>
         </CardContent>
       </Card>
@@ -314,9 +313,9 @@ export function TemplateEditorLayout() {
           )}
         </div>
 
-        <TabsContent value="editor" className="mt-6">
+        <TabsContent value="editor" className="mt-3">
           {currentVersion ? (
-            <div className="grid grid-cols-12 gap-3">
+            <div className="grid grid-cols-12 gap-2" style={{ height: 'calc(100vh - 220px)' }}>
               {/* Sidebar gauche - Navigation pages */}
               <div className="col-span-2">
                 <EditorSidebar />
@@ -359,7 +358,7 @@ export function TemplateEditorLayout() {
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="mt-6">
+        <TabsContent value="history" className="mt-3">
           <VersionHistory 
             versions={templateVersions}
             currentVersionId={currentVersion?.id || null}
