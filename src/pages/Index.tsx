@@ -46,8 +46,8 @@ export default function Index() {
         onNavigate={setCurrentView}
       />
       
-      <main className="flex-1 p-8 overflow-auto">
-        <div className="max-w-5xl mx-auto">
+      <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <div className="max-w-6xl mx-auto">
           {renderContent()}
         </div>
       </main>
