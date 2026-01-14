@@ -106,12 +106,25 @@ export function RentalProposalPreview() {
       const width = (element.size.width / CANVAS_SCALE.width) * 100;
       const height = (element.size.height / CANVAS_SCALE.height) * 100;
       
+      // Pour les textes: utiliser maxWidth et fit-content comme EditorCanvas
+      if (element.type === 'text') {
+        return {
+          position: 'absolute',
+          left: `${left}%`,
+          top: `${top}%`,
+          maxWidth: `${Math.min(Math.max(width, 5), 100)}%`,
+          width: 'fit-content',
+          height: 'auto',
+          zIndex: element.zIndex || 0,
+        };
+      }
+      
       return {
         position: 'absolute',
         left: `${left}%`,
         top: `${top}%`,
         width: `${width}%`,
-        height: element.type === 'text' ? 'auto' : `${height}%`,
+        height: `${height}%`,
         zIndex: element.zIndex || 0,
       };
     };
@@ -308,42 +321,72 @@ export function RentalProposalPreview() {
     </div>
   );
 
-  // Page 1 - Couverture
-  const renderPage1 = () => (
-    <div className="aspect-[210/297] bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border p-6 flex flex-col">
-      <div className="text-center flex-1 flex flex-col justify-center">
-        <h1 className="text-2xl font-bold text-primary mb-2">
-          Proposition de Location
-        </h1>
-        <p className="text-muted-foreground mb-8">Financière Professionnelle</p>
+  // Page 1 - Couverture (utilise les éléments du template)
+  const renderPage1 = () => {
+    const page1Elements = getStaticPageElements(1 as PDFPageNumber);
+    
+    return (
+      <div className="aspect-[210/297] bg-white rounded-lg border flex flex-col relative overflow-hidden">
+        {/* Conteneur canvas avec les mêmes proportions que l'éditeur */}
+        <div className="flex-1 relative">
+          {page1Elements.length > 0 ? (
+            <>
+              {/* Rendu des éléments du template */}
+              {page1Elements.map(el => renderTemplateElement(el))}
+              
+              {/* Zone d'injection des données client (positionnée en superposition) */}
+              <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-3 w-3 text-primary" />
+                  <span className="font-medium text-[10px]">Client</span>
+                </div>
+                <div className="text-[9px] space-y-0.5">
+                  <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+                  <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+                  <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+                  {clientData.email && (
+                    <p className="text-muted-foreground">{clientData.email}</p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            // Fallback si aucun élément template
+            <div className="flex items-center justify-center h-full bg-gradient-to-br from-primary/5 to-primary/10">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-primary mb-2">
+                  Proposition de Location
+                </h1>
+                <p className="text-muted-foreground mb-6">Financière Professionnelle</p>
+                
+                <div className="bg-background rounded-lg p-4 shadow-sm max-w-xs mx-auto">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Client</span>
+                  </div>
+                  <div className="text-left space-y-1 text-xs">
+                    <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+                    <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+                    <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         
-        <div className="bg-background rounded-lg p-6 shadow-sm max-w-md mx-auto">
-          <div className="flex items-center gap-2 mb-4">
-            <User className="h-5 w-5 text-primary" />
-            <span className="font-medium">Client</span>
-          </div>
-          <div className="text-left space-y-1 text-sm">
-            <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
-            <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
-            <p className="text-muted-foreground">
-              {clientData.codePostal} {clientData.ville}
-            </p>
-            {clientData.email && (
-              <p className="text-muted-foreground">{clientData.email}</p>
-            )}
+        <div className="p-2 border-t bg-muted/30">
+          <div className="flex items-center justify-between">
+            <div className="text-[8px] text-muted-foreground">
+              <p>Document généré le {new Date().toLocaleDateString('fr-FR')}</p>
+              {activeTemplate && <p>Template : {activeTemplate.name}</p>}
+            </div>
+            <PageFooter pageNum={1} />
           </div>
         </div>
       </div>
-      
-      <div className="flex items-end justify-between pt-4 border-t">
-        <div className="text-center text-xs text-muted-foreground flex-1">
-          <p>Document généré le {new Date().toLocaleDateString('fr-FR')}</p>
-          {activeTemplate && <p className="mt-1">Template : {activeTemplate.name}</p>}
-        </div>
-        <PageFooter pageNum={1} />
-      </div>
-    </div>
-  );
+    );
+  };
 
   // Page 2-3 - Engagements et conditions (statiques)
   const renderStaticPage = (pageNum: number, title: string) => {
@@ -433,14 +476,37 @@ export function RentalProposalPreview() {
               </div>
             </div>
             
-            {/* Éléments statiques du template (Avantages, Conditions) */}
-            <div className="space-y-2 mt-2">
+            {/* Éléments statiques du template (Avantages, Conditions) - rendu en flux normal */}
+            <div className="mt-2 space-y-1">
               {getStaticPageElements(4 as PDFPageNumber)
                 .filter(el => {
                   const elId = el.id.toLowerCase();
                   return elId.includes('avantage') || elId.includes('condition');
                 })
-                .map(el => renderTemplateElement(el))
+                .sort((a, b) => a.position.y - b.position.y)
+                .map(el => {
+                  if (el.type !== 'text') return null;
+                  const content = el.content as TextContent;
+                  const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
+                  
+                  return (
+                    <div
+                      key={el.id}
+                      style={{
+                        fontFamily: fontDef?.value || 'Outfit, sans-serif',
+                        fontSize: `${Math.max(content.fontSize * 0.35, 6)}px`,
+                        color: content.color || '#1f2937',
+                        fontWeight: content.bold ? 'bold' : 'normal',
+                        fontStyle: content.italic ? 'italic' : 'normal',
+                        textDecoration: content.underline ? 'underline' : 'none',
+                        lineHeight: 1.3,
+                      }}
+                      dangerouslySetInnerHTML={{
+                        __html: content.htmlContent || content.text.replace(/\n/g, '<br/>')
+                      }}
+                    />
+                  );
+                })
               }
             </div>
           </div>
