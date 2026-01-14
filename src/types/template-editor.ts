@@ -18,7 +18,7 @@ export type ShapeType = 'rectangle' | 'square' | 'rounded-rectangle' | 'circle' 
 export type AllowedFont = 'Garet' | 'DM Sans' | 'Inter' | 'Roboto';
 
 // Tailles autorisées (liste fermée)
-export type AllowedFontSize = 9 | 10 | 11 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
+export type AllowedFontSize = 9 | 10 | 11 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32 | 36 | 42 | 48 | 56 | 64 | 72 | 96;
 
 // Type de liste
 export type ListType = 'none' | 'bullet' | 'numbered';

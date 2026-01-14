@@ -1,8 +1,10 @@
 /**
  * Barre d'outils flottante pour l'édition inline du texte
  * Positionnée au-dessus de l'élément en cours d'édition
+ * Optimisée avec useMemo pour éviter les re-calculs inutiles
  */
 
+import { useMemo, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -10,7 +12,9 @@ import {
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
-  SelectValue 
+  SelectValue,
+  SelectGroup,
+  SelectLabel
 } from "@/components/ui/select";
 import { 
   Bold, 
@@ -44,7 +48,15 @@ interface FloatingToolbarProps {
   onCancel: () => void;
 }
 
-export function FloatingToolbar({
+// Groupes de tailles de police pour une meilleure lisibilité
+const FONT_SIZE_GROUPS = {
+  small: { label: 'Petit', sizes: [9, 10, 11, 12] },
+  medium: { label: 'Moyen', sizes: [14, 16, 18, 20, 24] },
+  large: { label: 'Grand', sizes: [28, 32, 36, 42, 48] },
+  xlarge: { label: 'Très grand', sizes: [56, 64, 72, 96] },
+} as const;
+
+export const FloatingToolbar = memo(function FloatingToolbar({
   position,
   fontSize,
   textAlign,
@@ -58,15 +70,18 @@ export function FloatingToolbar({
   onConfirm,
   onCancel,
 }: FloatingToolbarProps) {
+  // Mémoriser le style de positionnement
+  const toolbarStyle = useMemo(() => ({
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+    transform: 'translateX(-50%)',
+  }), [position.x, position.y]);
+
   return (
     <div
       data-floating-toolbar="true"
       className="absolute z-50 rounded-lg bg-popover border shadow-lg p-1.5 max-w-[calc(100%-16px)]"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        transform: 'translateX(-50%)',
-      }}
+      style={toolbarStyle}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => {
         e.stopPropagation();
@@ -172,14 +187,21 @@ export function FloatingToolbar({
           value={String(fontSize)}
           onValueChange={(val) => onFontSizeChange(Number(val) as AllowedFontSize)}
         >
-          <SelectTrigger className="h-7 w-16 text-xs">
+          <SelectTrigger className="h-7 w-20 text-xs">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
-            {ALLOWED_FONT_SIZES.map((size) => (
-              <SelectItem key={size} value={String(size)} className="text-xs">
-                {size}px
-              </SelectItem>
+          <SelectContent className="max-h-64">
+            {Object.entries(FONT_SIZE_GROUPS).map(([key, group]) => (
+              <SelectGroup key={key}>
+                <SelectLabel className="text-xs text-muted-foreground">{group.label}</SelectLabel>
+                {group.sizes.filter(size => 
+                  (ALLOWED_FONT_SIZES as readonly number[]).includes(size)
+                ).map((size) => (
+                  <SelectItem key={size} value={String(size)} className="text-xs">
+                    {size}px
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>
@@ -207,4 +229,4 @@ export function FloatingToolbar({
       </div>
     </div>
   );
-}
+});

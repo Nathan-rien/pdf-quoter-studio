@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "./RichTextEditor";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -717,12 +717,31 @@ export function ElementProperties() {
                 <SelectTrigger id="font-size">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {ALLOWED_FONT_SIZES.map((size) => (
-                    <SelectItem key={size} value={size.toString()}>
-                      {size}px
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-64">
+                  <SelectGroup>
+                    <SelectLabel className="text-xs text-muted-foreground">Petit</SelectLabel>
+                    {[9, 10, 11, 12].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>{size}px</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel className="text-xs text-muted-foreground">Moyen</SelectLabel>
+                    {[14, 16, 18, 20, 24].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>{size}px</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel className="text-xs text-muted-foreground">Grand</SelectLabel>
+                    {[28, 32, 36, 42, 48].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>{size}px</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel className="text-xs text-muted-foreground">Très grand</SelectLabel>
+                    {[56, 64, 72, 96].map((size) => (
+                      <SelectItem key={size} value={size.toString()}>{size}px</SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
