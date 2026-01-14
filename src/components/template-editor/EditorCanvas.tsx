@@ -3,7 +3,7 @@
  * Affiche les éléments réels du PDF avec sélection interactive et drag & drop
  */
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -88,9 +88,13 @@ export function EditorCanvas() {
   
   // État pour la position de la toolbar flottante
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
+  // Flag pour savoir si on doit recalculer la position de la toolbar
+  const [needsToolbarReposition, setNeedsToolbarReposition] = useState(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const editingElementRef = useRef<HTMLDivElement>(null);
 
   // Seuil de snap pour les guides (en pixels canvas)
   const SNAP_THRESHOLD = 8;
@@ -181,6 +185,92 @@ export function EditorCanvas() {
       containerRef.current.focus();
     }
   }, [selectedElementIds]);
+
+  // Fonction pour repositionner la toolbar dynamiquement
+  const repositionToolbar = useCallback(() => {
+    if (!inlineEditingElementId || !canvasRef.current || !toolbarRef.current || !editingElementRef.current) {
+      return;
+    }
+
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const elementRect = editingElementRef.current.getBoundingClientRect();
+    const toolbarRect = toolbarRef.current.getBoundingClientRect();
+
+    // Position relative au canvas (px)
+    const elementTopInCanvas = elementRect.top - canvasRect.top;
+    const elementBottomInCanvas = elementRect.bottom - canvasRect.top;
+    const centerX = elementRect.left - canvasRect.left + elementRect.width / 2;
+
+    const toolbarHeight = toolbarRect.height;
+    const toolbarWidth = toolbarRect.width;
+    const gap = 12; // Marge entre élément et toolbar
+
+    // Calculer les positions candidates
+    const aboveY = elementTopInCanvas - toolbarHeight - gap;
+    const belowY = elementBottomInCanvas + gap;
+
+    // Vérifier si on peut placer au-dessus (sans sortir du canvas)
+    const canPlaceAbove = aboveY >= 8;
+    // Vérifier si on peut placer en-dessous (sans sortir du canvas)
+    const canPlaceBelow = belowY + toolbarHeight <= canvasRect.height - 8;
+
+    // Choisir la meilleure position
+    let finalY: number;
+    if (canPlaceAbove) {
+      finalY = aboveY;
+    } else if (canPlaceBelow) {
+      finalY = belowY;
+    } else {
+      // Fallback: placer en haut du canvas avec un minimum de marge
+      finalY = 8;
+    }
+
+    // Clamp horizontal basé sur la largeur réelle de la toolbar
+    const minX = toolbarWidth / 2 + 8;
+    const maxX = canvasRect.width - toolbarWidth / 2 - 8;
+    const clampedX = Math.max(minX, Math.min(centerX, maxX));
+
+    setToolbarPosition({
+      x: clampedX,
+      y: Math.max(8, finalY),
+    });
+  }, [inlineEditingElementId]);
+
+  // Repositionner la toolbar après le rendu de l'éditeur inline
+  useLayoutEffect(() => {
+    if (needsToolbarReposition && inlineEditingElementId) {
+      // Utiliser requestAnimationFrame pour attendre que le DOM soit peint
+      const rafId = requestAnimationFrame(() => {
+        repositionToolbar();
+        setNeedsToolbarReposition(false);
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [needsToolbarReposition, inlineEditingElementId, repositionToolbar]);
+
+  // Observer les changements de taille de l'élément en édition
+  useEffect(() => {
+    if (!inlineEditingElementId || !editingElementRef.current) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      repositionToolbar();
+    });
+
+    resizeObserver.observe(editingElementRef.current);
+    return () => resizeObserver.disconnect();
+  }, [inlineEditingElementId, repositionToolbar]);
+
+  // Repositionner sur resize de fenêtre
+  useEffect(() => {
+    if (!inlineEditingElementId) return;
+
+    const handleWindowResize = () => {
+      repositionToolbar();
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [inlineEditingElementId, repositionToolbar]);
 
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(
     p => p.pageNumber === selectedPageNumber
@@ -593,33 +683,19 @@ export function EditorCanvas() {
     selectElement(elementId);
     setInlineEditing(elementId);
     
-    // Calculer la position de la toolbar (au-dessus ou en-dessous de l'élément, sans le chevaucher)
+    // Déclencher le repositionnement de la toolbar après le rendu
+    // On initialise avec une position temporaire, le repositionnement se fera via useLayoutEffect
     if (canvasRef.current) {
       const canvasRect = canvasRef.current.getBoundingClientRect();
       const targetRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-
-      // Position relative au canvas (px)
       const centerX = targetRect.left - canvasRect.left + targetRect.width / 2;
-      const toolbarHeight = 90; // hauteur de la toolbar (2 lignes) + marge
-      const elementTopInCanvas = targetRect.top - canvasRect.top;
-      const elementBottomInCanvas = targetRect.bottom - canvasRect.top;
       
-      // Priorité : placer au-dessus si possible, sinon en-dessous
-      const aboveY = elementTopInCanvas - toolbarHeight;
-      const belowY = elementBottomInCanvas + 12; // 12px de marge après l'élément
-
-      // Garde-fou pour éviter que la toolbar ne sorte à gauche/droite
-      const safeMarginX = 140;
-      const x = Math.max(safeMarginX, Math.min(centerX, canvasRect.width - safeMarginX));
-      
-      // Si assez d'espace au-dessus, placer là ; sinon en-dessous
-      const canPlaceAbove = aboveY >= 8;
-      const y = canPlaceAbove ? aboveY : belowY;
-
+      // Position initiale temporaire (sera recalculée)
       setToolbarPosition({
-        x,
-        y: Math.max(8, y),
+        x: Math.max(100, Math.min(centerX, canvasRect.width - 100)),
+        y: -1000, // Hors écran temporairement
       });
+      setNeedsToolbarReposition(true);
     }
     
     toast.success("Mode édition activé - modifiez le texte directement", { id: 'inline-edit', duration: 2000 });
@@ -801,6 +877,7 @@ export function EditorCanvas() {
           {/* Barre d'outils flottante pour l'édition inline */}
           {isInlineEditing && inlineTextContent && toolbarPosition && (
             <FloatingToolbar
+              ref={toolbarRef}
               position={toolbarPosition}
               fontSize={inlineTextContent.fontSize}
               textAlign={inlineTextContent.textAlign || 'left'}
@@ -1067,7 +1144,10 @@ export function EditorCanvas() {
                 >
                   {/* Édition inline du texte - structure stable avec keys uniques */}
                   {isTextElement && textContent && (
-                    <div key={`text-container-${element.id}`}>
+                    <div 
+                      key={`text-container-${element.id}`}
+                      ref={inlineEditingElementId === element.id ? editingElementRef : undefined}
+                    >
                       {inlineEditingElementId === element.id ? (
                         <InlineTextEditor
                           key={`inline-editor-${element.id}`}

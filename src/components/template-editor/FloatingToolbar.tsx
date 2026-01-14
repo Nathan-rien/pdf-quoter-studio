@@ -4,7 +4,7 @@
  * Optimisée avec useMemo pour éviter les re-calculs inutiles
  */
 
-import { useMemo, memo } from "react";
+import { useMemo, memo, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -56,7 +56,7 @@ const FONT_SIZE_GROUPS = {
   xlarge: { label: 'Très grand', sizes: [56, 64, 72, 96] },
 } as const;
 
-export const FloatingToolbar = memo(function FloatingToolbar({
+export const FloatingToolbar = memo(forwardRef<HTMLDivElement, FloatingToolbarProps>(function FloatingToolbar({
   position,
   fontSize,
   textAlign,
@@ -69,7 +69,7 @@ export const FloatingToolbar = memo(function FloatingToolbar({
   onNumberedList,
   onConfirm,
   onCancel,
-}: FloatingToolbarProps) {
+}, ref) {
   // Mémoriser le style de positionnement
   const toolbarStyle = useMemo(() => ({
     left: `${position.x}px`,
@@ -79,6 +79,7 @@ export const FloatingToolbar = memo(function FloatingToolbar({
 
   return (
     <div
+      ref={ref}
       data-floating-toolbar="true"
       className="absolute z-50 rounded-lg bg-popover border shadow-lg p-1.5 max-w-[calc(100%-16px)]"
       style={toolbarStyle}
@@ -229,4 +230,4 @@ export const FloatingToolbar = memo(function FloatingToolbar({
       </div>
     </div>
   );
-});
+}));
