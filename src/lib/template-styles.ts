@@ -41,7 +41,7 @@ export const ALLOWED_FONTS = [
 ] as const;
 
 // Tailles autorisées
-export const ALLOWED_FONT_SIZES = [9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32] as const;
+export const ALLOWED_FONT_SIZES = [9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72, 96] as const;
 
 // Styles de texte prédéfinis
 export const TEXT_PRESET_STYLES: Record<TextPresetStyle, {
