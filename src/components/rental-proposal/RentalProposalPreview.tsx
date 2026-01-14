@@ -171,11 +171,11 @@ export function RentalProposalPreview() {
             opacity: (content.opacity ?? 100) / 100,
           }}
         >
-          {content.imageUrl && (
+        {content.imageUrl && (
             <img
               src={content.imageUrl}
               alt={content.alt || 'Image'}
-              className="w-full h-full object-contain"
+              className={`w-full h-full ${content.objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
               style={{ transform: `rotate(${content.rotation || 0}deg)` }}
             />
           )}

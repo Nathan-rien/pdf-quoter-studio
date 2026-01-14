@@ -1106,7 +1106,7 @@ export function EditorCanvas() {
                         <img 
                           src={imageContent.imageUrl} 
                           alt={imageContent.alt || 'Image'} 
-                          className="w-full h-full object-contain"
+                          className={`w-full h-full ${imageContent.objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
                           style={{ transform: `rotate(${imageContent.rotation || 0}deg)` }}
                         />
                       ) : (

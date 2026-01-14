@@ -53,6 +53,7 @@ export interface ImageContent {
   // Nouveaux champs pour rotation et opacité
   rotation?: number; // 0, 90, 180, 270 degrés
   opacity?: number; // 0-100%
+  objectFit?: 'contain' | 'cover'; // Mode de remplissage (défaut: 'contain')
 }
 
 // Contenu bloc (conteneur d'éléments)

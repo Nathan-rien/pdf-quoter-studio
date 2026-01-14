@@ -65,7 +65,8 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
-  Sparkles
+  Sparkles,
+  Maximize
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -764,7 +765,7 @@ export function ElementProperties() {
                 <img 
                   src={imageContent.imageUrl} 
                   alt={imageContent.alt || 'Image'} 
-                  className="w-full h-full object-contain"
+                  className={`w-full h-full ${imageContent.objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
                   style={{
                     transform: `rotate(${imageContent.rotation || 0}deg)`
                   }}
@@ -847,6 +848,41 @@ export function ElementProperties() {
                 disabled={!isEditable}
                 className="w-full"
               />
+            </div>
+            
+            <Separator />
+            
+            {/* Mode de remplissage */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Maximize className="h-4 w-4" />
+                Remplissage
+              </Label>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={(!imageContent.objectFit || imageContent.objectFit === 'contain') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateImageContent(selectedElementIds[0], { objectFit: 'contain' })}
+                  disabled={!isEditable}
+                  className="flex-1"
+                >
+                  Contenir
+                </Button>
+                <Button
+                  variant={imageContent.objectFit === 'cover' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateImageContent(selectedElementIds[0], { objectFit: 'cover' })}
+                  disabled={!isEditable}
+                  className="flex-1"
+                >
+                  Remplir
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {imageContent.objectFit === 'cover' 
+                  ? 'L\'image remplit le cadre (peut être rognée)' 
+                  : 'L\'image est entièrement visible (peut avoir des marges)'}
+              </p>
             </div>
             
             <Separator />
