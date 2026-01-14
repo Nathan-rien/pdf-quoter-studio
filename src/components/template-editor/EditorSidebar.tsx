@@ -63,15 +63,15 @@ export function EditorSidebar() {
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <FileText className="h-4 w-4" />
+      <CardHeader className="pb-2 px-2">
+        <CardTitle className="text-xs flex items-center gap-1">
+          <FileText className="h-3 w-3" />
           Pages ({pages.length})
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-2">
-        <ScrollArea className="h-[400px]">
-          <div className="space-y-1">
+      <CardContent className="p-1.5">
+        <ScrollArea className="h-[480px]">
+          <div className="space-y-0.5">
             {pages.map((page) => {
               const isSelected = selectedPageNumber === page.pageNumber;
               const hasDynamicZones = page.dynamicZones.length > 0;
@@ -82,14 +82,14 @@ export function EditorSidebar() {
                   key={page.pageNumber}
                   variant={isSelected ? "secondary" : "ghost"}
                   className={cn(
-                    "w-full justify-start h-auto py-3 px-3",
-                    isSelected && "ring-2 ring-primary ring-offset-2"
+                    "w-full justify-start h-auto py-1.5 px-2",
+                    isSelected && "ring-1 ring-primary ring-offset-1"
                   )}
                   onClick={() => setSelectedPage(page.pageNumber as PDFPageNumber)}
                 >
-                  <div className="flex items-start gap-3 w-full">
+                  <div className="flex items-center gap-2 w-full">
                     <div className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded text-xs font-bold shrink-0",
+                      "flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold shrink-0",
                       hasDynamicZones 
                         ? "bg-primary/10 text-primary" 
                         : "bg-muted text-muted-foreground"
@@ -98,27 +98,14 @@ export function EditorSidebar() {
                     </div>
                     
                     <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-3 w-3 shrink-0" />
-                        <span className="text-xs font-medium">
-                          {page.title}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-1 mt-1">
-                        {page.type === 'static' && (
-                          <Badge variant="secondary" className="text-[10px] h-4">
-                            Statique
-                          </Badge>
-                        )}
-                        {hasDynamicZones && (
-                          <Badge variant="outline" className="text-[10px] h-4 gap-1">
-                            <Lock className="h-2 w-2" />
-                            {page.dynamicZones.length} zone{page.dynamicZones.length > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                      </div>
+                      <span className="text-[10px] font-medium truncate block">
+                        {page.title}
+                      </span>
                     </div>
+                    
+                    {hasDynamicZones && (
+                      <Lock className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+                    )}
                   </div>
                 </Button>
               );
@@ -128,47 +115,47 @@ export function EditorSidebar() {
 
         {isEditable && (
           <>
-            <Separator className="my-4" />
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground px-1">Ajouter une forme</p>
-              <div className="grid grid-cols-3 gap-1">
+            <Separator className="my-2" />
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground px-1">Formes</p>
+              <div className="grid grid-cols-3 gap-0.5">
                 {SHAPE_OPTIONS.map(({ type, label, icon: ShapeIcon }) => (
                   <Button
                     key={type}
                     variant={addElementMode === 'shape' && selectedShapeType === type ? "default" : "outline"}
                     size="sm"
-                    className="h-14 flex-col gap-1 text-[10px]"
+                    className="h-9 flex-col gap-0 text-[8px] px-1"
                     onClick={() => handleShapeClick(type)}
                   >
-                    <ShapeIcon className={cn("h-4 w-4", type === 'rounded-rectangle' && "rounded")} />
-                  {label}
+                    <ShapeIcon className={cn("h-3 w-3", type === 'rounded-rectangle' && "rounded")} />
+                    {label}
                   </Button>
                 ))}
               </div>
               {addElementMode === 'shape' && selectedShapeType && (
-                <p className="text-[10px] text-center text-muted-foreground">
-                  Cliquez sur le canvas pour placer la forme
+                <p className="text-[8px] text-center text-muted-foreground">
+                  Cliquez sur le canvas
                 </p>
               )}
             </div>
 
-            <Separator className="my-4" />
+            <Separator className="my-2" />
 
             {/* Section Icônes */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground px-1">Ajouter une icône</p>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground px-1">Icônes</p>
               <Button
                 variant={addElementMode === 'icon' ? "default" : "outline"}
                 size="sm"
-                className="w-full gap-2"
+                className="w-full gap-1.5 h-8 text-[10px]"
                 onClick={() => setIconDialogOpen(true)}
               >
-                <Sparkles className="h-4 w-4" />
-                Bibliothèque d'icônes
+                <Sparkles className="h-3 w-3" />
+                Bibliothèque
               </Button>
               {addElementMode === 'icon' && (
-                <p className="text-[10px] text-center text-muted-foreground">
-                  Cliquez sur le canvas pour placer l'icône
+                <p className="text-[8px] text-center text-muted-foreground">
+                  Cliquez sur le canvas
                 </p>
               )}
             </div>
