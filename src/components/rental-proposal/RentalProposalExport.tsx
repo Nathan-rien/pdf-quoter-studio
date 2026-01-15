@@ -24,10 +24,7 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
-
-// Constantes pour la pagination
-const OPTIONS_PER_PAGE = 6;
-const LINES_PER_PAGE = 12;
+import { CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
 
 export function RentalProposalExport() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -51,7 +48,7 @@ export function RentalProposalExport() {
   
   const optionsPagesCount = Math.max(1, Math.ceil(selectedOptions.length / OPTIONS_PER_PAGE));
   const linesPagesCount = Math.max(1, Math.ceil(lignesData.length / LINES_PER_PAGE));
-  const totalPages = 3 + linesPagesCount + optionsPagesCount + 2;
+  const totalPages = CONTRACT_PAGES;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';

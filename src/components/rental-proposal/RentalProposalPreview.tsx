@@ -29,18 +29,9 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
-
-// Constantes pour la pagination des options
-const OPTIONS_PER_PAGE = 6;
-const LINES_PER_PAGE = 12;
-
-// Constantes du canvas (identique à EditorCanvas)
-const CANVAS_SCALE = {
-  width: 500,
-  height: 707, // Ratio A4
-};
 
 export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
@@ -74,8 +65,8 @@ export function RentalProposalPreview() {
   // Calcul du nombre de pages pour les lignes produits
   const linesPagesCount = Math.max(1, Math.ceil(lignesData.length / LINES_PER_PAGE));
   
-  // Total pages: 3 statiques + pages produits + pages options + 2 finales
-  const totalPages = 3 + linesPagesCount + optionsPagesCount + 2;
+  // Total pages: utiliser le contrat fixe de 8 pages
+  const totalPages = CONTRACT_PAGES;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
@@ -134,8 +125,8 @@ export function RentalProposalPreview() {
       const content = element.content as TextContent;
       const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
       const fontValue = fontDef?.value || 'Outfit, sans-serif';
-      // Échelle de taille adaptée à la preview (plus petite)
-      const scaledFontSize = Math.max(content.fontSize * 0.4, 6);
+      // Échelle de taille adaptée à la preview (utilise la constante partagée)
+      const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
       const indentPx = (content.indentLevel || 0) * 12;
 
       return (
