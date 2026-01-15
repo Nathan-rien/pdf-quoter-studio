@@ -62,15 +62,15 @@ export function EditorSidebar() {
   };
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2 px-2">
-        <CardTitle className="text-xs flex items-center gap-1">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-1 px-2 py-2">
+        <CardTitle className="text-xs flex items-center gap-1.5">
           <FileText className="h-3 w-3" />
           Pages ({pages.length})
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-1.5">
-        <ScrollArea className="h-[480px]">
+      <CardContent className="p-1.5 flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
           <div className="space-y-0.5">
             {pages.map((page) => {
               const isSelected = selectedPageNumber === page.pageNumber;
@@ -87,7 +87,7 @@ export function EditorSidebar() {
                   )}
                   onClick={() => setSelectedPage(page.pageNumber as PDFPageNumber)}
                 >
-                  <div className="flex items-center gap-2 w-full">
+                  <div className="flex items-center gap-1.5 w-full">
                     <div className={cn(
                       "flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold shrink-0",
                       hasDynamicZones 

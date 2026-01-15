@@ -125,78 +125,78 @@ export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onVie
         </Card>
       </div>
 
-      {/* Status Cards */}
-      <div className="grid md:grid-cols-2 gap-4">
+      {/* Status Cards - 3 colonnes sur large écran */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Current Status */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">État actuel</CardTitle>
-            <CardDescription className="text-xs">Résumé des données chargées</CardDescription>
+          <CardHeader className="pb-1 py-2 px-3">
+            <CardTitle className="text-sm">État actuel</CardTitle>
+            <CardDescription className="text-[10px]">Données chargées</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2">
-                <FileUp className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-medium">PDF Devis</span>
+          <CardContent className="space-y-1.5 px-3 pb-3">
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1.5">
+                <FileUp className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium">PDF Devis</span>
               </div>
               {pdfImportStatus.isImported ? (
-                <Badge variant="success" className="text-xs">
-                  {pdfImportStatus.source === 'cybertek' ? 'Cybertek Pro' : 'GrosBill Pro'}
+                <Badge variant="success" className="text-[10px] h-5">
+                  {pdfImportStatus.source === 'cybertek' ? 'Cybertek' : 'GrosBill'}
                 </Badge>
               ) : (
-                <Badge variant="pending" className="text-xs">Non importé</Badge>
+                <Badge variant="pending" className="text-[10px] h-5">Non importé</Badge>
               )}
             </div>
             
-            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-medium">Fichier source</span>
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1.5">
+                <FileText className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium">Fichier</span>
               </div>
               {pdfImportStatus.fileName ? (
-                <Badge variant="secondary" className="max-w-[160px] truncate text-xs">
+                <Badge variant="secondary" className="max-w-[100px] truncate text-[10px] h-5">
                   {pdfImportStatus.fileName}
                 </Badge>
               ) : (
-                <Badge variant="pending" className="text-xs">-</Badge>
+                <Badge variant="pending" className="text-[10px] h-5">-</Badge>
               )}
             </div>
             
-            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-medium">Lignes de produit</span>
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1.5">
+                <FileText className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium">Lignes</span>
               </div>
-              <Badge variant={lignesData.length > 0 ? "success" : "pending"} className="text-xs">
-                {lignesData.length} ligne(s)
+              <Badge variant={lignesData.length > 0 ? "success" : "pending"} className="text-[10px] h-5">
+                {lignesData.length}
               </Badge>
             </div>
           </CardContent>
         </Card>
 
         {/* Info Card */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Workflow Proposition</CardTitle>
-            <CardDescription className="text-xs">4 étapes pour créer votre proposition</CardDescription>
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-1 py-2 px-3">
+            <CardTitle className="text-sm">Workflow</CardTitle>
+            <CardDescription className="text-[10px]">4 étapes</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs">
-                <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-medium">1</div>
-                <span>Import PDF (Cybertek Pro / GrosBill Pro)</span>
+          <CardContent className="px-3 pb-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">1</div>
+                <span>Import PDF</span>
               </div>
-              <div className="flex items-center gap-2 text-xs">
-                <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-medium">2</div>
-                <span>Édition des données extraites</span>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">2</div>
+                <span>Édition données</span>
               </div>
-              <div className="flex items-center gap-2 text-xs">
-                <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-medium">3</div>
-                <span>Aperçu de la proposition</span>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">3</div>
+                <span>Aperçu</span>
               </div>
-              <div className="flex items-center gap-2 text-xs">
-                <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-medium">4</div>
-                <span>Export du document final</span>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">4</div>
+                <span>Export final</span>
               </div>
             </div>
           </CardContent>
