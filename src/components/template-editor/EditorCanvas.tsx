@@ -15,6 +15,7 @@ import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
+import { CANVAS_SCALE } from "@/lib/canvas-constants";
 import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus, Sparkles } from "lucide-react";
 import { icons } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -32,11 +33,7 @@ const ZONE_POSITIONS: Record<string, { top: string; height: string }> = {
   'nos_options': { top: '66%', height: '22%' },
 };
 
-// Facteur d'échelle pour convertir les positions absolues en pourcentages
-const CANVAS_SCALE = {
-  width: 650, // Largeur max du canvas (optimisée pour utiliser l'espace)
-  height: 919, // Hauteur proportionnelle A4 (650 * 297/210)
-};
+// CANVAS_SCALE importé depuis canvas-constants.ts pour garantir la synchronisation
 
 export function EditorCanvas() {
   const { 
