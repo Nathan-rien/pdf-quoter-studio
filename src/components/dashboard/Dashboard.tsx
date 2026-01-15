@@ -1,12 +1,5 @@
 import { cn } from "@/lib/utils";
-import { 
-  FileText, 
-  Plus, 
-  History, 
-  Settings,
-  ChevronRight,
-  Sparkles
-} from "lucide-react";
+import { FileText, Plus, History, Settings, ChevronRight, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +13,7 @@ interface DashboardProps {
 
 export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: DashboardProps) {
   const { template, excelImport, csvImport, auditLogs } = useQuoteStore();
-  
+
   const hasActiveQuote = template || excelImport;
   const recentLogs = auditLogs.slice(0, 5);
 
@@ -37,22 +30,18 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
             <h1 className="text-2xl font-bold">Générateur de Devis</h1>
           </div>
           <p className="text-primary-foreground/80 max-w-xl mb-6">
-            Créez des devis professionnels conformes à votre template, alimentés par vos données Excel et vos tarifs actualisés.
+            Pour créer un devis, cliquer sur Nouvelle proposition ou Reprendre si vous avez déjà commencé une nouvelle
+            proposition.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button 
-              variant="secondary" 
-              size="lg" 
-              onClick={onNewQuote}
-              className="gap-2 font-semibold shadow-lg"
-            >
+            <Button variant="secondary" size="lg" onClick={onNewQuote} className="gap-2 font-semibold shadow-lg">
               <Plus className="h-5 w-5" />
               Nouveau devis
             </Button>
             {hasActiveQuote && (
-              <Button 
-                variant="ghost" 
-                size="lg" 
+              <Button
+                variant="ghost"
+                size="lg"
                 onClick={onResumeQuote}
                 className="gap-2 text-primary-foreground hover:bg-primary-foreground/10"
               >
@@ -66,11 +55,7 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
 
       {/* Quick Actions Grid */}
       <div className="grid md:grid-cols-3 gap-4">
-        <Card 
-          variant="interactive" 
-          onClick={onNewQuote}
-          className="group"
-        >
+        <Card variant="interactive" onClick={onNewQuote} className="group">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
               <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -78,16 +63,14 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
               </div>
               <div>
                 <h3 className="font-semibold mb-1">Nouveau devis</h3>
-                <p className="text-sm text-muted-foreground">
-                  Démarrer un nouveau processus de génération
-                </p>
+                <p className="text-sm text-muted-foreground">Démarrer un nouveau processus de génération</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card 
-          variant={hasActiveQuote ? "interactive" : "default"} 
+        <Card
+          variant={hasActiveQuote ? "interactive" : "default"}
           onClick={hasActiveQuote ? onResumeQuote : undefined}
           className={cn(!hasActiveQuote && "opacity-60")}
         >
@@ -99,10 +82,7 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
               <div>
                 <h3 className="font-semibold mb-1">Reprendre</h3>
                 <p className="text-sm text-muted-foreground">
-                  {hasActiveQuote 
-                    ? "Continuer le devis en cours"
-                    : "Aucun devis en cours"
-                  }
+                  {hasActiveQuote ? "Continuer le devis en cours" : "Aucun devis en cours"}
                 </p>
               </div>
             </div>
@@ -117,9 +97,7 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
               </div>
               <div>
                 <h3 className="font-semibold mb-1">Historique</h3>
-                <p className="text-sm text-muted-foreground">
-                  Consulter les exports précédents
-                </p>
+                <p className="text-sm text-muted-foreground">Consulter les exports précédents</p>
               </div>
             </div>
           </CardContent>
@@ -146,21 +124,19 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
                 <Badge variant="pending">Non sélectionné</Badge>
               )}
             </div>
-            
+
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <span className="text-sm font-medium">Fichier Excel</span>
               </div>
               {excelImport ? (
-                <Badge variant={excelImport.isValid ? "success" : "error"}>
-                  {excelImport.fileName}
-                </Badge>
+                <Badge variant={excelImport.isValid ? "success" : "error"}>{excelImport.fileName}</Badge>
               ) : (
                 <Badge variant="pending">Non importé</Badge>
               )}
             </div>
-            
+
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-muted-foreground" />
@@ -168,7 +144,7 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
               </div>
               {csvImport ? (
                 <Badge variant={csvImport.isValid ? "success" : "error"}>
-                  Mis à jour {new Date(csvImport.importDate).toLocaleDateString('fr-FR')}
+                  Mis à jour {new Date(csvImport.importDate).toLocaleDateString("fr-FR")}
                 </Badge>
               ) : (
                 <Badge variant="pending">Non importé</Badge>
@@ -188,25 +164,23 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
               <div className="space-y-3">
                 {recentLogs.map((log) => (
                   <div key={log.id} className="flex items-start gap-3 text-sm">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full mt-1.5 shrink-0",
-                      log.status === 'success' && "bg-success",
-                      log.status === 'warning' && "bg-warning",
-                      log.status === 'error' && "bg-destructive",
-                    )} />
+                    <div
+                      className={cn(
+                        "w-2 h-2 rounded-full mt-1.5 shrink-0",
+                        log.status === "success" && "bg-success",
+                        log.status === "warning" && "bg-warning",
+                        log.status === "error" && "bg-destructive",
+                      )}
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="truncate">{log.message}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(log.timestamp).toLocaleString('fr-FR')}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleString("fr-FR")}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Aucune activité récente
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-8">Aucune activité récente</p>
             )}
           </CardContent>
         </Card>
