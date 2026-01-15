@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
-import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal, Sparkles } from "lucide-react";
+import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal, Sparkles, MoveVertical } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
 import type { ShapeType } from "@/types/template-editor";
 import { IconLibraryDialog } from "./IconLibraryDialog";
@@ -28,7 +28,8 @@ const SHAPE_OPTIONS: { type: ShapeType; label: string; icon: React.ComponentType
   { type: 'rounded-rectangle', label: 'Arrondi', icon: RectangleHorizontal },
   { type: 'circle', label: 'Cercle', icon: Circle },
   { type: 'ellipse', label: 'Ellipse', icon: Circle },
-  { type: 'line', label: 'Ligne', icon: Minus },
+  { type: 'line', label: 'Ligne H', icon: Minus },
+  { type: 'line-vertical', label: 'Ligne V', icon: MoveVertical },
 ];
 
 export function EditorSidebar() {

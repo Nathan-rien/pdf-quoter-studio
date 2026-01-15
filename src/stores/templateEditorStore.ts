@@ -748,19 +748,22 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     const maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
     const defaultSize = SHAPE_DEFAULT_SIZES[shapeType];
 
+    const isLine = shapeType === 'line' || shapeType === 'line-vertical';
+    
     const defaultContent: ShapeContent = {
       shapeType,
-      backgroundColor: '#f3f4f6',
+      backgroundColor: isLine ? 'transparent' : '#f3f4f6',
       backgroundOpacity: 100,
       border: {
         enabled: true,
         color: '#1f2937',
-        width: 1
+        width: isLine ? 2 : 1
       },
       cornerRadius: shapeType === 'rounded-rectangle' ? 8 : 0,
       rotation: 0,
       aspectRatioLocked: shapeType === 'square' || shapeType === 'circle',
-      isLocked: false
+      isLocked: false,
+      lineStyle: 'solid'
     };
 
     const newElement: EditableElement = {

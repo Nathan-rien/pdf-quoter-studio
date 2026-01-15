@@ -1056,17 +1056,30 @@ export function EditorCanvas() {
                     : shapeContent.cornerRadius,
                 };
 
-                if (shapeContent.shapeType === 'line') {
+                if (shapeContent.shapeType === 'line' || shapeContent.shapeType === 'line-vertical') {
+                  const isVertical = shapeContent.shapeType === 'line-vertical';
+                  const lineStyle = shapeContent.lineStyle || 'solid';
+                  const lineWidth = shapeContent.border.width || 2;
+                  const lineColor = shapeContent.border.color || '#1f2937';
+                  
                   return (
                     <div 
-                      className="w-full flex items-center justify-center"
-                      style={{ height: '100%' }}
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ 
+                        transform: shapeContent.rotation ? `rotate(${shapeContent.rotation}deg)` : undefined 
+                      }}
                     >
                       <div 
                         style={{ 
-                          width: '100%',
-                          height: shapeContent.border.width || 2,
-                          backgroundColor: shapeContent.border.color || shapeContent.backgroundColor 
+                          width: isVertical ? lineWidth : '100%',
+                          height: isVertical ? '100%' : lineWidth,
+                          backgroundColor: lineStyle === 'solid' ? lineColor : 'transparent',
+                          borderTop: !isVertical && lineStyle !== 'solid' 
+                            ? `${lineWidth}px ${lineStyle} ${lineColor}` 
+                            : undefined,
+                          borderLeft: isVertical && lineStyle !== 'solid' 
+                            ? `${lineWidth}px ${lineStyle} ${lineColor}` 
+                            : undefined,
                         }} 
                       />
                     </div>
