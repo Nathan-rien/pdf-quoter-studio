@@ -208,8 +208,9 @@ export interface TemplateEditorState {
   selectedPageNumber: PDFPageNumber;
   editorMode: 'view' | 'edit';
   hasUnsavedChanges: boolean;
-  addElementMode: 'none' | 'text' | 'image' | 'shape' | 'icon';
+  addElementMode: 'none' | 'text' | 'image' | 'shape' | 'icon' | 'logo';
   selectedShapeType: ShapeType | null;
+  selectedLogoId: string | null;
   selectedIconName: string | null;
   inlineEditingElementId: string | null; // Élément en cours d'édition inline
 }

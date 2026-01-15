@@ -1,5 +1,5 @@
 /**
- * Sidebar de l'éditeur - Navigation entre les pages et ajout de formes/icônes
+ * Sidebar de l'éditeur - Navigation entre les pages et ajout de logos/formes/icônes
  */
 
 import { useState } from "react";
@@ -11,7 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
-import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal, Sparkles, MoveVertical } from "lucide-react";
+import { TEMPLATE_LOGOS } from "@/lib/template-logos";
+import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal, Sparkles, MoveVertical, ImageIcon } from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
 import type { ShapeType } from "@/types/template-editor";
 import { IconLibraryDialog } from "./IconLibraryDialog";
@@ -42,9 +43,11 @@ export function EditorSidebar() {
     editorMode,
     addElementMode,
     selectedShapeType,
+    selectedLogoId,
     setAddElementMode,
     setSelectedShapeType,
-    setSelectedIconName
+    setSelectedIconName,
+    setSelectedLogoId
   } = useTemplateEditorStore();
 
   const pages = PDF_TEMPLATE_CONTRACT.pages;
@@ -60,6 +63,12 @@ export function EditorSidebar() {
     if (!isEditable) return;
     setAddElementMode('icon');
     setSelectedIconName(iconName);
+  };
+
+  const handleLogoClick = (logoId: string) => {
+    if (!isEditable) return;
+    setAddElementMode('logo');
+    setSelectedLogoId(logoId);
   };
 
   return (
@@ -115,9 +124,46 @@ export function EditorSidebar() {
           </div>
         </ScrollArea>
 
-        {/* Section Formes et Icônes - toujours visible en mode édition */}
+        {/* Section Logos, Formes et Icônes - toujours visible en mode édition */}
         {isEditable && (
           <div className="shrink-0 pt-2 border-t mt-2">
+            {/* Section Logos */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground px-1 flex items-center gap-1">
+                <ImageIcon className="h-3 w-3" />
+                Logos
+              </p>
+              <div className="grid grid-cols-2 gap-1">
+                {TEMPLATE_LOGOS.map((logo) => (
+                  <Button
+                    key={logo.id}
+                    variant={addElementMode === 'logo' && selectedLogoId === logo.id ? "default" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "h-10 p-1 flex items-center justify-center",
+                      logo.previewBg === 'dark' ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
+                    )}
+                    onClick={() => handleLogoClick(logo.id)}
+                    title={logo.description}
+                  >
+                    <img 
+                      src={logo.url} 
+                      alt={logo.name} 
+                      className="h-full w-full object-contain"
+                    />
+                  </Button>
+                ))}
+              </div>
+              {addElementMode === 'logo' && selectedLogoId && (
+                <p className="text-[8px] text-center text-muted-foreground">
+                  Cliquez sur le canvas
+                </p>
+              )}
+            </div>
+
+            <Separator className="my-2" />
+
+            {/* Section Formes */}
             <div className="space-y-1.5">
               <p className="text-[10px] font-medium text-muted-foreground px-1">Formes</p>
               <div className="grid grid-cols-4 gap-0.5">

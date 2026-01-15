@@ -46,6 +46,7 @@ export function EditorCanvas() {
     addElementMode,
     selectedShapeType,
     selectedIconName,
+    selectedLogoId,
     inlineEditingElementId,
     selectElement,
     toggleElementSelection,
@@ -55,6 +56,7 @@ export function EditorCanvas() {
     addElement,
     addShape,
     addIcon,
+    addLogo,
     setAddElementMode,
     setInlineEditing,
     updateElementPosition,
@@ -783,7 +785,10 @@ export function EditorCanvas() {
       const y = ((e.clientY - rect.top) / rect.height) * CANVAS_SCALE.height;
       
       try {
-        if (addElementMode === 'icon' && selectedIconName) {
+        if (addElementMode === 'logo' && selectedLogoId) {
+          addLogo(selectedLogoId, { x: Math.round(x), y: Math.round(y) });
+          toast.success(`Logo ajouté`);
+        } else if (addElementMode === 'icon' && selectedIconName) {
           addIcon(selectedIconName, { x: Math.round(x), y: Math.round(y) });
           toast.success(`Icône ajoutée`);
         } else if (addElementMode === 'shape' && selectedShapeType) {
@@ -849,7 +854,7 @@ export function EditorCanvas() {
           {isAddMode && (
             <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-between">
               <p className="text-sm text-primary">
-                Cliquez sur le canvas pour placer {addElementMode === 'icon' ? 'l\'icône' : addElementMode === 'image' ? 'l\'image' : addElementMode === 'shape' ? 'la forme' : 'le texte'}
+                Cliquez sur le canvas pour placer {addElementMode === 'logo' ? 'le logo' : addElementMode === 'icon' ? 'l\'icône' : addElementMode === 'image' ? 'l\'image' : addElementMode === 'shape' ? 'la forme' : 'le texte'}
               </p>
               <Button variant="ghost" size="sm" onClick={handleCancelAddMode}>
                 Annuler
