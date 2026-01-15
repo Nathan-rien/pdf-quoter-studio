@@ -77,12 +77,14 @@ interface TemplateEditorStore extends TemplateEditorState {
   canUndo: () => boolean;
 
   // Ajout d'éléments
-  setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape' | 'icon') => void;
+  setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape' | 'icon' | 'logo') => void;
   setSelectedShapeType: (type: ShapeType | null) => void;
   setSelectedIconName: (name: string | null) => void;
+  setSelectedLogoId: (id: string | null) => void;
   addElement: (type: 'text' | 'image', position: { x: number; y: number }) => EditableElement;
   addShape: (shapeType: ShapeType, position: { x: number; y: number }) => EditableElement;
   addIcon: (iconName: string, position: { x: number; y: number }) => EditableElement;
+  addLogo: (logoId: string, position: { x: number; y: number }) => EditableElement;
   deleteElement: (elementId: string) => boolean;
   duplicateElement: (elementId: string) => EditableElement | null;
   
@@ -216,6 +218,7 @@ const initialState: TemplateEditorState = {
   addElementMode: 'none',
   selectedShapeType: null,
   selectedIconName: null,
+  selectedLogoId: null,
   inlineEditingElementId: null
 };
 
@@ -788,6 +791,66 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       addElementMode: 'none',
       selectedShapeType: null,
       selectedIconName: null
+    });
+
+    return newElement;
+  },
+
+  // Setter pour l'ID du logo sélectionné
+  setSelectedLogoId: (id) => set({ selectedLogoId: id }),
+
+  // Ajout d'un logo (crée un élément image)
+  addLogo: (logoId, position) => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      throw new Error('Cannot add logo to non-draft version');
+    }
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === selectedPageNumber);
+    if (pageIndex === -1) {
+      throw new Error('Page not found');
+    }
+
+    // Importer dynamiquement le logo
+    const { getLogoById } = require('@/lib/template-logos');
+    const logo = getLogoById(logoId);
+    if (!logo) {
+      throw new Error('Logo not found');
+    }
+
+    const existingElements = currentVersion.pages[pageIndex].elements.filter(e => !e.isDynamic);
+    const maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+
+    const defaultContent: ImageContent = {
+      imageUrl: logo.url,
+      alt: logo.description,
+      rotation: 0,
+      opacity: 100,
+      objectFit: 'contain'
+    };
+
+    const newElement: EditableElement = {
+      id: `logo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'image',
+      pageNumber: selectedPageNumber,
+      isDynamic: false,
+      position,
+      size: { width: 120, height: 50 }, // Taille par défaut pour un logo
+      content: defaultContent,
+      zIndex: maxZIndex + 1
+    };
+
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements, newElement];
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedElementId: newElement.id,
+      selectedElementIds: [newElement.id],
+      addElementMode: 'none',
+      selectedLogoId: null
     });
 
     return newElement;
