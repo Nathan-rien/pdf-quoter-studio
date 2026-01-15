@@ -15,7 +15,7 @@ import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
 import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
-import { CANVAS_SCALE } from "@/lib/canvas-constants";
+import { CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH } from "@/lib/canvas-constants";
 import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus, Sparkles } from "lucide-react";
 import { icons } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -857,13 +857,13 @@ export function EditorCanvas() {
             </div>
           )}
 
-          {/* Canvas A4 simulé */}
+          {/* Canvas A4 simulé - utilise ring au lieu de border pour ne pas affecter la surface utile */}
           <div 
             ref={canvasRef}
             className={cn(
               "relative mx-auto bg-white rounded-lg shadow-lg overflow-hidden",
-              "border-2",
-              isEditable ? "border-primary/30" : "border-border",
+              "ring-2",
+              isEditable ? "ring-primary/30" : "ring-border",
               isAddMode && "cursor-crosshair",
               (isDragging || isDraggingZone) && "cursor-grabbing",
               isResizing && "cursor-nwse-resize",
@@ -871,7 +871,7 @@ export function EditorCanvas() {
             )}
             style={{
               width: '100%',
-              maxWidth: '580px',
+              maxWidth: `${CANVAS_DISPLAY_MAX_WIDTH}px`,
               aspectRatio: '210 / 297', // A4 ratio
             }}
             onClick={handleCanvasClick}

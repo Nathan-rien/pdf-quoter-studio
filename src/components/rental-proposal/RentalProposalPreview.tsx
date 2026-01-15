@@ -29,7 +29,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex } from '@/lib/template-render-utils';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
@@ -793,8 +793,11 @@ export function RentalProposalPreview() {
         {/* Navigation pages */}
         {renderPageIndicator()}
         
-        {/* Aperçu page courante */}
-        <div className="max-w-lg mx-auto">
+        {/* Aperçu page courante - largeur identique à EditorCanvas */}
+        <div 
+          className="mx-auto w-full"
+          style={{ maxWidth: `${CANVAS_DISPLAY_MAX_WIDTH}px` }}
+        >
           {renderCurrentPage()}
         </div>
         

@@ -30,3 +30,6 @@ export const CONTRACT_PAGES = 8;
 // Constantes de pagination
 export const OPTIONS_PER_PAGE = 6;
 export const LINES_PER_PAGE = 12;
+
+// Largeur maximale d'affichage du canvas (identique Éditeur/Aperçu)
+export const CANVAS_DISPLAY_MAX_WIDTH = 580;
