@@ -120,34 +120,69 @@ export function RentalProposalPreview() {
       };
     };
 
-    // Rendu texte
+    // Fonction renderTextContent identique à EditorCanvas
+    const renderTextContent = (textContent: TextContent) => {
+      const listType = textContent.listType || 'none';
+      const indentLevel = textContent.indentLevel || 0;
+      const indentPx = indentLevel * 12 * PREVIEW_FONT_SCALE;
+      
+      // Si contenu HTML enrichi, l'utiliser directement
+      if (textContent.htmlContent) {
+        return (
+          <div 
+            style={{ paddingLeft: `${indentPx}px` }}
+            dangerouslySetInnerHTML={{ __html: textContent.htmlContent }}
+          />
+        );
+      }
+      
+      // Fallback sur le texte brut avec support des listes
+      const text = textContent.text || '';
+      const lines = text.split('\n');
+      return (
+        <>
+          {lines.map((line, i) => (
+            <div key={`line-${element.id}-${i}`} style={{ paddingLeft: `${indentPx}px` }}>
+              {listType === 'bullet' && '• '}
+              {listType === 'numbered' && `${i + 1}. `}
+              {line || '\u00A0'}
+            </div>
+          ))}
+        </>
+      );
+    };
+
+    // Rendu texte - structure identique à EditorCanvas
     if (element.type === 'text') {
       const content = element.content as TextContent;
       const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
       const fontValue = fontDef?.value || 'Outfit, sans-serif';
-      // Échelle de taille adaptée à la preview (utilise la constante partagée)
       const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
-      const indentPx = (content.indentLevel || 0) * 12;
 
       return (
         <div
           key={element.id}
-          style={{
-            ...getElementStyle(),
-            fontFamily: fontValue,
-            fontSize: `${scaledFontSize}px`,
-            color: content.color || '#1f2937',
-            fontWeight: content.bold ? 'bold' : 'normal',
-            fontStyle: content.italic ? 'italic' : 'normal',
-            textDecoration: content.underline ? 'underline' : 'none',
-            textAlign: content.textAlign || 'left',
-            paddingLeft: `${indentPx}px`,
-            lineHeight: 1.3,
-          }}
-          dangerouslySetInnerHTML={{
-            __html: content.htmlContent || content.text.replace(/\n/g, '<br/>')
-          }}
-        />
+          style={getElementStyle()}
+        >
+          <div 
+            className="px-0.5 py-px"
+            style={{
+              fontFamily: fontValue,
+              fontSize: `${scaledFontSize}px`,
+              color: content.color || '#1f2937',
+              fontWeight: content.bold ? 'bold' : 'normal',
+              fontStyle: content.italic ? 'italic' : 'normal',
+              textDecoration: content.underline ? 'underline' : 'none',
+              lineHeight: 1.2,
+              textAlign: content.textAlign || 'left',
+              width: '100%',
+            }}
+          >
+            <div className="whitespace-pre-wrap break-words">
+              {renderTextContent(content)}
+            </div>
+          </div>
+        </div>
       );
     }
 
