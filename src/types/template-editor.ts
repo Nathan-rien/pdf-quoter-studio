@@ -12,7 +12,10 @@ export type TemplateVersionStatus = 'brouillon' | 'publie' | 'archive';
 export type EditableElementType = 'text' | 'image' | 'block' | 'shape' | 'group' | 'icon';
 
 // Types de formes disponibles
-export type ShapeType = 'rectangle' | 'square' | 'rounded-rectangle' | 'circle' | 'ellipse' | 'line';
+export type ShapeType = 'rectangle' | 'square' | 'rounded-rectangle' | 'circle' | 'ellipse' | 'line' | 'line-vertical';
+
+// Style de trait pour les lignes
+export type LineStyle = 'solid' | 'dashed' | 'dotted';
 
 // Polices autorisées (liste fermée)
 export type AllowedFont = 'Garet' | 'DM Sans' | 'Inter' | 'Roboto';
@@ -103,10 +106,11 @@ export interface ShapeContent {
   backgroundOpacity: number; // 0-100%
   border: ShapeBorderStyle;
   cornerRadius: number; // 0-50px (0 = angles droits)
-  rotation: number; // 0, 90, 180, 270
+  rotation: number; // 0, 45, 90, 135, 180 (étendu pour les lignes)
   innerContent?: ShapeInnerContent;
   aspectRatioLocked: boolean;
   isLocked: boolean; // Forme verrouillée (non modifiable)
+  lineStyle?: LineStyle; // Style de trait pour les lignes (solid, dashed, dotted)
 }
 
 // Groupe d'éléments

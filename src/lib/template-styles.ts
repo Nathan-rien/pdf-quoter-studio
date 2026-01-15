@@ -76,11 +76,23 @@ export const TEXT_PRESET_STYLES: Record<TextPresetStyle, {
 // Rotations autorisées pour les images et formes
 export const ALLOWED_ROTATIONS = [0, 90, 180, 270] as const;
 
+// Rotations étendues pour les lignes (incluant diagonales)
+export const ALLOWED_LINE_ROTATIONS = [0, 45, 90, 135, 180] as const;
+
 // Épaisseurs de bordure autorisées
 export const ALLOWED_BORDER_WIDTHS = [1, 2, 3, 4, 5] as const;
 
 // Rayons de coins autorisés
 export const ALLOWED_CORNER_RADII = [0, 4, 8, 12, 16, 24, 32, 50] as const;
+
+// Styles de ligne disponibles
+export const LINE_STYLES = [
+  { name: 'Solide', value: 'solid' as const },
+  { name: 'Tirets', value: 'dashed' as const },
+  { name: 'Pointillés', value: 'dotted' as const },
+] as const;
+
+export type LineStyleValue = typeof LINE_STYLES[number]['value'];
 
 // Icônes disponibles pour les formes (liste fermée)
 export const ALLOWED_SHAPE_ICONS = [
@@ -99,6 +111,7 @@ export const SHAPE_DEFAULT_SIZES: Record<ShapeType, { width: number; height: num
   circle: { width: 60, height: 60 },
   ellipse: { width: 100, height: 60 },
   line: { width: 100, height: 2 },
+  'line-vertical': { width: 2, height: 100 },
 };
 
 // Validation qu'une couleur est autorisée

@@ -193,17 +193,38 @@ export function RentalProposalPreview() {
         baseStyle.border = `${content.border.width}px solid ${content.border.color}`;
       }
 
-      // Ligne spéciale
-      if (content.shapeType === 'line') {
+      // Ligne spéciale (horizontale et verticale)
+      if (content.shapeType === 'line' || content.shapeType === 'line-vertical') {
+        const isVertical = content.shapeType === 'line-vertical';
+        const lineStyle = content.lineStyle || 'solid';
+        const lineWidth = content.border?.width || 2;
+        const lineColor = content.border?.color || '#1f2937';
+        
         return (
           <div
             key={element.id}
             style={{
               ...getElementStyle(),
-              height: '2px',
-              backgroundColor: content.border?.color || '#1f2937',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: content.rotation ? `rotate(${content.rotation}deg)` : undefined,
             }}
-          />
+          >
+            <div 
+              style={{ 
+                width: isVertical ? lineWidth : '100%',
+                height: isVertical ? '100%' : lineWidth,
+                backgroundColor: lineStyle === 'solid' ? lineColor : 'transparent',
+                borderTop: !isVertical && lineStyle !== 'solid' 
+                  ? `${lineWidth}px ${lineStyle} ${lineColor}` 
+                  : undefined,
+                borderLeft: isVertical && lineStyle !== 'solid' 
+                  ? `${lineWidth}px ${lineStyle} ${lineColor}` 
+                  : undefined,
+              }} 
+            />
+          </div>
         );
       }
 

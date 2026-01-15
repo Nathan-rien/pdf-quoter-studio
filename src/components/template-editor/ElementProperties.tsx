@@ -23,9 +23,11 @@ import {
   ALLOWED_FONT_SIZES, 
   TEXT_PRESET_STYLES, 
   ALLOWED_ROTATIONS,
+  ALLOWED_LINE_ROTATIONS,
   SHAPE_BACKGROUND_COLORS,
   ALLOWED_BORDER_WIDTHS,
-  ALLOWED_CORNER_RADII
+  ALLOWED_CORNER_RADII,
+  LINE_STYLES
 } from "@/lib/template-styles";
 import type { TextContent, ImageContent, ShapeContent, TextPresetStyle, ListType, ShapeType, TextAlign, IconContent } from "@/types/template-editor";
 import { 
@@ -403,6 +405,7 @@ export function ElementProperties() {
       case 'ellipse':
         return Circle;
       case 'line':
+      case 'line-vertical':
         return Minus;
       default:
         return Square;
@@ -417,7 +420,8 @@ export function ElementProperties() {
       'rounded-rectangle': 'Rectangle arrondi',
       circle: 'Cercle',
       ellipse: 'Ellipse',
-      line: 'Ligne'
+      line: 'Ligne horizontale',
+      'line-vertical': 'Ligne verticale'
     };
     return labels[shapeContent.shapeType];
   };
@@ -1049,34 +1053,125 @@ export function ElementProperties() {
               )}
             </div>
 
-            <Separator />
-
-            {/* Coins arrondis (sauf cercle, ellipse, ligne) */}
-            {!['circle', 'ellipse', 'line'].includes(shapeContent.shapeType) && (
-              <div className="space-y-2">
-                <Label className="flex items-center justify-between">
-                  <span>Coins arrondis</span>
-                  <span className="text-xs text-muted-foreground">{shapeContent.cornerRadius}px</span>
-                </Label>
-                <div className="flex items-center gap-1 flex-wrap">
-                  {ALLOWED_CORNER_RADII.map((radius) => (
-                    <Button
-                      key={radius}
-                      variant={shapeContent.cornerRadius === radius ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleShapeContentChange({ cornerRadius: radius })}
-                      disabled={!isEditable || shapeContent.isLocked}
-                      className="text-xs h-7 px-2"
-                    >
-                      {radius}
-                    </Button>
-                  ))}
+            {/* Section spéciale pour les lignes */}
+            {(shapeContent.shapeType === 'line' || shapeContent.shapeType === 'line-vertical') && (
+              <>
+                <Separator />
+                
+                {/* Épaisseur du trait */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Épaisseur du trait
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    {ALLOWED_BORDER_WIDTHS.map((width) => (
+                      <Button
+                        key={width}
+                        variant={shapeContent.border.width === width ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleShapeBorderChange({ width })}
+                        disabled={!isEditable || shapeContent.isLocked}
+                        className="flex-1 text-xs"
+                      >
+                        {width}px
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                {/* Couleur du trait */}
+                <div className="space-y-2">
+                  <Label className="text-xs">Couleur du trait</Label>
+                  <div className="grid grid-cols-7 gap-1">
+                    {ALLOWED_COLORS.map((color) => (
+                      <button
+                        key={color.value}
+                        className={`w-5 h-5 rounded border-2 transition-all ${
+                          shapeContent.border.color === color.value 
+                            ? "border-primary ring-2 ring-primary/30" 
+                            : "border-transparent hover:border-muted-foreground/50"
+                        } ${(!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"}`}
+                        style={{ backgroundColor: color.value }}
+                        onClick={() => handleShapeBorderChange({ color: color.value })}
+                        disabled={!isEditable || shapeContent.isLocked}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rotation de la ligne */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <RotateCw className="h-4 w-4" />
+                    Rotation
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    {ALLOWED_LINE_ROTATIONS.map((rotation) => (
+                      <Button
+                        key={rotation}
+                        variant={shapeContent.rotation === rotation ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleShapeContentChange({ rotation })}
+                        disabled={!isEditable || shapeContent.isLocked}
+                        className="flex-1 text-xs"
+                      >
+                        {rotation}°
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Style de ligne */}
+                <div className="space-y-2">
+                  <Label>Style de trait</Label>
+                  <div className="flex items-center gap-1">
+                    {LINE_STYLES.map((style) => (
+                      <Button
+                        key={style.value}
+                        variant={(shapeContent.lineStyle || 'solid') === style.value ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleShapeContentChange({ lineStyle: style.value })}
+                        disabled={!isEditable || shapeContent.isLocked}
+                        className="flex-1 text-xs"
+                      >
+                        {style.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
 
-            {/* Rotation (sauf ligne) */}
-            {shapeContent.shapeType !== 'line' && (
+            {/* Coins arrondis (sauf cercle, ellipse, lignes) */}
+            {!['circle', 'ellipse', 'line', 'line-vertical'].includes(shapeContent.shapeType) && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="flex items-center justify-between">
+                    <span>Coins arrondis</span>
+                    <span className="text-xs text-muted-foreground">{shapeContent.cornerRadius}px</span>
+                  </Label>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {ALLOWED_CORNER_RADII.map((radius) => (
+                      <Button
+                        key={radius}
+                        variant={shapeContent.cornerRadius === radius ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleShapeContentChange({ cornerRadius: radius })}
+                        disabled={!isEditable || shapeContent.isLocked}
+                        className="text-xs h-7 px-2"
+                      >
+                        {radius}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Rotation (sauf lignes - elles ont leur propre section) */}
+            {!['line', 'line-vertical'].includes(shapeContent.shapeType) && (
               <>
                 <Separator />
                 <div className="space-y-2">
