@@ -63,15 +63,16 @@ export function EditorSidebar() {
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-1 px-2 py-2">
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="pb-1 px-2 py-2 shrink-0">
         <CardTitle className="text-xs flex items-center gap-1.5">
           <FileText className="h-3 w-3" />
           Pages ({pages.length})
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-1.5 flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
+      <CardContent className="p-1.5 flex-1 flex flex-col overflow-hidden">
+        {/* Liste des pages - scrollable */}
+        <ScrollArea className="flex-1 min-h-0">
           <div className="space-y-0.5">
             {pages.map((page) => {
               const isSelected = selectedPageNumber === page.pageNumber;
@@ -114,18 +115,18 @@ export function EditorSidebar() {
           </div>
         </ScrollArea>
 
+        {/* Section Formes et Icônes - toujours visible en mode édition */}
         {isEditable && (
-          <>
-            <Separator className="my-2" />
+          <div className="shrink-0 pt-2 border-t mt-2">
             <div className="space-y-1.5">
               <p className="text-[10px] font-medium text-muted-foreground px-1">Formes</p>
-              <div className="grid grid-cols-3 gap-0.5">
+              <div className="grid grid-cols-4 gap-0.5">
                 {SHAPE_OPTIONS.map(({ type, label, icon: ShapeIcon }) => (
                   <Button
                     key={type}
                     variant={addElementMode === 'shape' && selectedShapeType === type ? "default" : "outline"}
                     size="sm"
-                    className="h-9 flex-col gap-0 text-[8px] px-1"
+                    className="h-8 flex-col gap-0 text-[7px] px-0.5"
                     onClick={() => handleShapeClick(type)}
                   >
                     <ShapeIcon className={cn("h-3 w-3", type === 'rounded-rectangle' && "rounded")} />
@@ -160,7 +161,7 @@ export function EditorSidebar() {
                 </p>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* Dialog de sélection d'icônes */}
