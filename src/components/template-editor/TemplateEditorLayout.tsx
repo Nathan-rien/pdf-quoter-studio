@@ -160,28 +160,28 @@ export function TemplateEditorLayout() {
   const isEditable = currentVersion?.status === 'brouillon';
 
   return (
-    <div className="space-y-3 animate-slide-up">
+    <div className="space-y-2 animate-slide-up">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={handleBackToList} className="h-8">
-            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            Retour
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleBackToList} className="h-7 px-2">
+            <ArrowLeft className="h-3 w-3 mr-1" />
+            <span className="text-xs">Retour</span>
           </Button>
-          <div className="p-2 rounded-lg bg-primary text-primary-foreground">
-            <Palette className="h-5 w-5" />
+          <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
+            <Palette className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">
+            <h1 className="text-base font-bold">
               {currentTemplate?.name || 'Éditeur de Template'}
             </h1>
-            <p className="text-xs text-muted-foreground">
-              Mode administration - Modification du template PDF
+            <p className="text-[10px] text-muted-foreground">
+              Mode administration
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {currentVersion && (
             <>
               <Badge 
@@ -189,11 +189,12 @@ export function TemplateEditorLayout() {
                   currentVersion.status === 'publie' ? 'success' : 
                   currentVersion.status === 'archive' ? 'secondary' : 'pending'
                 }
+                className="text-[10px]"
               >
                 {currentVersion.status === 'publie' ? 'Publié' : 
                  currentVersion.status === 'archive' ? 'Archivé' : 'Brouillon'}
               </Badge>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 v{currentVersion.versionNumber}
               </span>
             </>
@@ -202,8 +203,8 @@ export function TemplateEditorLayout() {
           {/* Menu paramètres */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Settings className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -226,10 +227,10 @@ export function TemplateEditorLayout() {
 
       {/* Warning banner */}
       <Card variant="warning" className="border-warning/50 bg-warning/10">
-        <CardContent className="p-2 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-warning shrink-0" />
-          <p className="text-xs">
-            <strong>Mode Administration</strong> — Zones dynamiques protégées. Seuls les textes et images statiques sont éditables.
+        <CardContent className="py-1.5 px-2 flex items-center gap-2">
+          <AlertCircle className="h-3 w-3 text-warning shrink-0" />
+          <p className="text-[10px]">
+            <strong>Administration</strong> — Zones dynamiques protégées.
           </p>
         </CardContent>
       </Card>
@@ -237,36 +238,38 @@ export function TemplateEditorLayout() {
       {/* Main tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'editor' | 'history')}>
         <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="editor" className="gap-2">
-              <FileText className="h-4 w-4" />
+          <TabsList className="h-8">
+            <TabsTrigger value="editor" className="gap-1.5 text-xs h-7 px-2">
+              <FileText className="h-3 w-3" />
               Éditeur
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
-              <History className="h-4 w-4" />
-              Historique des versions
+            <TabsTrigger value="history" className="gap-1.5 text-xs h-7 px-2">
+              <History className="h-3 w-3" />
+              Versions
             </TabsTrigger>
           </TabsList>
 
           {activeTab === 'editor' && currentVersion && (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               {/* Barre d'outils ajout d'éléments */}
               {isEditable && (
-                <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
+                <div className="flex items-center gap-0.5 border rounded-md p-0.5 bg-muted/30">
                   <Button
                     variant={addElementMode === 'text' ? 'default' : 'ghost'}
                     size="sm"
+                    className="h-6 px-2 text-xs"
                     onClick={() => setAddElementMode(addElementMode === 'text' ? 'none' : 'text')}
                   >
-                    <Type className="h-4 w-4 mr-1" />
+                    <Type className="h-3 w-3 mr-1" />
                     Texte
                   </Button>
                   <Button
                     variant={addElementMode === 'image' ? 'default' : 'ghost'}
                     size="sm"
+                    className="h-6 px-2 text-xs"
                     onClick={() => setAddElementMode(addElementMode === 'image' ? 'none' : 'image')}
                   >
-                    <ImagePlus className="h-4 w-4 mr-1" />
+                    <ImagePlus className="h-3 w-3 mr-1" />
                     Image
                   </Button>
                 </div>
@@ -275,27 +278,29 @@ export function TemplateEditorLayout() {
               {currentVersion.status === 'brouillon' ? (
                 <>
                   {hasUnsavedChanges && (
-                    <Badge variant="warning" className="animate-pulse">
-                      Modifications non sauvegardées
+                    <Badge variant="warning" className="animate-pulse text-[10px]">
+                      Non sauvegardé
                     </Badge>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-7 text-xs"
                     onClick={handleDiscard}
                     disabled={!hasUnsavedChanges}
                   >
-                    <RotateCcw className="h-4 w-4 mr-2" />
+                    <RotateCcw className="h-3 w-3 mr-1" />
                     Annuler
                   </Button>
 
                   <Button
                     variant="default"
                     size="sm"
+                    className="h-7 text-xs"
                     onClick={() => setShowPublishDialog(true)}
                     disabled={!hasUnsavedChanges}
                   >
-                    <Save className="h-4 w-4 mr-2" />
+                    <Save className="h-3 w-3 mr-1" />
                     Sauvegarder
                   </Button>
                 </>
@@ -303,50 +308,52 @@ export function TemplateEditorLayout() {
                 <Button
                   variant="default"
                   size="sm"
+                  className="h-7 text-xs"
                   onClick={handleCreateVersion}
                 >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Éditer (créer un brouillon)
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Éditer
                 </Button>
               )}
             </div>
           )}
         </div>
 
-        <TabsContent value="editor" className="mt-3">
+        <TabsContent value="editor" className="mt-2">
           {currentVersion ? (
-            <div className="grid grid-cols-12 gap-2" style={{ height: 'calc(100vh - 220px)' }}>
+            <div className="grid grid-cols-12 gap-1.5" style={{ height: 'calc(100vh - 180px)' }}>
               {/* Sidebar gauche - Navigation pages */}
-              <div className="col-span-2">
+              <div className="col-span-2 overflow-auto">
                 <EditorSidebar />
               </div>
 
-              {/* Canvas central */}
-              <div className="col-span-7">
+              {/* Canvas central - plus large */}
+              <div className="col-span-8 overflow-hidden">
                 <EditorCanvas />
               </div>
 
-              {/* Panel droit - Propriétés */}
-              <div className="col-span-3">
+              {/* Panel droit - Propriétés - plus compact */}
+              <div className="col-span-2 overflow-auto">
                 <ElementProperties />
               </div>
             </div>
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Aucune version sélectionnée</CardTitle>
+                <CardTitle className="text-sm">Aucune version sélectionnée</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  Sélectionnez une version existante dans l'historique ou créez une nouvelle version.
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Sélectionnez une version existante ou créez-en une nouvelle.
                 </p>
-                <div className="flex gap-3">
-                  <Button onClick={handleCreateVersion}>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleCreateVersion}>
                     Créer une nouvelle version
                   </Button>
                   {publishedVersions.length > 0 && (
                     <Button 
                       variant="outline"
+                      size="sm"
                       onClick={() => loadVersion(publishedVersions[0])}
                     >
                       Voir la version publiée
@@ -358,7 +365,7 @@ export function TemplateEditorLayout() {
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="mt-3">
+        <TabsContent value="history" className="mt-2">
           <VersionHistory 
             versions={templateVersions}
             currentVersionId={currentVersion?.id || null}

@@ -7,6 +7,7 @@ import { TemplateEditorLayout } from "@/components/template-editor";
 import { RentalWorkflow } from "@/components/rental-proposal/RentalWorkflow";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
+import { cn } from "@/lib/utils";
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
@@ -46,8 +47,11 @@ export default function Index() {
         onNavigate={setCurrentView}
       />
       
-      <main className="flex-1 p-4 lg:p-6 overflow-auto">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-1 p-3 lg:p-4 overflow-auto">
+        <div className={cn(
+          "mx-auto",
+          currentView === 'template-editor' ? "max-w-full" : "max-w-7xl"
+        )}>
           {renderContent()}
         </div>
       </main>

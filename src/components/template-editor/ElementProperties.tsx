@@ -172,25 +172,21 @@ export function ElementProperties() {
   if (!selectedElement) {
     return (
       <Card className="h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <CardTitle className="text-sm flex items-center gap-2 shrink-0">
-              <MousePointer className="h-4 w-4" />
+        <CardHeader className="pb-2 py-2 px-2">
+          <div className="flex items-center justify-between gap-1 flex-wrap">
+            <CardTitle className="text-xs flex items-center gap-1 shrink-0">
+              <MousePointer className="h-3 w-3" />
               Propriétés
             </CardTitle>
-            <StatusBadge isEditable={isEditable} hasUnsavedChanges={hasUnsavedChanges} />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="p-4 rounded-full bg-muted mb-4">
-              <Info className="h-6 w-6 text-muted-foreground" />
+        <CardContent className="px-2 py-2">
+          <div className="flex flex-col items-center justify-center py-4 text-center">
+            <div className="p-2 rounded-full bg-muted mb-2">
+              <Info className="h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground mb-2">
+            <p className="text-[10px] text-muted-foreground">
               Aucun élément sélectionné
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Cliquez sur un élément éditable. Ctrl+clic pour multi-sélection.
             </p>
           </div>
         </CardContent>

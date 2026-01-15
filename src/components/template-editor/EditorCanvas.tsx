@@ -34,8 +34,8 @@ const ZONE_POSITIONS: Record<string, { top: string; height: string }> = {
 
 // Facteur d'échelle pour convertir les positions absolues en pourcentages
 const CANVAS_SCALE = {
-  width: 580, // Largeur max du canvas (optimisé)
-  height: 820, // Hauteur proportionnelle A4 (580 * 297/210)
+  width: 650, // Largeur max du canvas (optimisée pour utiliser l'espace)
+  height: 919, // Hauteur proportionnelle A4 (650 * 297/210)
 };
 
 export function EditorCanvas() {
