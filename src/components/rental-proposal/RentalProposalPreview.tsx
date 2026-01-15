@@ -200,30 +200,35 @@ export function RentalProposalPreview() {
         const lineWidth = content.border?.width || 2;
         const lineColor = content.border?.color || '#1f2937';
         
+        // Style de positionnement absolu sans transform (la rotation est appliquée sur le wrapper interne)
+        const positionStyle = getElementStyle();
+        
         return (
           <div
             key={element.id}
-            style={{
-              ...getElementStyle(),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transform: content.rotation ? `rotate(${content.rotation}deg)` : undefined,
-            }}
+            style={positionStyle}
           >
+            {/* Wrapper interne centré avec rotation - identique à EditorCanvas */}
             <div 
+              className="w-full h-full flex items-center justify-center"
               style={{ 
-                width: isVertical ? lineWidth : '100%',
-                height: isVertical ? '100%' : lineWidth,
-                backgroundColor: lineStyle === 'solid' ? lineColor : 'transparent',
-                borderTop: !isVertical && lineStyle !== 'solid' 
-                  ? `${lineWidth}px ${lineStyle} ${lineColor}` 
-                  : undefined,
-                borderLeft: isVertical && lineStyle !== 'solid' 
-                  ? `${lineWidth}px ${lineStyle} ${lineColor}` 
-                  : undefined,
-              }} 
-            />
+                transform: content.rotation ? `rotate(${content.rotation}deg)` : undefined 
+              }}
+            >
+              <div 
+                style={{ 
+                  width: isVertical ? lineWidth : '100%',
+                  height: isVertical ? '100%' : lineWidth,
+                  backgroundColor: lineStyle === 'solid' ? lineColor : 'transparent',
+                  borderTop: !isVertical && lineStyle !== 'solid' 
+                    ? `${lineWidth}px ${lineStyle} ${lineColor}` 
+                    : undefined,
+                  borderLeft: isVertical && lineStyle !== 'solid' 
+                    ? `${lineWidth}px ${lineStyle} ${lineColor}` 
+                    : undefined,
+                }} 
+              />
+            </div>
           </div>
         );
       }
@@ -387,14 +392,8 @@ export function RentalProposalPreview() {
           )}
         </div>
         
-        <div className="p-2 border-t bg-muted/30">
-          <div className="flex items-center justify-between">
-            <div className="text-[8px] text-muted-foreground">
-              <p>Document généré le {new Date().toLocaleDateString('fr-FR')}</p>
-              {activeTemplate && <p>Template : {activeTemplate.name}</p>}
-            </div>
-            <PageFooter pageNum={1} />
-          </div>
+        <div className="p-2">
+          <PageFooter pageNum={1} />
         </div>
       </div>
     );
