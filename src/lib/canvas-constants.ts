@@ -18,6 +18,12 @@ export const A4_ASPECT_RATIO = '210 / 297';
 // Facteur de mise à l'échelle pour le texte dans la preview
 export const PREVIEW_FONT_SCALE = 0.4;
 
+// Facteur de mise à l'échelle pour les icônes (identique éditeur/aperçu)
+export const PREVIEW_ICON_SCALE = 0.6;
+
+// Indentation des listes en pixels (avant scaling)
+export const LIST_INDENT_PX = 12;
+
 // Nombre de pages fixe selon le contrat PDF
 export const CONTRACT_PAGES = 8;
 

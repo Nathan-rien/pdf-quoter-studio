@@ -29,7 +29,8 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
+import { getSharedElementStyle, sortElementsByZIndex } from '@/lib/template-render-utils';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
 
@@ -84,47 +85,23 @@ export function RentalProposalPreview() {
     const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
     if (!pageContent) return [];
     
-    // Retourner uniquement les éléments non-dynamiques (texte/image statiques)
-    return pageContent.elements.filter(el => !el.isDynamic);
+    // Retourner uniquement les éléments non-dynamiques (texte/image statiques), triés par zIndex
+    return sortElementsByZIndex(pageContent.elements.filter(el => !el.isDynamic));
   };
 
-  // Rendu d'un élément du template (identique à EditorCanvas)
+  // Rendu d'un élément du template (utilise le style partagé pour garantir la fidélité WYSIWYG)
   const renderTemplateElement = (element: EditableElement) => {
-    // Calcul du style de position (comme EditorCanvas)
+    // Utilisation du style partagé pour garantir un rendu identique à EditorCanvas
     const getElementStyle = (): React.CSSProperties => {
-      const left = (element.position.x / CANVAS_SCALE.width) * 100;
-      const top = (element.position.y / CANVAS_SCALE.height) * 100;
-      const width = (element.size.width / CANVAS_SCALE.width) * 100;
-      const height = (element.size.height / CANVAS_SCALE.height) * 100;
-      
-      // Pour les textes: utiliser maxWidth et fit-content comme EditorCanvas
-      if (element.type === 'text') {
-        return {
-          position: 'absolute',
-          left: `${left}%`,
-          top: `${top}%`,
-          maxWidth: `${Math.min(Math.max(width, 5), 100)}%`,
-          width: 'fit-content',
-          height: 'auto',
-          zIndex: element.zIndex || 0,
-        };
-      }
-      
-      return {
-        position: 'absolute',
-        left: `${left}%`,
-        top: `${top}%`,
-        width: `${width}%`,
-        height: `${height}%`,
-        zIndex: element.zIndex || 0,
-      };
+      return getSharedElementStyle({ element });
     };
 
-    // Fonction renderTextContent identique à EditorCanvas
+    // Fonction renderTextContent identique à EditorCanvas (utilise LIST_INDENT_PX)
     const renderTextContent = (textContent: TextContent) => {
       const listType = textContent.listType || 'none';
       const indentLevel = textContent.indentLevel || 0;
-      const indentPx = indentLevel * 12 * PREVIEW_FONT_SCALE;
+      // Utilise la constante partagée (sans multiplication par PREVIEW_FONT_SCALE)
+      const indentPx = indentLevel * LIST_INDENT_PX;
       
       // Si contenu HTML enrichi, l'utiliser directement
       if (textContent.htmlContent) {
@@ -284,7 +261,7 @@ export function RentalProposalPreview() {
               {content.innerContent.text && (
                 <span
                   style={{
-                    fontSize: `${Math.max(content.innerContent.text.fontSize * 0.4, 6)}px`,
+                    fontSize: `${Math.max(content.innerContent.text.fontSize * PREVIEW_FONT_SCALE, 6)}px`,
                     color: content.innerContent.text.color,
                     fontWeight: content.innerContent.text.bold ? 'bold' : 'normal',
                     fontStyle: content.innerContent.text.italic ? 'italic' : 'normal',
@@ -298,7 +275,7 @@ export function RentalProposalPreview() {
                 if (!IconComp) return null;
                 return (
                   <IconComp
-                    size={Math.max(content.innerContent.icon.size * 0.4, 8)}
+                    size={Math.max(content.innerContent.icon.size * PREVIEW_ICON_SCALE, 8)}
                     color={content.innerContent.icon.color}
                   />
                 );
@@ -309,13 +286,13 @@ export function RentalProposalPreview() {
       );
     }
 
-    // Rendu icône
     if (element.type === 'icon') {
       const content = element.content as IconContent;
       const IconComponent = (icons as Record<string, LucideIcon>)[content.iconName];
       if (!IconComponent) return null;
       
-      const scaledSize = Math.max(content.size * 0.4, 8);
+      // Utilise PREVIEW_ICON_SCALE (0.6) au lieu de 0.4 pour correspondre à EditorCanvas
+      const scaledSize = Math.max(content.size * PREVIEW_ICON_SCALE, 8);
       
       return (
         <div
@@ -340,9 +317,9 @@ export function RentalProposalPreview() {
     return null;
   };
 
-  // Composant de pagination en bas à droite de chaque page
+    // Composant de pagination (visible en bas à droite de chaque page)
   const PageFooter = ({ pageNum }: { pageNum: number }) => (
-    <div className="flex justify-end mt-auto pt-2">
+    <div className="absolute bottom-0 right-0 px-2 py-1 z-50">
       <span className="text-[9px] text-muted-foreground">
         Page {pageNum}/{totalPages}
       </span>
@@ -378,58 +355,54 @@ export function RentalProposalPreview() {
     const page1Elements = getStaticPageElements(1 as PDFPageNumber);
     
     return (
-      <div className="aspect-[210/297] bg-white rounded-lg border flex flex-col relative overflow-hidden">
-        {/* Conteneur canvas avec les mêmes proportions que l'éditeur */}
-        <div className="flex-1 relative">
-          {page1Elements.length > 0 ? (
-            <>
-              {/* Rendu des éléments du template */}
-              {page1Elements.map(el => renderTemplateElement(el))}
+      <div className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden">
+        {/* Conteneur canvas qui occupe toute la zone - identique à EditorCanvas */}
+        {page1Elements.length > 0 ? (
+          <>
+            {/* Rendu des éléments du template */}
+            {page1Elements.map(el => renderTemplateElement(el))}
+            
+            {/* Zone d'injection des données client (positionnée en superposition) */}
+            <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
+              <div className="flex items-center gap-2 mb-2">
+                <User className="h-3 w-3 text-primary" />
+                <span className="font-medium text-[10px]">Client</span>
+              </div>
+              <div className="text-[9px] space-y-0.5">
+                <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+                <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+                <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+                {clientData.email && (
+                  <p className="text-muted-foreground">{clientData.email}</p>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          // Fallback si aucun élément template
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-primary mb-2">
+                Proposition de Location
+              </h1>
+              <p className="text-muted-foreground mb-6">Financière Professionnelle</p>
               
-              {/* Zone d'injection des données client (positionnée en superposition) */}
-              <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border">
-                <div className="flex items-center gap-2 mb-2">
-                  <User className="h-3 w-3 text-primary" />
-                  <span className="font-medium text-[10px]">Client</span>
+              <div className="bg-background rounded-lg p-4 shadow-sm max-w-xs mx-auto">
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Client</span>
                 </div>
-                <div className="text-[9px] space-y-0.5">
+                <div className="text-left space-y-1 text-xs">
                   <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
                   <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
                   <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
-                  {clientData.email && (
-                    <p className="text-muted-foreground">{clientData.email}</p>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            // Fallback si aucun élément template
-            <div className="flex items-center justify-center h-full bg-gradient-to-br from-primary/5 to-primary/10">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-primary mb-2">
-                  Proposition de Location
-                </h1>
-                <p className="text-muted-foreground mb-6">Financière Professionnelle</p>
-                
-                <div className="bg-background rounded-lg p-4 shadow-sm max-w-xs mx-auto">
-                  <div className="flex items-center gap-2 mb-3">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-sm">Client</span>
-                  </div>
-                  <div className="text-left space-y-1 text-xs">
-                    <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
-                    <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
-                    <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
-                  </div>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
         
-        <div className="p-2">
-          <PageFooter pageNum={1} />
-        </div>
+        <PageFooter pageNum={1} />
       </div>
     );
   };
@@ -439,25 +412,21 @@ export function RentalProposalPreview() {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
 
     return (
-      <div className="aspect-[210/297] bg-white rounded-lg border flex flex-col relative overflow-hidden">
-        {/* Conteneur avec positionnement relatif pour les éléments absolus */}
-        <div className="flex-1 relative">
-          {staticElements.length > 0 ? (
-            staticElements.map(el => renderTemplateElement(el))
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">{title}</p>
-                <p className="text-sm mt-2">Aucun contenu dans le template</p>
-              </div>
+      <div className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden">
+        {/* Conteneur qui occupe toute la zone - identique à EditorCanvas */}
+        {staticElements.length > 0 ? (
+          staticElements.map(el => renderTemplateElement(el))
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="font-medium">{title}</p>
+              <p className="text-sm mt-2">Aucun contenu dans le template</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="p-2">
-          <PageFooter pageNum={pageNum} />
-        </div>
+        <PageFooter pageNum={pageNum} />
       </div>
     );
   };
