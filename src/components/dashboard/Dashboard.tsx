@@ -30,8 +30,7 @@ export function Dashboard({ onNewQuote, onResumeQuote, onViewHistory }: Dashboar
             <h1 className="text-2xl font-bold">Générateur de Devis</h1>
           </div>
           <p className="text-primary-foreground/80 max-w-xl mb-6">
-            Pour créer un devis, cliquer sur Nouvelle proposition ou Reprendre si vous avez déjà commencé une nouvelle
-            proposition.
+            Pour créer un nouveau devis, cliquer sur Nouvelle Proposition !
           </p>
           <div className="flex flex-wrap gap-3">
             <Button variant="secondary" size="lg" onClick={onNewQuote} className="gap-2 font-semibold shadow-lg">
