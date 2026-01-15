@@ -66,6 +66,10 @@ export function InlineTextEditor({
 
   // Gérer les raccourcis clavier
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // IMPORTANT: Stopper la propagation pour TOUTES les touches
+    // Empêche le canvas de capturer Delete/Backspace/Arrows/etc.
+    e.stopPropagation();
+
     // Échap pour annuler et sortir
     if (e.key === 'Escape') {
       e.preventDefault();

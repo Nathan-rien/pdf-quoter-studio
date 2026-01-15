@@ -102,6 +102,12 @@ export function EditorCanvas() {
 
   // Raccourcis clavier pour déplacer, copier et coller les éléments
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // IMPORTANT: Ignorer TOUS les raccourcis clavier si on est en édition inline
+    // Laisser l'InlineTextEditor gérer ses propres événements (Delete, Backspace, etc.)
+    if (inlineEditingElementId) {
+      return;
+    }
+
     // Copier (Ctrl+C / Cmd+C)
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
       if (selectedElementIds.length > 0) {
@@ -174,7 +180,7 @@ export function EditorCanvas() {
     if (moved) {
       e.preventDefault();
     }
-  }, [selectedElementIds, currentVersion, editorMode, moveSelectedElements, copySelectedElements, pasteElements, deleteSelectedElements, undo]);
+  }, [inlineEditingElementId, selectedElementIds, currentVersion, editorMode, moveSelectedElements, copySelectedElements, pasteElements, deleteSelectedElements, undo]);
 
   // Focus sur le conteneur pour capturer les événements clavier
   useEffect(() => {
@@ -200,16 +206,19 @@ export function EditorCanvas() {
 
     const toolbarHeight = toolbarRect.height;
     const toolbarWidth = toolbarRect.width;
-    const gap = 12; // Marge entre élément et toolbar
+    
+    // Marge augmentée entre l'élément et la toolbar pour éviter l'obstruction
+    const gapAbove = 16;
+    const gapBelow = 16;
 
-    // Calculer les positions candidates
-    const aboveY = elementTopInCanvas - toolbarHeight - gap;
-    const belowY = elementBottomInCanvas + gap;
+    // Calculer les positions candidates avec les marges augmentées
+    const aboveY = elementTopInCanvas - toolbarHeight - gapAbove;
+    const belowY = elementBottomInCanvas + gapBelow;
 
-    // Vérifier si on peut placer au-dessus (sans sortir du canvas)
-    const canPlaceAbove = aboveY >= 8;
-    // Vérifier si on peut placer en-dessous (sans sortir du canvas)
-    const canPlaceBelow = belowY + toolbarHeight <= canvasRect.height - 8;
+    // Vérifier si on peut placer au-dessus (avec marge de sécurité)
+    const canPlaceAbove = aboveY >= 12;
+    // Vérifier si on peut placer en-dessous (avec marge de sécurité)
+    const canPlaceBelow = belowY + toolbarHeight <= canvasRect.height - 12;
 
     // Choisir la meilleure position
     let finalY: number;
@@ -222,9 +231,9 @@ export function EditorCanvas() {
       finalY = 8;
     }
 
-    // Clamp horizontal basé sur la largeur réelle de la toolbar
-    const minX = toolbarWidth / 2 + 8;
-    const maxX = canvasRect.width - toolbarWidth / 2 - 8;
+    // Clamp horizontal avec plus de marge pour éviter les débordements
+    const minX = toolbarWidth / 2 + 12;
+    const maxX = canvasRect.width - toolbarWidth / 2 - 12;
     const clampedX = Math.max(minX, Math.min(centerX, maxX));
 
     setToolbarPosition({
