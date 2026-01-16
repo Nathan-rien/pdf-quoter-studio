@@ -60,7 +60,7 @@ export function PreviewEditableCanvas({
     elementStartY: number;
   } | null>(null);
 
-  const { updateElementPosition, updateElementSize } = useTemplateEditorStore();
+  const { updateElementFromPreview } = useTemplateEditorStore();
 
   // Helper pour vérifier si un élément est verrouillé
   const isElementLocked = (element: EditableElement): boolean => {
@@ -131,7 +131,7 @@ export function PreviewEditableCanvas({
         const newX = Math.max(0, Math.min(CANVAS_SCALE.width - element.size.width, dragState.elementStartX + deltaX));
         const newY = Math.max(0, Math.min(CANVAS_SCALE.height - element.size.height, dragState.elementStartY + deltaY));
         
-        updateElementPosition(element.id, { x: newX, y: newY });
+        updateElementFromPreview(element.id, pageNumber, { position: { x: newX, y: newY } });
       }
     }
 
@@ -160,11 +160,13 @@ export function PreviewEditableCanvas({
           newY = resizeState.elementStartY + (resizeState.elementStartHeight - newHeight);
         }
 
-        updateElementPosition(element.id, { x: Math.max(0, newX), y: Math.max(0, newY) });
-        updateElementSize(element.id, { width: newWidth, height: newHeight });
+        updateElementFromPreview(element.id, pageNumber, { 
+          position: { x: Math.max(0, newX), y: Math.max(0, newY) },
+          size: { width: newWidth, height: newHeight }
+        });
       }
     }
-  }, [dragState, resizeState, elements, getCanvasCoordinates, updateElementPosition, updateElementSize]);
+  }, [dragState, resizeState, elements, getCanvasCoordinates, updateElementFromPreview, pageNumber]);
 
   const handleMouseUp = useCallback(() => {
     setDragState(null);
