@@ -814,8 +814,8 @@ export function EditorCanvas() {
   };
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3 flex-row items-center justify-between">
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3 flex-row items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -842,13 +842,13 @@ export function EditorCanvas() {
         </div>
       </CardHeader>
       
-      <CardContent className="p-4">
+      <CardContent className="p-4 flex-1 overflow-auto">
         {/* Conteneur focusable pour les raccourcis clavier */}
         <div
           ref={containerRef}
           tabIndex={0}
           onKeyDown={handleKeyDown}
-          className="outline-none"
+          className="outline-none min-h-fit"
         >
           {/* Message mode ajout */}
           {isAddMode && (
