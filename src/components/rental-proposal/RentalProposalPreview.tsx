@@ -605,86 +605,13 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(6 as PDFPageNumber, staticElements, renderOptionsContent);
   };
 
-  // Page finale - Récapitulatif
+  // Page 7 - Services CybertekPro (100% statique selon le contrat)
   const renderSummaryPage = () => {
     const staticElements = getStaticPageElements(7 as PDFPageNumber);
     
-    const renderSummaryContent = () => (
-      <div 
-        className="absolute"
-        style={{
-          left: '4%',
-          top: '10%',
-          width: '92%',
-        }}
-      >
-        <div className="space-y-3">
-          {/* Investissement */}
-          <div className="bg-muted/20 rounded-lg p-2">
-            <h4 className="font-medium mb-2 flex items-center gap-1 text-[10px]">
-              <Package className="h-3 w-3" />
-              Investissement
-            </h4>
-            <div className="space-y-1 text-[9px]">
-              <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Montant total HT :</span>
-                <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Location */}
-          <div className="bg-primary/5 rounded-lg p-2">
-            <h4 className="font-medium mb-2 flex items-center gap-1 text-[10px]">
-              <Calculator className="h-3 w-3" />
-              Conditions de location
-            </h4>
-            <div className="space-y-1 text-[9px]">
-              <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Durée :</span>
-                <span className="font-medium">{matriceData.duree} mois</span>
-              </div>
-              <Separator className="my-1" />
-              <div className="flex justify-between font-semibold gap-4">
-                <span>Loyer mensuel HT :</span>
-                <span className="text-primary">{formatNumber(calculatedValues.loyerMensuel)} €</span>
-              </div>
-              <div className="flex justify-between font-semibold gap-4">
-                <span>Loyer avec services :</span>
-                <span className="text-primary">{formatNumber(calculatedValues.loyerServicesInclus)} €</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Options sélectionnées */}
-          {selectedOptions.length > 0 && (
-            <div className="bg-muted/20 rounded-lg p-2">
-              <h4 className="font-medium mb-2 flex items-center gap-1 text-[10px]">
-                <Settings className="h-3 w-3" />
-                Options incluses ({selectedOptions.length})
-              </h4>
-              <div className="space-y-0.5 text-[9px]">
-                {selectedOptions.slice(0, 4).map(opt => (
-                  <div key={opt.id} className="flex justify-between gap-4">
-                    <span className="text-muted-foreground truncate">{opt.name}</span>
-                    {opt.price !== null && (
-                      <span>{formatNumber(opt.price)} €/mois</span>
-                    )}
-                  </div>
-                ))}
-                {selectedOptions.length > 4 && (
-                  <p className="text-muted-foreground text-[8px]">
-                    + {selectedOptions.length - 4} autres options
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-    
-    return renderPageWithEditMode(7 as PDFPageNumber, staticElements, renderSummaryContent);
+    // Page 7 est purement statique - pas de contenu dynamique injecté
+    // Les éléments statiques (titres et cartes de services) viennent du template
+    return renderPageWithEditMode(7 as PDFPageNumber, staticElements);
   };
 
   // Page signature
