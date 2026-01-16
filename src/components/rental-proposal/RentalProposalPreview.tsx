@@ -1,13 +1,12 @@
 /**
  * Composant d'aperçu PDF pour la proposition de location
  * Affiche le template sélectionné avec les données injectées
- * Gère la pagination dynamique pour les options services
+ * Structure fixe de 8 pages avec mode édition optionnel
  */
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, 
@@ -16,9 +15,10 @@ import {
   Calculator, 
   Settings, 
   CheckCircle, 
-  Clock,
   ChevronLeft,
   ChevronRight,
+  Edit3,
+  Eye,
   icons
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -33,9 +33,11 @@ import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, C
 import { getSharedElementStyle, sortElementsByZIndex } from '@/lib/template-render-utils';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
+import { PreviewEditableCanvas } from './PreviewEditableCanvas';
 
 export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
+  const [isEditMode, setIsEditMode] = React.useState(false);
   
   // Synchronisation avec le cloud pour charger les templates
   const { isLoading, hasLoaded } = useTemplateSync();
@@ -45,7 +47,6 @@ export function RentalProposalPreview() {
     matriceData,
     lignesData,
     optionsServices,
-    pdfImportStatus,
     getCalculatedValues,
   } = useRentalProposalStore();
 
@@ -60,13 +61,7 @@ export function RentalProposalPreview() {
   const calculatedValues = getCalculatedValues();
   const selectedOptions = optionsServices.filter(opt => opt.selected);
   
-  // Calcul du nombre de pages dynamiques pour les options
-  const optionsPagesCount = Math.max(1, Math.ceil(selectedOptions.length / OPTIONS_PER_PAGE));
-  
-  // Calcul du nombre de pages pour les lignes produits
-  const linesPagesCount = Math.max(1, Math.ceil(lignesData.length / LINES_PER_PAGE));
-  
-  // Total pages: utiliser le contrat fixe de 8 pages
+  // Total pages: contrat fixe de 8 pages
   const totalPages = CONTRACT_PAGES;
 
   const formatNumber = (value: number | null) => {
@@ -431,12 +426,10 @@ export function RentalProposalPreview() {
     );
   };
 
-  // Pages produits (dynamiques)
-  const renderProductPage = (pageIndex: number) => {
-    const startIndex = pageIndex * LINES_PER_PAGE;
-    const pageLines = lignesData.slice(startIndex, startIndex + LINES_PER_PAGE);
-    const pageNum = 4 + pageIndex;
-    const isLastProductPage = pageIndex === linesPagesCount - 1;
+  // Pages produits (dynamiques) - Page 4 fixe
+  const renderProductPage = () => {
+    const pageLines = lignesData.slice(0, LINES_PER_PAGE);
+    const pageNum = 4;
     
     return (
       <div className="aspect-[210/297] bg-background rounded-lg border p-6 flex flex-col">
@@ -447,9 +440,7 @@ export function RentalProposalPreview() {
           </Badge>
         </div>
         
-        <h3 className="text-lg font-bold mb-4">
-          {pageIndex === 0 ? 'Détail du matériel' : `Détail du matériel (suite ${pageIndex + 1})`}
-        </h3>
+        <h3 className="text-lg font-bold mb-4">Détail du matériel</h3>
         
         {/* Tableau des produits - compact et lisible */}
         <div className="overflow-hidden">
@@ -463,7 +454,7 @@ export function RentalProposalPreview() {
             
             <div className="divide-y divide-muted/50">
               {pageLines.map((ligne, idx) => (
-                <div key={startIndex + idx} className="grid grid-cols-12 gap-0.5 px-1 py-0.5 text-[8px] items-start">
+                <div key={idx} className="grid grid-cols-12 gap-0.5 px-1 py-0.5 text-[8px] items-start">
                   <div className="col-span-6 break-words whitespace-normal leading-tight">{ligne.designation || '-'}</div>
                   <div className="col-span-2 text-center">{ligne.quantite}</div>
                   <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
@@ -474,70 +465,32 @@ export function RentalProposalPreview() {
           </div>
         </div>
         
-        {/* Totaux sur la dernière page produits */}
-        {isLastProductPage && (
-          <div className="mt-1 pt-1 border-t">
-            <div className="flex justify-end mb-3">
-              <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
-                <div className="flex justify-between text-[9px] mb-1 gap-3">
-                  <span className="text-muted-foreground">Sous-total HT :</span>
-                  <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
-                </div>
-                <Separator className="my-1" />
-                <div className="flex justify-between font-semibold text-[9px] gap-3">
-                  <span>Total investissement :</span>
-                  <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
-                </div>
+        {/* Totaux */}
+        <div className="mt-1 pt-1 border-t">
+          <div className="flex justify-end mb-3">
+            <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
+              <div className="flex justify-between text-[9px] mb-1 gap-3">
+                <span className="text-muted-foreground">Sous-total HT :</span>
+                <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
+              </div>
+              <Separator className="my-1" />
+              <div className="flex justify-between font-semibold text-[9px] gap-3">
+                <span>Total investissement :</span>
+                <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
               </div>
             </div>
-            
-            {/* Éléments statiques du template (Avantages, Conditions) - rendu en flux normal */}
-            <div className="mt-2 space-y-1">
-              {getStaticPageElements(4 as PDFPageNumber)
-                .filter(el => {
-                  const elId = el.id.toLowerCase();
-                  return elId.includes('avantage') || elId.includes('condition');
-                })
-                .sort((a, b) => a.position.y - b.position.y)
-                .map(el => {
-                  if (el.type !== 'text') return null;
-                  const content = el.content as TextContent;
-                  const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
-                  
-                  return (
-                    <div
-                      key={el.id}
-                      style={{
-                        fontFamily: fontDef?.value || 'Outfit, sans-serif',
-                        fontSize: `${Math.max(content.fontSize * 0.35, 6)}px`,
-                        color: content.color || '#1f2937',
-                        fontWeight: content.bold ? 'bold' : 'normal',
-                        fontStyle: content.italic ? 'italic' : 'normal',
-                        textDecoration: content.underline ? 'underline' : 'none',
-                        lineHeight: 1.3,
-                      }}
-                      dangerouslySetInnerHTML={{
-                        __html: content.htmlContent || content.text.replace(/\n/g, '<br/>')
-                      }}
-                    />
-                  );
-                })
-              }
-            </div>
           </div>
-        )}
+        </div>
         
         <PageFooter pageNum={pageNum} />
       </div>
     );
   };
 
-  // Pages Options Services (dynamiques avec pagination)
-  const renderOptionsPage = (pageIndex: number) => {
-    const startIndex = pageIndex * OPTIONS_PER_PAGE;
-    const pageOptions = selectedOptions.slice(startIndex, startIndex + OPTIONS_PER_PAGE);
-    const pageNum = 4 + linesPagesCount + pageIndex;
-    const isFirstOptionsPage = pageIndex === 0;
+  // Page Options Services - Page 6 fixe
+  const renderOptionsPage = () => {
+    const pageOptions = selectedOptions.slice(0, OPTIONS_PER_PAGE);
+    const pageNum = 6;
     
     return (
       <div className="aspect-[210/297] bg-background rounded-lg border p-6 flex flex-col">
@@ -548,16 +501,14 @@ export function RentalProposalPreview() {
           </Badge>
         </div>
         
-        <h3 className="text-lg font-bold mb-2">
-          {isFirstOptionsPage ? 'Vos options de services' : `Vos options de services (suite ${pageIndex + 1})`}
-        </h3>
+        <h3 className="text-lg font-bold mb-2">Vos options de services</h3>
         <p className="text-sm text-muted-foreground mb-4">
           Services inclus dans votre contrat de location
         </p>
         
         {/* Liste des options */}
         <div className="flex-1 space-y-3">
-          {pageOptions.length === 0 && isFirstOptionsPage ? (
+          {pageOptions.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="text-center">
                 <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -740,31 +691,20 @@ export function RentalProposalPreview() {
     </div>
   );
 
-  // Rendu de la page courante
+  // Rendu de la page courante - Structure FIXE 8 pages
   const renderCurrentPage = () => {
-    if (currentPreviewPage === 1) return renderPage1();
-    if (currentPreviewPage === 2) return renderStaticPage(2, 'Nos engagements');
-    if (currentPreviewPage === 3) return renderStaticPage(3, 'Conditions de location');
-    
-    // Pages produits
-    const productStartPage = 4;
-    const productEndPage = productStartPage + linesPagesCount - 1;
-    if (currentPreviewPage >= productStartPage && currentPreviewPage <= productEndPage) {
-      return renderProductPage(currentPreviewPage - productStartPage);
+    switch (currentPreviewPage) {
+      case 1: return renderPage1();
+      case 2: return renderStaticPage(2, 'Nos engagements');
+      case 3: return renderStaticPage(3, 'Conditions de location');
+      case 4: return renderProductPage();
+      case 5: return renderStaticPage(5, 'Offre matériel');
+      case 6: return renderOptionsPage();
+      case 7: return renderSummaryPage();
+      case 8: return renderSignaturePage();
+      default: return null;
     }
-    
-    // Pages options
-    const optionsStartPage = productEndPage + 1;
-    const optionsEndPage = optionsStartPage + optionsPagesCount - 1;
-    if (currentPreviewPage >= optionsStartPage && currentPreviewPage <= optionsEndPage) {
-      return renderOptionsPage(currentPreviewPage - optionsStartPage);
-    }
-    
-    // Pages finales
-    if (currentPreviewPage === totalPages - 1) return renderSummaryPage();
-    if (currentPreviewPage === totalPages) return renderSignaturePage();
-    
-    return null;
+  };
   };
 
   return (
