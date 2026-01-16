@@ -112,6 +112,13 @@ interface TemplateEditorStore extends TemplateEditorState {
   selectedDynamicZoneId: string | null;
   selectDynamicZone: (zoneId: string | null) => void;
 
+  // Mise à jour depuis l'aperçu (sans dépendre de selectedPageNumber ou status brouillon)
+  updateElementFromPreview: (
+    elementId: string, 
+    pageNumber: PDFPageNumber, 
+    updates: { position?: { x: number; y: number }; size?: { width: number; height: number } }
+  ) => boolean;
+
   // Versioning
   loadVersion: (version: TemplateVersion) => void;
   createNewVersion: () => TemplateVersion | null;
@@ -1419,6 +1426,52 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       currentVersion: { ...currentVersion, pages: updatedPages },
       hasUnsavedChanges: true
     });
+    return true;
+  },
+
+  // Mise à jour d'un élément depuis l'aperçu (sans dépendre de selectedPageNumber ou status)
+  // Opère sur allVersions et currentVersion directement
+  updateElementFromPreview: (elementId, pageNumber, updates) => {
+    const { currentVersion, allVersions } = get();
+    if (!currentVersion) return false;
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === pageNumber);
+    if (pageIndex === -1) return false;
+
+    const elementIndex = currentVersion.pages[pageIndex].elements.findIndex(e => e.id === elementId);
+    if (elementIndex === -1) return false;
+
+    const element = currentVersion.pages[pageIndex].elements[elementIndex];
+    if (element.isDynamic) return false;
+
+    // Créer une copie profonde pour la mise à jour
+    const updatedPages = [...currentVersion.pages];
+    const updatedElements = [...updatedPages[pageIndex].elements];
+    
+    updatedElements[elementIndex] = {
+      ...element,
+      position: updates.position || element.position,
+      size: updates.size || element.size,
+    };
+    
+    updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
+    
+    const updatedVersion = { ...currentVersion, pages: updatedPages };
+    
+    // Mettre à jour aussi dans allVersions si la version y existe
+    const versionIndex = allVersions.findIndex(v => v.id === currentVersion.id);
+    let updatedAllVersions = allVersions;
+    if (versionIndex !== -1) {
+      updatedAllVersions = [...allVersions];
+      updatedAllVersions[versionIndex] = updatedVersion;
+    }
+
+    set({
+      currentVersion: updatedVersion,
+      allVersions: updatedAllVersions,
+      hasUnsavedChanges: true
+    });
+    
     return true;
   },
 
