@@ -50,7 +50,12 @@ export function RentalProposalPreview() {
     getCalculatedValues,
   } = useRentalProposalStore();
 
-  const { getActiveTemplate, getTemplateLatestVersion } = useTemplateEditorStore();
+  const { 
+    getActiveTemplate, 
+    getTemplateLatestVersion, 
+    preparePreviewEditing, 
+    getCurrentVersionForPreview 
+  } = useTemplateEditorStore();
   
   // Afficher un état de chargement si les templates ne sont pas encore chargés
   if (isLoading && !hasLoaded) {
@@ -70,11 +75,20 @@ export function RentalProposalPreview() {
   };
 
   // Helper pour obtenir les éléments statiques d'une page du template
+  // En mode édition, utilise currentVersion (version de travail), sinon la dernière version publiée
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     const template = getActiveTemplate();
     if (!template) return [];
     
-    const version = getTemplateLatestVersion(template.id);
+    // En mode édition, utiliser currentVersion (initialisée par preparePreviewEditing)
+    let version;
+    if (isEditMode) {
+      version = getCurrentVersionForPreview();
+    }
+    // Fallback sur la dernière version si pas en mode édition ou pas de currentVersion
+    if (!version) {
+      version = getTemplateLatestVersion(template.id);
+    }
     if (!version) return [];
     
     const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
@@ -83,6 +97,18 @@ export function RentalProposalPreview() {
     // Retourner uniquement les éléments non-dynamiques (texte/image statiques), triés par zIndex
     return sortElementsByZIndex(pageContent.elements.filter(el => !el.isDynamic));
   };
+  
+  // Initialiser la version de travail lors de l'activation du mode édition
+  const handleToggleEditMode = React.useCallback(() => {
+    const newEditMode = !isEditMode;
+    
+    // Si on active le mode édition, initialiser la version de travail
+    if (newEditMode && activeTemplate) {
+      preparePreviewEditing(activeTemplate.id);
+    }
+    
+    setIsEditMode(newEditMode);
+  }, [isEditMode, activeTemplate, preparePreviewEditing]);
 
   // Rendu d'un élément du template (utilise le style partagé pour garantir la fidélité WYSIWYG)
   const renderTemplateElement = (element: EditableElement) => {
@@ -747,7 +773,7 @@ export function RentalProposalPreview() {
             <Button
               variant={isEditMode ? "default" : "outline"}
               size="sm"
-              onClick={() => setIsEditMode(!isEditMode)}
+              onClick={handleToggleEditMode}
               className="gap-1"
             >
               {isEditMode ? (

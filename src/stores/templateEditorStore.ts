@@ -112,12 +112,19 @@ interface TemplateEditorStore extends TemplateEditorState {
   selectedDynamicZoneId: string | null;
   selectDynamicZone: (zoneId: string | null) => void;
 
+  // Préparation du mode édition depuis l'aperçu (initialise une version de travail)
+  preparePreviewEditing: (templateId: string) => { versionId: string; status: string } | null;
+  
   // Mise à jour depuis l'aperçu (sans dépendre de selectedPageNumber ou status brouillon)
+  // Autonome : initialise currentVersion si nécessaire
   updateElementFromPreview: (
     elementId: string, 
     pageNumber: PDFPageNumber, 
     updates: { position?: { x: number; y: number }; size?: { width: number; height: number } }
   ) => boolean;
+  
+  // Getter pour obtenir la version de travail courante (pour l'aperçu en mode édition)
+  getCurrentVersionForPreview: () => TemplateVersion | null;
 
   // Versioning
   loadVersion: (version: TemplateVersion) => void;
@@ -1429,10 +1436,56 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     return true;
   },
 
+  // Préparer le mode édition depuis l'aperçu
+  // Initialise currentVersion avec la dernière version du template
+  preparePreviewEditing: (templateId) => {
+    const { allVersions, currentVersion, currentTemplateId } = get();
+    
+    // Si déjà initialisé pour ce template, retourner les infos actuelles
+    if (currentTemplateId === templateId && currentVersion) {
+      return { versionId: currentVersion.id, status: currentVersion.status };
+    }
+    
+    // Trouver la dernière version du template
+    const templateVersions = allVersions.filter(v => v.templateId === templateId);
+    if (templateVersions.length === 0) return null;
+    
+    // Prendre la version la plus récente
+    const latestVersion = templateVersions.reduce((latest, v) => 
+      v.versionNumber > latest.versionNumber ? v : latest
+    , templateVersions[0]);
+    
+    // Charger cette version comme version courante
+    set({
+      currentVersion: latestVersion,
+      currentTemplateId: templateId,
+    });
+    
+    return { versionId: latestVersion.id, status: latestVersion.status };
+  },
+  
+  // Getter pour obtenir la version de travail courante
+  getCurrentVersionForPreview: () => {
+    return get().currentVersion;
+  },
+
   // Mise à jour d'un élément depuis l'aperçu (sans dépendre de selectedPageNumber ou status)
-  // Opère sur allVersions et currentVersion directement
+  // Autonome : initialise currentVersion si nécessaire via preparePreviewEditing
   updateElementFromPreview: (elementId, pageNumber, updates) => {
-    const { currentVersion, allVersions } = get();
+    let { currentVersion, allVersions, currentTemplateId } = get();
+    
+    // Si currentVersion n'est pas initialisée, essayer de l'initialiser
+    if (!currentVersion) {
+      // Trouver le template actif via la fonction du store
+      const activeTemplate = get().getActiveTemplate();
+      if (activeTemplate) {
+        const result = get().preparePreviewEditing(activeTemplate.id);
+        if (!result) return false;
+        currentVersion = get().currentVersion;
+        allVersions = get().allVersions;
+      }
+    }
+    
     if (!currentVersion) return false;
 
     const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === pageNumber);

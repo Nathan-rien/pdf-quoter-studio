@@ -87,6 +87,7 @@ export function PreviewEditableCanvas({
   // Gestion du drag
   const handleMouseDown = useCallback((e: React.MouseEvent, element: EditableElement) => {
     if (!isEditMode || isElementLocked(element)) return;
+    e.preventDefault(); // Empêche la sélection de texte pendant le drag
     e.stopPropagation();
     
     const coords = getCanvasCoordinates(e.clientX, e.clientY);
@@ -104,6 +105,7 @@ export function PreviewEditableCanvas({
   // Gestion du resize
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, element: EditableElement, corner: string) => {
     if (!isEditMode || isElementLocked(element)) return;
+    e.preventDefault(); // Empêche la sélection de texte pendant le resize
     e.stopPropagation();
     
     const coords = getCanvasCoordinates(e.clientX, e.clientY);
