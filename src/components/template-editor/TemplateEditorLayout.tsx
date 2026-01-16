@@ -328,7 +328,7 @@ export function TemplateEditorLayout() {
               </div>
 
               {/* Canvas central - plus large */}
-              <div className="col-span-8 overflow-hidden">
+              <div className="col-span-8 overflow-auto">
                 <EditorCanvas />
               </div>
 
