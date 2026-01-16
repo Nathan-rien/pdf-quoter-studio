@@ -57,12 +57,28 @@ export function RentalProposalPreview() {
     getCurrentVersionForPreview 
   } = useTemplateEditorStore();
   
+  // Calculer activeTemplate AVANT le useCallback (dépendance)
+  const activeTemplate = getActiveTemplate();
+  
+  // Initialiser la version de travail lors de l'activation du mode édition
+  // IMPORTANT: Ce hook DOIT être appelé avant tout return conditionnel
+  const handleToggleEditMode = React.useCallback(() => {
+    const newEditMode = !isEditMode;
+    
+    // Si on active le mode édition, initialiser la version de travail
+    if (newEditMode && activeTemplate) {
+      preparePreviewEditing(activeTemplate.id);
+    }
+    
+    setIsEditMode(newEditMode);
+  }, [isEditMode, activeTemplate, preparePreviewEditing]);
+  
   // Afficher un état de chargement si les templates ne sont pas encore chargés
+  // Ce return conditionnel est maintenant APRÈS tous les hooks
   if (isLoading && !hasLoaded) {
     return <LoadingState message="Chargement du template..." />;
   }
   
-  const activeTemplate = getActiveTemplate();
   const calculatedValues = getCalculatedValues();
   const selectedOptions = optionsServices.filter(opt => opt.selected);
   
@@ -77,7 +93,7 @@ export function RentalProposalPreview() {
   // Helper pour obtenir les éléments statiques d'une page du template
   // En mode édition, utilise currentVersion (version de travail), sinon la dernière version publiée
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
-    const template = getActiveTemplate();
+    const template = activeTemplate;
     if (!template) return [];
     
     // En mode édition, utiliser currentVersion (initialisée par preparePreviewEditing)
@@ -97,18 +113,6 @@ export function RentalProposalPreview() {
     // Retourner uniquement les éléments non-dynamiques (texte/image statiques), triés par zIndex
     return sortElementsByZIndex(pageContent.elements.filter(el => !el.isDynamic));
   };
-  
-  // Initialiser la version de travail lors de l'activation du mode édition
-  const handleToggleEditMode = React.useCallback(() => {
-    const newEditMode = !isEditMode;
-    
-    // Si on active le mode édition, initialiser la version de travail
-    if (newEditMode && activeTemplate) {
-      preparePreviewEditing(activeTemplate.id);
-    }
-    
-    setIsEditMode(newEditMode);
-  }, [isEditMode, activeTemplate, preparePreviewEditing]);
 
   // Rendu d'un élément du template (utilise le style partagé pour garantir la fidélité WYSIWYG)
   const renderTemplateElement = (element: EditableElement) => {
