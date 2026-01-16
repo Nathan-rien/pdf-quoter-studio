@@ -25,6 +25,7 @@ import { validateTemplateForPublication } from '@/lib/template-validation';
 import { blockDynamicZoneEdit } from '@/lib/template-protection';
 import { PDF_TEMPLATE_ELEMENTS } from '@/lib/pdf-template-elements';
 import { SHAPE_DEFAULT_SIZES } from '@/lib/template-styles';
+import { getLogoById } from '@/lib/template-logos';
 
 interface TemplateEditorStore extends TemplateEditorState {
   // Actions templates
@@ -811,8 +812,6 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       throw new Error('Page not found');
     }
 
-    // Importer dynamiquement le logo
-    const { getLogoById } = require('@/lib/template-logos');
     const logo = getLogoById(logoId);
     if (!logo) {
       throw new Error('Logo not found');
