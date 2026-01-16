@@ -705,12 +705,11 @@ export function RentalProposalPreview() {
       default: return null;
     }
   };
-  };
 
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
-        {/* Info template */}
+        {/* Info template + bouton édition */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FileText className="h-5 w-5 text-muted-foreground" />
@@ -723,9 +722,29 @@ export function RentalProposalPreview() {
               </p>
             </div>
           </div>
-          <Badge variant="secondary">
-            {totalPages} pages
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={isEditMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setIsEditMode(!isEditMode)}
+              className="gap-1"
+            >
+              {isEditMode ? (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Lecture
+                </>
+              ) : (
+                <>
+                  <Edit3 className="h-4 w-4" />
+                  Modifier
+                </>
+              )}
+            </Button>
+            <Badge variant="secondary">
+              {totalPages} pages
+            </Badge>
+          </div>
         </div>
         
         <Separator />
