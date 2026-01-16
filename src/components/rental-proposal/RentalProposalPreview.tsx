@@ -312,7 +312,7 @@ export function RentalProposalPreview() {
     return null;
   };
 
-    // Composant de pagination (visible en bas à droite de chaque page)
+  // Composant de pagination (visible en bas à droite de chaque page)
   const PageFooter = ({ pageNum }: { pageNum: number }) => (
     <div className="absolute bottom-0 right-0 px-2 py-1 z-50">
       <span className="text-[9px] text-muted-foreground">
@@ -320,6 +320,51 @@ export function RentalProposalPreview() {
       </span>
     </div>
   );
+
+  // Helper pour gérer le mode édition avec PreviewEditableCanvas
+  const renderPageWithEditMode = (
+    pageNum: PDFPageNumber,
+    staticElements: EditableElement[],
+    renderDynamicContent?: () => React.ReactNode,
+    fallbackContent?: React.ReactNode
+  ) => {
+    // Mode édition : utiliser PreviewEditableCanvas
+    if (isEditMode) {
+      return (
+        <PreviewEditableCanvas
+          pageNumber={pageNum}
+          elements={staticElements}
+          renderDynamicContent={renderDynamicContent}
+          pageFooter={<PageFooter pageNum={pageNum} />}
+          isEditMode={isEditMode}
+        />
+      );
+    }
+    
+    // Mode lecture : rendu classique
+    return (
+      <div 
+        className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden"
+        style={{ maxWidth: CANVAS_DISPLAY_MAX_WIDTH }}
+      >
+        {staticElements.length > 0 ? (
+          <>
+            {staticElements.map(el => renderTemplateElement(el))}
+            {renderDynamicContent?.()}
+          </>
+        ) : fallbackContent || (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="font-medium">Page {pageNum}</p>
+              <p className="text-sm mt-2">Aucun contenu dans le template</p>
+            </div>
+          </div>
+        )}
+        <PageFooter pageNum={pageNum} />
+      </div>
+    );
+  };
 
   const renderPageIndicator = () => (
     <div className="flex items-center justify-between px-4 py-2 bg-muted/50 rounded-lg">
@@ -349,240 +394,209 @@ export function RentalProposalPreview() {
   const renderPage1 = () => {
     const page1Elements = getStaticPageElements(1 as PDFPageNumber);
     
-    return (
-      <div className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden">
-        {/* Conteneur canvas qui occupe toute la zone - identique à EditorCanvas */}
-        {page1Elements.length > 0 ? (
-          <>
-            {/* Rendu des éléments du template */}
-            {page1Elements.map(el => renderTemplateElement(el))}
-            
-            {/* Zone d'injection des données client (positionnée en superposition) */}
-            <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
-              <div className="flex items-center gap-2 mb-2">
-                <User className="h-3 w-3 text-primary" />
-                <span className="font-medium text-[10px]">Client</span>
-              </div>
-              <div className="text-[9px] space-y-0.5">
-                <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
-                <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
-                <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
-                {clientData.email && (
-                  <p className="text-muted-foreground">{clientData.email}</p>
-                )}
-              </div>
+    const renderClientData = () => (
+      <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
+        <div className="flex items-center gap-2 mb-2">
+          <User className="h-3 w-3 text-primary" />
+          <span className="font-medium text-[10px]">Client</span>
+        </div>
+        <div className="text-[9px] space-y-0.5">
+          <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+          <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+          <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+          {clientData.email && (
+            <p className="text-muted-foreground">{clientData.email}</p>
+          )}
+        </div>
+      </div>
+    );
+    
+    const fallbackContent = (
+      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-primary mb-2">
+            Proposition de Location
+          </h1>
+          <p className="text-muted-foreground mb-6">Financière Professionnelle</p>
+          
+          <div className="bg-background rounded-lg p-4 shadow-sm max-w-xs mx-auto">
+            <div className="flex items-center gap-2 mb-3">
+              <User className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">Client</span>
             </div>
-          </>
-        ) : (
-          // Fallback si aucun élément template
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-primary mb-2">
-                Proposition de Location
-              </h1>
-              <p className="text-muted-foreground mb-6">Financière Professionnelle</p>
-              
-              <div className="bg-background rounded-lg p-4 shadow-sm max-w-xs mx-auto">
-                <div className="flex items-center gap-2 mb-3">
-                  <User className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-sm">Client</span>
-                </div>
-                <div className="text-left space-y-1 text-xs">
-                  <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
-                  <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
-                  <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
-                </div>
-              </div>
+            <div className="text-left space-y-1 text-xs">
+              <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+              <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+              <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
             </div>
           </div>
-        )}
-        
-        <PageFooter pageNum={1} />
+        </div>
       </div>
+    );
+    
+    return renderPageWithEditMode(
+      1 as PDFPageNumber, 
+      page1Elements, 
+      page1Elements.length > 0 ? renderClientData : undefined,
+      fallbackContent
     );
   };
 
   // Page 2-3 - Engagements et conditions (statiques)
   const renderStaticPage = (pageNum: number, title: string) => {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
-
-    return (
-      <div className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden">
-        {/* Conteneur qui occupe toute la zone - identique à EditorCanvas */}
-        {staticElements.length > 0 ? (
-          staticElements.map(el => renderTemplateElement(el))
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">{title}</p>
-              <p className="text-sm mt-2">Aucun contenu dans le template</p>
-            </div>
-          </div>
-        )}
-
-        <PageFooter pageNum={pageNum} />
+    
+    const fallbackContent = (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="font-medium">{title}</p>
+          <p className="text-sm mt-2">Aucun contenu dans le template</p>
+        </div>
       </div>
     );
+
+    return renderPageWithEditMode(pageNum as PDFPageNumber, staticElements, undefined, fallbackContent);
   };
 
   // Pages produits (dynamiques) - Page 4 fixe avec éléments statiques du template
   const renderProductPage = () => {
     const pageLines = lignesData.slice(0, LINES_PER_PAGE);
-    const pageNum = 4;
-    
-    // Récupérer les éléments statiques du template pour la page 4
     const staticElements = getStaticPageElements(4 as PDFPageNumber);
     
-    return (
+    const renderProductTable = () => (
       <div 
-        className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden"
-        style={{ maxWidth: CANVAS_DISPLAY_MAX_WIDTH }}
+        className="absolute bg-white"
+        style={{
+          left: '3%',
+          top: '15%',
+          width: '94%',
+          maxHeight: '40%',
+        }}
       >
-        {/* Éléments statiques du template (titre, intro, avantages, conditions) */}
-        {staticElements.map(el => renderTemplateElement(el))}
-        
-        {/* Zone dynamique : Tableau des produits - positionnée entre intro et avantages */}
-        <div 
-          className="absolute bg-white"
-          style={{
-            left: '3%',
-            top: '15%',
-            width: '94%',
-            maxHeight: '40%',
-          }}
-        >
-          {/* Tableau des produits - compact */}
-          <div className="border rounded overflow-hidden">
-            <div className="grid grid-cols-12 gap-0.5 bg-muted px-1 py-0.5 text-[8px] font-medium">
-              <div className="col-span-6">Désignation</div>
-              <div className="col-span-2 text-center">Qté</div>
-              <div className="col-span-2 text-right">P.U. HT</div>
-              <div className="col-span-2 text-right">Total HT</div>
-            </div>
-            
-            <div className="divide-y divide-muted/50">
-              {pageLines.map((ligne, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-0.5 px-1 py-0.5 text-[8px] items-start">
-                  <div className="col-span-6 break-words whitespace-normal leading-tight">{ligne.designation || '-'}</div>
-                  <div className="col-span-2 text-center">{ligne.quantite}</div>
-                  <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
-                  <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
-                </div>
-              ))}
-            </div>
+        {/* Tableau des produits - compact */}
+        <div className="border rounded overflow-hidden">
+          <div className="grid grid-cols-12 gap-0.5 bg-muted px-1 py-0.5 text-[8px] font-medium">
+            <div className="col-span-6">Désignation</div>
+            <div className="col-span-2 text-center">Qté</div>
+            <div className="col-span-2 text-right">P.U. HT</div>
+            <div className="col-span-2 text-right">Total HT</div>
           </div>
           
-          {/* Totaux immédiatement après le tableau */}
-          <div className="mt-1 flex justify-end">
-            <div className="bg-primary/5 rounded-lg p-2 min-w-[160px]">
-              <div className="flex justify-between text-[8px] mb-1 gap-2">
-                <span className="text-muted-foreground">Sous-total HT&nbsp;:</span>
-                <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
+          <div className="divide-y divide-muted/50">
+            {pageLines.map((ligne, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-0.5 px-1 py-0.5 text-[8px] items-start">
+                <div className="col-span-6 break-words whitespace-normal leading-tight">{ligne.designation || '-'}</div>
+                <div className="col-span-2 text-center">{ligne.quantite}</div>
+                <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
+                <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
               </div>
-              <Separator className="my-1" />
-              <div className="flex justify-between font-semibold text-[8px] gap-2">
-                <span>Total investissement&nbsp;:</span>
-                <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
         
-        <PageFooter pageNum={pageNum} />
+        {/* Totaux immédiatement après le tableau */}
+        <div className="mt-1 flex justify-end">
+          <div className="bg-primary/5 rounded-lg p-2 min-w-[160px]">
+            <div className="flex justify-between text-[8px] mb-1 gap-2">
+              <span className="text-muted-foreground">Sous-total HT&nbsp;:</span>
+              <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
+            </div>
+            <Separator className="my-1" />
+            <div className="flex justify-between font-semibold text-[8px] gap-2">
+              <span>Total investissement&nbsp;:</span>
+              <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
+    
+    return renderPageWithEditMode(4 as PDFPageNumber, staticElements, renderProductTable);
   };
 
   // Page Options Services - Page 6 fixe
   const renderOptionsPage = () => {
     const pageOptions = selectedOptions.slice(0, OPTIONS_PER_PAGE);
-    const pageNum = 6;
+    const staticElements = getStaticPageElements(6 as PDFPageNumber);
     
-    return (
-      <div className="aspect-[210/297] bg-background rounded-lg border p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <Badge variant="default" className="gap-1 bg-primary">
-            <Settings className="h-3 w-3" />
-            Options
-          </Badge>
-        </div>
-        
-        <h3 className="text-lg font-bold mb-2">Vos options de services</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Services inclus dans votre contrat de location
-        </p>
-        
-        {/* Liste des options */}
-        <div className="flex-1 space-y-3">
-          {pageOptions.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="text-center">
-                <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Aucune option sélectionnée</p>
-              </div>
+    const renderOptionsContent = () => (
+      <div 
+        className="absolute"
+        style={{
+          left: '3%',
+          top: '15%',
+          width: '94%',
+          maxHeight: '70%',
+        }}
+      >
+        {pageOptions.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-muted-foreground">
+            <div className="text-center">
+              <Settings className="h-6 w-6 mx-auto mb-1 opacity-50" />
+              <p className="text-[9px]">Aucune option sélectionnée</p>
             </div>
-          ) : (
-            pageOptions.map((option, idx) => (
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {pageOptions.map((option) => (
               <div 
                 key={option.id} 
-                className="border rounded-lg p-4 bg-muted/20 hover:bg-muted/30 transition-colors"
+                className="border rounded-lg p-2 bg-muted/20"
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle className="h-4 w-4 text-success" />
-                      <span className="font-medium">{option.name}</span>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <CheckCircle className="h-3 w-3 text-success" />
+                      <span className="font-medium text-[9px]">{option.name}</span>
                     </div>
                     {option.description && (
-                      <p className="text-sm text-muted-foreground ml-6 whitespace-pre-wrap">
+                      <p className="text-[8px] text-muted-foreground ml-4 whitespace-pre-wrap">
                         {option.description}
                       </p>
                     )}
                   </div>
                   {option.price !== null && (
                     <div className="text-right">
-                      <span className="font-semibold text-primary">
+                      <span className="font-semibold text-primary text-[9px]">
                         {formatNumber(option.price)} €
                       </span>
-                      <span className="text-xs text-muted-foreground block">/mois</span>
+                      <span className="text-[7px] text-muted-foreground block">/mois</span>
                     </div>
                   )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-        
-        <PageFooter pageNum={pageNum} />
+            ))}
+          </div>
+        )}
       </div>
     );
+    
+    return renderPageWithEditMode(6 as PDFPageNumber, staticElements, renderOptionsContent);
   };
 
   // Page finale - Récapitulatif
   const renderSummaryPage = () => {
-    const pageNum = totalPages - 1;
+    const staticElements = getStaticPageElements(7 as PDFPageNumber);
     
-    return (
-      <div className="aspect-[210/297] bg-background rounded-lg border p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <Badge variant="secondary" className="gap-1">
-            <Calculator className="h-3 w-3" />
-            Récapitulatif
-          </Badge>
-        </div>
-        
-        <h3 className="text-lg font-bold mb-4">Récapitulatif de votre offre</h3>
-        
-        <div className="flex-1 space-y-4">
+    const renderSummaryContent = () => (
+      <div 
+        className="absolute"
+        style={{
+          left: '4%',
+          top: '10%',
+          width: '92%',
+        }}
+      >
+        <div className="space-y-3">
           {/* Investissement */}
-          <div className="bg-muted/20 rounded-lg p-4">
-            <h4 className="font-medium mb-3 flex items-center gap-2">
-              <Package className="h-4 w-4" />
+          <div className="bg-muted/20 rounded-lg p-2">
+            <h4 className="font-medium mb-2 flex items-center gap-1 text-[10px]">
+              <Package className="h-3 w-3" />
               Investissement
             </h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+            <div className="space-y-1 text-[9px]">
+              <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Montant total HT :</span>
                 <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
               </div>
@@ -590,22 +604,22 @@ export function RentalProposalPreview() {
           </div>
           
           {/* Location */}
-          <div className="bg-primary/5 rounded-lg p-4">
-            <h4 className="font-medium mb-3 flex items-center gap-2">
-              <Calculator className="h-4 w-4" />
+          <div className="bg-primary/5 rounded-lg p-2">
+            <h4 className="font-medium mb-2 flex items-center gap-1 text-[10px]">
+              <Calculator className="h-3 w-3" />
               Conditions de location
             </h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+            <div className="space-y-1 text-[9px]">
+              <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Durée :</span>
                 <span className="font-medium">{matriceData.duree} mois</span>
               </div>
-              <Separator className="my-2" />
-              <div className="flex justify-between font-semibold">
+              <Separator className="my-1" />
+              <div className="flex justify-between font-semibold gap-4">
                 <span>Loyer mensuel HT :</span>
                 <span className="text-primary">{formatNumber(calculatedValues.loyerMensuel)} €</span>
               </div>
-              <div className="flex justify-between font-semibold">
+              <div className="flex justify-between font-semibold gap-4">
                 <span>Loyer avec services :</span>
                 <span className="text-primary">{formatNumber(calculatedValues.loyerServicesInclus)} €</span>
               </div>
@@ -614,14 +628,14 @@ export function RentalProposalPreview() {
           
           {/* Options sélectionnées */}
           {selectedOptions.length > 0 && (
-            <div className="bg-muted/20 rounded-lg p-4">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <Settings className="h-4 w-4" />
+            <div className="bg-muted/20 rounded-lg p-2">
+              <h4 className="font-medium mb-2 flex items-center gap-1 text-[10px]">
+                <Settings className="h-3 w-3" />
                 Options incluses ({selectedOptions.length})
               </h4>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-0.5 text-[9px]">
                 {selectedOptions.slice(0, 4).map(opt => (
-                  <div key={opt.id} className="flex justify-between">
+                  <div key={opt.id} className="flex justify-between gap-4">
                     <span className="text-muted-foreground truncate">{opt.name}</span>
                     {opt.price !== null && (
                       <span>{formatNumber(opt.price)} €/mois</span>
@@ -629,7 +643,7 @@ export function RentalProposalPreview() {
                   </div>
                 ))}
                 {selectedOptions.length > 4 && (
-                  <p className="text-muted-foreground text-xs">
+                  <p className="text-muted-foreground text-[8px]">
                     + {selectedOptions.length - 4} autres options
                   </p>
                 )}
@@ -637,26 +651,26 @@ export function RentalProposalPreview() {
             </div>
           )}
         </div>
-        
-        <PageFooter pageNum={pageNum} />
       </div>
     );
+    
+    return renderPageWithEditMode(7 as PDFPageNumber, staticElements, renderSummaryContent);
   };
 
   // Page signature
-  const renderSignaturePage = () => (
-    <div className="aspect-[210/297] bg-background rounded-lg border p-6 flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <Badge variant="outline" className="gap-1">
-          <FileText className="h-3 w-3" />
-          Signature
-        </Badge>
-      </div>
-      
-      <h3 className="text-lg font-bold mb-4">Conditions et signature</h3>
-      
-      <div className="flex-1 flex flex-col">
-        <div className="space-y-4 text-sm text-muted-foreground">
+  const renderSignaturePage = () => {
+    const staticElements = getStaticPageElements(8 as PDFPageNumber);
+    
+    const renderSignatureContent = () => (
+      <div 
+        className="absolute"
+        style={{
+          left: '4%',
+          top: '15%',
+          width: '92%',
+        }}
+      >
+        <div className="space-y-3 text-[9px] text-muted-foreground">
           <p>
             Le présent document constitue une proposition de location financière.
             Les conditions définitives seront précisées dans le contrat de location.
@@ -666,37 +680,37 @@ export function RentalProposalPreview() {
           </p>
         </div>
         
-        <div className="grid grid-cols-2 gap-8 pt-8 border-t mt-4">
+        <div className="grid grid-cols-2 gap-6 pt-6 border-t mt-4">
           <div>
-            <p className="text-sm font-medium mb-2">Le client</p>
-            <p className="text-xs text-muted-foreground mb-4">
+            <p className="text-[10px] font-medium mb-1">Le client</p>
+            <p className="text-[8px] text-muted-foreground mb-3">
               {clientData.nom || 'Nom du client'}
             </p>
-            <div className="border-2 border-dashed border-muted rounded-lg h-24 flex items-center justify-center text-xs text-muted-foreground">
+            <div className="border-2 border-dashed border-muted rounded-lg h-16 flex items-center justify-center text-[8px] text-muted-foreground">
               Signature
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-[8px] text-muted-foreground mt-1">
               Date : ___/___/______
             </p>
           </div>
           <div>
-            <p className="text-sm font-medium mb-2">Pour la société</p>
-            <p className="text-xs text-muted-foreground mb-4">
+            <p className="text-[10px] font-medium mb-1">Pour la société</p>
+            <p className="text-[8px] text-muted-foreground mb-3">
               CybertekPro
             </p>
-            <div className="border-2 border-dashed border-muted rounded-lg h-24 flex items-center justify-center text-xs text-muted-foreground">
+            <div className="border-2 border-dashed border-muted rounded-lg h-16 flex items-center justify-center text-[8px] text-muted-foreground">
               Signature
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-[8px] text-muted-foreground mt-1">
               Date : ___/___/______
             </p>
           </div>
         </div>
       </div>
-      
-      <PageFooter pageNum={totalPages} />
-    </div>
-  );
+    );
+    
+    return renderPageWithEditMode(8 as PDFPageNumber, staticElements, renderSignatureContent);
+  };
 
   // Rendu de la page courante - Structure FIXE 8 pages
   const renderCurrentPage = () => {
