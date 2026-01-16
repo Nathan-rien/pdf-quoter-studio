@@ -426,24 +426,33 @@ export function RentalProposalPreview() {
     );
   };
 
-  // Pages produits (dynamiques) - Page 4 fixe
+  // Pages produits (dynamiques) - Page 4 fixe avec éléments statiques du template
   const renderProductPage = () => {
     const pageLines = lignesData.slice(0, LINES_PER_PAGE);
     const pageNum = 4;
     
+    // Récupérer les éléments statiques du template pour la page 4
+    const staticElements = getStaticPageElements(4 as PDFPageNumber);
+    
     return (
-      <div className="aspect-[210/297] bg-background rounded-lg border p-6 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <Badge variant="secondary" className="gap-1">
-            <Package className="h-3 w-3" />
-            Dynamique
-          </Badge>
-        </div>
+      <div 
+        className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden"
+        style={{ maxWidth: CANVAS_DISPLAY_MAX_WIDTH }}
+      >
+        {/* Éléments statiques du template (titre, intro, avantages, conditions) */}
+        {staticElements.map(el => renderTemplateElement(el))}
         
-        <h3 className="text-lg font-bold mb-4">Détail du matériel</h3>
-        
-        {/* Tableau des produits - compact et lisible */}
-        <div className="overflow-hidden">
+        {/* Zone dynamique : Tableau des produits - positionnée entre intro et avantages */}
+        <div 
+          className="absolute bg-white"
+          style={{
+            left: '3%',
+            top: '15%',
+            width: '94%',
+            maxHeight: '40%',
+          }}
+        >
+          {/* Tableau des produits - compact */}
           <div className="border rounded overflow-hidden">
             <div className="grid grid-cols-12 gap-0.5 bg-muted px-1 py-0.5 text-[8px] font-medium">
               <div className="col-span-6">Désignation</div>
@@ -463,19 +472,17 @@ export function RentalProposalPreview() {
               ))}
             </div>
           </div>
-        </div>
-        
-        {/* Totaux */}
-        <div className="mt-1 pt-1 border-t">
-          <div className="flex justify-end mb-3">
-            <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
-              <div className="flex justify-between text-[9px] mb-1 gap-3">
-                <span className="text-muted-foreground">Sous-total HT :</span>
+          
+          {/* Totaux immédiatement après le tableau */}
+          <div className="mt-1 flex justify-end">
+            <div className="bg-primary/5 rounded-lg p-2 min-w-[160px]">
+              <div className="flex justify-between text-[8px] mb-1 gap-2">
+                <span className="text-muted-foreground">Sous-total HT&nbsp;:</span>
                 <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
               </div>
               <Separator className="my-1" />
-              <div className="flex justify-between font-semibold text-[9px] gap-3">
-                <span>Total investissement :</span>
+              <div className="flex justify-between font-semibold text-[8px] gap-2">
+                <span>Total investissement&nbsp;:</span>
                 <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
               </div>
             </div>
