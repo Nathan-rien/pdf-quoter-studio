@@ -1145,6 +1145,7 @@ export function EditorCanvas() {
                 <div
                   key={element.id}
                   data-element-id={element.id}
+                  ref={inlineEditingElementId === element.id ? editingElementRef : undefined}
                   className={cn(
                     "absolute rounded-sm",
                     !isDragging && !isResizing && "transition-all duration-150",
@@ -1168,10 +1169,7 @@ export function EditorCanvas() {
                 >
                   {/* Édition inline du texte - structure stable avec keys uniques */}
                   {isTextElement && textContent && (
-                    <div 
-                      key={`text-container-${element.id}`}
-                      ref={inlineEditingElementId === element.id ? editingElementRef : undefined}
-                    >
+                    <div key={`text-container-${element.id}`}>
                       {inlineEditingElementId === element.id ? (
                         <InlineTextEditor
                           key={`inline-editor-${element.id}`}
