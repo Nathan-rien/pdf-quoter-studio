@@ -74,21 +74,21 @@ export const TEMPLATE_LOGOS: TemplateLogo[] = [
 ];
 
 // Taille par défaut pour un logo en footer
-export const DEFAULT_FOOTER_LOGO_SIZE = { width: 80, height: 35 };
+export const DEFAULT_FOOTER_LOGO_SIZE = { width: 156, height: 72 };
 
 // Positions prédéfinies pour les logos (en pixels du canvas)
 export const LOGO_POSITIONS = {
   bottomRight: { 
-    x: Math.round(CANVAS_SCALE.width * 0.85) - DEFAULT_FOOTER_LOGO_SIZE.width,  // ~472
-    y: Math.round(CANVAS_SCALE.height * 0.92) - DEFAULT_FOOTER_LOGO_SIZE.height // ~810
+    x: 484,
+    y: 839
   },
   bottomLeft: { 
-    x: Math.round(CANVAS_SCALE.width * 0.05),    // ~32
-    y: Math.round(CANVAS_SCALE.height * 0.92) - DEFAULT_FOOTER_LOGO_SIZE.height
+    x: Math.round(CANVAS_SCALE.width * 0.05),
+    y: 839
   },
   topRight: { 
-    x: Math.round(CANVAS_SCALE.width * 0.85) - DEFAULT_FOOTER_LOGO_SIZE.width, 
-    y: Math.round(CANVAS_SCALE.height * 0.02)     // ~18
+    x: 484, 
+    y: Math.round(CANVAS_SCALE.height * 0.02)
   },
   topLeft: { 
     x: Math.round(CANVAS_SCALE.width * 0.05), 
