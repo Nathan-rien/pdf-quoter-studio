@@ -644,59 +644,13 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(7 as PDFPageNumber, staticElements);
   };
 
-  // Page signature
+  // Page signature - 100% statique selon le contrat PDF
   const renderSignaturePage = () => {
     const staticElements = getStaticPageElements(8 as PDFPageNumber);
     
-    const renderSignatureContent = () => (
-      <div 
-        className="absolute"
-        style={{
-          left: '4%',
-          top: '15%',
-          width: '92%',
-        }}
-      >
-        <div className="space-y-3 text-[9px] text-muted-foreground">
-          <p>
-            Le présent document constitue une proposition de location financière.
-            Les conditions définitives seront précisées dans le contrat de location.
-          </p>
-          <p>
-            Durée de validité de l'offre : 30 jours à compter de la date d'émission.
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-6 pt-6 border-t mt-4">
-          <div>
-            <p className="text-[10px] font-medium mb-1">Le client</p>
-            <p className="text-[8px] text-muted-foreground mb-3">
-              {clientData.nom || 'Nom du client'}
-            </p>
-            <div className="border-2 border-dashed border-muted rounded-lg h-16 flex items-center justify-center text-[8px] text-muted-foreground">
-              Signature
-            </div>
-            <p className="text-[8px] text-muted-foreground mt-1">
-              Date : ___/___/______
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-medium mb-1">Pour la société</p>
-            <p className="text-[8px] text-muted-foreground mb-3">
-              CybertekPro
-            </p>
-            <div className="border-2 border-dashed border-muted rounded-lg h-16 flex items-center justify-center text-[8px] text-muted-foreground">
-              Signature
-            </div>
-            <p className="text-[8px] text-muted-foreground mt-1">
-              Date : ___/___/______
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-    
-    return renderPageWithEditMode(8 as PDFPageNumber, staticElements, renderSignatureContent);
+    // Page 8 est purement statique - pas de contenu dynamique injecté
+    // Les éléments de signature (date, zones, mentions) viennent du template
+    return renderPageWithEditMode(8 as PDFPageNumber, staticElements);
   };
 
   // Rendu de la page courante - Structure FIXE 8 pages
