@@ -19,8 +19,9 @@ import type {
   PDFTemplate,
   IconContent
 } from '@/types/template-editor';
-import type { PDFPageNumber, DynamicZone } from '@/types/pdf-template';
-import { PDF_TEMPLATE_CONTRACT } from '@/lib/pdf-template-contract';
+import type { PDFPageNumber, DynamicZone, isProtectedPage as isProtectedPageFn } from '@/types/pdf-template';
+import { isProtectedPage } from '@/types/pdf-template';
+import { PDF_TEMPLATE_CONTRACT, getDefaultPageConfigs } from '@/lib/pdf-template-contract';
 import { validateTemplateForPublication } from '@/lib/template-validation';
 import { blockDynamicZoneEdit } from '@/lib/template-protection';
 import { PDF_TEMPLATE_ELEMENTS } from '@/lib/pdf-template-elements';
@@ -136,6 +137,11 @@ interface TemplateEditorStore extends TemplateEditorState {
   // Validation
   validateDynamicZonesIntegrity: () => PublishValidationResult;
 
+  // Gestion des pages
+  addPage: (title?: string, afterPageNumber?: number) => TemplatePageContent | null;
+  deletePage: (pageNumber: number) => boolean;
+  canDeletePage: (pageNumber: number) => { canDelete: boolean; reason?: string };
+
   // Utilitaires
   getCurrentPageContent: () => TemplatePageContent | null;
   getPublishedVersions: () => TemplateVersion[];
@@ -213,6 +219,30 @@ const saveToHistory = (state: TemplateEditorState) => {
   if (undoHistory.length > MAX_HISTORY_SIZE) {
     undoHistory.shift();
   }
+};
+
+// Helper pour renuméroter les pages en préservant les pages protégées
+const renumberPagesInVersion = (pages: TemplatePageContent[]): TemplatePageContent[] => {
+  // Séparer les pages protégées et non-protégées
+  const protectedPages = pages.filter(p => isProtectedPage(p.pageNumber));
+  const otherPages = pages.filter(p => !isProtectedPage(p.pageNumber));
+  
+  // Renuméroter les autres pages séquentiellement, en évitant 4, 5, 6
+  let currentNumber = 1;
+  const renumberedOthers = otherPages.map(page => {
+    while ([4, 5, 6].includes(currentNumber)) {
+      currentNumber++;
+    }
+    const newNumber = currentNumber;
+    currentNumber++;
+    return { ...page, pageNumber: newNumber };
+  });
+  
+  // Fusionner et trier
+  const allPages = [...renumberedOthers, ...protectedPages];
+  allPages.sort((a, b) => a.pageNumber - b.pageNumber);
+  
+  return allPages;
 };
 
 const initialState: TemplateEditorState = {
@@ -1696,6 +1726,116 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
   getPublishedVersions: () => {
     const { allVersions, currentTemplateId } = get();
     return allVersions.filter(v => v.templateId === currentTemplateId && v.status === 'publie');
+  },
+
+  // Gestion des pages
+  canDeletePage: (pageNumber: number) => {
+    const { currentVersion } = get();
+    
+    if (!currentVersion) {
+      return { canDelete: false, reason: 'Aucune version chargée' };
+    }
+
+    if (currentVersion.status !== 'brouillon') {
+      return { canDelete: false, reason: 'Version non modifiable' };
+    }
+
+    // Minimum 1 page requise
+    if (currentVersion.pages.length <= 1) {
+      return { canDelete: false, reason: 'Au moins 1 page requise' };
+    }
+
+    // Pages protégées (zones dynamiques)
+    if (isProtectedPage(pageNumber)) {
+      return { canDelete: false, reason: 'Page protégée (zones dynamiques)' };
+    }
+
+    // Vérifier que la page existe
+    const pageExists = currentVersion.pages.some(p => p.pageNumber === pageNumber);
+    if (!pageExists) {
+      return { canDelete: false, reason: 'Page non trouvée' };
+    }
+
+    return { canDelete: true };
+  },
+
+  addPage: (title = 'Nouvelle page', afterPageNumber) => {
+    const state = get();
+    const { currentVersion, currentTemplateId } = state;
+    
+    if (!currentVersion || currentVersion.status !== 'brouillon' || !currentTemplateId) {
+      return null;
+    }
+
+    // Sauvegarder dans l'historique avant modification
+    saveToHistory(state);
+
+    // Trouver l'index d'insertion
+    const insertIndex = afterPageNumber 
+      ? currentVersion.pages.findIndex(p => p.pageNumber === afterPageNumber) + 1
+      : currentVersion.pages.length;
+
+    // Trouver le prochain numéro de page disponible
+    const existingPageNumbers = currentVersion.pages.map(p => p.pageNumber);
+    let newPageNumber = 1;
+    while (existingPageNumbers.includes(newPageNumber) || [4, 5, 6].includes(newPageNumber)) {
+      newPageNumber++;
+    }
+
+    // Créer la nouvelle page
+    const newPageContent: TemplatePageContent = {
+      pageNumber: newPageNumber,
+      elements: [],
+      dynamicZones: []
+    };
+
+    // Insérer la nouvelle page
+    const updatedPages = [...currentVersion.pages];
+    updatedPages.splice(insertIndex, 0, newPageContent);
+
+    // Renuméroter les pages (sauf protégées)
+    const renumberedPages = renumberPagesInVersion(updatedPages);
+
+    set({
+      currentVersion: { ...currentVersion, pages: renumberedPages },
+      hasUnsavedChanges: true,
+      selectedPageNumber: newPageNumber
+    });
+
+    return newPageContent;
+  },
+
+  deletePage: (pageNumber: number) => {
+    const state = get();
+    const { currentVersion, selectedPageNumber } = state;
+    
+    const check = get().canDeletePage(pageNumber);
+    if (!check.canDelete) {
+      return false;
+    }
+
+    // Sauvegarder dans l'historique avant suppression
+    saveToHistory(state);
+
+    // Supprimer la page
+    const updatedPages = currentVersion!.pages.filter(p => p.pageNumber !== pageNumber);
+
+    // Renuméroter les pages
+    const renumberedPages = renumberPagesInVersion(updatedPages);
+
+    // Ajuster la page sélectionnée si nécessaire
+    let newSelectedPage = selectedPageNumber;
+    if (selectedPageNumber === pageNumber) {
+      newSelectedPage = renumberedPages.length > 0 ? renumberedPages[0].pageNumber : 1;
+    }
+
+    set({
+      currentVersion: { ...currentVersion!, pages: renumberedPages },
+      hasUnsavedChanges: true,
+      selectedPageNumber: newSelectedPage
+    });
+
+    return true;
   },
 
   discardChanges: () => {

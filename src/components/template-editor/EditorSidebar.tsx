@@ -6,16 +6,40 @@ import { useState } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { PDF_TEMPLATE_CONTRACT } from "@/lib/pdf-template-contract";
+import { isProtectedPage } from "@/types/pdf-template";
 import { TEMPLATE_LOGOS } from "@/lib/template-logos";
-import { Lock, FileText, Table, Settings, Square, Circle, Minus, RectangleHorizontal, Sparkles, MoveVertical, ImageIcon } from "lucide-react";
+import { 
+  Lock, 
+  FileText, 
+  Table, 
+  Settings, 
+  Square, 
+  Circle, 
+  Minus, 
+  RectangleHorizontal, 
+  Sparkles, 
+  MoveVertical, 
+  ImageIcon,
+  Plus,
+  Trash2
+} from "lucide-react";
 import type { PDFPageNumber } from "@/types/pdf-template";
 import type { ShapeType } from "@/types/template-editor";
 import { IconLibraryDialog } from "./IconLibraryDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const PAGE_ICONS: Record<number, React.ComponentType<{ className?: string }>> = {
   4: Table,
@@ -35,6 +59,8 @@ const SHAPE_OPTIONS: { type: ShapeType; label: string; icon: React.ComponentType
 
 export function EditorSidebar() {
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState<number | null>(null);
   
   const { 
     selectedPageNumber, 
@@ -47,10 +73,13 @@ export function EditorSidebar() {
     setAddElementMode,
     setSelectedShapeType,
     setSelectedIconName,
-    setSelectedLogoId
+    setSelectedLogoId,
+    addPage,
+    deletePage,
+    canDeletePage
   } = useTemplateEditorStore();
 
-  const pages = PDF_TEMPLATE_CONTRACT.pages;
+  const pages = currentVersion?.pages || [];
   const isEditable = editorMode === 'edit' && currentVersion?.status === 'brouillon';
 
   const handleShapeClick = (shapeType: ShapeType) => {
@@ -71,152 +100,242 @@ export function EditorSidebar() {
     setSelectedLogoId(logoId);
   };
 
+  const handleAddPage = () => {
+    if (!isEditable) return;
+    const newPage = addPage('Nouvelle page', selectedPageNumber);
+    if (newPage) {
+      toast.success(`Page ${newPage.pageNumber} ajoutée`);
+    }
+  };
+
+  const handleDeletePageClick = (pageNumber: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isEditable) return;
+    
+    const check = canDeletePage(pageNumber);
+    if (!check.canDelete) {
+      toast.error(check.reason || 'Impossible de supprimer cette page');
+      return;
+    }
+    
+    setPageToDelete(pageNumber);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeletePage = () => {
+    if (pageToDelete !== null) {
+      const success = deletePage(pageToDelete);
+      if (success) {
+        toast.success(`Page ${pageToDelete} supprimée`);
+      }
+    }
+    setDeleteDialogOpen(false);
+    setPageToDelete(null);
+  };
+
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
-      <CardHeader className="pb-1 px-2 py-2 shrink-0">
-        <CardTitle className="text-xs flex items-center gap-1.5">
-          <FileText className="h-3 w-3" />
-          Pages ({pages.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-1.5 flex-1 flex flex-col overflow-hidden">
-        {/* Liste des pages - scrollable */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="space-y-0.5">
-            {pages.map((page) => {
-              const isSelected = selectedPageNumber === page.pageNumber;
-              const hasDynamicZones = page.dynamicZones.length > 0;
-              const Icon = PAGE_ICONS[page.pageNumber] || FileText;
-              
-              return (
-                <Button
-                  key={page.pageNumber}
-                  variant={isSelected ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start h-auto py-1.5 px-2",
-                    isSelected && "ring-1 ring-primary ring-offset-1"
-                  )}
-                  onClick={() => setSelectedPage(page.pageNumber as PDFPageNumber)}
-                >
-                  <div className="flex items-center gap-1.5 w-full">
-                    <div className={cn(
-                      "flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold shrink-0",
-                      hasDynamicZones 
-                        ? "bg-primary/10 text-primary" 
-                        : "bg-muted text-muted-foreground"
-                    )}>
-                      {page.pageNumber}
-                    </div>
+    <>
+      <Card className="h-full flex flex-col overflow-hidden">
+        <CardHeader className="pb-1 px-2 py-2 shrink-0">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            <FileText className="h-3 w-3" />
+            Pages ({pages.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-1.5 flex-1 flex flex-col overflow-hidden">
+          {/* Liste des pages - scrollable */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-0.5">
+              {pages.map((page) => {
+                const isSelected = selectedPageNumber === page.pageNumber;
+                const hasDynamicZones = page.dynamicZones.length > 0;
+                const isProtected = isProtectedPage(page.pageNumber);
+                const Icon = PAGE_ICONS[page.pageNumber] || FileText;
+                const deleteCheck = canDeletePage(page.pageNumber);
+                
+                // Trouver le titre de la page (pour les pages protégées, utiliser un titre par défaut)
+                const pageTitle = page.pageNumber === 4 ? 'Offre neuf + rachat' 
+                  : page.pageNumber === 5 ? 'Offre matériel neuf'
+                  : page.pageNumber === 6 ? 'Offre de services'
+                  : `Page ${page.pageNumber}`;
+                
+                return (
+                  <div
+                    key={page.pageNumber}
+                    className={cn(
+                      "flex items-center gap-1 group",
+                      isSelected && "ring-1 ring-primary ring-offset-1 rounded"
+                    )}
+                  >
+                    <Button
+                      variant={isSelected ? "secondary" : "ghost"}
+                      className="flex-1 justify-start h-auto py-1.5 px-2"
+                      onClick={() => setSelectedPage(page.pageNumber as PDFPageNumber)}
+                    >
+                      <div className="flex items-center gap-1.5 w-full">
+                        <div className={cn(
+                          "flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold shrink-0",
+                          hasDynamicZones 
+                            ? "bg-primary/10 text-primary" 
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {page.pageNumber}
+                        </div>
+                        
+                        <div className="flex-1 text-left min-w-0">
+                          <span className="text-[10px] font-medium truncate block">
+                            {pageTitle}
+                          </span>
+                        </div>
+                        
+                        {isProtected && (
+                          <Lock className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+                        )}
+                      </div>
+                    </Button>
                     
-                    <div className="flex-1 text-left min-w-0">
-                      <span className="text-[10px] font-medium truncate block">
-                        {page.title}
-                      </span>
-                    </div>
-                    
-                    {hasDynamicZones && (
-                      <Lock className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+                    {/* Bouton de suppression (visible uniquement en mode édition pour les pages non protégées) */}
+                    {isEditable && deleteCheck.canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        onClick={(e) => handleDeletePageClick(page.pageNumber, e)}
+                        title="Supprimer cette page"
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
                     )}
                   </div>
+                );
+              })}
+              
+              {/* Bouton d'ajout de page */}
+              {isEditable && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-center h-8 mt-2 gap-1.5 text-[10px] border-dashed"
+                  onClick={handleAddPage}
+                >
+                  <Plus className="h-3 w-3" />
+                  Ajouter une page
                 </Button>
-              );
-            })}
-          </div>
-        </ScrollArea>
+              )}
+            </div>
+          </ScrollArea>
 
-        {/* Section Logos, Formes et Icônes - toujours visible en mode édition */}
-        {isEditable && (
-          <div className="shrink-0 pt-2 border-t mt-2">
-            {/* Section Logos */}
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-medium text-muted-foreground px-1 flex items-center gap-1">
-                <ImageIcon className="h-3 w-3" />
-                Logos
-              </p>
-              <div className="grid grid-cols-2 gap-1">
-                {TEMPLATE_LOGOS.map((logo) => (
-                  <Button
-                    key={logo.id}
-                    variant={addElementMode === 'logo' && selectedLogoId === logo.id ? "default" : "outline"}
-                    size="sm"
-                    className={cn(
-                      "h-10 p-1 flex items-center justify-center",
-                      logo.previewBg === 'dark' ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
-                    )}
-                    onClick={() => handleLogoClick(logo.id)}
-                    title={logo.description}
-                  >
-                    <img 
-                      src={logo.url} 
-                      alt={logo.name} 
-                      className="h-full w-full object-contain"
-                    />
-                  </Button>
-                ))}
+          {/* Section Logos, Formes et Icônes - toujours visible en mode édition */}
+          {isEditable && (
+            <div className="shrink-0 pt-2 border-t mt-2">
+              {/* Section Logos */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground px-1 flex items-center gap-1">
+                  <ImageIcon className="h-3 w-3" />
+                  Logos
+                </p>
+                <div className="grid grid-cols-2 gap-1">
+                  {TEMPLATE_LOGOS.map((logo) => (
+                    <Button
+                      key={logo.id}
+                      variant={addElementMode === 'logo' && selectedLogoId === logo.id ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        "h-10 p-1 flex items-center justify-center",
+                        logo.previewBg === 'dark' ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
+                      )}
+                      onClick={() => handleLogoClick(logo.id)}
+                      title={logo.description}
+                    >
+                      <img 
+                        src={logo.url} 
+                        alt={logo.name} 
+                        className="h-full w-full object-contain"
+                      />
+                    </Button>
+                  ))}
+                </div>
+                {addElementMode === 'logo' && selectedLogoId && (
+                  <p className="text-[8px] text-center text-muted-foreground">
+                    Cliquez sur le canvas
+                  </p>
+                )}
               </div>
-              {addElementMode === 'logo' && selectedLogoId && (
-                <p className="text-[8px] text-center text-muted-foreground">
-                  Cliquez sur le canvas
-                </p>
-              )}
-            </div>
 
-            <Separator className="my-2" />
+              <Separator className="my-2" />
 
-            {/* Section Formes */}
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-medium text-muted-foreground px-1">Formes</p>
-              <div className="grid grid-cols-4 gap-0.5">
-                {SHAPE_OPTIONS.map(({ type, label, icon: ShapeIcon }) => (
-                  <Button
-                    key={type}
-                    variant={addElementMode === 'shape' && selectedShapeType === type ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 flex-col gap-0 text-[7px] px-0.5"
-                    onClick={() => handleShapeClick(type)}
-                  >
-                    <ShapeIcon className={cn("h-3 w-3", type === 'rounded-rectangle' && "rounded")} />
-                    {label}
-                  </Button>
-                ))}
+              {/* Section Formes */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground px-1">Formes</p>
+                <div className="grid grid-cols-4 gap-0.5">
+                  {SHAPE_OPTIONS.map(({ type, label, icon: ShapeIcon }) => (
+                    <Button
+                      key={type}
+                      variant={addElementMode === 'shape' && selectedShapeType === type ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 flex-col gap-0 text-[7px] px-0.5"
+                      onClick={() => handleShapeClick(type)}
+                    >
+                      <ShapeIcon className={cn("h-3 w-3", type === 'rounded-rectangle' && "rounded")} />
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+                {addElementMode === 'shape' && selectedShapeType && (
+                  <p className="text-[8px] text-center text-muted-foreground">
+                    Cliquez sur le canvas
+                  </p>
+                )}
               </div>
-              {addElementMode === 'shape' && selectedShapeType && (
-                <p className="text-[8px] text-center text-muted-foreground">
-                  Cliquez sur le canvas
-                </p>
-              )}
+
+              <Separator className="my-2" />
+
+              {/* Section Icônes */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground px-1">Icônes</p>
+                <Button
+                  variant={addElementMode === 'icon' ? "default" : "outline"}
+                  size="sm"
+                  className="w-full gap-1.5 h-8 text-[10px]"
+                  onClick={() => setIconDialogOpen(true)}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Bibliothèque
+                </Button>
+                {addElementMode === 'icon' && (
+                  <p className="text-[8px] text-center text-muted-foreground">
+                    Cliquez sur le canvas
+                  </p>
+                )}
+              </div>
             </div>
+          )}
 
-            <Separator className="my-2" />
+          {/* Dialog de sélection d'icônes */}
+          <IconLibraryDialog
+            open={iconDialogOpen}
+            onOpenChange={setIconDialogOpen}
+            onSelect={handleIconSelect}
+          />
+        </CardContent>
+      </Card>
 
-            {/* Section Icônes */}
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-medium text-muted-foreground px-1">Icônes</p>
-              <Button
-                variant={addElementMode === 'icon' ? "default" : "outline"}
-                size="sm"
-                className="w-full gap-1.5 h-8 text-[10px]"
-                onClick={() => setIconDialogOpen(true)}
-              >
-                <Sparkles className="h-3 w-3" />
-                Bibliothèque
-              </Button>
-              {addElementMode === 'icon' && (
-                <p className="text-[8px] text-center text-muted-foreground">
-                  Cliquez sur le canvas
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Dialog de sélection d'icônes */}
-        <IconLibraryDialog
-          open={iconDialogOpen}
-          onOpenChange={setIconDialogOpen}
-          onSelect={handleIconSelect}
-        />
-      </CardContent>
-    </Card>
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la page {pageToDelete} ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Tous les éléments de cette page seront supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeletePage} className="bg-destructive text-destructive-foreground">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

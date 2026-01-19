@@ -280,8 +280,8 @@ const PAGE_8_ELEMENTS: EditableElement[] = [
   }),
 ];
 
-// Export de tous les éléments par page
-export const PDF_TEMPLATE_ELEMENTS: Record<PDFPageNumber, EditableElement[]> = {
+// Export de tous les éléments par page (pages par défaut)
+export const PDF_TEMPLATE_ELEMENTS: Record<number, EditableElement[]> = {
   1: PAGE_1_ELEMENTS,
   2: PAGE_2_ELEMENTS,
   3: PAGE_3_ELEMENTS,
@@ -293,7 +293,7 @@ export const PDF_TEMPLATE_ELEMENTS: Record<PDFPageNumber, EditableElement[]> = {
 };
 
 // Obtenir tous les éléments pour une page
-export function getPageElements(pageNumber: PDFPageNumber): EditableElement[] {
+export function getPageElements(pageNumber: number): EditableElement[] {
   return PDF_TEMPLATE_ELEMENTS[pageNumber] || [];
 }
 

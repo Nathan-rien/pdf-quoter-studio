@@ -22,7 +22,7 @@ export interface BlockingError {
 /**
  * Récupère les zones dynamiques attendues pour une page
  */
-export function getDynamicZonesForPage(pageNumber: PDFPageNumber): DynamicZone[] {
+export function getDynamicZonesForPage(pageNumber: number): DynamicZone[] {
   const pageConfig = PDF_TEMPLATE_CONTRACT.pages.find(p => p.pageNumber === pageNumber);
   return pageConfig?.dynamicZones || [];
 }
@@ -112,7 +112,7 @@ export function isElementEditable(element: EditableElement): boolean {
  * Vérifie si une position est dans une zone dynamique
  */
 export function isPositionInDynamicZone(
-  pageNumber: PDFPageNumber,
+  pageNumber: number,
   x: number,
   y: number,
   pageContent: TemplatePageContent

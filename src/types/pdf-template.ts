@@ -1,10 +1,14 @@
 /**
  * Types contractuels pour le template PDF
- * Structure figée - 8 pages
+ * Structure dynamique avec pages protégées pour les zones dynamiques
  */
 
-// Pages du template (ordre figé)
-export type PDFPageNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+// Pages du template (nombre variable)
+export type PDFPageNumber = number;
+
+// Pages protégées contenant des zones dynamiques (ne peuvent pas être supprimées)
+export const PROTECTED_PAGES = [4, 5, 6] as const;
+export type ProtectedPageNumber = typeof PROTECTED_PAGES[number];
 
 // Type de page
 export type PDFPageType = 'static' | 'dynamic_partial' | 'dynamic_conditional';
@@ -38,7 +42,7 @@ export interface PDFTemplateContract {
   id: string;
   name: string;
   version: string;
-  totalPages: 8;
+  totalPages: number; // Nombre variable de pages
   pages: PDFPageConfig[];
   createdAt: Date;
   isActive: boolean;
@@ -58,4 +62,9 @@ export interface TemplateValidationResult {
   pageResults: PageValidationResult[];
   blockers: string[];
   warnings: string[];
+}
+
+// Vérifier si une page est protégée
+export function isProtectedPage(pageNumber: number): boolean {
+  return PROTECTED_PAGES.includes(pageNumber as ProtectedPageNumber);
 }

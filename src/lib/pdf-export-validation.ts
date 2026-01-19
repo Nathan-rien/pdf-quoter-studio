@@ -8,7 +8,7 @@
  */
 
 import { InvestData, OptionsServicesData } from '@/types/quote';
-import { PDFPageNumber, TemplateValidationResult, PageValidationResult } from '@/types/pdf-template';
+import { TemplateValidationResult, PageValidationResult } from '@/types/pdf-template';
 import { PDF_TEMPLATE_CONTRACT } from './pdf-template-contract';
 
 export interface ExportPrerequisites {
@@ -38,7 +38,7 @@ export function checkExportPrerequisites(
  * Valide une page spécifique avant export
  */
 function validatePage(
-  pageNumber: PDFPageNumber,
+  pageNumber: number,
   investData: InvestData | null,
   optionsData: OptionsServicesData | null
 ): PageValidationResult {
