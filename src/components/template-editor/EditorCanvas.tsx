@@ -1201,7 +1201,10 @@ export function EditorCanvas() {
                   
                   {element.type === 'image' && (
                     <div 
-                      className="w-full h-full flex items-center justify-center bg-gray-50 border border-dashed border-gray-200 rounded"
+                      className={cn(
+                        "w-full h-full flex items-center justify-center rounded",
+                        !imageContent?.imageUrl && "bg-gray-50 border border-dashed border-gray-200"
+                      )}
                       style={{ opacity: (imageContent?.opacity ?? 100) / 100 }}
                     >
                       {imageContent?.imageUrl ? (
