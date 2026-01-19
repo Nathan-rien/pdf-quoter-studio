@@ -9,13 +9,13 @@ import type {
   PublishValidationError, 
   PublishValidationWarning 
 } from '@/types/template-editor';
-import type { PDFPageNumber } from '@/types/pdf-template';
+import { isProtectedPage, PROTECTED_PAGES } from '@/types/pdf-template';
 import { PDF_TEMPLATE_CONTRACT } from './pdf-template-contract';
 import { validateDynamicZone, getDynamicZonesForPage } from './template-protection';
 
 /**
  * Valide un template avant publication
- * Vérifie l'intégrité des zones dynamiques, le nombre de pages, l'ordre des pages
+ * Vérifie l'intégrité des zones dynamiques, les pages protégées
  */
 export function validateTemplateForPublication(
   version: TemplateVersion
@@ -23,43 +23,31 @@ export function validateTemplateForPublication(
   const errors: PublishValidationError[] = [];
   const warnings: PublishValidationWarning[] = [];
 
-  // 1. Vérifier le nombre de pages (doit être exactement 8)
-  if (version.pages.length !== 8) {
+  // 1. Vérifier qu'il y a au moins 1 page
+  if (version.pages.length === 0) {
     errors.push({
       type: 'page_count',
-      message: `Nombre de pages invalide : ${version.pages.length} (attendu : 8)`
+      message: 'Le template doit contenir au moins 1 page'
     });
   }
 
-  // 2. Vérifier l'ordre des pages
-  for (let i = 0; i < 8; i++) {
-    const expectedPageNumber = (i + 1) as PDFPageNumber;
-    const page = version.pages[i];
+  // 2. Vérifier que les pages protégées (4, 5, 6) sont présentes
+  for (const protectedPageNum of PROTECTED_PAGES) {
+    const page = version.pages.find(p => p.pageNumber === protectedPageNum);
     
     if (!page) {
       errors.push({
         type: 'page_order',
-        pageNumber: expectedPageNumber,
-        message: `Page ${expectedPageNumber} manquante`
-      });
-      continue;
-    }
-
-    if (page.pageNumber !== expectedPageNumber) {
-      errors.push({
-        type: 'page_order',
-        pageNumber: expectedPageNumber,
-        message: `Page à la position ${i + 1} a le numéro ${page.pageNumber} (attendu : ${expectedPageNumber})`
+        pageNumber: protectedPageNum,
+        message: `Page protégée ${protectedPageNum} manquante (zones dynamiques requises)`
       });
     }
   }
 
-  // 3. Vérifier l'intégrité de toutes les zones dynamiques
-  const dynamicPages = [4, 5, 6] as const;
-  
-  for (const pageNumber of dynamicPages) {
+  // 3. Vérifier l'intégrité de toutes les zones dynamiques sur les pages protégées
+  for (const pageNumber of PROTECTED_PAGES) {
     const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
-    const expectedZones = getDynamicZonesForPage(pageNumber as PDFPageNumber);
+    const expectedZones = getDynamicZonesForPage(pageNumber);
 
     for (const zone of expectedZones) {
       const result = validateDynamicZone(zone, pageContent);
@@ -67,7 +55,7 @@ export function validateTemplateForPublication(
       if (!result.isValid) {
         errors.push({
           type: 'dynamic_zone_integrity',
-          pageNumber: pageNumber as PDFPageNumber,
+          pageNumber: pageNumber,
           zoneId: zone.id,
           message: result.errors.join('; ')
         });
@@ -81,7 +69,7 @@ export function validateTemplateForPublication(
         if (!found) {
           errors.push({
             type: 'missing_zone',
-            pageNumber: pageNumber as PDFPageNumber,
+            pageNumber: pageNumber,
             zoneId: expectedZone.id,
             message: `Zone dynamique "${expectedZone.id}" manquante sur la page ${pageNumber}`
           });
