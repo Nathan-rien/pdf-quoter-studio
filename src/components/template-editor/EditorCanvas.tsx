@@ -1159,7 +1159,7 @@ export function EditorCanvas() {
                   )}
                   style={{
                     ...style,
-                    zIndex: isSelected ? 20 : (element.zIndex || 0) + 10
+                    zIndex: (element.zIndex || 0) + 10 + ((isDraggedElement || isResizingElement) ? 1000 : 0)
                   }}
                   onMouseDown={(e) => !isInlineEditing && handleMouseDown(element.id, e)}
                   onClick={(e) => handleElementClick(element.id, e)}
