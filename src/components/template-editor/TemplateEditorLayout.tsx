@@ -61,9 +61,10 @@ export function TemplateEditorLayout() {
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
   
   // Synchronisation avec le cloud
-  const { isLoading, isSyncing, syncAllToDatabase } = useTemplateSync();
+  const { isLoading, isSyncing, syncAllToDatabase, saveTemplateToDatabase } = useTemplateSync();
   
   const {
     currentVersion,
@@ -140,10 +141,28 @@ export function TemplateEditorLayout() {
     }
   };
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
     if (currentTemplateId && editedName.trim()) {
-      renameTemplate(currentTemplateId, editedName.trim());
-      toast.success("Template renommé");
+      const newName = editedName.trim();
+      setIsSavingName(true);
+      
+      // Mettre à jour localement d'abord
+      renameTemplate(currentTemplateId, newName);
+      
+      // Récupérer le template mis à jour depuis le store
+      const updatedTemplate = useTemplateEditorStore.getState().allTemplates.find(t => t.id === currentTemplateId);
+      
+      if (updatedTemplate) {
+        // Sauvegarder immédiatement dans le cloud
+        const success = await saveTemplateToDatabase(updatedTemplate);
+        if (success) {
+          toast.success("Template renommé et sauvegardé");
+        } else {
+          toast.error("Erreur lors de la sauvegarde du nom");
+        }
+      }
+      
+      setIsSavingName(false);
     }
     setIsEditingName(false);
   };
@@ -212,8 +231,8 @@ export function TemplateEditorLayout() {
                   autoFocus
                   className="h-7 text-base font-bold px-2 w-64"
                 />
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleSaveName}>
-                  <Check className="h-3 w-3" />
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleSaveName} disabled={isSavingName}>
+                  {isSavingName ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                 </Button>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCancelEditingName}>
                   <X className="h-3 w-3" />
