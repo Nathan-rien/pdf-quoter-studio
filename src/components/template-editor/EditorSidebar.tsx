@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { isProtectedPage } from "@/types/pdf-template";
-import { TEMPLATE_LOGOS } from "@/lib/template-logos";
+import { TEMPLATE_LOGOS, LOGO_POSITIONS, DEFAULT_FOOTER_LOGO_SIZE } from "@/lib/template-logos";
 import { 
   Lock, 
   FileText, 
@@ -76,7 +76,8 @@ export function EditorSidebar() {
     setSelectedLogoId,
     addPage,
     deletePage,
-    canDeletePage
+    canDeletePage,
+    addLogoToAllPages
   } = useTemplateEditorStore();
 
   const pages = currentVersion?.pages || [];
@@ -98,6 +99,21 @@ export function EditorSidebar() {
     if (!isEditable) return;
     setAddElementMode('logo');
     setSelectedLogoId(logoId);
+  };
+
+  const handleAddLogoToAllPages = (logoId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isEditable) return;
+    
+    const count = addLogoToAllPages(
+      logoId, 
+      LOGO_POSITIONS.bottomRight, 
+      DEFAULT_FOOTER_LOGO_SIZE
+    );
+    
+    if (count > 0) {
+      toast.success(`Logo ajouté sur ${count} pages`);
+    }
   };
 
   const handleAddPage = () => {
@@ -240,25 +256,36 @@ export function EditorSidebar() {
                   <ImageIcon className="h-3 w-3" />
                   Logos
                 </p>
-                <div className="grid grid-cols-2 gap-1">
+                <div className="space-y-1">
                   {TEMPLATE_LOGOS.map((logo) => (
-                    <Button
-                      key={logo.id}
-                      variant={addElementMode === 'logo' && selectedLogoId === logo.id ? "default" : "outline"}
-                      size="sm"
-                      className={cn(
-                        "h-10 p-1 flex items-center justify-center",
-                        logo.previewBg === 'dark' ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
-                      )}
-                      onClick={() => handleLogoClick(logo.id)}
-                      title={logo.description}
-                    >
-                      <img 
-                        src={logo.url} 
-                        alt={logo.name} 
-                        className="h-full w-full object-contain"
-                      />
-                    </Button>
+                    <div key={logo.id} className="flex items-center gap-1">
+                      <Button
+                        variant={addElementMode === 'logo' && selectedLogoId === logo.id ? "default" : "outline"}
+                        size="sm"
+                        className={cn(
+                          "h-10 flex-1 p-1 flex items-center justify-center",
+                          logo.previewBg === 'dark' ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
+                        )}
+                        onClick={() => handleLogoClick(logo.id)}
+                        title={`${logo.description} - Cliquez pour placer sur la page courante`}
+                      >
+                        <img 
+                          src={logo.url} 
+                          alt={logo.name} 
+                          className="h-full w-full object-contain"
+                        />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 px-2 text-[8px] shrink-0"
+                        onClick={(e) => handleAddLogoToAllPages(logo.id, e)}
+                        title="Ajouter en bas à droite de toutes les pages"
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" />
+                        Toutes
+                      </Button>
+                    </div>
                   ))}
                 </div>
                 {addElementMode === 'logo' && selectedLogoId && (

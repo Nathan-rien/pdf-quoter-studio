@@ -72,6 +72,17 @@ export const TEMPLATE_LOGOS: TemplateLogo[] = [
   }
 ];
 
+// Positions prédéfinies pour les logos (en pourcentage du canvas)
+export const LOGO_POSITIONS = {
+  bottomRight: { x: 85, y: 92 },
+  bottomLeft: { x: 5, y: 92 },
+  topRight: { x: 85, y: 2 },
+  topLeft: { x: 5, y: 2 }
+} as const;
+
+// Taille par défaut pour un logo en footer
+export const DEFAULT_FOOTER_LOGO_SIZE = { width: 80, height: 35 };
+
 export function getLogoById(id: string): TemplateLogo | undefined {
   return TEMPLATE_LOGOS.find(logo => logo.id === id);
 }

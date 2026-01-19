@@ -87,6 +87,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   addShape: (shapeType: ShapeType, position: { x: number; y: number }) => EditableElement;
   addIcon: (iconName: string, position: { x: number; y: number }) => EditableElement;
   addLogo: (logoId: string, position: { x: number; y: number }) => EditableElement;
+  addLogoToAllPages: (logoId: string, position: { x: number; y: number }, size: { width: number; height: number }) => number;
   deleteElement: (elementId: string) => boolean;
   duplicateElement: (elementId: string) => EditableElement | null;
   
@@ -901,6 +902,61 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     });
 
     return newElement;
+  },
+
+  // Ajout d'un logo sur toutes les pages
+  addLogoToAllPages: (logoId, position, size) => {
+    const { currentVersion } = get();
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      return 0;
+    }
+
+    const logo = getLogoById(logoId);
+    if (!logo) {
+      return 0;
+    }
+
+    saveToHistory(get());
+
+    const defaultContent: ImageContent = {
+      imageUrl: logo.url,
+      alt: logo.description,
+      rotation: 0,
+      opacity: 100,
+      objectFit: 'contain'
+    };
+
+    let addedCount = 0;
+    const updatedPages = currentVersion.pages.map((page) => {
+      const existingElements = page.elements.filter(e => !e.isDynamic);
+      const maxZIndex = existingElements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
+
+      const newElement: EditableElement = {
+        id: `logo-${page.pageNumber}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'image',
+        pageNumber: page.pageNumber as PDFPageNumber,
+        isDynamic: false,
+        position,
+        size,
+        content: defaultContent,
+        zIndex: maxZIndex + 1
+      };
+
+      addedCount++;
+      return {
+        ...page,
+        elements: [...page.elements, newElement]
+      };
+    });
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      addElementMode: 'none',
+      selectedLogoId: null
+    });
+
+    return addedCount;
   },
 
   // Ajout d'une icône
