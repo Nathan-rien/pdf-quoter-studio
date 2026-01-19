@@ -3,8 +3,20 @@ import { persist } from 'zustand/middleware';
 import { PDFParseResult, PDFProductLine } from '@/lib/pdf-import-parser';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
+import { CommercialEntity, Commercial, COMMERCIAUX, getCommercialById } from '@/data/commerciaux';
 
 export type RentalWorkflowStep = 'import' | 'data' | 'template' | 'preview' | 'export';
+
+// Commercial data
+interface CommercialData {
+  entity: CommercialEntity | null;
+  commercialId: string | null;
+}
+
+const initialCommercialData: CommercialData = {
+  entity: null,
+  commercialId: null,
+};
 
 interface ClientData {
   nom: string;
@@ -51,6 +63,9 @@ interface RentalProposalState {
   // Client data
   clientData: ClientData;
   
+  // Commercial data
+  commercialData: CommercialData;
+  
   // Matrice data (replaces devis, location, etc.)
   matriceData: MatriceData;
   
@@ -86,6 +101,11 @@ interface RentalProposalActions {
   updateOptionService: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
   deleteOptionService: (id: string) => void;
   toggleOptionService: (id: string) => void;
+  
+  // Commercial
+  updateCommercialEntity: (entity: CommercialEntity | null) => void;
+  selectCommercial: (commercialId: string | null) => void;
+  getSelectedCommercial: () => Commercial | null;
   
   // Computed values (getters)
   getCalculatedValues: () => ReturnType<typeof calculateAllMatriceValues>;
@@ -128,6 +148,7 @@ const initialPDFImportStatus: PDFImportStatus = {
 const initialState: RentalProposalState = {
   pdfImportStatus: initialPDFImportStatus,
   clientData: initialClientData,
+  commercialData: initialCommercialData,
   matriceData: initialMatriceData,
   lignesData: [],
   optionsServices: [],
@@ -257,6 +278,27 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         }));
       },
 
+      // Commercial actions
+      updateCommercialEntity: (entity) => {
+        set({ 
+          commercialData: { entity, commercialId: null },
+          hasUnsavedChanges: true 
+        });
+      },
+
+      selectCommercial: (commercialId) => {
+        set(state => ({ 
+          commercialData: { ...state.commercialData, commercialId },
+          hasUnsavedChanges: true 
+        }));
+      },
+
+      getSelectedCommercial: () => {
+        const { commercialData } = get();
+        if (!commercialData.commercialId) return null;
+        return getCommercialById(commercialData.commercialId);
+      },
+
       getSelectedOptionsPrices: () => {
         const state = get();
         return state.optionsServices
@@ -333,6 +375,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       partialize: (state) => ({
         pdfImportStatus: state.pdfImportStatus,
         clientData: state.clientData,
+        commercialData: state.commercialData,
         matriceData: state.matriceData,
         lignesData: state.lignesData,
         optionsServices: state.optionsServices,
@@ -368,6 +411,11 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             // Validate matriceData
             if (!state.matriceData || typeof state.matriceData !== 'object') {
               state.matriceData = initialMatriceData;
+            }
+            
+            // Validate commercialData
+            if (!state.commercialData || typeof state.commercialData !== 'object') {
+              state.commercialData = initialCommercialData;
             }
             
             // Validate pdfImportStatus

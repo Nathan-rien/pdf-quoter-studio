@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download } from 'lucide-react';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStor
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { BASE_TAUX_DATA } from '@/data/base-taux';
 import { getConditionFinContrat } from '@/data/frais-dossier';
+import { ENTITIES, getCommerciauxByEntity, CommercialEntity } from '@/data/commerciaux';
 
 export function RentalDataEditor() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -26,6 +27,7 @@ export function RentalDataEditor() {
     lignesData,
     optionsServices,
     pdfImportStatus,
+    commercialData,
     updateClientField,
     updateMatriceField,
     updateLigne,
@@ -36,6 +38,9 @@ export function RentalDataEditor() {
     deleteOptionService,
     toggleOptionService,
     getCalculatedValues,
+    updateCommercialEntity,
+    selectCommercial,
+    getSelectedCommercial,
   } = useRentalProposalStore();
 
   const { options: adminOptions } = useOptionsAdminStore();
@@ -134,7 +139,7 @@ export function RentalDataEditor() {
         </TabsList>
 
         {/* Client Tab */}
-        <TabsContent value="client" className="mt-4">
+        <TabsContent value="client" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Informations client</CardTitle>
@@ -193,6 +198,69 @@ export function RentalDataEditor() {
                   onChange={(e) => updateClientField('telephone', e.target.value)}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Commercial Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                Commercial associé
+              </CardTitle>
+              <CardDescription>Sélectionnez l'entité et le commercial en charge de cette proposition</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Sélecteur d'entité */}
+                <div className="space-y-2">
+                  <Label>Entité</Label>
+                  <Select
+                    value={commercialData.entity ?? ''}
+                    onValueChange={(value) => updateCommercialEntity(value as CommercialEntity)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir une entité..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ENTITIES.map(e => (
+                        <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Sélecteur de commercial (filtré par entité) */}
+                <div className="space-y-2">
+                  <Label>Commercial</Label>
+                  <Select
+                    value={commercialData.commercialId ?? ''}
+                    onValueChange={(value) => selectCommercial(value)}
+                    disabled={!commercialData.entity}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir un commercial..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {commercialData.entity && getCommerciauxByEntity(commercialData.entity).map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Aperçu du commercial sélectionné */}
+              {getSelectedCommercial() && (
+                <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                  <p className="font-medium">{getSelectedCommercial()!.nom}</p>
+                  {getSelectedCommercial()!.telephone && (
+                    <p className="text-muted-foreground">{getSelectedCommercial()!.telephone}</p>
+                  )}
+                  <p className="text-muted-foreground">{getSelectedCommercial()!.email}</p>
+                  <p className="text-muted-foreground text-xs mt-1">{getSelectedCommercial()!.adresse}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
