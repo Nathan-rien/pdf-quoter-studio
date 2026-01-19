@@ -480,13 +480,14 @@ export function ElementProperties() {
 
             <div className="space-y-2">
               <Label>Couleur</Label>
-              <div className="grid grid-cols-4 gap-1">
+              <div className="grid grid-cols-9 gap-1 max-h-24 overflow-y-auto p-1 border rounded-md bg-muted/20">
                 {ALLOWED_COLORS.map((color) => (
                   <button
                     key={color.value}
                     className={cn(
-                      "w-8 h-8 rounded border-2 transition-all",
-                      iconContent.color === color.value ? "border-primary scale-110" : "border-transparent hover:border-muted-foreground/50"
+                      "w-5 h-5 rounded border-2 transition-all shrink-0",
+                      iconContent.color === color.value ? "border-primary ring-1 ring-primary/30 scale-110" : "border-transparent hover:border-muted-foreground/50",
+                      !isEditable && "opacity-50 cursor-not-allowed"
                     )}
                     style={{ backgroundColor: color.value }}
                     onClick={() => updateIconContent(selectedElement.id, { color: color.value })}
@@ -748,15 +749,15 @@ export function ElementProperties() {
 
             {/* Couleur */}
             <div className="space-y-2">
-              <Label>Couleur</Label>
-              <div className="grid grid-cols-7 gap-1">
+              <Label>Couleur du texte</Label>
+              <div className="grid grid-cols-9 gap-1 max-h-32 overflow-y-auto p-1 border rounded-md bg-muted/20">
                 {ALLOWED_COLORS.map((color) => (
                   <button
                     key={color.value}
                     className={cn(
-                      "w-6 h-6 rounded border-2 transition-all",
+                      "w-5 h-5 rounded border-2 transition-all shrink-0",
                       textContent.color === color.value 
-                        ? "border-primary ring-2 ring-primary/30" 
+                        ? "border-primary ring-2 ring-primary/30 scale-110" 
                         : "border-transparent hover:border-muted-foreground/50",
                       !isEditable && "opacity-50 cursor-not-allowed"
                     )}
@@ -953,15 +954,15 @@ export function ElementProperties() {
                 <Palette className="h-4 w-4" />
                 Couleur de fond
               </Label>
-              <div className="grid grid-cols-6 gap-1">
+              <div className="grid grid-cols-8 gap-1 max-h-36 overflow-y-auto p-1.5 border rounded-md bg-muted/20">
                 {SHAPE_BACKGROUND_COLORS.map((color) => (
                   <button
                     key={color.value}
                     className={cn(
-                      "w-6 h-6 rounded border-2 transition-all",
+                      "w-5 h-5 rounded border-2 transition-all shrink-0",
                       color.value === 'transparent' && "bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOCIgaGVpZ2h0PSI4IiB2aWV3Qm94PSIwIDAgOCA4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNjY2MiLz48cmVjdCB4PSI0IiB5PSI0IiB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjY2NjIi8+PC9zdmc+')]",
                       shapeContent.backgroundColor === color.value 
-                        ? "border-primary ring-2 ring-primary/30" 
+                        ? "border-primary ring-2 ring-primary/30 scale-110" 
                         : "border-transparent hover:border-muted-foreground/50",
                       (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
                     )}
@@ -1011,14 +1012,14 @@ export function ElementProperties() {
                   {/* Couleur de bordure */}
                   <div className="space-y-2">
                     <Label className="text-xs">Couleur</Label>
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-9 gap-1 max-h-24 overflow-y-auto p-1 border rounded-md bg-muted/20">
                       {ALLOWED_COLORS.map((color) => (
                         <button
                           key={color.value}
                           className={cn(
-                            "w-5 h-5 rounded border-2 transition-all",
+                            "w-4 h-4 rounded border-2 transition-all shrink-0",
                             shapeContent.border.color === color.value 
-                              ? "border-primary ring-2 ring-primary/30" 
+                              ? "border-primary ring-1 ring-primary/30 scale-110" 
                               : "border-transparent hover:border-muted-foreground/50",
                             (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
                           )}
@@ -1082,15 +1083,17 @@ export function ElementProperties() {
                 {/* Couleur du trait */}
                 <div className="space-y-2">
                   <Label className="text-xs">Couleur du trait</Label>
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="grid grid-cols-9 gap-1 max-h-24 overflow-y-auto p-1 border rounded-md bg-muted/20">
                     {ALLOWED_COLORS.map((color) => (
                       <button
                         key={color.value}
-                        className={`w-5 h-5 rounded border-2 transition-all ${
+                        className={cn(
+                          "w-4 h-4 rounded border-2 transition-all shrink-0",
                           shapeContent.border.color === color.value 
-                            ? "border-primary ring-2 ring-primary/30" 
-                            : "border-transparent hover:border-muted-foreground/50"
-                        } ${(!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"}`}
+                            ? "border-primary ring-1 ring-primary/30 scale-110" 
+                            : "border-transparent hover:border-muted-foreground/50",
+                          (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
+                        )}
                         style={{ backgroundColor: color.value }}
                         onClick={() => handleShapeBorderChange({ color: color.value })}
                         disabled={!isEditable || shapeContent.isLocked}
