@@ -13,114 +13,106 @@ import type { LucideIcon } from "lucide-react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Catégories d'icônes pour faciliter la navigation
+// Catégories d'icônes avec noms PascalCase (noms réels Lucide)
 const ICON_CATEGORIES: Record<string, string[]> = {
   'Flèches': [
-    'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
-    'arrow-up-right', 'arrow-up-left', 'arrow-down-right', 'arrow-down-left',
-    'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right',
-    'chevrons-up', 'chevrons-down', 'chevrons-left', 'chevrons-right',
-    'move-up', 'move-down', 'move-left', 'move-right',
-    'corner-up-left', 'corner-up-right', 'corner-down-left', 'corner-down-right',
-    'undo', 'redo', 'undo-2', 'redo-2',
-    'arrow-big-up', 'arrow-big-down', 'arrow-big-left', 'arrow-big-right',
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    'ArrowUpRight', 'ArrowUpLeft', 'ArrowDownRight', 'ArrowDownLeft',
+    'ChevronUp', 'ChevronDown', 'ChevronLeft', 'ChevronRight',
+    'ChevronsUp', 'ChevronsDown', 'ChevronsLeft', 'ChevronsRight',
+    'MoveUp', 'MoveDown', 'MoveLeft', 'MoveRight',
+    'CornerUpLeft', 'CornerUpRight', 'CornerDownLeft', 'CornerDownRight',
+    'Undo', 'Redo', 'Undo2', 'Redo2',
+    'ArrowBigUp', 'ArrowBigDown', 'ArrowBigLeft', 'ArrowBigRight',
   ],
   'Communication': [
-    'mail', 'mail-open', 'inbox', 'send', 'forward',
-    'phone', 'phone-call', 'phone-incoming', 'phone-outgoing', 'phone-missed',
-    'message-circle', 'message-square', 'messages-square',
-    'at-sign', 'bell', 'bell-ring', 'megaphone',
-    'share', 'share-2', 'external-link', 'link', 'link-2',
-    'radio', 'wifi', 'bluetooth', 'signal',
+    'Mail', 'MailOpen', 'Inbox', 'Send', 'Forward',
+    'Phone', 'PhoneCall', 'PhoneIncoming', 'PhoneOutgoing', 'PhoneMissed',
+    'MessageCircle', 'MessageSquare', 'MessagesSquare',
+    'AtSign', 'Bell', 'BellRing', 'Megaphone',
+    'Share', 'Share2', 'ExternalLink', 'Link', 'Link2',
+    'Radio', 'Wifi', 'Bluetooth', 'Signal',
   ],
   'Fichiers': [
-    'file', 'file-text', 'file-image', 'file-video', 'file-audio',
-    'file-code', 'file-json', 'file-spreadsheet',
-    'folder', 'folder-open', 'folder-plus', 'folder-minus',
-    'clipboard', 'clipboard-list', 'clipboard-check',
-    'download', 'upload', 'hard-drive', 'database',
-    'archive', 'zip', 'package',
+    'File', 'FileText', 'FileImage', 'FileVideo', 'FileAudio',
+    'FileCode', 'FileJson', 'FileSpreadsheet',
+    'Folder', 'FolderOpen', 'FolderPlus', 'FolderMinus',
+    'Clipboard', 'ClipboardList', 'ClipboardCheck',
+    'Download', 'Upload', 'HardDrive', 'Database',
+    'Archive', 'Package',
   ],
   'Média': [
-    'image', 'images', 'camera', 'video', 'film',
-    'play', 'pause', 'stop', 'skip-back', 'skip-forward',
-    'volume', 'volume-1', 'volume-2', 'volume-x',
-    'mic', 'mic-off', 'headphones', 'speaker',
-    'music', 'music-2', 'music-3', 'music-4',
-    'youtube', 'twitch',
+    'Image', 'Images', 'Camera', 'Video', 'Film',
+    'Play', 'Pause', 'Square', 'SkipBack', 'SkipForward',
+    'Volume', 'Volume1', 'Volume2', 'VolumeX',
+    'Mic', 'MicOff', 'Headphones', 'Speaker',
+    'Music', 'Music2', 'Music3', 'Music4',
+    'Youtube',
   ],
   'Interface': [
-    'menu', 'more-horizontal', 'more-vertical', 'grip-horizontal', 'grip-vertical',
-    'settings', 'settings-2', 'sliders', 'sliders-horizontal',
-    'search', 'filter', 'sort-asc', 'sort-desc',
-    'eye', 'eye-off', 'expand', 'minimize', 'maximize',
-    'plus', 'minus', 'x', 'check', 'check-circle',
-    'info', 'alert-circle', 'alert-triangle', 'help-circle',
-    'loader', 'loader-2', 'refresh-cw', 'rotate-cw',
+    'Menu', 'MoreHorizontal', 'MoreVertical', 'GripHorizontal', 'GripVertical',
+    'Settings', 'Settings2', 'SlidersHorizontal', 'SlidersVertical',
+    'Search', 'Filter', 'ArrowUpDown', 'ListFilter',
+    'Eye', 'EyeOff', 'Expand', 'Minimize', 'Maximize',
+    'Plus', 'Minus', 'X', 'Check', 'CheckCircle',
+    'Info', 'AlertCircle', 'AlertTriangle', 'HelpCircle',
+    'Loader', 'Loader2', 'RefreshCw', 'RotateCw',
   ],
   'Utilisateurs': [
-    'user', 'users', 'user-plus', 'user-minus', 'user-check', 'user-x',
-    'contact', 'contact-2', 'badge-check', 'verified',
-    'smile', 'frown', 'meh', 'laugh', 'angry',
-    'heart', 'heart-handshake', 'thumbs-up', 'thumbs-down',
-    'hand-metal', 'hand-shake',
+    'User', 'Users', 'UserPlus', 'UserMinus', 'UserCheck', 'UserX',
+    'Contact', 'Contact2', 'BadgeCheck',
+    'Smile', 'Frown', 'Meh', 'Laugh', 'Angry',
+    'Heart', 'HeartHandshake', 'ThumbsUp', 'ThumbsDown',
   ],
   'Commerce': [
-    'shopping-cart', 'shopping-bag', 'package', 'box',
-    'credit-card', 'wallet', 'banknote', 'coins',
-    'percent', 'tag', 'tags', 'receipt', 'barcode',
-    'store', 'building', 'building-2', 'factory',
-    'truck', 'shipping', 'package-check', 'package-x',
+    'ShoppingCart', 'ShoppingBag', 'Package', 'Box',
+    'CreditCard', 'Wallet', 'Banknote', 'Coins',
+    'Percent', 'Tag', 'Tags', 'Receipt', 'Barcode',
+    'Store', 'Building', 'Building2', 'Factory',
+    'Truck', 'PackageCheck', 'PackageX',
   ],
   'Édition': [
-    'edit', 'edit-2', 'edit-3', 'pencil', 'pen-tool',
-    'eraser', 'scissors', 'crop', 'type',
-    'bold', 'italic', 'underline', 'strikethrough',
-    'align-left', 'align-center', 'align-right', 'align-justify',
-    'list', 'list-ordered', 'list-checks',
-    'indent', 'outdent',
-    'copy', 'clipboard-copy', 'clipboard-paste',
+    'Pencil', 'PenTool', 'Highlighter',
+    'Eraser', 'Scissors', 'Crop', 'Type',
+    'Bold', 'Italic', 'Underline', 'Strikethrough',
+    'AlignLeft', 'AlignCenter', 'AlignRight', 'AlignJustify',
+    'List', 'ListOrdered', 'ListChecks',
+    'IndentIncrease', 'IndentDecrease',
+    'Copy', 'ClipboardCopy', 'ClipboardPaste',
   ],
   'Formes': [
-    'square', 'rectangle', 'circle', 'triangle',
-    'pentagon', 'hexagon', 'octagon', 'star',
-    'diamond', 'heart', 'spade', 'club',
-    'box', 'cube', 'cylinder', 'cone', 'torus',
+    'Square', 'RectangleHorizontal', 'Circle', 'Triangle',
+    'Pentagon', 'Hexagon', 'Octagon', 'Star',
+    'Diamond', 'Heart', 'Spade', 'Club',
+    'Box', 'Cuboid', 'Cylinder', 'Cone',
   ],
   'Météo': [
-    'sun', 'moon', 'cloud', 'cloud-sun', 'cloud-moon',
-    'cloud-rain', 'cloud-snow', 'cloud-lightning', 'cloud-fog',
-    'wind', 'droplets', 'thermometer', 'umbrella',
-    'sunrise', 'sunset', 'rainbow',
+    'Sun', 'Moon', 'Cloud', 'CloudSun', 'CloudMoon',
+    'CloudRain', 'CloudSnow', 'CloudLightning', 'CloudFog',
+    'Wind', 'Droplets', 'Thermometer', 'Umbrella',
+    'Sunrise', 'Sunset', 'Rainbow',
   ],
   'Transport': [
-    'car', 'bus', 'train', 'plane', 'ship', 'rocket',
-    'bike', 'sailboat', 'truck', 'tractor',
-    'navigation', 'compass', 'map', 'map-pin', 'locate',
-    'parking', 'fuel', 'gauge',
+    'Car', 'Bus', 'Train', 'Plane', 'Ship', 'Rocket',
+    'Bike', 'Sailboat', 'Truck', 'Tractor',
+    'Navigation', 'Compass', 'Map', 'MapPin', 'LocateFixed',
+    'ParkingSquare', 'Fuel', 'Gauge',
   ],
   'Tech': [
-    'monitor', 'laptop', 'smartphone', 'tablet', 'watch',
-    'cpu', 'hard-drive', 'server', 'database', 'cloud',
-    'code', 'terminal', 'git-branch', 'git-commit', 'git-merge',
-    'bug', 'zap', 'activity', 'pulse',
-    'wifi', 'bluetooth', 'nfc',
+    'Monitor', 'Laptop', 'Smartphone', 'Tablet', 'Watch',
+    'Cpu', 'HardDrive', 'Server', 'Database', 'Cloud',
+    'Code', 'Terminal', 'GitBranch', 'GitCommit', 'GitMerge',
+    'Bug', 'Zap', 'Activity',
+    'Wifi', 'Bluetooth', 'Nfc',
   ],
 };
 
-// Convertir le nom kebab-case en PascalCase pour accéder aux icônes
-const kebabToPascal = (str: string): string => {
-  return str
-    .split('-')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
-};
-
-// Obtenir toutes les icônes disponibles
+// Obtenir toutes les icônes disponibles (noms PascalCase)
 const getAllIconNames = (): string[] => {
   return Object.keys(icons).filter(key => {
-    // Filtrer les exports non-icônes
-    return typeof (icons as Record<string, unknown>)[key] === 'object' && key !== 'default';
+    const icon = (icons as Record<string, unknown>)[key];
+    // Filtrer uniquement les composants icônes valides
+    return icon && typeof icon === 'object' && '$$typeof' in (icon as object);
   });
 };
 
@@ -156,9 +148,9 @@ export function IconPicker({
     if (activeTab === 'all') {
       result = allIcons;
     } else {
-      const categoryKebabNames = ICON_CATEGORIES[activeTab] || [];
-      const categoryPascalNames = categoryKebabNames.map(kebabToPascal);
-      result = allIcons.filter(name => categoryPascalNames.includes(name));
+      const categoryNames = ICON_CATEGORIES[activeTab] || [];
+      // Filtrer uniquement les icônes qui existent réellement dans Lucide
+      result = categoryNames.filter(name => allIcons.includes(name));
     }
 
     if (search.trim()) {
@@ -223,7 +215,7 @@ export function IconPicker({
         <TabsContent value={activeTab} className="mt-2">
           <ScrollArea style={{ height: maxHeight }}>
             {filteredIcons.length > 0 ? (
-              <div className="grid grid-cols-6 gap-1 p-1">
+              <div className="grid grid-cols-8 gap-1 p-1">
                 {filteredIcons.map(iconName => {
                   const Icon = (icons as Record<string, LucideIcon>)[iconName];
                   if (!Icon) return null;
@@ -237,7 +229,7 @@ export function IconPicker({
                       onClick={() => handleSelect(iconName)}
                       disabled={disabled}
                       className={cn(
-                        "flex flex-col items-center justify-center p-2 rounded-md",
+                        "flex items-center justify-center p-2 rounded-md aspect-square",
                         "hover:bg-accent hover:text-accent-foreground",
                         "transition-colors cursor-pointer",
                         "disabled:opacity-50 disabled:cursor-not-allowed",
