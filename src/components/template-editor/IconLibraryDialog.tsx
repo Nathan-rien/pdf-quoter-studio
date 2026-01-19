@@ -51,7 +51,7 @@ export function IconLibraryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
@@ -66,15 +66,15 @@ export function IconLibraryDialog({
           <IconPicker
             value={selectedIcon}
             onChange={setSelectedIcon}
-            maxHeight={350}
+            maxHeight={450}
           />
         </div>
 
         {/* Prévisualisation de l'icône sélectionnée */}
         {selectedIcon && SelectedIconComponent && (
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-background border">
-              <SelectedIconComponent className="h-6 w-6" />
+            <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-background border">
+              <SelectedIconComponent className="h-8 w-8" />
             </div>
             <div>
               <p className="text-sm font-medium">{selectedIcon}</p>
