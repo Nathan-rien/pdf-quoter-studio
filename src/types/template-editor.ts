@@ -186,9 +186,10 @@ export interface PublishValidationError {
 }
 
 export interface PublishValidationWarning {
-  type: 'empty_text' | 'missing_image';
+  type: 'empty_text' | 'missing_image' | 'missing_page' | 'dynamic_zone_integrity' | 'missing_zone';
   pageNumber?: PDFPageNumber;
   elementId?: string;
+  zoneId?: string;
   message: string;
 }
 

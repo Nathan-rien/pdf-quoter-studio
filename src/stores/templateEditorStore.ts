@@ -19,8 +19,8 @@ import type {
   PDFTemplate,
   IconContent
 } from '@/types/template-editor';
-import type { PDFPageNumber, DynamicZone, isProtectedPage as isProtectedPageFn } from '@/types/pdf-template';
-import { isProtectedPage } from '@/types/pdf-template';
+import type { PDFPageNumber, DynamicZone, DynamicZoneType } from '@/types/pdf-template';
+import { generateDynamicZoneId, AVAILABLE_ZONE_TYPES } from '@/types/pdf-template';
 import { PDF_TEMPLATE_CONTRACT, getDefaultPageConfigs } from '@/lib/pdf-template-contract';
 import { validateTemplateForPublication } from '@/lib/template-validation';
 import { blockDynamicZoneEdit } from '@/lib/template-protection';
@@ -139,8 +139,16 @@ interface TemplateEditorStore extends TemplateEditorState {
 
   // Gestion des pages
   addPage: (title?: string, afterPageNumber?: number) => TemplatePageContent | null;
-  deletePage: (pageNumber: number) => boolean;
-  canDeletePage: (pageNumber: number) => { canDelete: boolean; reason?: string };
+  deletePage: (pageNumber: number, forceDelete?: boolean) => boolean;
+  canDeletePage: (pageNumber: number) => { canDelete: boolean; hasWarning?: boolean; reason?: string; warning?: string; dynamicZonesCount?: number };
+
+  // Gestion des zones dynamiques
+  addDynamicZone: (pageNumber: number, type: DynamicZoneType, isRequired?: boolean, description?: string) => DynamicZone | null;
+  updateDynamicZone: (zoneId: string, updates: Partial<Pick<DynamicZone, 'isRequired' | 'description' | 'position'>>) => boolean;
+  removeDynamicZone: (zoneId: string) => boolean;
+  moveDynamicZoneToPage: (zoneId: string, targetPageNumber: number) => boolean;
+  getDynamicZonesForCurrentPage: () => DynamicZone[];
+  getAllDynamicZones: () => DynamicZone[];
 
   // Utilitaires
   getCurrentPageContent: () => TemplatePageContent | null;
@@ -221,28 +229,24 @@ const saveToHistory = (state: TemplateEditorState) => {
   }
 };
 
-// Helper pour renuméroter les pages en préservant les pages protégées
+// Helper pour renuméroter les pages séquentiellement
 const renumberPagesInVersion = (pages: TemplatePageContent[]): TemplatePageContent[] => {
-  // Séparer les pages protégées et non-protégées
-  const protectedPages = pages.filter(p => isProtectedPage(p.pageNumber));
-  const otherPages = pages.filter(p => !isProtectedPage(p.pageNumber));
+  // Trier les pages par numéro actuel
+  const sortedPages = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
   
-  // Renuméroter les autres pages séquentiellement, en évitant 4, 5, 6
-  let currentNumber = 1;
-  const renumberedOthers = otherPages.map(page => {
-    while ([4, 5, 6].includes(currentNumber)) {
-      currentNumber++;
+  // Renuméroter séquentiellement à partir de 1
+  return sortedPages.map((page, index) => {
+    const newNumber = index + 1;
+    if (page.pageNumber !== newNumber) {
+      // Mettre à jour le numéro de page dans les zones dynamiques aussi
+      const updatedZones = page.dynamicZones.map(zone => ({
+        ...zone,
+        pageNumber: newNumber
+      }));
+      return { ...page, pageNumber: newNumber, dynamicZones: updatedZones };
     }
-    const newNumber = currentNumber;
-    currentNumber++;
-    return { ...page, pageNumber: newNumber };
+    return page;
   });
-  
-  // Fusionner et trier
-  const allPages = [...renumberedOthers, ...protectedPages];
-  allPages.sort((a, b) => a.pageNumber - b.pageNumber);
-  
-  return allPages;
 };
 
 const initialState: TemplateEditorState = {
@@ -1745,15 +1749,31 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       return { canDelete: false, reason: 'Au moins 1 page requise' };
     }
 
-    // Pages protégées (zones dynamiques)
-    if (isProtectedPage(pageNumber)) {
-      return { canDelete: false, reason: 'Page protégée (zones dynamiques)' };
+    // Vérifier que la page existe
+    const page = currentVersion.pages.find(p => p.pageNumber === pageNumber);
+    if (!page) {
+      return { canDelete: false, reason: 'Page non trouvée' };
     }
 
-    // Vérifier que la page existe
-    const pageExists = currentVersion.pages.some(p => p.pageNumber === pageNumber);
-    if (!pageExists) {
-      return { canDelete: false, reason: 'Page non trouvée' };
+    // Vérifier si la page a des zones dynamiques
+    if (page.dynamicZones.length > 0) {
+      const requiredZones = page.dynamicZones.filter(z => z.isRequired);
+      
+      if (requiredZones.length > 0) {
+        return { 
+          canDelete: true, 
+          hasWarning: true,
+          warning: `Cette page contient ${requiredZones.length} zone(s) dynamique(s) requise(s). Les données ne seront plus injectées.`,
+          dynamicZonesCount: page.dynamicZones.length
+        };
+      }
+      
+      return { 
+        canDelete: true, 
+        hasWarning: true,
+        warning: `Cette page contient ${page.dynamicZones.length} zone(s) dynamique(s). Les données ne seront plus injectées.`,
+        dynamicZonesCount: page.dynamicZones.length
+      };
     }
 
     return { canDelete: true };
@@ -1775,16 +1795,13 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       ? currentVersion.pages.findIndex(p => p.pageNumber === afterPageNumber) + 1
       : currentVersion.pages.length;
 
-    // Trouver le prochain numéro de page disponible
-    const existingPageNumbers = currentVersion.pages.map(p => p.pageNumber);
-    let newPageNumber = 1;
-    while (existingPageNumbers.includes(newPageNumber) || [4, 5, 6].includes(newPageNumber)) {
-      newPageNumber++;
-    }
+    // Trouver le prochain numéro de page disponible (temporaire, sera renuméroté)
+    const maxPageNumber = Math.max(...currentVersion.pages.map(p => p.pageNumber), 0);
+    const tempPageNumber = maxPageNumber + 1;
 
     // Créer la nouvelle page
     const newPageContent: TemplatePageContent = {
-      pageNumber: newPageNumber,
+      pageNumber: tempPageNumber,
       elements: [],
       dynamicZones: []
     };
@@ -1793,24 +1810,34 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     const updatedPages = [...currentVersion.pages];
     updatedPages.splice(insertIndex, 0, newPageContent);
 
-    // Renuméroter les pages (sauf protégées)
+    // Renuméroter les pages
     const renumberedPages = renumberPagesInVersion(updatedPages);
+    
+    // Trouver le nouveau numéro de la page insérée
+    const finalPageNumber = renumberedPages[insertIndex]?.pageNumber || 1;
 
     set({
       currentVersion: { ...currentVersion, pages: renumberedPages },
       hasUnsavedChanges: true,
-      selectedPageNumber: newPageNumber
+      selectedPageNumber: finalPageNumber
     });
 
-    return newPageContent;
+    return renumberedPages[insertIndex] || newPageContent;
   },
 
-  deletePage: (pageNumber: number) => {
+  deletePage: (pageNumber: number, forceDelete?: boolean) => {
     const state = get();
     const { currentVersion, selectedPageNumber } = state;
     
     const check = get().canDeletePage(pageNumber);
+    
+    // Si on ne peut pas supprimer
     if (!check.canDelete) {
+      return false;
+    }
+    
+    // Si il y a un avertissement et pas de forceDelete, on bloque
+    if (check.hasWarning && !forceDelete) {
       return false;
     }
 
@@ -1836,6 +1863,167 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     });
 
     return true;
+  },
+
+  // Gestion des zones dynamiques
+  addDynamicZone: (pageNumber: number, type: DynamicZoneType, isRequired: boolean = false, description?: string) => {
+    const state = get();
+    const { currentVersion } = state;
+    
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      return null;
+    }
+
+    const pageIndex = currentVersion.pages.findIndex(p => p.pageNumber === pageNumber);
+    if (pageIndex === -1) return null;
+
+    const zoneTypeInfo = AVAILABLE_ZONE_TYPES.find(z => z.type === type);
+    if (!zoneTypeInfo) return null;
+
+    // Sauvegarder dans l'historique
+    saveToHistory(state);
+
+    const newZone: DynamicZone = {
+      id: generateDynamicZoneId(type, pageNumber),
+      pageNumber,
+      type,
+      sourceSheet: zoneTypeInfo.sourceSheet,
+      isRequired,
+      description: description || zoneTypeInfo.description
+    };
+
+    const updatedPages = [...currentVersion.pages];
+    updatedPages[pageIndex] = {
+      ...updatedPages[pageIndex],
+      dynamicZones: [...updatedPages[pageIndex].dynamicZones, newZone]
+    };
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+
+    return newZone;
+  },
+
+  updateDynamicZone: (zoneId: string, updates: Partial<Pick<DynamicZone, 'isRequired' | 'description' | 'position'>>) => {
+    const state = get();
+    const { currentVersion } = state;
+    
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      return false;
+    }
+
+    // Sauvegarder dans l'historique
+    saveToHistory(state);
+
+    const updatedPages = currentVersion.pages.map(page => ({
+      ...page,
+      dynamicZones: page.dynamicZones.map(zone =>
+        zone.id === zoneId ? { ...zone, ...updates } : zone
+      )
+    }));
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+
+    return true;
+  },
+
+  removeDynamicZone: (zoneId: string) => {
+    const state = get();
+    const { currentVersion } = state;
+    
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      return false;
+    }
+
+    // Sauvegarder dans l'historique
+    saveToHistory(state);
+
+    const updatedPages = currentVersion.pages.map(page => ({
+      ...page,
+      dynamicZones: page.dynamicZones.filter(zone => zone.id !== zoneId)
+    }));
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+      selectedDynamicZoneId: get().selectedDynamicZoneId === zoneId ? null : get().selectedDynamicZoneId
+    });
+
+    return true;
+  },
+
+  moveDynamicZoneToPage: (zoneId: string, targetPageNumber: number) => {
+    const state = get();
+    const { currentVersion } = state;
+    
+    if (!currentVersion || currentVersion.status !== 'brouillon') {
+      return false;
+    }
+
+    // Trouver la zone
+    let foundZone: DynamicZone | null = null;
+    for (const page of currentVersion.pages) {
+      const zone = page.dynamicZones.find(z => z.id === zoneId);
+      if (zone) {
+        foundZone = { ...zone };
+        break;
+      }
+    }
+    
+    if (!foundZone) return false;
+    
+    // Vérifier que la page cible existe
+    const targetPageExists = currentVersion.pages.some(p => p.pageNumber === targetPageNumber);
+    if (!targetPageExists) return false;
+
+    // Sauvegarder dans l'historique
+    saveToHistory(state);
+
+    // Supprimer de la page source et ajouter à la page cible
+    const updatedPages = currentVersion.pages.map(page => {
+      // Supprimer de la page source
+      if (page.dynamicZones.some(z => z.id === zoneId)) {
+        return {
+          ...page,
+          dynamicZones: page.dynamicZones.filter(z => z.id !== zoneId)
+        };
+      }
+      // Ajouter à la page cible
+      if (page.pageNumber === targetPageNumber) {
+        return {
+          ...page,
+          dynamicZones: [...page.dynamicZones, { ...foundZone!, pageNumber: targetPageNumber }]
+        };
+      }
+      return page;
+    });
+
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true
+    });
+
+    return true;
+  },
+
+  getDynamicZonesForCurrentPage: () => {
+    const { currentVersion, selectedPageNumber } = get();
+    if (!currentVersion) return [];
+    
+    const page = currentVersion.pages.find(p => p.pageNumber === selectedPageNumber);
+    return page?.dynamicZones || [];
+  },
+
+  getAllDynamicZones: () => {
+    const { currentVersion } = get();
+    if (!currentVersion) return [];
+    
+    return currentVersion.pages.flatMap(p => p.dynamicZones);
   },
 
   discardChanges: () => {
