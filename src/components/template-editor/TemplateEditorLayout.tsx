@@ -31,8 +31,11 @@ import {
   Cloud,
   Loader2,
   Trash2,
-  Settings
+  Settings,
+  Check,
+  X
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +59,8 @@ export function TemplateEditorLayout() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor');
   const [showClearCacheDialog, setShowClearCacheDialog] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
   
   // Synchronisation avec le cloud
   const { isLoading, isSyncing, syncAllToDatabase } = useTemplateSync();
@@ -75,7 +80,8 @@ export function TemplateEditorLayout() {
     getPublishedVersions,
     setAddElementMode,
     backToList,
-    getTemplateVersions
+    getTemplateVersions,
+    renameTemplate
   } = useTemplateEditorStore();
 
   // Récupérer le template courant
@@ -127,6 +133,31 @@ export function TemplateEditorLayout() {
     backToList();
   };
 
+  const handleStartEditingName = () => {
+    if (currentTemplate) {
+      setEditedName(currentTemplate.name);
+      setIsEditingName(true);
+    }
+  };
+
+  const handleSaveName = () => {
+    if (currentTemplateId && editedName.trim()) {
+      renameTemplate(currentTemplateId, editedName.trim());
+      toast.success("Template renommé");
+    }
+    setIsEditingName(false);
+  };
+
+  const handleCancelEditingName = () => {
+    setIsEditingName(false);
+    setEditedName('');
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSaveName();
+    if (e.key === 'Escape') handleCancelEditingName();
+  };
+
   // Affichage du chargement
   if (isLoading) {
     return (
@@ -172,9 +203,32 @@ export function TemplateEditorLayout() {
             <Palette className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-base font-bold">
-              {currentTemplate?.name || 'Éditeur de Template'}
-            </h1>
+            {isEditingName ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onKeyDown={handleNameKeyDown}
+                  autoFocus
+                  className="h-7 text-base font-bold px-2 w-64"
+                />
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleSaveName}>
+                  <Check className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCancelEditingName}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <h1 
+                className="text-base font-bold cursor-pointer hover:text-primary flex items-center gap-1 group"
+                onClick={handleStartEditingName}
+                title="Cliquer pour renommer"
+              >
+                {currentTemplate?.name || 'Éditeur de Template'}
+                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </h1>
+            )}
             <p className="text-[10px] text-muted-foreground">
               Mode administration
             </p>
