@@ -215,7 +215,7 @@ export function IconPicker({
         <TabsContent value={activeTab} className="mt-2">
           <ScrollArea style={{ height: maxHeight }}>
             {filteredIcons.length > 0 ? (
-              <div className="grid grid-cols-8 gap-1 p-1">
+              <div className="grid grid-cols-6 gap-2 p-2">
                 {filteredIcons.map(iconName => {
                   const Icon = (icons as Record<string, LucideIcon>)[iconName];
                   if (!Icon) return null;
@@ -229,7 +229,7 @@ export function IconPicker({
                       onClick={() => handleSelect(iconName)}
                       disabled={disabled}
                       className={cn(
-                        "flex items-center justify-center p-2 rounded-md aspect-square",
+                        "flex items-center justify-center p-3 rounded-md aspect-square",
                         "hover:bg-accent hover:text-accent-foreground",
                         "transition-colors cursor-pointer",
                         "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -237,7 +237,7 @@ export function IconPicker({
                       )}
                       title={pascalToKebab(iconName)}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-6 w-6" />
                     </button>
                   );
                 })}
