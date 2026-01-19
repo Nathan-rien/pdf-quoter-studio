@@ -124,13 +124,20 @@ export function EditorSidebar() {
 
   const confirmDeletePage = () => {
     if (pageToDelete !== null) {
-      const success = deletePage(pageToDelete);
+      // forceDelete = true pour bypasser l'avertissement
+      const success = deletePage(pageToDelete, true);
       if (success) {
         toast.success(`Page ${pageToDelete} supprimée`);
       }
     }
     setDeleteDialogOpen(false);
     setPageToDelete(null);
+  };
+
+  const getDeleteWarning = () => {
+    if (pageToDelete === null) return null;
+    const check = canDeletePage(pageToDelete);
+    return check.hasWarning ? check.warning : null;
   };
 
   return (
@@ -322,10 +329,14 @@ export function EditorSidebar() {
       {/* Dialog de confirmation de suppression */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogHeader>
             <AlertDialogTitle>Supprimer la page {pageToDelete} ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Tous les éléments de cette page seront supprimés.
+              {getDeleteWarning() ? (
+                <span className="text-warning">{getDeleteWarning()}</span>
+              ) : (
+                'Cette action est irréversible. Tous les éléments de cette page seront supprimés.'
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

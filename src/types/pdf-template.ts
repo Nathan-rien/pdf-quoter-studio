@@ -6,15 +6,18 @@
 // Pages du template (nombre variable)
 export type PDFPageNumber = number;
 
-// Pages protégées contenant des zones dynamiques (ne peuvent pas être supprimées)
-export const PROTECTED_PAGES = [4, 5, 6] as const;
-export type ProtectedPageNumber = typeof PROTECTED_PAGES[number];
-
 // Type de page
 export type PDFPageType = 'static' | 'dynamic_partial' | 'dynamic_conditional';
 
 // Type de zone dynamique
 export type DynamicZoneType = 'invest_table' | 'options_block' | 'location_block';
+
+// Types de zone disponibles avec leurs métadonnées
+export const AVAILABLE_ZONE_TYPES: { type: DynamicZoneType; label: string; sourceSheet: string; description: string }[] = [
+  { type: 'invest_table', label: 'Tableau Invest', sourceSheet: 'invest ', description: 'Tableau des produits/matériels' },
+  { type: 'options_block', label: 'Bloc Options', sourceSheet: 'Options services ', description: 'Bloc services et options' },
+  { type: 'location_block', label: 'Bloc Location', sourceSheet: 'invest ', description: 'Bloc conditions de location (durée, montant, loyer)' }
+];
 
 // Définition d'une zone dynamique
 export interface DynamicZone {
@@ -64,7 +67,36 @@ export interface TemplateValidationResult {
   warnings: string[];
 }
 
-// Vérifier si une page est protégée
+// Résultat de vérification de suppression de page
+export interface PageDeletionCheck {
+  canDelete: boolean;
+  hasWarning?: boolean;
+  reason?: string;
+  warning?: string;
+  dynamicZonesCount?: number;
+}
+
+/**
+ * Vérifie si une page a des zones dynamiques (protection dynamique)
+ * Une page est considérée comme "protégée" si elle contient des zones dynamiques
+ */
+export function hasPageDynamicZones(pageNumber: number, dynamicZones: DynamicZone[]): boolean {
+  return dynamicZones.some(zone => zone.pageNumber === pageNumber);
+}
+
+/**
+ * Vérifie si une page est protégée par défaut (numéros 4, 5, 6 dans le contrat initial)
+ * DEPRECATED: Utiliser hasPageDynamicZones pour une vérification basée sur les zones réelles
+ */
 export function isProtectedPage(pageNumber: number): boolean {
-  return PROTECTED_PAGES.includes(pageNumber as ProtectedPageNumber);
+  // Maintenant, une page est protégée si elle a des zones dynamiques
+  // Cette fonction est gardée pour la rétro-compatibilité mais devrait être remplacée
+  return [4, 5, 6].includes(pageNumber);
+}
+
+/**
+ * Génère un ID unique pour une zone dynamique
+ */
+export function generateDynamicZoneId(type: DynamicZoneType, pageNumber: number): string {
+  return `${type}_page${pageNumber}_${Date.now()}`;
 }

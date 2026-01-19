@@ -9,13 +9,12 @@ import type {
   PublishValidationError, 
   PublishValidationWarning 
 } from '@/types/template-editor';
-import { isProtectedPage, PROTECTED_PAGES } from '@/types/pdf-template';
-import { PDF_TEMPLATE_CONTRACT } from './pdf-template-contract';
+import { getAllDynamicZones } from './pdf-template-contract';
 import { validateDynamicZone, getDynamicZonesForPage } from './template-protection';
 
 /**
  * Valide un template avant publication
- * Vérifie l'intégrité des zones dynamiques, les pages protégées
+ * Vérifie l'intégrité des zones dynamiques
  */
 export function validateTemplateForPublication(
   version: TemplateVersion
@@ -31,34 +30,52 @@ export function validateTemplateForPublication(
     });
   }
 
-  // 2. Vérifier que les pages protégées (4, 5, 6) sont présentes
-  for (const protectedPageNum of PROTECTED_PAGES) {
-    const page = version.pages.find(p => p.pageNumber === protectedPageNum);
-    
-    if (!page) {
-      errors.push({
-        type: 'page_order',
-        pageNumber: protectedPageNum,
-        message: `Page protégée ${protectedPageNum} manquante (zones dynamiques requises)`
-      });
-    }
-  }
+  // 2. Vérifier l'intégrité de toutes les zones dynamiques
+  const allDynamicZones = getAllDynamicZones();
+  const pagesWithDynamicZones = new Set(allDynamicZones.map(z => z.pageNumber));
 
-  // 3. Vérifier l'intégrité de toutes les zones dynamiques sur les pages protégées
-  for (const pageNumber of PROTECTED_PAGES) {
+  for (const pageNumber of pagesWithDynamicZones) {
     const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
     const expectedZones = getDynamicZonesForPage(pageNumber);
+
+    // Vérifier que la page existe si elle a des zones requises
+    if (!pageContent) {
+      const requiredZones = expectedZones.filter(z => z.isRequired);
+      if (requiredZones.length > 0) {
+        errors.push({
+          type: 'page_order',
+          pageNumber: pageNumber,
+          message: `Page ${pageNumber} manquante - contient ${requiredZones.length} zone(s) dynamique(s) requise(s)`
+        });
+      } else {
+        warnings.push({
+          type: 'missing_page',
+          pageNumber: pageNumber,
+          message: `Page ${pageNumber} avec zones dynamiques optionnelles manquante`
+        });
+      }
+      continue;
+    }
 
     for (const zone of expectedZones) {
       const result = validateDynamicZone(zone, pageContent);
       
       if (!result.isValid) {
-        errors.push({
-          type: 'dynamic_zone_integrity',
-          pageNumber: pageNumber,
-          zoneId: zone.id,
-          message: result.errors.join('; ')
-        });
+        if (zone.isRequired) {
+          errors.push({
+            type: 'dynamic_zone_integrity',
+            pageNumber: pageNumber,
+            zoneId: zone.id,
+            message: result.errors.join('; ')
+          });
+        } else {
+          warnings.push({
+            type: 'dynamic_zone_integrity',
+            pageNumber: pageNumber,
+            zoneId: zone.id,
+            message: result.errors.join('; ')
+          });
+        }
       }
     }
 
@@ -67,18 +84,27 @@ export function validateTemplateForPublication(
       for (const expectedZone of expectedZones) {
         const found = pageContent.dynamicZones.find(z => z.id === expectedZone.id);
         if (!found) {
-          errors.push({
-            type: 'missing_zone',
-            pageNumber: pageNumber,
-            zoneId: expectedZone.id,
-            message: `Zone dynamique "${expectedZone.id}" manquante sur la page ${pageNumber}`
-          });
+          if (expectedZone.isRequired) {
+            errors.push({
+              type: 'missing_zone',
+              pageNumber: pageNumber,
+              zoneId: expectedZone.id,
+              message: `Zone dynamique requise "${expectedZone.id}" manquante sur la page ${pageNumber}`
+            });
+          } else {
+            warnings.push({
+              type: 'missing_zone',
+              pageNumber: pageNumber,
+              zoneId: expectedZone.id,
+              message: `Zone dynamique optionnelle "${expectedZone.id}" manquante sur la page ${pageNumber}`
+            });
+          }
         }
       }
     }
   }
 
-  // 4. Vérifier les éléments texte vides (warning seulement)
+  // 3. Vérifier les éléments texte vides (warning seulement)
   for (const page of version.pages) {
     for (const element of page.elements) {
       if (element.type === 'text' && !element.isDynamic) {
