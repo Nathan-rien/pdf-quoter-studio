@@ -7,6 +7,7 @@ import cbproWhtFilled from '@/assets/logos/cbpro-wht-filled.svg';
 import cbproWhtFilledBaseline from '@/assets/logos/cbpro-wht-filled-baseline.svg';
 import cbproWhtStroke from '@/assets/logos/cbpro-wht-stroke.svg';
 import cbproWhtStrokeBaseline from '@/assets/logos/cbpro-wht-stroke-baseline.svg';
+import { CANVAS_SCALE } from '@/lib/canvas-constants';
 
 export interface TemplateLogo {
   id: string;
@@ -72,16 +73,28 @@ export const TEMPLATE_LOGOS: TemplateLogo[] = [
   }
 ];
 
-// Positions prédéfinies pour les logos (en pourcentage du canvas)
-export const LOGO_POSITIONS = {
-  bottomRight: { x: 85, y: 92 },
-  bottomLeft: { x: 5, y: 92 },
-  topRight: { x: 85, y: 2 },
-  topLeft: { x: 5, y: 2 }
-} as const;
-
 // Taille par défaut pour un logo en footer
 export const DEFAULT_FOOTER_LOGO_SIZE = { width: 80, height: 35 };
+
+// Positions prédéfinies pour les logos (en pixels du canvas)
+export const LOGO_POSITIONS = {
+  bottomRight: { 
+    x: Math.round(CANVAS_SCALE.width * 0.85) - DEFAULT_FOOTER_LOGO_SIZE.width,  // ~472
+    y: Math.round(CANVAS_SCALE.height * 0.92) - DEFAULT_FOOTER_LOGO_SIZE.height // ~810
+  },
+  bottomLeft: { 
+    x: Math.round(CANVAS_SCALE.width * 0.05),    // ~32
+    y: Math.round(CANVAS_SCALE.height * 0.92) - DEFAULT_FOOTER_LOGO_SIZE.height
+  },
+  topRight: { 
+    x: Math.round(CANVAS_SCALE.width * 0.85) - DEFAULT_FOOTER_LOGO_SIZE.width, 
+    y: Math.round(CANVAS_SCALE.height * 0.02)     // ~18
+  },
+  topLeft: { 
+    x: Math.round(CANVAS_SCALE.width * 0.05), 
+    y: Math.round(CANVAS_SCALE.height * 0.02) 
+  }
+} as const;
 
 export function getLogoById(id: string): TemplateLogo | undefined {
   return TEMPLATE_LOGOS.find(logo => logo.id === id);
