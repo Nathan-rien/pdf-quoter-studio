@@ -442,10 +442,16 @@ export function TemplateEditorLayout() {
           <VersionHistory 
             versions={templateVersions}
             currentVersionId={currentVersion?.id || null}
-            onSelectVersion={loadVersion}
+            onSelectVersion={(version) => {
+              loadVersion(version);
+              setActiveTab('editor');
+            }}
             onCreateVersion={handleCreateVersion}
             onLoadVersionPages={async (versionId) => {
               const pages = await loadVersionPages(versionId);
+              if (pages !== null) {
+                setActiveTab('editor');
+              }
               return pages !== null;
             }}
             isLoadingVersion={isLoadingVersion}
