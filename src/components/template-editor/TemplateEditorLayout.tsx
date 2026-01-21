@@ -91,6 +91,23 @@ export function TemplateEditorLayout() {
   // Récupérer les versions du template courant
   const templateVersions = currentTemplateId ? getTemplateVersions(currentTemplateId) : [];
 
+  // Auto-load pages from cloud if current version has empty pages
+  useEffect(() => {
+    const loadPagesIfEmpty = async () => {
+      if (
+        currentVersion && 
+        currentVersion.id && 
+        (!currentVersion.pages || currentVersion.pages.length === 0) &&
+        !isLoadingVersion
+      ) {
+        console.log('Pages vides détectées, chargement depuis le cloud...');
+        await loadVersionPages(currentVersion.id);
+      }
+    };
+    
+    loadPagesIfEmpty();
+  }, [currentVersion?.id, currentVersion?.pages?.length, isLoadingVersion, loadVersionPages]);
+
   const handleDiscard = () => {
     discardChanges();
     toast.info("Modifications annulées");
