@@ -246,12 +246,20 @@ export function useTemplateSync() {
       }
 
       // Mettre à jour le store avec les pages chargées
-      const currentVersions = useTemplateEditorStore.getState().allVersions;
-      const updatedVersions = currentVersions.map(v => 
+      const currentState = useTemplateEditorStore.getState();
+      const updatedVersions = currentState.allVersions.map(v =>
         v.id === versionId ? { ...v, pages } : v
       );
-      
-      useTemplateEditorStore.setState({ allVersions: updatedVersions });
+
+      // IMPORTANT: si la version courante est celle qu'on vient de charger,
+      // il faut aussi mettre à jour currentVersion (sinon UI = pages(0) + boucle de reload).
+      useTemplateEditorStore.setState({
+        allVersions: updatedVersions,
+        currentVersion:
+          currentState.currentVersion?.id === versionId
+            ? { ...currentState.currentVersion, pages }
+            : currentState.currentVersion,
+      });
       
       console.log(`Pages chargées pour version ${versionId}: ${pages.length} pages`);
       return pages;
