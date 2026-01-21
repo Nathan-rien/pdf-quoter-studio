@@ -56,30 +56,33 @@ function createDefaultPages(): TemplatePageContent[] {
 
 // Convertir une version DB vers le format du store
 function dbToStoreVersion(db: DbVersion): TemplateVersion {
-  // Parse les pages depuis le JSON
+  // Parse les pages depuis le JSON (peut être undefined si lazy loading)
   let pages: TemplatePageContent[] = [];
   
-  if (db.pages && Array.isArray(db.pages) && db.pages.length > 0) {
-    // Vérifier que les pages ont réellement du contenu
-    const hasContent = db.pages.some((page: any) => 
-      page.elements && page.elements.length > 0
-    );
-    
-    if (hasContent) {
-      pages = db.pages.map((page: any) => ({
-        pageNumber: page.pageNumber as PDFPageNumber,
-        elements: page.elements || [],
-        dynamicZones: page.dynamicZones || []
-      }));
+  if (db.pages !== undefined) {
+    if (db.pages && Array.isArray(db.pages) && db.pages.length > 0) {
+      // Vérifier que les pages ont réellement du contenu
+      const hasContent = db.pages.some((page: any) => 
+        page.elements && page.elements.length > 0
+      );
+      
+      if (hasContent) {
+        pages = db.pages.map((page: any) => ({
+          pageNumber: page.pageNumber as PDFPageNumber,
+          elements: page.elements || [],
+          dynamicZones: page.dynamicZones || []
+        }));
+      } else {
+        // Pages vides en base, utiliser les pages par défaut
+        console.log('Pages vides détectées, utilisation des pages par défaut');
+        pages = createDefaultPages();
+      }
     } else {
-      // Pages vides en base, utiliser les pages par défaut
-      console.log('Pages vides détectées, utilisation des pages par défaut');
+      // Pas de pages en base, utiliser les pages par défaut
       pages = createDefaultPages();
     }
-  } else {
-    // Pas de pages en base, utiliser les pages par défaut
-    pages = createDefaultPages();
   }
+  // Si db.pages === undefined (lazy loading), pages reste un tableau vide
   
   return {
     id: db.id,
@@ -141,8 +144,9 @@ export function useTemplateSync() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoadingVersion, setIsLoadingVersion] = useState(false);
 
-  // Charger les templates depuis la base de données
+  // Charger les templates depuis la base de données (SANS les pages pour éviter le timeout)
   const loadFromDatabase = useCallback(async () => {
     if (hasLoaded) return;
     
@@ -167,10 +171,10 @@ export function useTemplateSync() {
         return;
       }
 
-      // Récupérer les versions
+      // Récupérer les versions SANS la colonne pages (trop volumineuse)
       const { data: versions, error: versionsError } = await supabase
         .from('template_versions')
-        .select('*')
+        .select('id, template_id, version_number, status, created_at, created_by, published_at')
         .order('version_number', { ascending: true });
 
       if (versionsError) {
@@ -180,7 +184,8 @@ export function useTemplateSync() {
 
       // Convertir et mettre à jour le store
       const storeTemplates = templates.map(dbToStoreTemplate);
-      const storeVersions = (versions || []).map(dbToStoreVersion);
+      // Convertir sans les pages (lazy loading)
+      const storeVersions = (versions || []).map(v => dbToStoreVersion({ ...v, pages: undefined }));
 
       // Mettre à jour le store avec les données de la base
       useTemplateEditorStore.setState({
@@ -189,13 +194,75 @@ export function useTemplateSync() {
       });
 
       setHasLoaded(true);
-      console.log(`Chargé ${storeTemplates.length} templates et ${storeVersions.length} versions depuis la base`);
+      console.log(`Chargé ${storeTemplates.length} templates et ${storeVersions.length} versions (métadonnées) depuis la base`);
     } catch (error) {
       console.error('Erreur sync templates:', error);
     } finally {
       setIsLoading(false);
     }
   }, [hasLoaded]);
+
+  // Charger les pages d'une version spécifique (lazy loading)
+  const loadVersionPages = useCallback(async (versionId: string): Promise<TemplatePageContent[] | null> => {
+    try {
+      setIsLoadingVersion(true);
+      
+      const { data, error } = await supabase
+        .from('template_versions')
+        .select('pages')
+        .eq('id', versionId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erreur chargement pages:', error);
+        toast.error('Erreur lors du chargement de la version');
+        return null;
+      }
+
+      if (!data) {
+        console.error('Version non trouvée:', versionId);
+        return null;
+      }
+
+      // Parser les pages
+      let pages: TemplatePageContent[] = [];
+      
+      if (data.pages && Array.isArray(data.pages) && data.pages.length > 0) {
+        const hasContent = data.pages.some((page: any) => 
+          page.elements && page.elements.length > 0
+        );
+        
+        if (hasContent) {
+          pages = data.pages.map((page: any) => ({
+            pageNumber: page.pageNumber as PDFPageNumber,
+            elements: page.elements || [],
+            dynamicZones: page.dynamicZones || []
+          }));
+        } else {
+          pages = createDefaultPages();
+        }
+      } else {
+        pages = createDefaultPages();
+      }
+
+      // Mettre à jour le store avec les pages chargées
+      const currentVersions = useTemplateEditorStore.getState().allVersions;
+      const updatedVersions = currentVersions.map(v => 
+        v.id === versionId ? { ...v, pages } : v
+      );
+      
+      useTemplateEditorStore.setState({ allVersions: updatedVersions });
+      
+      console.log(`Pages chargées pour version ${versionId}: ${pages.length} pages`);
+      return pages;
+    } catch (error) {
+      console.error('Erreur chargement pages:', error);
+      toast.error('Erreur lors du chargement de la version');
+      return null;
+    } finally {
+      setIsLoadingVersion(false);
+    }
+  }, []);
 
   // Sauvegarder un template dans la base de données
   const saveTemplateToDatabase = useCallback(async (template: PDFTemplate) => {
@@ -305,8 +372,10 @@ export function useTemplateSync() {
   return {
     isLoading,
     isSyncing,
+    isLoadingVersion,
     hasLoaded,
     loadFromDatabase,
+    loadVersionPages,
     saveTemplateToDatabase,
     saveVersionToDatabase,
     syncAllToDatabase,

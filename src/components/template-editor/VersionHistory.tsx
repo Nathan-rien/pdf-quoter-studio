@@ -1,8 +1,11 @@
 /**
  * Historique des versions du template
  * Affiche toutes les versions avec leur statut
+ * Implémente le lazy loading des pages à la demande
  */
 
+import { useState } from "react";
+import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import type { TemplateVersion } from "@/types/template-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +22,8 @@ import {
   Archive,
   CheckCircle,
   Clock,
-  User
+  User,
+  Loader2
 } from "lucide-react";
 
 interface VersionHistoryProps {
@@ -27,6 +31,8 @@ interface VersionHistoryProps {
   currentVersionId: string | null;
   onSelectVersion: (version: TemplateVersion) => void;
   onCreateVersion: () => void;
+  onLoadVersionPages?: (versionId: string) => Promise<boolean>;
+  isLoadingVersion?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -54,10 +60,41 @@ export function VersionHistory({
   versions, 
   currentVersionId, 
   onSelectVersion,
-  onCreateVersion 
+  onCreateVersion,
+  onLoadVersionPages,
+  isLoadingVersion = false
 }: VersionHistoryProps) {
+  const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null);
+  
   // Trier par numéro de version décroissant
   const sortedVersions = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
+
+  // Handler pour sélectionner une version avec lazy loading des pages
+  const handleSelectVersion = async (version: TemplateVersion) => {
+    // Si les pages sont déjà chargées (length > 0), sélectionner directement
+    if (version.pages && version.pages.length > 0) {
+      onSelectVersion(version);
+      return;
+    }
+
+    // Sinon, charger les pages d'abord
+    if (onLoadVersionPages) {
+      setLoadingVersionId(version.id);
+      const success = await onLoadVersionPages(version.id);
+      setLoadingVersionId(null);
+      
+      if (success) {
+        // Récupérer la version mise à jour DEPUIS LE STORE (pas depuis les props)
+        const updatedVersion = useTemplateEditorStore.getState().allVersions.find(v => v.id === version.id);
+        if (updatedVersion) {
+          onSelectVersion(updatedVersion);
+        }
+      }
+    } else {
+      // Fallback si pas de loader
+      onSelectVersion(version);
+    }
+  };
 
   return (
     <Card>
@@ -92,9 +129,10 @@ export function VersionHistory({
                     variant={isSelected ? "selected" : "interactive"}
                     className={cn(
                       "cursor-pointer transition-all",
-                      isSelected && "ring-2 ring-primary"
+                      isSelected && "ring-2 ring-primary",
+                      loadingVersionId === version.id && "opacity-70"
                     )}
-                    onClick={() => onSelectVersion(version)}
+                    onClick={() => handleSelectVersion(version)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -105,7 +143,11 @@ export function VersionHistory({
                             version.status === 'brouillon' ? "bg-warning/10 text-warning" :
                             "bg-muted text-muted-foreground"
                           )}>
-                            <StatusIcon className="h-5 w-5" />
+                            {loadingVersionId === version.id ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <StatusIcon className="h-5 w-5" />
+                            )}
                           </div>
                           
                           <div>
@@ -116,10 +158,17 @@ export function VersionHistory({
                               <Badge variant={statusConfig.variant}>
                                 {statusConfig.label}
                               </Badge>
+                              {version.pages.length === 0 && (
+                                <Badge variant="outline" className="text-[10px]">
+                                  Non chargée
+                                </Badge>
+                              )}
                             </div>
                             
                             <p className="text-xs text-muted-foreground mb-2">
-                              {statusConfig.description}
+                              {loadingVersionId === version.id 
+                                ? 'Chargement...' 
+                                : statusConfig.description}
                             </p>
                             
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -150,13 +199,20 @@ export function VersionHistory({
                           variant="ghost"
                           size="sm"
                           className="shrink-0"
+                          disabled={loadingVersionId === version.id || isLoadingVersion}
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelectVersion(version);
+                            handleSelectVersion(version);
                           }}
                         >
-                          <Eye className="h-4 w-4 mr-1" />
-                          {version.status === 'brouillon' ? 'Éditer' : 'Voir'}
+                          {loadingVersionId === version.id ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <Eye className="h-4 w-4 mr-1" />
+                          )}
+                          {loadingVersionId === version.id 
+                            ? 'Chargement...' 
+                            : version.status === 'brouillon' ? 'Éditer' : 'Voir'}
                         </Button>
                       </div>
                     </CardContent>

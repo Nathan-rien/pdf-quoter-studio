@@ -64,7 +64,7 @@ export function TemplateEditorLayout() {
   const [isSavingName, setIsSavingName] = useState(false);
   
   // Synchronisation avec le cloud
-  const { isLoading, isSyncing, syncAllToDatabase, saveTemplateToDatabase } = useTemplateSync();
+  const { isLoading, isSyncing, isLoadingVersion, syncAllToDatabase, saveTemplateToDatabase, loadVersionPages } = useTemplateSync();
   
   const {
     currentVersion,
@@ -444,6 +444,11 @@ export function TemplateEditorLayout() {
             currentVersionId={currentVersion?.id || null}
             onSelectVersion={loadVersion}
             onCreateVersion={handleCreateVersion}
+            onLoadVersionPages={async (versionId) => {
+              const pages = await loadVersionPages(versionId);
+              return pages !== null;
+            }}
+            isLoadingVersion={isLoadingVersion}
           />
         </TabsContent>
       </Tabs>
