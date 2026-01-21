@@ -1900,6 +1900,12 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     // Sauvegarder dans l'historique avant suppression
     saveToHistory(state);
 
+    // Log des zones dynamiques supprimées
+    const pageToRemove = currentVersion!.pages.find(p => p.pageNumber === pageNumber);
+    if (pageToRemove && pageToRemove.dynamicZones.length > 0) {
+      console.log(`Suppression de ${pageToRemove.dynamicZones.length} zone(s) dynamique(s) de la page ${pageNumber}`);
+    }
+
     // Supprimer la page
     const updatedPages = currentVersion!.pages.filter(p => p.pageNumber !== pageNumber);
 
