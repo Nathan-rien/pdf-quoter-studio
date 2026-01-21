@@ -260,7 +260,7 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>

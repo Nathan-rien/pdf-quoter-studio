@@ -140,10 +140,19 @@ export function EditorSidebar() {
 
   const confirmDeletePage = () => {
     if (pageToDelete !== null) {
+      const check = canDeletePage(pageToDelete);
+      const dynamicZonesCount = check.dynamicZonesCount || 0;
+      
       // forceDelete = true pour bypasser l'avertissement
       const success = deletePage(pageToDelete, true);
       if (success) {
-        toast.success(`Page ${pageToDelete} supprimée`);
+        if (dynamicZonesCount > 0) {
+          toast.success(`Page ${pageToDelete} supprimée`, {
+            description: `${dynamicZonesCount} zone(s) dynamique(s) ont été supprimées.`
+          });
+        } else {
+          toast.success(`Page ${pageToDelete} supprimée`);
+        }
       }
     }
     setDeleteDialogOpen(false);
