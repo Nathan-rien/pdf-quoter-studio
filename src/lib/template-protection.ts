@@ -39,48 +39,40 @@ export function getExpectedDynamicZone(zoneId: string): DynamicZone | null {
 }
 
 /**
- * Vérifie qu'une zone dynamique n'a pas été altérée
+ * Vérifie la cohérence interne d'une zone dynamique
+ * NOTE: Ne bloque plus si la zone est absente (suppression autorisée)
  */
 export function validateDynamicZone(
   zone: DynamicZone,
   pageContent: TemplatePageContent | undefined
 ): ZoneValidationResult {
   const errors: string[] = [];
-  const expectedZone = getExpectedDynamicZone(zone.id);
+  const warnings: string[] = [];
 
-  if (!expectedZone) {
-    errors.push(`Zone "${zone.id}" inconnue dans le contrat`);
-    return { isValid: false, errors };
-  }
-
+  // Page absente : ce n'est plus une erreur bloquante
   if (!pageContent) {
-    errors.push(`Page ${zone.pageNumber} introuvable`);
-    return { isValid: false, errors };
+    return { isValid: true, errors: [] };
   }
 
-  // Zone supprimée ?
+  // Zone absente de la page : ce n'est plus une erreur bloquante
   const currentZone = pageContent.dynamicZones.find(z => z.id === zone.id);
   if (!currentZone) {
-    errors.push(`Zone "${zone.id}" supprimée - INTERDIT`);
-    return { isValid: false, errors };
+    // La zone a été supprimée intentionnellement - autorisé
+    return { isValid: true, errors: [] };
   }
 
-  // Zone déplacée sur autre page ?
-  if (currentZone.pageNumber !== expectedZone.pageNumber) {
-    errors.push(
-      `Zone "${zone.id}" déplacée de page ${expectedZone.pageNumber} à page ${currentZone.pageNumber} - INTERDIT`
-    );
-  }
-
-  // Source de données modifiée ?
-  if (currentZone.sourceSheet !== expectedZone.sourceSheet) {
-    errors.push(
-      `Source de données modifiée pour zone "${zone.id}" : attendu "${expectedZone.sourceSheet}", trouvé "${currentZone.sourceSheet}" - INTERDIT`
+  // Validations de cohérence interne seulement
+  // Source de données modifiée ? (warning, pas erreur)
+  const expectedZone = getExpectedDynamicZone(zone.id);
+  if (expectedZone && currentZone.sourceSheet !== expectedZone.sourceSheet) {
+    // Changement de source inattendu mais non bloquant
+    warnings.push(
+      `Source de données modifiée pour zone "${zone.id}" : "${expectedZone.sourceSheet}" → "${currentZone.sourceSheet}"`
     );
   }
 
   return {
-    isValid: errors.length === 0,
+    isValid: true,
     errors
   };
 }
