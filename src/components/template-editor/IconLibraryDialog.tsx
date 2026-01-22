@@ -62,11 +62,11 @@ export function IconLibraryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-4 overflow-hidden">
           <IconPicker
             value={selectedIcon}
             onChange={setSelectedIcon}
-            maxHeight={450}
+            maxHeight={400}
           />
         </div>
 
