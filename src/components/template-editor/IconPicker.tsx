@@ -256,7 +256,7 @@ export function IconPicker({
   const categoryNames = Object.keys(ICON_CATEGORIES);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 overflow-hidden">
       {/* Barre de recherche */}
       <div className="relative">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
