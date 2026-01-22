@@ -40,9 +40,10 @@ import { PreviewEditableCanvas } from './PreviewEditableCanvas';
 export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
   const [isEditMode, setIsEditMode] = React.useState(false);
+  const [pagesLoaded, setPagesLoaded] = React.useState(false);
   
   // Synchronisation avec le cloud pour charger les templates
-  const { isLoading, hasLoaded } = useTemplateSync();
+  const { isLoading, hasLoaded, loadVersionPages, isLoadingVersion } = useTemplateSync();
   
   const {
     clientData,
@@ -70,7 +71,9 @@ export function RentalProposalPreview() {
     if (isEditMode) {
       return getCurrentVersionForPreview() || null;
     }
-    return getTemplateLatestVersion(activeTemplate.id) || null;
+    // Relecture depuis le store après loadVersionPages
+    const version = getTemplateLatestVersion(activeTemplate.id);
+    return version && version.pages.length > 0 ? version : null;
   }, [activeTemplate, isEditMode, getCurrentVersionForPreview, getTemplateLatestVersion]);
   
   // Helper pour trouver la page d'injection d'un type de zone
@@ -93,9 +96,39 @@ export function RentalProposalPreview() {
     setIsEditMode(newEditMode);
   }, [isEditMode, activeTemplate, preparePreviewEditing]);
   
-  // Afficher un état de chargement si les templates ne sont pas encore chargés
+  // Lazy loading des pages du template après le chargement initial des métadonnées
+  React.useEffect(() => {
+    const loadPages = async () => {
+      if (!hasLoaded) return;
+      if (pagesLoaded) return;
+      
+      const template = getActiveTemplate();
+      if (!template) {
+        setPagesLoaded(true);
+        return;
+      }
+      
+      const version = getTemplateLatestVersion(template.id);
+      if (!version) {
+        setPagesLoaded(true);
+        return;
+      }
+      
+      // Si les pages ne sont pas chargées (lazy loading), les charger depuis le cloud
+      if (version.pages.length === 0) {
+        console.log('[RentalProposalPreview] Lazy loading pages for version:', version.id);
+        await loadVersionPages(version.id);
+      }
+      
+      setPagesLoaded(true);
+    };
+    
+    loadPages();
+  }, [hasLoaded, pagesLoaded, getActiveTemplate, getTemplateLatestVersion, loadVersionPages]);
+  
+  // Afficher un état de chargement si les templates ou les pages ne sont pas encore chargés
   // Ce return conditionnel est maintenant APRÈS tous les hooks
-  if (isLoading && !hasLoaded) {
+  if ((isLoading && !hasLoaded) || isLoadingVersion || !pagesLoaded) {
     return <LoadingState message="Chargement du template..." />;
   }
   
