@@ -4,7 +4,8 @@
  */
 
 import { CANVAS_SCALE } from './canvas-constants';
-import type { EditableElement, ShapeContent } from '@/types/template-editor';
+import { getLogoById } from './template-logos';
+import type { EditableElement, ShapeContent, ImageContent } from '@/types/template-editor';
 
 interface ElementStyleOptions {
   element: EditableElement;
@@ -60,4 +61,29 @@ export const getSharedElementStyle = ({ element, canvasWidth = CANVAS_SCALE.widt
  */
 export const sortElementsByZIndex = (elements: EditableElement[]): EditableElement[] => {
   return [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+};
+
+/**
+ * Résout l'URL d'une image en utilisant logoId si disponible
+ * Avec fallback pour les anciens chemins de logos persistés
+ */
+export const resolveImageUrl = (content: ImageContent | null): string | undefined => {
+  if (!content) return undefined;
+  
+  // Si logoId est présent, résoudre dynamiquement via getLogoById
+  if (content.logoId) {
+    const logo = getLogoById(content.logoId);
+    if (logo) return logo.url;
+  }
+  
+  // Fallback : détecter les anciens chemins Vite de logos et les résoudre
+  if (content.imageUrl?.includes('/src/assets/logos/') || content.imageUrl?.includes('assets/logos/')) {
+    const logoIdMatch = content.imageUrl.match(/cbpro-[a-z-]+/);
+    if (logoIdMatch) {
+      const logo = getLogoById(logoIdMatch[0]);
+      if (logo) return logo.url;
+    }
+  }
+  
+  return content.imageUrl;
 };

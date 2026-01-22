@@ -16,6 +16,7 @@ import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
 import { CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH } from "@/lib/canvas-constants";
+import { resolveImageUrl } from "@/lib/template-render-utils";
 import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus, Sparkles } from "lucide-react";
 import { icons } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -1199,29 +1200,33 @@ export function EditorCanvas() {
                     </div>
                   )}
                   
-                  {element.type === 'image' && (
-                    <div 
-                      className={cn(
-                        "w-full h-full flex items-center justify-center rounded",
-                        !imageContent?.imageUrl && "bg-gray-50 border border-dashed border-gray-200"
-                      )}
-                      style={{ opacity: (imageContent?.opacity ?? 100) / 100 }}
-                    >
-                      {imageContent?.imageUrl ? (
-                        <img 
-                          src={imageContent.imageUrl} 
-                          alt={imageContent.alt || 'Image'} 
-                          className={`w-full h-full ${imageContent.objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
-                          style={{ transform: `rotate(${imageContent.rotation || 0}deg)` }}
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center gap-1 text-gray-300">
-                          <ImageIcon className="h-4 w-4" />
-                          <span className="text-[8px]">Image</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {element.type === 'image' && (() => {
+                    const resolvedUrl = resolveImageUrl(imageContent);
+                    
+                    return (
+                      <div 
+                        className={cn(
+                          "w-full h-full flex items-center justify-center rounded",
+                          !resolvedUrl && "bg-gray-50 border border-dashed border-gray-200"
+                        )}
+                        style={{ opacity: (imageContent?.opacity ?? 100) / 100 }}
+                      >
+                        {resolvedUrl ? (
+                          <img 
+                            src={resolvedUrl} 
+                            alt={imageContent?.alt || 'Image'} 
+                            className={`w-full h-full ${imageContent?.objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
+                            style={{ transform: `rotate(${imageContent?.rotation || 0}deg)` }}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-gray-300">
+                            <ImageIcon className="h-4 w-4" />
+                            <span className="text-[8px]">Image</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {isShapeElement && renderShape()}
 

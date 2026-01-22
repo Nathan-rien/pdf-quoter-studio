@@ -57,6 +57,7 @@ export interface ImageContent {
   rotation?: number; // 0, 90, 180, 270 degrés
   opacity?: number; // 0-100%
   objectFit?: 'contain' | 'cover'; // Mode de remplissage (défaut: 'contain')
+  logoId?: string; // ID du logo pour résolution dynamique (évite les chemins Vite volatiles)
 }
 
 // Contenu bloc (conteneur d'éléments)
