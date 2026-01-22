@@ -281,7 +281,7 @@ export function IconPicker({
 
       {/* Onglets de catégories */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <ScrollArea className="w-full">
+        <div className="overflow-x-auto overflow-y-hidden pb-1">
           <TabsList className="inline-flex h-8 w-max">
             <TabsTrigger value="all" className="text-xs px-2 h-6">
               Tous ({getCategoryCount('all')})
@@ -292,7 +292,7 @@ export function IconPicker({
               </TabsTrigger>
             ))}
           </TabsList>
-        </ScrollArea>
+        </div>
 
         <TabsContent value={activeTab} className="mt-2">
           <ScrollArea style={{ height: maxHeight }}>
