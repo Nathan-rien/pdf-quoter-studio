@@ -31,7 +31,7 @@ import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
-import { getSharedElementStyle, sortElementsByZIndex } from '@/lib/template-render-utils';
+import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl } from '@/lib/template-render-utils';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
 import { PreviewEditableCanvas } from './PreviewEditableCanvas';
@@ -193,6 +193,8 @@ export function RentalProposalPreview() {
     // Rendu image
     if (element.type === 'image') {
       const content = element.content as ImageContent;
+      const resolvedUrl = resolveImageUrl(content);
+      
       return (
         <div
           key={element.id}
@@ -201,9 +203,9 @@ export function RentalProposalPreview() {
             opacity: (content.opacity ?? 100) / 100,
           }}
         >
-        {content.imageUrl && (
+        {resolvedUrl && (
             <img
-              src={content.imageUrl}
+              src={resolvedUrl}
               alt={content.alt || 'Image'}
               className={`w-full h-full ${content.objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
               style={{ transform: `rotate(${content.rotation || 0}deg)` }}

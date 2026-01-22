@@ -874,7 +874,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       alt: logo.description,
       rotation: 0,
       opacity: 100,
-      objectFit: 'contain'
+      objectFit: 'contain',
+      logoId: logoId  // Stocke l'ID pour résolution dynamique après rechargement
     };
 
     const newElement: EditableElement = {
@@ -923,7 +924,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       alt: logo.description,
       rotation: 0,
       opacity: 100,
-      objectFit: 'contain'
+      objectFit: 'contain',
+      logoId: logoId  // Stocke l'ID pour résolution dynamique après rechargement
     };
 
     let addedCount = 0;
