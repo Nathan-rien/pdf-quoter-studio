@@ -32,8 +32,9 @@ import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl } from '@/lib/template-render-utils';
-import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
-import type { PDFPageNumber } from '@/types/pdf-template';
+import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
+import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
+import type { PDFPageNumber, DynamicZoneType } from '@/types/pdf-template';
 import { PreviewEditableCanvas } from './PreviewEditableCanvas';
 
 export function RentalProposalPreview() {
@@ -56,11 +57,28 @@ export function RentalProposalPreview() {
     getActiveTemplate, 
     getTemplateLatestVersion, 
     preparePreviewEditing, 
-    getCurrentVersionForPreview 
+    getCurrentVersionForPreview,
+    allVersions 
   } = useTemplateEditorStore();
   
   // Calculer activeTemplate AVANT le useCallback (dépendance)
   const activeTemplate = getActiveTemplate();
+  
+  // Helper pour obtenir la version courante du template
+  const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
+    if (!activeTemplate) return null;
+    if (isEditMode) {
+      return getCurrentVersionForPreview() || null;
+    }
+    return getTemplateLatestVersion(activeTemplate.id) || null;
+  }, [activeTemplate, isEditMode, getCurrentVersionForPreview, getTemplateLatestVersion]);
+  
+  // Helper pour trouver la page d'injection d'un type de zone
+  const getInjectionPageForZoneType = React.useCallback((zoneType: DynamicZoneType): number | null => {
+    const version = getCurrentVersion();
+    const result = findZoneByTypeInVersion(version, zoneType);
+    return result?.pageNumber ?? null;
+  }, [getCurrentVersion]);
   
   // Initialiser la version de travail lors de l'activation du mode édition
   // IMPORTANT: Ce hook DOIT être appelé avant tout return conditionnel
@@ -655,19 +673,37 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(8 as PDFPageNumber, staticElements);
   };
 
-  // Rendu de la page courante - Structure FIXE 8 pages
+  // Rendu de la page courante - Structure dynamique avec réaffectation automatique
   const renderCurrentPage = () => {
-    switch (currentPreviewPage) {
-      case 1: return renderPage1();
-      case 2: return renderStaticPage(2, 'Nos engagements');
-      case 3: return renderStaticPage(3, 'Conditions de location');
-      case 4: return renderProductPage();
-      case 5: return renderStaticPage(5, 'Offre matériel');
-      case 6: return renderOptionsPage();
-      case 7: return renderSummaryPage();
-      case 8: return renderSignaturePage();
-      default: return null;
+    const version = getCurrentVersion();
+    const totalPagesInVersion = version?.pages.length || CONTRACT_PAGES;
+    
+    // Trouver les pages d'injection pour chaque type de zone
+    const investPage = getInjectionPageForZoneType('invest_table');
+    const optionsPage = getInjectionPageForZoneType('options_block');
+    
+    // Mapping dynamique : afficher le contenu approprié selon le type de zone présent
+    if (currentPreviewPage === 1) return renderPage1();
+    
+    // Si la page courante contient la zone invest_table, afficher les produits
+    if (investPage && currentPreviewPage === investPage) {
+      return renderProductPage();
     }
+    
+    // Si la page courante contient la zone options_block, afficher les options
+    if (optionsPage && currentPreviewPage === optionsPage) {
+      return renderOptionsPage();
+    }
+    
+    // Sinon page statique
+    if (currentPreviewPage === 2) return renderStaticPage(2, 'Nos engagements');
+    if (currentPreviewPage === 3) return renderStaticPage(3, 'Conditions de location');
+    if (currentPreviewPage === 5) return renderStaticPage(5, 'Offre matériel');
+    if (currentPreviewPage === 7) return renderSummaryPage();
+    if (currentPreviewPage === 8) return renderSignaturePage();
+    
+    // Page générique pour les autres
+    return renderStaticPage(currentPreviewPage, `Page ${currentPreviewPage}`);
   };
 
   return (

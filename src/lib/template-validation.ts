@@ -1,20 +1,21 @@
 /**
  * Validation pré-publication du template
- * Garantit l'intégrité des zones dynamiques avant publication
+ * Valide les zones dynamiques PRÉSENTES dans la version courante
+ * (pas de comparaison avec le contrat statique - suppression autorisée)
  */
 
 import type { 
   TemplateVersion, 
   PublishValidationResult, 
   PublishValidationError, 
-  PublishValidationWarning 
+  PublishValidationWarning,
+  TextContent 
 } from '@/types/template-editor';
-import { getAllDynamicZones } from './pdf-template-contract';
-import { validateDynamicZone, getDynamicZonesForPage } from './template-protection';
+import type { DynamicZoneType } from '@/types/pdf-template';
 
 /**
  * Valide un template avant publication
- * Vérifie l'intégrité des zones dynamiques
+ * Basée sur la version courante, pas le contrat statique
  */
 export function validateTemplateForPublication(
   version: TemplateVersion
@@ -30,85 +31,58 @@ export function validateTemplateForPublication(
     });
   }
 
-  // 2. Vérifier l'intégrité de toutes les zones dynamiques
-  const allDynamicZones = getAllDynamicZones();
-  const pagesWithDynamicZones = new Set(allDynamicZones.map(z => z.pageNumber));
-
-  for (const pageNumber of pagesWithDynamicZones) {
-    const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
-    const expectedZones = getDynamicZonesForPage(pageNumber);
-
-    // Vérifier que la page existe si elle a des zones requises
-    if (!pageContent) {
-      const requiredZones = expectedZones.filter(z => z.isRequired);
-      if (requiredZones.length > 0) {
-        errors.push({
-          type: 'page_order',
-          pageNumber: pageNumber,
-          message: `Page ${pageNumber} manquante - contient ${requiredZones.length} zone(s) dynamique(s) requise(s)`
-        });
-      } else {
+  // 2. Valider les zones dynamiques PRÉSENTES dans la version courante
+  for (const page of version.pages) {
+    for (const zone of page.dynamicZones) {
+      // Vérifier cohérence interne de la zone (pageNumber doit correspondre)
+      if (zone.pageNumber !== page.pageNumber) {
         warnings.push({
-          type: 'missing_page',
-          pageNumber: pageNumber,
-          message: `Page ${pageNumber} avec zones dynamiques optionnelles manquante`
+          type: 'dynamic_zone_integrity',
+          pageNumber: page.pageNumber,
+          zoneId: zone.id,
+          message: `Zone "${zone.id}" a un numéro de page incohérent (${zone.pageNumber} vs ${page.pageNumber})`
         });
-      }
-      continue;
-    }
-
-    for (const zone of expectedZones) {
-      const result = validateDynamicZone(zone, pageContent);
-      
-      if (!result.isValid) {
-        if (zone.isRequired) {
-          errors.push({
-            type: 'dynamic_zone_integrity',
-            pageNumber: pageNumber,
-            zoneId: zone.id,
-            message: result.errors.join('; ')
-          });
-        } else {
-          warnings.push({
-            type: 'dynamic_zone_integrity',
-            pageNumber: pageNumber,
-            zoneId: zone.id,
-            message: result.errors.join('; ')
-          });
-        }
-      }
-    }
-
-    // Vérifier que toutes les zones attendues sont présentes
-    if (pageContent) {
-      for (const expectedZone of expectedZones) {
-        const found = pageContent.dynamicZones.find(z => z.id === expectedZone.id);
-        if (!found) {
-          if (expectedZone.isRequired) {
-            errors.push({
-              type: 'missing_zone',
-              pageNumber: pageNumber,
-              zoneId: expectedZone.id,
-              message: `Zone dynamique requise "${expectedZone.id}" manquante sur la page ${pageNumber}`
-            });
-          } else {
-            warnings.push({
-              type: 'missing_zone',
-              pageNumber: pageNumber,
-              zoneId: expectedZone.id,
-              message: `Zone dynamique optionnelle "${expectedZone.id}" manquante sur la page ${pageNumber}`
-            });
-          }
-        }
       }
     }
   }
 
-  // 3. Vérifier les éléments texte vides (warning seulement)
+  // 3. Ajouter des warnings informatifs si des types de zones "classiques" manquent
+  const presentZoneTypes = new Set(
+    version.pages.flatMap(p => p.dynamicZones.map(z => z.type))
+  );
+  
+  const zoneTypeLabels: Record<DynamicZoneType, string> = {
+    'invest_table': 'Tableau Invest',
+    'location_block': 'Bloc Location',
+    'options_block': 'Bloc Options'
+  };
+  
+  if (!presentZoneTypes.has('invest_table')) {
+    warnings.push({
+      type: 'missing_zone',
+      message: 'Aucune zone "Tableau Invest" - les données produits ne seront pas injectées'
+    });
+  }
+  
+  if (!presentZoneTypes.has('location_block')) {
+    warnings.push({
+      type: 'missing_zone', 
+      message: 'Aucune zone "Bloc Location" - les conditions de location ne seront pas injectées'
+    });
+  }
+
+  if (!presentZoneTypes.has('options_block')) {
+    warnings.push({
+      type: 'missing_zone',
+      message: 'Aucune zone "Bloc Options" - les services ne seront pas injectés'
+    });
+  }
+
+  // 4. Vérifier les éléments texte vides (warning seulement)
   for (const page of version.pages) {
     for (const element of page.elements) {
       if (element.type === 'text' && !element.isDynamic) {
-        const textContent = element.content as { text?: string };
+        const textContent = element.content as TextContent;
         if (!textContent.text || textContent.text.trim() === '') {
           warnings.push({
             type: 'empty_text',
