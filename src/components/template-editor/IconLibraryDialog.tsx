@@ -51,8 +51,8 @@ export function IconLibraryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[85vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
             Bibliothèque d'icônes
@@ -62,30 +62,30 @@ export function IconLibraryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0 py-4 space-y-4">
           <IconPicker
             value={selectedIcon}
             onChange={setSelectedIcon}
-            maxHeight={400}
+            maxHeight={350}
           />
+
+          {/* Prévisualisation de l'icône sélectionnée */}
+          {selectedIcon && SelectedIconComponent && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+              <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-background border">
+                <SelectedIconComponent className="h-8 w-8" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{selectedIcon}</p>
+                <p className="text-xs text-muted-foreground">
+                  Cliquez sur Confirmer pour ajouter cette icône
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Prévisualisation de l'icône sélectionnée */}
-        {selectedIcon && SelectedIconComponent && (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-            <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-background border">
-              <SelectedIconComponent className="h-8 w-8" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">{selectedIcon}</p>
-              <p className="text-xs text-muted-foreground">
-                Cliquez sur Confirmer pour ajouter cette icône
-              </p>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="flex-shrink-0 pt-4 gap-2 sm:gap-0">
           <Button variant="outline" onClick={handleCancel}>
             Annuler
           </Button>
