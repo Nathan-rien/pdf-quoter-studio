@@ -16,7 +16,7 @@ import { getDynamicZonesForPage } from "@/lib/template-protection";
 import { cn } from "@/lib/utils";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
 import { CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH } from "@/lib/canvas-constants";
-import { resolveImageUrl } from "@/lib/template-render-utils";
+import { getSharedElementStyle, resolveImageUrl, sortElementsByZIndex } from '@/lib/template-render-utils';
 import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus, Sparkles } from "lucide-react";
 import { icons } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -301,31 +301,21 @@ export function EditorCanvas() {
     ? inlineEditingElement.content as TextContent 
     : null;
 
-  // Convertir position absolue en position relative canvas
-  const getElementStyle = (element: { position: { x: number; y: number }; size: { width: number; height: number }; type?: string }) => {
-    const left = (element.position.x / CANVAS_SCALE.width) * 100;
-    const top = (element.position.y / CANVAS_SCALE.height) * 100;
-    const maxWidth = (element.size.width / CANVAS_SCALE.width) * 100;
-    const minHeight = (element.size.height / CANVAS_SCALE.height) * 100;
+  // Fonction unifiée de calcul des styles - utilise getSharedElementStyle pour garantir la fidélité WYSIWYG
+  const getElementStyle = (element: { position: { x: number; y: number }; size: { width: number; height: number }; type?: string; zIndex?: number; content?: unknown }) => {
+    // Convertir en format attendu par getSharedElementStyle
+    const fullElement = {
+      id: '',
+      type: element.type || 'text',
+      pageNumber: selectedPageNumber,
+      isDynamic: false,
+      position: element.position,
+      size: element.size,
+      content: element.content || {},
+      zIndex: element.zIndex || 1,
+    } as import('@/types/template-editor').EditableElement;
     
-    const isTextType = element.type === 'text';
-    
-    return {
-      left: `${Math.min(left, 100)}%`,
-      top: `${Math.min(top, 100)}%`,
-      // Pour les textes: largeur auto avec max-width, pour les images: largeur fixe
-      ...(isTextType 
-        ? { 
-            maxWidth: `${Math.min(Math.max(maxWidth, 5), 100)}%`,
-            width: 'fit-content',
-            height: 'auto'
-          }
-        : { 
-            width: `${Math.min(Math.max(maxWidth, 3), 100)}%`,
-            height: `${Math.max(minHeight, 2)}%` 
-          }
-      ),
-    };
+    return getSharedElementStyle({ element: fullElement });
   };
 
   // Drag & Drop handlers

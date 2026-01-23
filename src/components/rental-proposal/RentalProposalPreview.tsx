@@ -97,6 +97,7 @@ export function RentalProposalPreview() {
   }, [isEditMode, activeTemplate, preparePreviewEditing]);
   
   // Lazy loading des pages du template après le chargement initial des métadonnées
+  // IMPORTANT: Ne marquer comme chargé que si les pages sont vraiment disponibles dans le store
   React.useEffect(() => {
     const loadPages = async () => {
       if (!hasLoaded) return;
@@ -117,9 +118,21 @@ export function RentalProposalPreview() {
       // Si les pages ne sont pas chargées (lazy loading), les charger depuis le cloud
       if (version.pages.length === 0) {
         console.log('[RentalProposalPreview] Lazy loading pages for version:', version.id);
-        await loadVersionPages(version.id);
+        const loadedPages = await loadVersionPages(version.id);
+        
+        // Ne marquer comme chargé que si on a effectivement reçu des pages
+        if (loadedPages && loadedPages.length > 0) {
+          console.log('[RentalProposalPreview] Pages loaded successfully:', loadedPages.length, 'pages');
+          setPagesLoaded(true);
+        } else {
+          // Retry en cas d'échec - permettre un nouveau cycle
+          console.warn('[RentalProposalPreview] No pages loaded, will retry');
+        }
+        return;
       }
       
+      // Pages déjà présentes dans le store
+      console.log('[RentalProposalPreview] Pages already in store:', version.pages.length, 'pages');
       setPagesLoaded(true);
     };
     
@@ -145,12 +158,16 @@ export function RentalProposalPreview() {
 
   // Helper pour obtenir les éléments statiques d'une page du template
   // En mode édition, utilise currentVersion (version de travail), sinon la dernière version publiée
+  // IMPORTANT: Relire depuis le store à chaque appel pour garantir la fraîcheur des données après lazy loading
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     const template = activeTemplate;
-    if (!template) return [];
+    if (!template) {
+      console.warn(`[RentalProposalPreview] getStaticPageElements(${pageNumber}): No active template`);
+      return [];
+    }
     
     // En mode édition, utiliser currentVersion (initialisée par preparePreviewEditing)
-    let version;
+    let version: TemplateVersion | null = null;
     if (isEditMode) {
       version = getCurrentVersionForPreview();
     }
@@ -158,13 +175,21 @@ export function RentalProposalPreview() {
     if (!version) {
       version = getTemplateLatestVersion(template.id);
     }
-    if (!version) return [];
+    if (!version) {
+      console.warn(`[RentalProposalPreview] getStaticPageElements(${pageNumber}): No version found`);
+      return [];
+    }
     
     const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
-    if (!pageContent) return [];
+    if (!pageContent) {
+      console.warn(`[RentalProposalPreview] getStaticPageElements(${pageNumber}): Page not found in version (${version.pages.length} pages total)`);
+      return [];
+    }
     
     // Retourner uniquement les éléments non-dynamiques (texte/image statiques), triés par zIndex
-    return sortElementsByZIndex(pageContent.elements.filter(el => !el.isDynamic));
+    const elements = sortElementsByZIndex(pageContent.elements.filter(el => !el.isDynamic));
+    console.log(`[RentalProposalPreview] Page ${pageNumber}: ${elements.length} static elements`);
+    return elements;
   };
 
   // Rendu d'un élément du template (utilise le style partagé pour garantir la fidélité WYSIWYG)
