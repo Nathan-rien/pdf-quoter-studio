@@ -49,6 +49,7 @@ export function RentalProposalPreview() {
     clientData,
     matriceData,
     lignesData,
+    servicesInclus,
     optionsServices,
     getCalculatedValues,
     getSelectedCommercial,
@@ -681,7 +682,7 @@ export function RentalProposalPreview() {
     
     const renderOptionsContent = () => (
       <div 
-        className="absolute"
+        className="absolute z-40"
         style={{
           left: '3%',
           top: '15%',
@@ -689,11 +690,24 @@ export function RentalProposalPreview() {
           maxHeight: '70%',
         }}
       >
+        {/* Bloc permanent "Services inclus" - toujours affiché en haut */}
+        <div className="border rounded-lg p-2 bg-primary/10 mb-3">
+          <div className="flex items-center gap-1 mb-0.5">
+            <CheckCircle className="h-3 w-3 text-primary" />
+            <span className="font-medium text-[9px] text-primary">Services inclus</span>
+            <Badge variant="secondary" className="text-[6px] px-1 py-0 ml-1 scale-90">Permanent</Badge>
+          </div>
+          <p className="text-[8px] text-muted-foreground ml-4 whitespace-pre-wrap">
+            {servicesInclus.description}
+          </p>
+        </div>
+
+        {/* Options additionnelles sélectionnées */}
         {pageOptions.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">
+          <div className="flex items-center justify-center h-16 text-muted-foreground">
             <div className="text-center">
-              <Settings className="h-6 w-6 mx-auto mb-1 opacity-50" />
-              <p className="text-[9px]">Aucune option sélectionnée</p>
+              <Settings className="h-5 w-5 mx-auto mb-1 opacity-50" />
+              <p className="text-[8px]">Aucune option additionnelle sélectionnée</p>
             </div>
           </div>
         ) : (

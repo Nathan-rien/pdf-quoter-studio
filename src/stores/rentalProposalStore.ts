@@ -56,6 +56,11 @@ interface PDFImportStatus {
   importDate: string | null; // Changed to string for JSON serialization
 }
 
+// Services inclus (bloc permanent)
+interface ServicesInclus {
+  description: string;
+}
+
 interface RentalProposalState {
   // Import status
   pdfImportStatus: PDFImportStatus;
@@ -72,7 +77,10 @@ interface RentalProposalState {
   // Lignes produits (Invest tab)
   lignesData: PDFProductLine[];
   
-  // Options services
+  // Services inclus (bloc permanent - toujours affiché en haut de page 5)
+  servicesInclus: ServicesInclus;
+  
+  // Options services additionnelles
   optionsServices: OptionService[];
   
   // Workflow
@@ -96,7 +104,10 @@ interface RentalProposalActions {
   addLigne: () => void;
   deleteLigne: (index: number) => void;
   
-  // Options services
+  // Services inclus (bloc permanent)
+  updateServicesInclus: (description: string) => void;
+  
+  // Options services additionnelles
   addOptionService: (name: string, description: string, price: number | null) => void;
   updateOptionService: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
   deleteOptionService: (id: string) => void;
@@ -145,12 +156,18 @@ const initialPDFImportStatus: PDFImportStatus = {
   importDate: null,
 };
 
+// Services inclus par défaut (bloc permanent)
+const initialServicesInclus: ServicesInclus = {
+  description: 'Contrat de location et gestion administrative, Optimisation des coûts et gestion budgétaire, Gestion des évolutions du parc',
+};
+
 const initialState: RentalProposalState = {
   pdfImportStatus: initialPDFImportStatus,
   clientData: initialClientData,
   commercialData: initialCommercialData,
   matriceData: initialMatriceData,
   lignesData: [],
+  servicesInclus: initialServicesInclus,
   optionsServices: [],
   currentStep: 'import',
   hasUnsavedChanges: false,
@@ -238,6 +255,13 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       deleteLigne: (index) => {
         set(state => ({
           lignesData: state.lignesData.filter((_, i) => i !== index),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateServicesInclus: (description) => {
+        set(state => ({
+          servicesInclus: { ...state.servicesInclus, description },
           hasUnsavedChanges: true,
         }));
       },
