@@ -634,9 +634,9 @@ export function RentalProposalPreview() {
           maxHeight: '40%',
         }}
       >
-        {/* Tableau des produits - compact */}
+        {/* Tableau des produits */}
         <div className="border rounded overflow-hidden">
-          <div className="grid grid-cols-12 gap-0.5 bg-muted px-1 py-0.5 text-[8px] font-medium">
+          <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1.5 text-[10px] font-medium">
             <div className="col-span-6">Désignation</div>
             <div className="col-span-2 text-center">Qté</div>
             <div className="col-span-2 text-right">P.U. HT</div>
@@ -645,8 +645,8 @@ export function RentalProposalPreview() {
           
           <div className="divide-y divide-muted/50">
             {pageLines.map((ligne, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-0.5 px-1 py-0.5 text-[8px] items-start">
-                <div className="col-span-6 break-words whitespace-normal leading-tight">{ligne.designation || '-'}</div>
+              <div key={idx} className="grid grid-cols-12 gap-1 px-2 py-1 text-[9px] items-start">
+                <div className="col-span-6 break-words whitespace-normal leading-snug">{ligne.designation || '-'}</div>
                 <div className="col-span-2 text-center">{ligne.quantite}</div>
                 <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
                 <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
@@ -656,14 +656,14 @@ export function RentalProposalPreview() {
         </div>
         
         {/* Totaux immédiatement après le tableau */}
-        <div className="mt-1 flex justify-end">
-          <div className="bg-primary/5 rounded-lg p-2 min-w-[160px]">
-            <div className="flex justify-between text-[8px] mb-1 gap-2">
+        <div className="mt-2 flex justify-end">
+          <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
+            <div className="flex justify-between text-[10px] mb-1 gap-3">
               <span className="text-muted-foreground">Sous-total HT&nbsp;:</span>
               <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
             </div>
-            <Separator className="my-1" />
-            <div className="flex justify-between font-semibold text-[8px] gap-2">
+            <Separator className="my-1.5" />
+            <div className="flex justify-between font-semibold text-[10px] gap-3">
               <span>Total investissement&nbsp;:</span>
               <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
             </div>
