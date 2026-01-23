@@ -30,7 +30,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
@@ -148,8 +148,9 @@ export function RentalProposalPreview() {
   const calculatedValues = getCalculatedValues();
   const selectedOptions = optionsServices.filter(opt => opt.selected);
   
-  // Total pages: contrat fixe de 8 pages
-  const totalPages = CONTRACT_PAGES;
+  // Total pages: dynamique selon la version publiée du template
+  const currentVersion = getCurrentVersion();
+  const totalPages = currentVersion?.pages.length || DEFAULT_CONTRACT_PAGES;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
@@ -713,32 +714,33 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(pageNumber, staticElements, renderOptionsContent);
   };
 
-  // Page 7 - Services CybertekPro (100% statique selon le contrat)
-  const renderSummaryPage = () => {
-    const staticElements = getStaticPageElements(7 as PDFPageNumber);
-    
-    // Page 7 est purement statique - pas de contenu dynamique injecté
-    // Les éléments statiques (titres et cartes de services) viennent du template
-    return renderPageWithEditMode(7 as PDFPageNumber, staticElements);
-  };
-
-  // Page signature - 100% statique selon le contrat PDF
-  const renderSignaturePage = () => {
-    const staticElements = getStaticPageElements(8 as PDFPageNumber);
-    
-    // Page 8 est purement statique - pas de contenu dynamique injecté
-    // Les éléments de signature (date, zones, mentions) viennent du template
-    return renderPageWithEditMode(8 as PDFPageNumber, staticElements);
+  // Rendu page statique générique pour les pages > 4 sans zone dynamique
+  const renderGenericStaticPage = (pageNum: number) => {
+    const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
+    return renderPageWithEditMode(pageNum as PDFPageNumber, staticElements);
   };
 
   // Rendu de la page courante - Structure dynamique avec réaffectation automatique
   const renderCurrentPage = () => {
-    const version = getCurrentVersion();
-    const totalPagesInVersion = version?.pages.length || CONTRACT_PAGES;
-    
     // Trouver les pages d'injection pour chaque type de zone
     const investPage = getInjectionPageForZoneType('invest_table');
     const optionsPage = getInjectionPageForZoneType('options_block');
+    
+    // Vérifier si la page demandée existe dans la version
+    const version = getCurrentVersion();
+    const pageExists = version?.pages.some(p => p.pageNumber === currentPreviewPage);
+    
+    // Si la page n'existe pas, afficher un message
+    if (!pageExists && currentPreviewPage > 1) {
+      return (
+        <div 
+          className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden flex items-center justify-center"
+          style={{ maxWidth: CANVAS_DISPLAY_MAX_WIDTH }}
+        >
+          <p className="text-muted-foreground text-sm">Page {currentPreviewPage} n'existe pas dans ce template</p>
+        </div>
+      );
+    }
     
     // Mapping dynamique : afficher le contenu approprié selon le type de zone présent
     if (currentPreviewPage === 1) return renderPage1();
@@ -753,18 +755,14 @@ export function RentalProposalPreview() {
       return renderOptionsPage(optionsPage as PDFPageNumber);
     }
     
-    // Sinon page statique
+    // Pages statiques connues (si elles existent dans la version)
     if (currentPreviewPage === 2) return renderStaticPage(2, 'Nos engagements');
     if (currentPreviewPage === 3) return renderStaticPage(3, 'Conditions de location');
-    // Page 5 en statique seulement si options n'est pas sur page 5
     if (currentPreviewPage === 5 && optionsPage !== 5) return renderStaticPage(5, 'Offre matériel');
-    // Page 6 en statique seulement si options n'est pas sur page 6
     if (currentPreviewPage === 6 && optionsPage !== 6) return renderStaticPage(6, 'Votre offre de service');
-    if (currentPreviewPage === 7) return renderSummaryPage();
-    if (currentPreviewPage === 8) return renderSignaturePage();
     
-    // Page générique pour les autres
-    return renderStaticPage(currentPreviewPage, `Page ${currentPreviewPage}`);
+    // Pages génériques (7, 8 ou autres) - rendu statique basé sur les éléments du template
+    return renderGenericStaticPage(currentPreviewPage);
   };
 
   return (
@@ -821,9 +819,9 @@ export function RentalProposalPreview() {
           {renderCurrentPage()}
         </div>
         
-        {/* Miniatures */}
+        {/* Miniatures - basées sur le nombre réel de pages */}
         <div className="flex justify-center gap-2 flex-wrap pt-4 border-t">
-          {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map(pageNum => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
             <button
               key={pageNum}
               onClick={() => setCurrentPreviewPage(pageNum)}
@@ -837,22 +835,6 @@ export function RentalProposalPreview() {
               {pageNum}
             </button>
           ))}
-          {totalPages > 8 && (
-            <>
-              <span className="text-muted-foreground">...</span>
-              <button
-                onClick={() => setCurrentPreviewPage(totalPages)}
-                className={cn(
-                  "w-8 h-8 rounded text-xs font-medium transition-colors",
-                  currentPreviewPage === totalPages
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-muted/80"
-                )}
-              >
-                {totalPages}
-              </button>
-            </>
-          )}
         </div>
       </CardContent>
     </Card>
