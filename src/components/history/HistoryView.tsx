@@ -1,4 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -6,80 +7,218 @@ import {
   FileText, 
   Download, 
   Calendar,
-  Clock,
-  Check,
-  AlertTriangle
+  Trash2,
+  Loader2,
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
-interface HistoryEntry {
+interface ProposalExport {
   id: string;
-  fileName: string;
-  createdAt: Date;
-  template: string;
-  status: 'success' | 'error';
-  rowCount: number;
-  optionsCount: number;
+  proposal_name: string;
+  file_name: string;
+  client_name: string | null;
+  template_name: string;
+  status: string;
+  row_count: number;
+  options_count: number;
+  pdf_html_content: string | null;
+  created_at: string;
 }
 
-// Mock history data
-const mockHistory: HistoryEntry[] = [
-  {
-    id: "exp-001",
-    fileName: "Devis_Client_ABC_2024-01-15.pdf",
-    createdAt: new Date("2024-01-15T14:30:00"),
-    template: "Devis Standard",
-    status: 'success',
-    rowCount: 42,
-    optionsCount: 3,
-  },
-  {
-    id: "exp-002",
-    fileName: "Devis_Projet_XYZ_2024-01-12.pdf",
-    createdAt: new Date("2024-01-12T09:15:00"),
-    template: "Devis Standard",
-    status: 'success',
-    rowCount: 28,
-    optionsCount: 5,
-  },
-  {
-    id: "exp-003",
-    fileName: "Devis_Demo_2024-01-10.pdf",
-    createdAt: new Date("2024-01-10T16:45:00"),
-    template: "Devis Compact",
-    status: 'error',
-    rowCount: 0,
-    optionsCount: 0,
-  },
-];
-
 interface HistoryViewProps {
-  onSelectEntry?: (entry: HistoryEntry) => void;
+  onSelectEntry?: (entry: ProposalExport) => void;
 }
 
 export function HistoryView({ onSelectEntry }: HistoryViewProps) {
-  const formatDate = (date: Date) => {
+  const [exports, setExports] = useState<ProposalExport[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const fetchExports = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('proposal_exports')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setExports(data || []);
+    } catch (err) {
+      console.error('Error fetching exports:', err);
+      setError("Impossible de charger l'historique");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExports();
+  }, []);
+
+  const formatDate = (dateStr: string) => {
     return new Intl.DateTimeFormat('fr-FR', {
       dateStyle: 'long',
       timeStyle: 'short',
-    }).format(date);
+    }).format(new Date(dateStr));
   };
+
+  const handleDownload = async (entry: ProposalExport) => {
+    if (!entry.pdf_html_content) {
+      toast({
+        title: "Téléchargement indisponible",
+        description: "Le contenu de ce document n'est plus disponible.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloadingId(entry.id);
+
+    try {
+      // Ouvrir une fenêtre d'impression avec le contenu HTML sauvegardé
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      
+      if (!printWindow) {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'ouvrir la fenêtre. Vérifiez les popups.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      printWindow.document.write(entry.pdf_html_content);
+      printWindow.document.close();
+      
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+          toast({
+            title: "PDF prêt",
+            description: `Document "${entry.proposal_name}" préparé pour impression.`,
+          });
+        }, 500);
+      };
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDelete = async (entry: ProposalExport) => {
+    setDeletingId(entry.id);
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('proposal_exports')
+        .delete()
+        .eq('id', entry.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      setExports(prev => prev.filter(e => e.id !== entry.id));
+      toast({
+        title: "Supprimé",
+        description: `"${entry.proposal_name}" a été supprimé de l'historique.`,
+      });
+    } catch (err) {
+      console.error('Error deleting export:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer cette entrée.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div>
+          <h2 className="text-lg font-semibold mb-1">Historique des exports</h2>
+          <p className="text-muted-foreground text-sm">
+            Chargement de l'historique...
+          </p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div>
+          <h2 className="text-lg font-semibold mb-1">Historique des exports</h2>
+          <p className="text-muted-foreground text-sm">{error}</p>
+        </div>
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center">
+              <div className="p-3 rounded-full bg-destructive/10 inline-block mb-3">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+              </div>
+              <h3 className="font-medium text-sm mb-3">Erreur de chargement</h3>
+              <Button variant="outline" size="sm" onClick={fetchExports}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Réessayer
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div>
-        <h2 className="text-lg font-semibold mb-1">Historique des exports</h2>
-        <p className="text-muted-foreground text-sm">
-          Consultez et téléchargez les devis générés précédemment.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold mb-1">Historique des exports</h2>
+          <p className="text-muted-foreground text-sm">
+            {exports.length > 0 
+              ? `${exports.length} proposition(s) exportée(s)` 
+              : 'Consultez et téléchargez les propositions générées.'}
+          </p>
+        </div>
+        {exports.length > 0 && (
+          <Button variant="ghost" size="icon" onClick={fetchExports}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      {mockHistory.length > 0 ? (
+      {exports.length > 0 ? (
         <div className="space-y-3">
-          {mockHistory.map((entry) => (
+          {exports.map((entry) => (
             <Card 
               key={entry.id}
-              variant="interactive"
-              className="group"
+              className="group hover:border-primary/30 transition-colors"
             >
               <CardContent className="p-3">
                 <div className="flex items-start gap-3">
@@ -97,8 +236,8 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="font-medium text-sm truncate">{entry.fileName}</h3>
-                      <Badge variant={entry.status === 'success' ? 'success' : 'error'} className="text-xs">
+                      <h3 className="font-medium text-sm truncate">{entry.proposal_name}</h3>
+                      <Badge variant={entry.status === 'success' ? 'default' : 'destructive'} className="text-xs">
                         {entry.status === 'success' ? 'Succès' : 'Erreur'}
                       </Badge>
                     </div>
@@ -106,28 +245,52 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {formatDate(entry.createdAt)}
+                        {formatDate(entry.created_at)}
                       </span>
-                      <span>Template: {entry.template}</span>
+                      {entry.client_name && (
+                        <span className="truncate">Client: {entry.client_name}</span>
+                      )}
                     </div>
                     
                     {entry.status === 'success' && (
                       <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                        <span>{entry.rowCount} lignes Invest</span>
-                        <span>{entry.optionsCount} options</span>
+                        <span>{entry.row_count} lignes</span>
+                        <span>{entry.options_count} options</span>
+                        <span className="text-muted-foreground/60">• {entry.template_name}</span>
                       </div>
                     )}
                   </div>
 
-                  {entry.status === 'success' && (
+                  <div className="flex items-center gap-1">
+                    {entry.status === 'success' && entry.pdf_html_content && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDownload(entry)}
+                        disabled={downloadingId === entry.id}
+                      >
+                        {downloadingId === entry.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDelete(entry)}
+                      disabled={deletingId === entry.id}
                     >
-                      <Download className="h-3.5 w-3.5" />
+                      {deletingId === entry.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
                     </Button>
-                  )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -142,7 +305,7 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
               </div>
               <h3 className="font-medium text-sm mb-1">Aucun historique</h3>
               <p className="text-xs text-muted-foreground">
-                Les devis exportés apparaîtront ici.
+                Les propositions exportées apparaîtront ici.
               </p>
             </div>
           </CardContent>

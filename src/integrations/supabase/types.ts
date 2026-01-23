@@ -41,6 +41,56 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_exports: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          file_name: string
+          id: string
+          options_count: number | null
+          pdf_html_content: string | null
+          proposal_name: string
+          row_count: number | null
+          status: string
+          template_id: string | null
+          template_name: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          file_name: string
+          id?: string
+          options_count?: number | null
+          pdf_html_content?: string | null
+          proposal_name: string
+          row_count?: number | null
+          status?: string
+          template_id?: string | null
+          template_name: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          file_name?: string
+          id?: string
+          options_count?: number | null
+          pdf_html_content?: string | null
+          proposal_name?: string
+          row_count?: number | null
+          status?: string
+          template_id?: string | null
+          template_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_exports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_versions: {
         Row: {
           created_at: string

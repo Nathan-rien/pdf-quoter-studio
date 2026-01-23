@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
 import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
@@ -37,6 +38,7 @@ export function RentalProposalExport() {
     lignesData,
     servicesInclus,
     optionsServices,
+    proposalName,
     pdfImportStatus,
     getCalculatedValues,
   } = useRentalProposalStore();
@@ -60,9 +62,31 @@ export function RentalProposalExport() {
   };
 
   const generateFileName = () => {
-    const clientName = clientData.nom.replace(/[^a-zA-Z0-9]/g, '_') || 'Proposition';
+    const name = proposalName || clientData.nom || 'Proposition';
+    const safeName = name.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
     const date = new Date().toISOString().split('T')[0];
-    return `Proposition_${clientName}_${date}.pdf`;
+    return `${safeName}_${date}.pdf`;
+  };
+
+  const saveToHistory = async (htmlContent: string, status: 'success' | 'error') => {
+    try {
+      const displayName = proposalName || `Proposition ${clientData.nom}` || 'Proposition Commerciale';
+      
+      await supabase.from('proposal_exports').insert({
+        proposal_name: displayName,
+        file_name: generateFileName(),
+        client_name: clientData.nom || null,
+        template_id: activeTemplate?.id || null,
+        template_name: activeTemplate?.name || 'Template par défaut',
+        status,
+        row_count: lignesData.length,
+        options_count: selectedOptions.length,
+        pdf_html_content: status === 'success' ? htmlContent : null,
+      });
+    } catch (err) {
+      console.error('Failed to save to history:', err);
+      // Ne pas bloquer l'export si l'historique échoue
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -92,9 +116,13 @@ export function RentalProposalExport() {
       
       // Attendre le chargement puis imprimer
       printWindow.onload = () => {
-        setTimeout(() => {
+        setTimeout(async () => {
           printWindow.print();
           printWindow.close();
+          
+          // Sauvegarder dans l'historique
+          await saveToHistory(htmlContent, 'success');
+          
           setIsGenerating(false);
           setIsGenerated(true);
           
@@ -107,6 +135,10 @@ export function RentalProposalExport() {
 
     } catch (error) {
       console.error('Erreur lors de la génération du PDF:', error);
+      
+      // Sauvegarder l'erreur dans l'historique
+      await saveToHistory('', 'error');
+      
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la génération du PDF.",
