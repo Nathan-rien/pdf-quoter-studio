@@ -83,6 +83,9 @@ interface RentalProposalState {
   // Options services additionnelles
   optionsServices: OptionService[];
   
+  // Nom personnalisé de la proposition
+  proposalName: string;
+  
   // Workflow
   currentStep: RentalWorkflowStep;
   hasUnsavedChanges: boolean;
@@ -95,6 +98,9 @@ interface RentalProposalActions {
   
   // Client data
   updateClientField: (field: keyof ClientData, value: string) => void;
+  
+  // Proposal name
+  updateProposalName: (name: string) => void;
   
   // Matrice data
   updateMatriceField: <K extends keyof MatriceData>(field: K, value: MatriceData[K]) => void;
@@ -169,6 +175,7 @@ const initialState: RentalProposalState = {
   lignesData: [],
   servicesInclus: initialServicesInclus,
   optionsServices: [],
+  proposalName: '',
   currentStep: 'import',
   hasUnsavedChanges: false,
   isActive: false,
@@ -182,6 +189,12 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       importFromPDF: (result, fileName) => {
         // Calculer le montant investissement depuis Total HT du PDF
         const montantInvestissement = result.totaux.totalHT;
+        
+        // Générer un nom de proposition par défaut basé sur le client et la date
+        const clientName = result.client.nom || 'Client';
+        const now = new Date();
+        const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        const defaultProposalName = `Proposition ${clientName} - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
         
         set({
           pdfImportStatus: {
@@ -205,6 +218,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             duree: result.location.duree ?? 36,
           },
           lignesData: result.lignes,
+          proposalName: defaultProposalName,
           currentStep: 'data',
           hasUnsavedChanges: true,
           isActive: true,
@@ -216,6 +230,10 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           clientData: { ...state.clientData, [field]: value },
           hasUnsavedChanges: true,
         }));
+      },
+
+      updateProposalName: (name) => {
+        set({ proposalName: name, hasUnsavedChanges: true });
       },
 
       updateMatriceField: (field, value) => {
@@ -403,6 +421,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         matriceData: state.matriceData,
         lignesData: state.lignesData,
         optionsServices: state.optionsServices,
+        proposalName: state.proposalName,
         currentStep: state.currentStep,
         isActive: state.isActive,
       }),

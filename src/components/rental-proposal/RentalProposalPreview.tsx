@@ -8,6 +8,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import { 
   FileText, 
   User, 
@@ -20,6 +21,9 @@ import {
   Edit3,
   Eye,
   Briefcase,
+  Pencil,
+  Check,
+  X,
   icons
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -41,6 +45,8 @@ export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
   const [isEditMode, setIsEditMode] = React.useState(false);
   const [pagesLoaded, setPagesLoaded] = React.useState(false);
+  const [isEditingName, setIsEditingName] = React.useState(false);
+  const [tempName, setTempName] = React.useState('');
   
   // Synchronisation avec le cloud pour charger les templates
   const { isLoading, hasLoaded, loadVersionPages, isLoadingVersion } = useTemplateSync();
@@ -51,6 +57,8 @@ export function RentalProposalPreview() {
     lignesData,
     servicesInclus,
     optionsServices,
+    proposalName,
+    updateProposalName,
     getCalculatedValues,
     getSelectedCommercial,
   } = useRentalProposalStore();
@@ -790,23 +798,79 @@ export function RentalProposalPreview() {
     return renderGenericStaticPage(currentPreviewPage);
   };
 
+  const handleStartEditName = () => {
+    setTempName(proposalName || activeTemplate?.name || 'Proposition Commerciale');
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = () => {
+    updateProposalName(tempName.trim() || 'Proposition Commerciale');
+    setIsEditingName(false);
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setTempName('');
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveName();
+    } else if (e.key === 'Escape') {
+      handleCancelEditName();
+    }
+  };
+
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
-        {/* Info template + bouton édition */}
+        {/* Nom de la proposition éditable */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="font-medium">
-                {activeTemplate?.name || 'Aucun template actif'}
-              </p>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              {isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onKeyDown={handleNameKeyDown}
+                    className="h-8 text-sm font-medium"
+                    autoFocus
+                    placeholder="Nom de la proposition"
+                  />
+                  <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={handleSaveName}>
+                    <Check className="h-4 w-4 text-success" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={handleCancelEditName}>
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="group flex items-center gap-2">
+                  <p 
+                    className="font-medium truncate cursor-pointer hover:text-primary transition-colors"
+                    onClick={handleStartEditName}
+                    title="Cliquez pour modifier le nom"
+                  >
+                    {proposalName || activeTemplate?.name || 'Proposition Commerciale'}
+                  </p>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={handleStartEditName}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
                 {lignesData.length} ligne(s) • {selectedOptions.length} option(s) sélectionnée(s)
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant={isEditMode ? "default" : "outline"}
               size="sm"
