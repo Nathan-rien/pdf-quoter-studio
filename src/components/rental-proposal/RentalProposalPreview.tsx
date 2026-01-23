@@ -628,10 +628,10 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(4 as PDFPageNumber, staticElements, renderProductTable);
   };
 
-  // Page Options Services - Page 6 fixe
-  const renderOptionsPage = () => {
+  // Page Options Services - numéro de page dynamique selon les zones
+  const renderOptionsPage = (pageNumber: PDFPageNumber) => {
     const pageOptions = selectedOptions.slice(0, OPTIONS_PER_PAGE);
-    const staticElements = getStaticPageElements(6 as PDFPageNumber);
+    const staticElements = getStaticPageElements(pageNumber);
     
     const renderOptionsContent = () => (
       <div 
@@ -685,7 +685,7 @@ export function RentalProposalPreview() {
       </div>
     );
     
-    return renderPageWithEditMode(6 as PDFPageNumber, staticElements, renderOptionsContent);
+    return renderPageWithEditMode(pageNumber, staticElements, renderOptionsContent);
   };
 
   // Page 7 - Services CybertekPro (100% statique selon le contrat)
@@ -725,13 +725,16 @@ export function RentalProposalPreview() {
     
     // Si la page courante contient la zone options_block, afficher les options
     if (optionsPage && currentPreviewPage === optionsPage) {
-      return renderOptionsPage();
+      return renderOptionsPage(optionsPage as PDFPageNumber);
     }
     
     // Sinon page statique
     if (currentPreviewPage === 2) return renderStaticPage(2, 'Nos engagements');
     if (currentPreviewPage === 3) return renderStaticPage(3, 'Conditions de location');
-    if (currentPreviewPage === 5) return renderStaticPage(5, 'Offre matériel');
+    // Page 5 en statique seulement si options n'est pas sur page 5
+    if (currentPreviewPage === 5 && optionsPage !== 5) return renderStaticPage(5, 'Offre matériel');
+    // Page 6 en statique seulement si options n'est pas sur page 6
+    if (currentPreviewPage === 6 && optionsPage !== 6) return renderStaticPage(6, 'Votre offre de service');
     if (currentPreviewPage === 7) return renderSummaryPage();
     if (currentPreviewPage === 8) return renderSignaturePage();
     
