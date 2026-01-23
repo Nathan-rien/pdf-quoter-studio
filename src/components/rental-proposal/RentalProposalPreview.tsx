@@ -685,59 +685,50 @@ export function RentalProposalPreview() {
         className="absolute z-40"
         style={{
           left: '3%',
-          top: '15%',
+          top: '12%',
           width: '94%',
-          maxHeight: '70%',
+          maxHeight: '75%',
+          overflow: 'hidden',
         }}
       >
-        {/* Bloc permanent "Services inclus" - toujours affiché en haut */}
-        <div className="border rounded-lg p-2 bg-primary/10 mb-3">
-          <div className="flex items-center gap-1 mb-0.5">
-            <CheckCircle className="h-3 w-3 text-primary" />
-            <span className="font-medium text-[9px] text-primary">Services inclus</span>
-            <Badge variant="secondary" className="text-[6px] px-1 py-0 ml-1 scale-90">Permanent</Badge>
+        {/* Bloc permanent "Services inclus" - style header gris + puces */}
+        <div className="mb-3 border rounded overflow-hidden">
+          <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+            <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
+            <span className="font-semibold text-[11px]">Services Inclus</span>
           </div>
-          <p className="text-[8px] text-muted-foreground ml-4 whitespace-pre-wrap">
-            {servicesInclus.description}
-          </p>
+          <div className="px-3 py-2 bg-background">
+            <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+              {servicesInclus.description.split(',').map((item, i) => (
+                <li key={i} className="leading-tight">{item.trim()}</li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        {/* Options additionnelles sélectionnées */}
-        {pageOptions.length === 0 ? (
-          <div className="flex items-center justify-center h-16 text-muted-foreground">
-            <div className="text-center">
-              <Settings className="h-5 w-5 mx-auto mb-1 opacity-50" />
-              <p className="text-[8px]">Aucune option additionnelle sélectionnée</p>
-            </div>
-          </div>
-        ) : (
+        {/* Options additionnelles sélectionnées - même style */}
+        {pageOptions.length > 0 && (
           <div className="space-y-2">
             {pageOptions.map((option) => (
-              <div 
-                key={option.id} 
-                className="border rounded-lg p-2 bg-muted/20"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <CheckCircle className="h-3 w-3 text-success" />
-                      <span className="font-medium text-[9px]">{option.name}</span>
-                    </div>
-                    {option.description && (
-                      <p className="text-[8px] text-muted-foreground ml-4 whitespace-pre-wrap">
-                        {option.description}
-                      </p>
-                    )}
-                  </div>
+              <div key={option.id} className="border rounded overflow-hidden">
+                <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-foreground/70" />
+                  <span className="font-semibold text-[11px]">{option.name}</span>
                   {option.price !== null && (
-                    <div className="text-right">
-                      <span className="font-semibold text-primary text-[9px]">
-                        {formatNumber(option.price)} €
-                      </span>
-                      <span className="text-[7px] text-muted-foreground block">/mois</span>
-                    </div>
+                    <span className="ml-auto text-[9px] text-primary font-medium">
+                      {formatNumber(option.price)} €/mois
+                    </span>
                   )}
                 </div>
+                {option.description && (
+                  <div className="px-3 py-2 bg-background">
+                    <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+                      {option.description.split(',').map((item, i) => (
+                        <li key={i} className="leading-tight">{item.trim()}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ))}
           </div>
