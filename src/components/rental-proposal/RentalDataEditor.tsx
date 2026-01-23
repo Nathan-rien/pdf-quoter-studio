@@ -26,6 +26,7 @@ export function RentalDataEditor() {
     clientData,
     matriceData,
     lignesData,
+    servicesInclus,
     optionsServices,
     pdfImportStatus,
     commercialData,
@@ -34,6 +35,7 @@ export function RentalDataEditor() {
     updateLigne,
     addLigne,
     deleteLigne,
+    updateServicesInclus,
     addOptionService,
     updateOptionService,
     deleteOptionService,
@@ -446,12 +448,35 @@ export function RentalDataEditor() {
         </TabsContent>
 
         {/* Options Tab */}
-        <TabsContent value="options" className="mt-4">
+        <TabsContent value="options" className="mt-4 space-y-4">
+          {/* Bloc permanent "Services inclus" - toujours affiché */}
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">Services inclus</CardTitle>
+                  <Badge variant="secondary" className="text-xs">Toujours affiché</Badge>
+                </div>
+              </div>
+              <CardDescription>Ce bloc apparaît systématiquement en haut de la page 5</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Description des services inclus..."
+                value={servicesInclus.description}
+                onChange={(e) => updateServicesInclus(e.target.value)}
+                className="min-h-[80px] resize-y"
+                rows={3}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Options additionnelles */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Services inclus</CardTitle>
-                <CardDescription>Services inclus dans le loyer</CardDescription>
+                <CardTitle className="text-lg">Options additionnelles</CardTitle>
+                <CardDescription>Services supplémentaires sélectionnables</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
@@ -507,7 +532,7 @@ export function RentalDataEditor() {
             <CardContent>
               <div className="space-y-3">
                 {optionsServices.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Aucune option service</p>
+                  <p className="text-center text-muted-foreground py-8">Aucune option additionnelle</p>
                 ) : (
                   optionsServices.map((opt) => (
                     <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">

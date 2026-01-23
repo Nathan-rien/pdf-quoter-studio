@@ -8,19 +8,8 @@ const generateId = () => crypto.randomUUID();
 const toServiceItem = (text: string): ServiceItem => ({ text });
 
 // Options pré-remplies basées sur les captures d'écran
+// NOTE: "Services Inclus" a été retiré car c'est maintenant un bloc permanent dans le store rental-proposal
 const defaultOptions: ServiceOptionDefinition[] = [
-  {
-    id: generateId(),
-    title: 'Services Inclus',
-    services: [
-      { text: 'Contrat de location et gestion administrative' },
-      { text: 'Optimisation des coûts et gestion budgétaire' },
-      { text: 'Gestion des évolutions du parc' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
   {
     id: generateId(),
     title: 'Pro-Tection',

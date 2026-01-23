@@ -35,6 +35,7 @@ export function RentalProposalExport() {
     clientData,
     matriceData,
     lignesData,
+    servicesInclus,
     optionsServices,
     pdfImportStatus,
     getCalculatedValues,
@@ -241,9 +242,15 @@ export function RentalProposalExport() {
         <h2>Vos options de services</h2>
         <p style="color: #6b7280;">Services inclus dans votre contrat de location</p>
         
+        <!-- Bloc permanent Services inclus -->
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; color: #2563eb; font-size: 16px;">✓ Services inclus <span style="background: #dbeafe; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 8px;">Permanent</span></h4>
+          <p style="margin: 0; color: #4b5563; white-space: pre-wrap;">${servicesInclus.description}</p>
+        </div>
+        
         ${selectedOptions.length === 0 ? `
           <div style="text-align: center; padding: 40px; color: #9ca3af;">
-            <p>Aucune option sélectionnée</p>
+            <p>Aucune option additionnelle sélectionnée</p>
           </div>
         ` : optionsHTML}
         
