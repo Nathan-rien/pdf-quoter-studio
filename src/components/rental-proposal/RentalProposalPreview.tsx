@@ -159,7 +159,7 @@ export function RentalProposalPreview() {
 
   // Helper pour obtenir les éléments statiques d'une page du template
   // En mode édition, utilise currentVersion (version de travail), sinon la dernière version publiée
-  // IMPORTANT: Relire depuis le store à chaque appel pour garantir la fraîcheur des données après lazy loading
+  // IMPORTANT: Relire DIRECTEMENT depuis le store pour garantir la fraîcheur des données après lazy loading
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     const template = activeTemplate;
     if (!template) {
@@ -168,28 +168,42 @@ export function RentalProposalPreview() {
     }
     
     // En mode édition, utiliser currentVersion (initialisée par preparePreviewEditing)
-    let version: TemplateVersion | null = null;
     if (isEditMode) {
-      version = getCurrentVersionForPreview();
+      const editVersion = getCurrentVersionForPreview();
+      if (editVersion) {
+        const pageContent = editVersion.pages.find(p => p.pageNumber === pageNumber);
+        const elements = sortElementsByZIndex(pageContent?.elements.filter(el => !el.isDynamic) || []);
+        console.log(`[Preview EDIT] Page ${pageNumber}: ${elements.length} elements`);
+        return elements;
+      }
     }
-    // Fallback sur la dernière version si pas en mode édition ou pas de currentVersion
-    if (!version) {
-      version = getTemplateLatestVersion(template.id);
+    
+    // IMPORTANT: Relire DIRECTEMENT depuis le store Zustand pour obtenir les données fraîches
+    // après le lazy loading (évite le problème de closure stale)
+    const freshState = useTemplateEditorStore.getState();
+    const templateVersions = freshState.allVersions.filter(v => v.templateId === template.id);
+    const publishedVersions = templateVersions.filter(v => v.status === 'publie');
+    
+    let version: TemplateVersion | undefined;
+    if (publishedVersions.length > 0) {
+      version = publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
+    } else if (templateVersions.length > 0) {
+      version = templateVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
     }
-    if (!version) {
-      console.warn(`[RentalProposalPreview] getStaticPageElements(${pageNumber}): No version found`);
+    
+    if (!version || version.pages.length === 0) {
+      console.warn(`[Preview] Page ${pageNumber}: No version or empty pages (versions: ${templateVersions.length})`);
       return [];
     }
     
     const pageContent = version.pages.find(p => p.pageNumber === pageNumber);
     if (!pageContent) {
-      console.warn(`[RentalProposalPreview] getStaticPageElements(${pageNumber}): Page not found in version (${version.pages.length} pages total)`);
+      console.warn(`[Preview] Page ${pageNumber}: Not found in version v${version.versionNumber} (${version.pages.length} pages)`);
       return [];
     }
     
-    // Retourner uniquement les éléments non-dynamiques (texte/image statiques), triés par zIndex
     const elements = sortElementsByZIndex(pageContent.elements.filter(el => !el.isDynamic));
-    console.log(`[RentalProposalPreview] Page ${pageNumber}: ${elements.length} static elements`);
+    console.log(`[Preview] Page ${pageNumber}: ${elements.length} static elements from v${version.versionNumber}`);
     return elements;
   };
 
