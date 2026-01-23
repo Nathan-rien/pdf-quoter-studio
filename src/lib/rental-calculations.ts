@@ -153,6 +153,21 @@ export function calculateMargeLoc(
 }
 
 /**
+ * Calcule le loyer mensuel sur investissement (hors services)
+ * Formule: Invest Margé * Coefficient / 100
+ */
+export function calculateLoyerMensuelInvestissement(
+  investMarge: number | null,
+  coefficient: number | null
+): number | null {
+  if (investMarge === null || coefficient === null) {
+    return null;
+  }
+  const result = investMarge * coefficient / 100;
+  return Math.round(result * 100) / 100;
+}
+
+/**
  * Interface pour les résultats des calculs
  */
 export interface CalculatedMatriceValues {
@@ -160,6 +175,7 @@ export interface CalculatedMatriceValues {
   investMarge: number | null;
   servicesInclusLoyers: number | null;
   loyerServicesInclus: number | null;
+  loyerMensuelInvestissement: number | null;
   loyerMensuel: number | null;
   sommeLoyers: number | null;
   coutContrat: number | null;
@@ -190,7 +206,10 @@ export function calculateAllMatriceValues(
   // Calcul loyer services inclus
   const loyerServicesInclus = calculateLoyerServicesInclus(servicesInclusLoyers, coefficient);
   
-  // Calcul loyer mensuel
+  // Calcul loyer mensuel sur investissement (hors services)
+  const loyerMensuelInvestissement = calculateLoyerMensuelInvestissement(investMarge, coefficient);
+  
+  // Calcul loyer mensuel total (investissement + services)
   const loyerMensuel = calculateLoyerMensuel(investMarge, coefficient, loyerServicesInclus);
   
   // Calcul somme loyers
@@ -213,6 +232,7 @@ export function calculateAllMatriceValues(
     investMarge,
     servicesInclusLoyers,
     loyerServicesInclus,
+    loyerMensuelInvestissement,
     loyerMensuel,
     sommeLoyers,
     coutContrat,

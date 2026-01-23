@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,7 +124,7 @@ export function RentalDataEditor() {
           </TabsTrigger>
           <TabsTrigger value="options" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
-            Options
+            Services inclus
           </TabsTrigger>
           <TabsTrigger value="invest" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
@@ -359,7 +360,7 @@ export function RentalDataEditor() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-5 gap-4">
                 <div className="space-y-2">
                   <Label>Durée</Label>
                   <div className="flex items-center h-10 px-3 bg-muted rounded-md">
@@ -373,8 +374,14 @@ export function RentalDataEditor() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Loyer mensuel HT</Label>
+                  <Label>Loyer mensuel investissement</Label>
                   <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span>{formatNumber(calculatedValues.loyerMensuelInvestissement)} €</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Loyer mensuel HT</Label>
+                  <div className="flex items-center h-10 px-3 bg-primary/10 rounded-md border border-primary/20">
                     <span className="font-medium">{formatNumber(calculatedValues.loyerMensuel)} €</span>
                   </div>
                 </div>
@@ -443,7 +450,7 @@ export function RentalDataEditor() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Options services</CardTitle>
+                <CardTitle className="text-lg">Services inclus</CardTitle>
                 <CardDescription>Services inclus dans le loyer</CardDescription>
               </div>
               <div className="flex gap-2">
@@ -503,19 +510,20 @@ export function RentalDataEditor() {
                   <p className="text-center text-muted-foreground py-8">Aucune option service</p>
                 ) : (
                   optionsServices.map((opt) => (
-                    <div key={opt.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                      <Switch checked={opt.selected} onCheckedChange={() => toggleOptionService(opt.id)} />
+                    <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                      <Switch checked={opt.selected} onCheckedChange={() => toggleOptionService(opt.id)} className="mt-2" />
                       <Input
                         placeholder="Nom"
                         value={opt.name}
                         onChange={(e) => updateOptionService(opt.id, { name: e.target.value })}
-                        className="flex-1"
+                        className="w-40"
                       />
-                      <Input
+                      <Textarea
                         placeholder="Description"
                         value={opt.description}
                         onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
-                        className="flex-1"
+                        className="flex-1 min-h-[40px] resize-y"
+                        rows={2}
                       />
                       <Input
                         type="number"
@@ -525,7 +533,7 @@ export function RentalDataEditor() {
                         onChange={(e) => updateOptionService(opt.id, { price: e.target.value ? parseFloat(e.target.value) : null })}
                         className="w-24"
                       />
-                      <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)} className="mt-1">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
