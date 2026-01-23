@@ -207,11 +207,17 @@ export function RentalProposalPreview() {
     return elements;
   };
 
+  // Helper pour normaliser le z-index (identique à EditorCanvas: +10 pour éviter les valeurs négatives)
+  const previewZIndex = (el: EditableElement): number => (el.zIndex ?? 0) + 10;
+
   // Rendu d'un élément du template (utilise le style partagé pour garantir la fidélité WYSIWYG)
   const renderTemplateElement = (element: EditableElement) => {
-    // Utilisation du style partagé pour garantir un rendu identique à EditorCanvas
+    // Utilisation du style partagé + z-index normalisé pour garantir un rendu identique à EditorCanvas
     const getElementStyle = (): React.CSSProperties => {
-      return getSharedElementStyle({ element });
+      return {
+        ...getSharedElementStyle({ element }),
+        zIndex: previewZIndex(element),
+      };
     };
 
     // Fonction renderTextContent identique à EditorCanvas (utilise LIST_INDENT_PX)
