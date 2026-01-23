@@ -24,7 +24,7 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
-import { CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
 
 export function RentalProposalExport() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -40,7 +40,7 @@ export function RentalProposalExport() {
     getCalculatedValues,
   } = useRentalProposalStore();
 
-  const { getActiveTemplate } = useTemplateEditorStore();
+  const { getActiveTemplate, getTemplateLatestVersion } = useTemplateEditorStore();
   
   const activeTemplate = getActiveTemplate();
   const calculatedValues = getCalculatedValues();
@@ -48,7 +48,10 @@ export function RentalProposalExport() {
   
   const optionsPagesCount = Math.max(1, Math.ceil(selectedOptions.length / OPTIONS_PER_PAGE));
   const linesPagesCount = Math.max(1, Math.ceil(lignesData.length / LINES_PER_PAGE));
-  const totalPages = CONTRACT_PAGES;
+  
+  // Utiliser le nombre réel de pages de la version publiée
+  const latestVersion = activeTemplate ? getTemplateLatestVersion(activeTemplate.id) : null;
+  const totalPages = latestVersion?.pages.length || DEFAULT_CONTRACT_PAGES;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';

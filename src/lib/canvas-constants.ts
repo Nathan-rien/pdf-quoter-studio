@@ -24,8 +24,9 @@ export const PREVIEW_ICON_SCALE = 0.6;
 // Indentation des listes en pixels (avant scaling)
 export const LIST_INDENT_PX = 12;
 
-// Nombre de pages fixe selon le contrat PDF
-export const CONTRACT_PAGES = 8;
+// Nombre de pages par défaut (référence historique)
+// DÉPRÉCIÉ : Utiliser version.pages.length pour le nombre réel de pages
+export const DEFAULT_CONTRACT_PAGES = 8;
 
 // Constantes de pagination
 export const OPTIONS_PER_PAGE = 6;
