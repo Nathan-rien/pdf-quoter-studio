@@ -33,7 +33,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   loadTemplateList: () => void;
   selectTemplate: (templateId: string) => void;
   createNewTemplate: (name: string, description?: string) => PDFTemplate | null;
-  duplicateTemplate: (templateId: string, newName: string, description?: string, includeAllVersions?: boolean) => PDFTemplate | null;
+  duplicateTemplate: (templateId: string, newName: string, description?: string, includeAllVersions?: boolean, preloadedPages?: Record<string, TemplatePageContent[]>) => PDFTemplate | null;
   renameTemplate: (templateId: string, newName: string) => void;
   deleteTemplate: (templateId: string) => boolean;
   setTemplateActive: (templateId: string) => void;
@@ -349,7 +349,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     return newTemplate;
   },
 
-  duplicateTemplate: (templateId, newName, description, includeAllVersions = false) => {
+  duplicateTemplate: (templateId, newName, description, includeAllVersions = false, preloadedPages?: Record<string, TemplatePageContent[]>) => {
     const { allTemplates, allVersions } = get();
     const sourceTemplate = allTemplates.find(t => t.id === templateId);
     if (!sourceTemplate) return null;
@@ -383,16 +383,17 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     }
 
     // Cloner les versions avec nouveaux IDs
-    // Si les pages source sont vides (lazy loading non chargé), utiliser les pages par défaut
+    // Priorité : pages préchargées > pages en mémoire > pages par défaut
     const duplicatedVersions: TemplateVersion[] = versionsToDuplicate.map((v, index) => {
-      // Récupérer les pages source ou créer les pages par défaut
-      const sourcePages = v.pages && v.pages.length > 0 
-        ? v.pages 
-        : PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
-            pageNumber: pageConfig.pageNumber as PDFPageNumber,
-            elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
-            dynamicZones: pageConfig.dynamicZones as DynamicZone[]
-          }));
+      // Récupérer les pages source : préchargées depuis le cloud > en mémoire > par défaut
+      const sourcePages = 
+        (preloadedPages && preloadedPages[v.id]) ||
+        (v.pages && v.pages.length > 0 ? v.pages : null) ||
+        PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
+          pageNumber: pageConfig.pageNumber as PDFPageNumber,
+          elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
+          dynamicZones: pageConfig.dynamicZones as DynamicZone[]
+        }));
       
       return {
         ...v,
