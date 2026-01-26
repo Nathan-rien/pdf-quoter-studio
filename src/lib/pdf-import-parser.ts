@@ -328,12 +328,13 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     if (/Dont\s+eco-?taxe/i.test(l)) continue;
     if (isBannedLine(l) || isGarantieLine(l)) continue;
 
-    // Special refs first (Installation, Frais de livraison)
+    // Special refs first (Installation ONLY - Frais de livraison is excluded from import)
     // Using windowed lookahead to avoid absorbing global totals like "14 700,00 €"
     // FIXED: Use permissive regex patterns instead of strict startsWith()
     const isInstallation = isInstallationStartLine(l);
-    const isFraisLivraison = isFraisLivraisonLine(l);
-    const specialRefMatch = isInstallation ? 'Installation' : (isFraisLivraison ? 'Frais de livraison' : null);
+    // NOTE: Frais de livraison is intentionally NOT imported
+    const specialRefMatch = isInstallation ? 'Installation' : null;
+    
     if (specialRefMatch) {
       // Windowed lookahead: scan up to 6 lines maximum to find QTE + total
       const maxLookahead = 6;
@@ -629,43 +630,31 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
           if (isBannedLine(currentLine) || isGarantieLine(currentLine)) continue;
           
           // Try to extract amount from this line
-          const amountMatches = [...currentLine.matchAll(/(\d{1,2})\s+([\d\s,.]+)\s*€/gi)];
-          if (amountMatches.length > 0) {
+          // Format expected: "QTE AMOUNT €" where AMOUNT is the TOTAL (not unitaire)
+          // Example: "2 974,00 € Installation" → qty=2, total=974.00€
+          const amountMatches = [...currentLine.matchAll(/([\d\s,.]+)\s*€/gi)];
+          if (amountMatches.length > 0 && recoveredTotal === 0) {
             const lastMatch = amountMatches[amountMatches.length - 1];
-            const qty = parseInt(lastMatch[1], 10) || 1;
-            const total = parseNumber(lastMatch[2]) || 0;
+            const total = parseNumber(lastMatch[1]) || 0;
             
-            // Only accept reasonable amounts (< 5000€ for service lines)
-            if (total > 0 && total < 5000) {
-              recoveredQty = qty;
-              recoveredTotal = total;
-              foundAmount = true;
-              
-              // Add text before the amount
-              const textPart = currentLine.slice(0, currentLine.indexOf(lastMatch[0])).trim();
-               if (textPart && !isInstallationStartLine(textPart)) {
-                designationParts.push(textPart);
-              }
-              continue;
-            }
-          }
-          
-          // Also check for amount-only pattern (fallback qty=1)
-          const amountOnly = currentLine.match(/([\d\s,.]+)\s*€/);
-          if (amountOnly && recoveredTotal === 0) {
-            const total = parseNumber(amountOnly[1]) || 0;
-            if (total > 0 && total < 5000) {
-              // Check for qty before amount
-              const qtyMatch = currentLine.match(/\b(\d{1,2})\s+[\d\s,.]+\s*€/);
+            // Only accept reasonable amounts (100€ to 5000€ for service lines)
+            if (total >= 100 && total < 5000) {
+              // Look for a standalone QTE before the amount (e.g., "2 974,00")
+              // The QTE is typically a 1-2 digit number at the START of the line or right before
+              const lineBeforeAmount = currentLine.slice(0, currentLine.indexOf(lastMatch[0])).trim();
+              const qtyMatch = lineBeforeAmount.match(/\b(\d{1,2})\s*$/);
               if (qtyMatch) {
                 recoveredQty = parseInt(qtyMatch[1], 10) || 1;
               }
-              recoveredTotal = total;
+              recoveredTotal = total; // This is already the VTN (total)
               foundAmount = true;
               
-              const textPart = currentLine.slice(0, currentLine.indexOf(amountOnly[0])).trim();
-               if (textPart && !isInstallationStartLine(textPart)) {
-                designationParts.push(textPart);
+              // Add text before the qty+amount (the real designation part)
+              const textBeforeQty = qtyMatch 
+                ? lineBeforeAmount.slice(0, lineBeforeAmount.lastIndexOf(qtyMatch[0])).trim()
+                : lineBeforeAmount;
+              if (textBeforeQty && !isInstallationStartLine(textBeforeQty)) {
+                designationParts.push(textBeforeQty);
               }
               continue;
             }
@@ -725,65 +714,67 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Look for SY-RKS02 reference (may be embedded in a longer line)
+      // Look for SY-RKS02 reference
       if (/SY-RKS02/i.test(line)) {
         console.log('[Cybertek Parser] Recovery: found SY-RKS02 at line', i, ':', line);
         
-        // Scan window to collect designation + amount.
-        // IMPORTANT: In extracted text, the designation often sits on the PREVIOUS line
-        // and the amount can be on a dedicated line ("2 216,00 €").
-        const maxWindow = 25;
+        // Scan a TIGHT window around the SY-RKS02 line only
+        // Stop as soon as we hit another product or marker
         const designationParts: string[] = [];
         let recoveredQty = 1;
         let recoveredTotal = 0;
-        let amountLineIdx = -1;
-
-        const startIdx = Math.max(0, i - 2);
         
-        for (let j = startIdx; j < lines.length && j <= i + maxWindow; j++) {
+        // Look 1 line before for the main designation
+        const prevLine = i > 0 ? lines[i - 1] : '';
+        if (prevLine && /Kit\s+Rails\s+coulissants/i.test(prevLine)) {
+          designationParts.push(prevLine.trim());
+        }
+        
+        // Scan forward for amount and additional designation (max 8 lines)
+        for (let j = i; j < lines.length && j <= i + 8; j++) {
           const currentLine = lines[j];
           
-          // Stop if we hit another SY- product or terminal markers
+          // Hard stop: another SY- product, Installation, or terminal markers
           if (j > i && (
             (syRefPattern.test(currentLine) && !/SY-RKS02/i.test(currentLine)) ||
             isInstallationStartLine(currentLine) ||
             isFraisLivraisonLine(currentLine) ||
-            stopRe.test(currentLine)
+            stopRe.test(currentLine) ||
+            /HAT5320/i.test(currentLine) // Next product in this PDF
           )) {
             break;
           }
           
-          // Skip banned lines for designation but still check for amounts
-          const skipForDesignation = isBannedLine(currentLine);
-          
-          // Try to extract QTE + amount
-          const amountMatches = [...currentLine.matchAll(/(\d{1,2})\s+([\d\s,.]+)\s*€/gi)];
-          if (amountMatches.length > 0 && recoveredTotal === 0) {
-            const lastMatch = amountMatches[amountMatches.length - 1];
-            const qty = parseInt(lastMatch[1], 10) || 1;
-            const total = parseNumber(lastMatch[2]) || 0;
-            
-            // Accept reasonable amounts (Kit Rails should be ~200€)
-            if (total > 0 && total < 1000) {
-              recoveredQty = qty;
+          // Try to extract amount (format: "QTE AMOUNT €")
+          const amountMatch = currentLine.match(/([\d\s,.]+)\s*€/);
+          if (amountMatch && recoveredTotal === 0) {
+            const total = parseNumber(amountMatch[1]) || 0;
+            // Kit Rails should be ~200€ (accept 50-500)
+            if (total >= 50 && total <= 500) {
+              // Look for qty before amount
+              const qtyMatch = currentLine.match(/\b(\d{1,2})\s+[\d\s,.]+\s*€/);
+              if (qtyMatch) {
+                recoveredQty = parseInt(qtyMatch[1], 10) || 1;
+              }
               recoveredTotal = total;
-              amountLineIdx = j;
             }
           }
           
-          // Collect line for designation (including after the amount line to capture "CMA -01" + "Garantie")
-          if (!skipForDesignation) {
-            // Skip the pure amount-only line ("2 216,00 €") but keep other lines.
-            if (/^\s*\d{1,2}\s+[\d\s,.]+\s*€\s*$/i.test(currentLine)) continue;
-
-            let clean = currentLine
+          // Collect designation parts (not the SY- line itself, not amount-only lines)
+          if (!/^SY-RKS02/i.test(currentLine) && !/^\s*\d{1,2}\s+[\d\s,.]+\s*€\s*$/i.test(currentLine)) {
+            const clean = currentLine
               .replace(/\bSY-RKS02\b/gi, '')
+              .replace(/Garantie:\s*\d+\s*ans?/gi, '') // Strip "Garantie: X ans" suffix
               .trim();
-
-            // Drop a lonely SY code line
-            if (/^SY-\w+/i.test(clean) && clean.length <= 12) continue;
-
-            if (clean) designationParts.push(clean);
+            
+            // Only add if it looks like RKS designation content
+            if (clean && (
+              /profondeur|rack|compatible|CMA/i.test(clean) ||
+              /Kit\s+Rails/i.test(clean) ||
+              /RKS-02/i.test(clean)
+            )) {
+              designationParts.push(clean);
+            }
           }
         }
         
@@ -791,7 +782,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
           const designation = designationParts
             .join(' ')
             .replace(/\s+/g, ' ')
-            .trim();
+            .trim() || 'Synology Kit Rails coulissants RKS-02';
           
           console.log('[Cybertek Parser] Recovery: RKS-02 extracted', {
             qty: recoveredQty,
@@ -813,34 +804,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
   
-  // Recovery for "Frais de livraison" (including 0€ amounts)
-  const hasFraisLivraison = result.lignes!.some(l => 
-    l.reference?.toLowerCase().includes('frais')
-  );
-  
-  if (!hasFraisLivraison) {
-    for (let i = 0; i < lines.length; i++) {
-      if (isFraisLivraisonLine(lines[i])) {
-        // Look for amount on this line or next few lines
-        for (let j = i; j < lines.length && j <= i + 5; j++) {
-          const amountMatch = lines[j].match(/([\d\s,.]+)\s*€/);
-          if (amountMatch) {
-            const total = parseNumber(amountMatch[1]) ?? 0;
-            // Accept 0€ for delivery
-            result.lignes!.push({
-              reference: 'Frais de livraison',
-              designation: 'Frais de livraison',
-              quantite: 1,
-              totalHT: total,
-              prixUnitaire: total,
-            });
-            break;
-          }
-        }
-        break;
-      }
-    }
-  }
+  // NOTE: "Frais de livraison" is intentionally NOT recovered - not needed in Invest
   
   console.log('[Cybertek Parser] Final extracted lines:', result.lignes!.map(l => ({
     ref: l.reference,
