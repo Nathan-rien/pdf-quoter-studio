@@ -304,61 +304,9 @@ export function RentalProposalExport() {
       `;
     }
     
-    // Dernière page : Récapitulatif et signature
-    const lastPage = totalPages;
-    dynamicContent[lastPage] = `
-      <div class="dynamic-content" style="position: absolute; left: 5%; top: 10%; width: 90%; z-index: 40;">
-        <h3 style="margin: 0 0 16px 0; font-size: 14px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Récapitulatif de votre offre</h3>
-        
-        <div class="summary-box" style="margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 6px;">
-            <span style="color: #6b7280;">Investissement HT :</span>
-            <span style="font-weight: 600;">${formatNumber(matriceData.montantInvestissement)} €</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 6px;">
-            <span style="color: #6b7280;">Durée :</span>
-            <span style="font-weight: 600;">${matriceData.duree} mois</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 6px;">
-            <span style="color: #6b7280;">Loyer mensuel HT :</span>
-            <span style="font-weight: 600; color: #2563eb;">${formatNumber(calculatedValues.loyerMensuel)} €</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 10px;">
-            <span style="color: #6b7280;">Loyer avec services :</span>
-            <span style="font-weight: 600; color: #2563eb;">${formatNumber(calculatedValues.loyerServicesInclus)} €</span>
-          </div>
-        </div>
-        
-        <div class="total-box" style="margin-bottom: 24px;">
-          <p style="font-weight: 600; color: #16a34a; margin: 0; font-size: 11px;">
-            Coût total du contrat : ${formatNumber(calculatedValues.coutContrat)} €
-          </p>
-        </div>
-        
-        <p style="color: #6b7280; font-size: 9px; margin-bottom: 24px;">
-          Le présent document constitue une proposition de location financière. Durée de validité : 30 jours.
-        </p>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px;">
-          <div>
-            <p style="font-weight: 600; font-size: 10px; margin-bottom: 4px;">Le client</p>
-            <p style="color: #6b7280; font-size: 9px;">${clientData.nom || 'Nom du client'}</p>
-            <div class="signature-box">Signature</div>
-            <p style="color: #6b7280; font-size: 9px; margin-top: 8px;">Date : ___/___/______</p>
-          </div>
-          <div>
-            <p style="font-weight: 600; font-size: 10px; margin-bottom: 4px;">Pour la société</p>
-            <p style="color: #6b7280; font-size: 9px;">${activeTemplate?.name || 'CybertekPro'}</p>
-            <div class="signature-box">Signature</div>
-            <p style="color: #6b7280; font-size: 9px; margin-top: 8px;">Date : ___/___/______</p>
-          </div>
-        </div>
-        
-        <div style="text-align: center; font-size: 9px; color: #9ca3af; margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
-          <p>Document généré automatiquement - ${date}</p>
-        </div>
-      </div>
-    `;
+    // Note: La dernière page (signature) est 100% statique
+    // Elle utilise uniquement les éléments définis dans le template (zones signature, mentions légales)
+    // Aucune injection dynamique n'est nécessaire
     
     return dynamicContent;
   }, [clientData, matriceData, lignesData, servicesInclus, optionsServices, nosOptions, selectedCommercial, calculatedValues, totalPages, activeTemplate, selectedOptions, selectedNosOptions]);

@@ -1,11 +1,17 @@
 /**
  * Générateur HTML pour l'export PDF
  * Convertit les éléments du template en HTML pour l'impression
+ * 
+ * IMPORTANT: Ce module doit garantir une fidélité WYSIWYG parfaite avec RentalProposalPreview
+ * - Utilise les mêmes constantes (CANVAS_SCALE, PREVIEW_FONT_SCALE, etc.)
+ * - Applique la même normalisation z-index (+10)
+ * - Rend les icônes Lucide en SVG inline
  */
 
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX } from './canvas-constants';
 import { ALLOWED_FONTS } from './template-styles';
 import { getSharedElementStyle, resolveImageUrl } from './template-render-utils';
+import { renderIconSVG } from './lucide-svg-paths';
 import type { 
   EditableElement, 
   TextContent, 
@@ -15,6 +21,12 @@ import type {
   TemplateVersion,
   TemplatePageContent
 } from '@/types/template-editor';
+
+/**
+ * Normalise le z-index d'un élément (identique à RentalProposalPreview)
+ * Ajoute +10 pour éviter que les éléments avec zIndex négatif soient cachés
+ */
+const normalizeZIndex = (element: EditableElement): number => (element.zIndex ?? 0) + 10;
 
 // Cache pour les images base64 (éviter les conversions répétées)
 const imageCache = new Map<string, string>();
@@ -108,6 +120,7 @@ function renderTextElementToHTML(element: EditableElement): string {
   
   const textStyle: React.CSSProperties = {
     ...style,
+    zIndex: normalizeZIndex(element), // Normalisation z-index WYSIWYG
     fontFamily: fontValue,
     fontSize: `${scaledFontSize}px`,
     color: content.color || '#1f2937',
@@ -157,6 +170,7 @@ async function renderImageElementToHTML(element: EditableElement): Promise<strin
   
   const imgStyle: React.CSSProperties = {
     ...style,
+    zIndex: normalizeZIndex(element), // Normalisation z-index WYSIWYG
     opacity,
   };
   
@@ -188,6 +202,7 @@ function renderShapeElementToHTML(element: EditableElement): string {
     
     const wrapperStyle: React.CSSProperties = {
       ...positionStyle,
+      zIndex: normalizeZIndex(element), // Normalisation z-index WYSIWYG
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -220,6 +235,7 @@ function renderShapeElementToHTML(element: EditableElement): string {
   // Formes standard
   const shapeStyle: React.CSSProperties = {
     ...positionStyle,
+    zIndex: normalizeZIndex(element), // Normalisation z-index WYSIWYG
     backgroundColor: content.backgroundColor !== 'transparent' ? content.backgroundColor : undefined,
     opacity: (content.backgroundOpacity ?? 100) / 100,
     borderRadius: content.shapeType === 'circle' || content.shapeType === 'ellipse'
@@ -255,38 +271,41 @@ function renderShapeElementToHTML(element: EditableElement): string {
       textHtml = `<span style="${styleToString(textStyle)}">${escapeHTML(t.content)}</span>`;
     }
     
-    // Note: Les icônes Lucide ne peuvent pas être rendues en HTML pur de manière simple
-    // On les omet pour le PDF
+    // Rendu SVG inline des icônes internes
+    let iconHtml = '';
+    if (content.innerContent.icon) {
+      const icon = content.innerContent.icon;
+      const scaledIconSize = Math.max(icon.size * PREVIEW_ICON_SCALE, 8);
+      iconHtml = renderIconSVG(icon.name, scaledIconSize, icon.color);
+    }
     
-    innerContent = `<div style="${styleToString(innerStyle)}">${textHtml}</div>`;
+    innerContent = `<div style="${styleToString(innerStyle)}">${iconHtml}${textHtml}</div>`;
   }
   
   return `<div style="${styleToString(shapeStyle)}">${innerContent}</div>`;
 }
 
 /**
- * Rend un élément icône en HTML (placeholder - les icônes SVG sont complexes)
+ * Rend un élément icône en HTML avec SVG inline
  */
 function renderIconElementToHTML(element: EditableElement): string {
-  // Les icônes Lucide nécessiteraient d'inclure le SVG complet
-  // Pour simplifier, on affiche un placeholder ou on omet
   const content = element.content as IconContent;
   const style = getSharedElementStyle({ element });
   const scaledSize = Math.max(content.size * PREVIEW_ICON_SCALE, 8);
   
-  // Placeholder simple avec le nom de l'icône
   const iconStyle: React.CSSProperties = {
     ...style,
+    zIndex: normalizeZIndex(element), // Normalisation z-index WYSIWYG
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: `${scaledSize * 0.5}px`,
-    color: content.color,
     transform: content.rotation ? `rotate(${content.rotation}deg)` : undefined,
   };
   
-  // Note: On pourrait inclure les SVG des icônes Lucide ici si nécessaire
-  return `<div style="${styleToString(iconStyle)}"></div>`;
+  // Rendu SVG inline de l'icône Lucide
+  const svgHtml = renderIconSVG(content.iconName, scaledSize, content.color, content.strokeWidth);
+  
+  return `<div style="${styleToString(iconStyle)}">${svgHtml}</div>`;
 }
 
 /**
