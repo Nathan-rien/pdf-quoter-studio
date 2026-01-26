@@ -1,145 +1,132 @@
 
-
-# Plan : Corriger le parsing Cybertek (Adresse, Totaux, Ligne Installation)
+# Plan : Corriger le parsing Installation et agrandir les champs Désignation
 
 ## Problèmes identifiés
 
-### 1. Adresse non récupérée
-Le parser Cybertek cherche des patterns très spécifiques mais ne récupère pas correctement le bloc "ADRESSE DE LIVRAISON":
-- **Actuellement** : regex trop spécifique (`DOMAINE DE RABA + RUE/AVENUE/COURS...`)
-- **Attendu** : Extraction multi-lignes après "ADRESSE DE LIVRAISON"
+### Problème 1 : Ligne "Prestation d'installation" mal parsée
 
-### 2. Données Matrice non populées  
-Les totaux (Total HT, TVA, TTC) ne sont pas visibles dans le texte extrait du PDF Cybertek. Ils doivent être **calculés** à partir des lignes produits :
-- Total HT = 2 176 + 3 222 + 216 + 8 112 + 974 = **14 700,00 €**
-- TVA 20% = 14 700 × 0.20 = **2 940,00 €**
-- Total TTC = 14 700 × 1.20 = **17 640,00 €**
+La ligne d'installation dans le PDF Cybertek affiche :
+- **QTE** : 2
+- **Prix Total de vente HT** : 974,00 €
 
-### 3. Ligne "Installation" manquante
-Le parser cherche les lignes commençant par "Installation" mais le PDF Cybertek montre:
-- REF = "Installation"
-- DESIGNATION = "Prestation d'installation sur les sites de Bordeaux..."
+Mais le parser extrait :
+- **Nb** : 14 (incorrect)
+- **VTN** : 700,00 € (incorrect)
 
-Le problème : la ligne parsée commence par "Prestation d'installation" car le texte est concaténé différemment.
+**Cause** : Le regex `rowEndRegex` (`/(\d+)\s+${money}\s*€\s*$/`) capture mal les données car :
+1. Le texte PDF contient probablement d'autres nombres (comme "16Go", "2x", "12 disques") qui sont confondus avec la quantité
+2. Le pattern cherche `\d+ money €` en fin de ligne, mais le buffer accumulé contient trop de texte non filtré
+
+Le problème vient du fait que la ligne "Prestation" est matchée par `specialRefs` et que le buffer accumulé contient des nombres parasites ("2x 16Go", "12 disques 8To").
+
+### Problème 2 : Champ Désignation trop étroit
+
+Le `TableHead` pour "Désignation" n'a pas de largeur définie, il prend l'espace restant mais le `Input` à l'intérieur est contraint par la hauteur `h-8`.
 
 ---
 
 ## Modifications requises
 
-### Fichier : `src/lib/pdf-import-parser.ts`
+### Fichier 1 : `src/lib/pdf-import-parser.ts`
 
-### Modification 1 : Extraire l'adresse depuis "ADRESSE DE LIVRAISON"
+#### Modification A : Améliorer le parsing des lignes "Prestation"
 
-**Lignes 122-141** - Ajouter une extraction multi-lignes après "ADRESSE DE LIVRAISON":
+Renforcer l'extraction pour les lignes commençant par "Prestation" :
+1. Chercher le pattern QTE + montant **à la fin du texte accumulé** uniquement
+2. Exclure les nombres faisant partie de la désignation (comme "2x", "16Go", "12 disques")
 
 ```typescript
-// Cybertek: Extract address from ADRESSE DE LIVRAISON block
-const livraisonIdx = lines.findIndex((l) => /ADRESSE\s+DE\s+LIVRAISON/i.test(l));
-if (livraisonIdx !== -1) {
-  // Skip header lines (GROUPE CYBERTEK, etc.) - look for client name pattern
-  for (let i = livraisonIdx + 1; i < Math.min(livraisonIdx + 10, lines.length); i++) {
-    const line = lines[i];
-    
-    // Skip company info lines
-    if (/S\.?A\.?S\.?\s+GROUPE\s+CYBERTEK|SIEGE\s+SOCIAL|AU\s+CAPITAL|RCS|TVA\s*:/i.test(line)) {
-      continue;
-    }
-    
-    // Stop at next section marker
-    if (/ADRESSE\s+DE\s+FACTURATION|N°\s*client|Devis\s+du/i.test(line)) {
-      break;
-    }
-    
-    // Client name (first significant line after headers)
-    if (!result.client!.nom && /^[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+$/.test(line) && line.length > 5) {
-      result.client!.nom = line.trim();
-      continue;
-    }
-    
-    // Address line (contains street keywords or numbers)
-    if (!result.client!.adresse && /\d+|RUE|AVENUE|COURS|BOULEVARD|DOMAINE|CHEMIN/i.test(line)) {
-      result.client!.adresse = line.trim();
-      continue;
-    }
-    
-    // Postal code + City (5 digits + city name)
-    const cpVille = line.match(/^(\d{5})\s+(.+?)(?:\s+FR)?$/i);
-    if (cpVille) {
-      result.client!.codePostal = cpVille[1];
-      result.client!.ville = cpVille[2].replace(/\s+FR$/i, '').trim();
-      break;
-    }
-  }
-}
+// Dans la section specialRefMatch (lignes 290-318)
+// Le pattern actuel match tous les nombres, il faut être plus strict
+
+// Amélioration : créer un pattern qui cherche UNIQUEMENT le pattern final
+// Format attendu dans le PDF Cybertek : "... texte 2 974,00 €"
+// où 2 = quantité et 974,00 € = prix total
+
+// Solution : scanner depuis la FIN du buffer pour trouver "QTE montant €"
+const endOfBufferMatch = buffer.match(/(?: |^)(\d{1,3})\s+([\d\s,]+)\s*€\s*$/);
 ```
 
-### Modification 2 : Calculer les totaux si non trouvés
+Mais le vrai problème est que le regex actuel capture "14" qui n'est pas la QTE.
 
-**Lignes 396-427** - Ajouter une stratégie de calcul après les fallbacks:
+**Solution améliorée** : Inverser l'approche - pour les lignes "Prestation", chercher le pattern final strict `\b(\d{1,2})\s+([\d\s,.]+)\s*€\s*$` qui :
+- `\b(\d{1,2})` : 1 ou 2 chiffres précédés d'une limite de mot (évite "16Go")
+- `\s+([\d\s,.]+)\s*€\s*$` : montant en euros à la fin
 
 ```typescript
-// Strategy 4: Calculate totals from line items if still not found
-if (result.totaux!.totalHT === null && result.lignes!.length > 0) {
-  const calculatedTotalHT = result.lignes!.reduce(
-    (sum, line) => sum + (line.totalHT || 0), 
-    0
-  );
-  
-  if (calculatedTotalHT > 0) {
-    result.totaux!.totalHT = Math.round(calculatedTotalHT * 100) / 100;
-    result.totaux!.tva = Math.round(calculatedTotalHT * 0.20 * 100) / 100;
-    result.totaux!.totalTTC = Math.round(calculatedTotalHT * 1.20 * 100) / 100;
-    console.log('Cybertek - Totals calculated from line items:', result.totaux);
-  }
-}
+// Amélioration du pattern pour les prestations
+const prestationEndRegex = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
 ```
 
-### Modification 3 : Ajouter "Prestation" dans les références spéciales
+### Fichier 2 : `src/components/rental-proposal/RentalDataEditor.tsx`
 
-**Ligne 199** - Étendre la liste `specialRefs`:
+#### Modification B : Agrandir le champ Désignation
 
-```typescript
-// Special refs without dash - including service/prestation lines
-const specialRefs = ['Installation', 'Frais de livraison', 'Prestation'];
-```
+Remplacer le composant `Input` par `Textarea` pour la colonne Désignation, avec une largeur minimum plus grande et permettre le redimensionnement.
 
-Et modifier la logique de matching pour être plus flexible (lignes 236-265):
-
-```typescript
-// Special refs: match at start OR check if "Installation" is the reference column
-const specialRefMatch = specialRefs.find((sr) => 
-  l.toLowerCase().startsWith(sr.toLowerCase()) ||
-  (sr === 'Installation' && /^Installation\s+/i.test(l))
-);
-
-// Also handle case where "Installation" appears as a standalone ref followed by description
-if (!specialRefMatch && /^Installation$/i.test(l.trim())) {
-  // This is likely the REF "Installation" - look for designation in next line
-  // ... handle this case
-}
+```tsx
+// Ligne 756-761 - Remplacer Input par Textarea pour Désignation
+<TableCell className="min-w-[300px]">
+  <Textarea
+    value={ligne.designation}
+    onChange={(e) => updateLigne(index, { designation: e.target.value })}
+    className="min-h-[40px] resize-y"
+    rows={2}
+  />
+</TableCell>
 ```
 
 ---
 
-## Résumé des résultats attendus
+## Détails techniques
+
+### Modification 1 : Correction du pattern pour les prestations
+
+Dans `parseCybertekText()`, section lignes 290-318, améliorer le pattern pour détecter correctement QTE et Total HT :
+
+```typescript
+// Pattern amélioré : cherche le pattern final "QTE montant €"
+// - \b assure qu'on ne capture pas "16Go" ou "2x"
+// - (\d{1,2}) limite à 1-2 chiffres pour la quantité
+// - Montant peut avoir espaces comme séparateurs de milliers
+const prestationEndRegex = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
+
+if (specialRefMatch) {
+  let buffer = l;
+  let j = i;
+  while (j < rowsSource.length - 1) {
+    // Essayer de matcher la fin du buffer avec le pattern strict
+    const endMatch = buffer.match(prestationEndRegex);
+    if (endMatch) {
+      const quantite = parseInt(endMatch[1], 10) || 1;
+      const totalHT = parseNumber(endMatch[2]) || 0;
+      // ...
+    }
+    // ...
+  }
+}
+```
+
+### Modification 2 : Élargir la colonne Désignation
+
+1. Ajouter `min-w-[300px]` ou `w-1/2` au `TableHead` et `TableCell` de Désignation
+2. Utiliser `Textarea` au lieu de `Input` pour permettre l'affichage multiligne
+3. Ajouter `resize-y` pour permettre le redimensionnement vertical
+
+---
+
+## Résumé des fichiers modifiés
+
+| Fichier | Modification |
+|---------|--------------|
+| `src/lib/pdf-import-parser.ts` | Pattern regex amélioré pour les lignes "Prestation" |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Textarea + min-width pour Désignation |
+
+## Résultat attendu
 
 | Donnée | Avant | Après |
 |--------|-------|-------|
-| **Nom client** | GROUPE KEDGE BUSINESS SCHOOL ✓ | GROUPE KEDGE BUSINESS SCHOOL ✓ |
-| **Adresse** | null ❌ | DOMAINE DE RABA 680 COURS DE LA LIBERATION ✓ |
-| **Code postal** | 33400 ✓ | 33400 ✓ |
-| **Ville** | TALENCE FR ✓ | TALENCE ✓ (sans "FR") |
-| **Total HT** | null ❌ | 14 700,00 € ✓ (calculé) |
-| **TVA 20%** | null ❌ | 2 940,00 € ✓ (calculé) |
-| **Total TTC** | null ❌ | 17 640,00 € ✓ (calculé) |
-| **Ligne Installation** | manquante ❌ | Présente ✓ |
-
----
-
-## Impact technique
-
-- **Fichier modifié** : `src/lib/pdf-import-parser.ts`
-- **Fonction modifiée** : `parseCybertekText()`
-- **Aucun impact sur** : Le parser Grosbill (fonction séparée)
-- **Rétrocompatibilité** : Les extractions existantes restent en fallback
-
+| **Désignation Installation** | "d'installation sur..." (tronqué, sans "Prestation") | "Prestation d'installation sur les sites de Bordeaux et Marseille..." (complet) |
+| **Nb (Installation)** | 14 ❌ | 2 ✓ |
+| **VTN (Installation)** | 700,00 € ❌ | 974,00 € ✓ |
+| **Affichage champ Désignation** | Tronqué | Visible en entier avec possibilité de redimensionner |
