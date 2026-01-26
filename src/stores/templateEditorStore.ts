@@ -230,13 +230,10 @@ const saveToHistory = (state: TemplateEditorState) => {
   }
 };
 
-// Helper pour renuméroter les pages séquentiellement
+// Helper pour renuméroter les pages séquentiellement (sans tri - préserve l'ordre d'insertion)
 const renumberPagesInVersion = (pages: TemplatePageContent[]): TemplatePageContent[] => {
-  // Trier les pages par numéro actuel
-  const sortedPages = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
-  
-  // Renuméroter séquentiellement à partir de 1
-  return sortedPages.map((page, index) => {
+  // Renuméroter les pages dans leur ordre actuel (PAS de tri pour préserver l'insertion)
+  return pages.map((page, index) => {
     const newNumber = index + 1;
     if (page.pageNumber !== newNumber) {
       // Mettre à jour le numéro de page dans les zones dynamiques aussi
@@ -1850,20 +1847,16 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
     // Trouver l'index d'insertion
     // afterPageNumber = 0 signifie "au début", null/undefined = "à la fin"
-    console.log('[addPage] afterPageNumber:', afterPageNumber, 'typeof:', typeof afterPageNumber);
-    console.log('[addPage] pages:', currentVersion.pages.map(p => p.pageNumber));
-    
     let insertIndex: number;
     if (afterPageNumber === 0) {
       insertIndex = 0;
     } else if (afterPageNumber !== undefined && afterPageNumber !== null) {
       const foundIndex = currentVersion.pages.findIndex(p => p.pageNumber === afterPageNumber);
-      console.log('[addPage] foundIndex for page', afterPageNumber, ':', foundIndex);
       insertIndex = foundIndex >= 0 ? foundIndex + 1 : currentVersion.pages.length;
     } else {
       insertIndex = currentVersion.pages.length;
     }
-    console.log('[addPage] insertIndex:', insertIndex);
+
     // Trouver le prochain numéro de page disponible (temporaire, sera renuméroté)
     const maxPageNumber = Math.max(...currentVersion.pages.map(p => p.pageNumber), 0);
     const tempPageNumber = maxPageNumber + 1;
