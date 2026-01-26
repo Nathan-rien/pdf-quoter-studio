@@ -685,9 +685,10 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(4 as PDFPageNumber, staticElements, renderProductTable);
   };
 
-  // Page 5 - Services inclus uniquement (bloc permanent)
+  // Page 5 - Services inclus (bloc permanent + options additionnelles sélectionnées)
   const renderServicesInclusPage = () => {
     const staticElements = getStaticPageElements(5 as PDFPageNumber);
+    const pageOptions = selectedOptions.slice(0, OPTIONS_PER_PAGE);
     
     const renderServicesContent = () => (
       <div 
@@ -714,6 +715,34 @@ export function RentalProposalPreview() {
             </ul>
           </div>
         </div>
+
+        {/* Options additionnelles sélectionnées (depuis optionsServices) */}
+        {pageOptions.length > 0 && (
+          <div className="space-y-2">
+            {pageOptions.map((option) => (
+              <div key={option.id} className="border rounded overflow-hidden">
+                <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-foreground/70" />
+                  <span className="font-semibold text-[11px]">{option.name}</span>
+                  {option.price !== null && (
+                    <span className="ml-auto text-[9px] text-primary font-medium">
+                      {formatNumber(option.price)} €/mois
+                    </span>
+                  )}
+                </div>
+                {option.description && (
+                  <div className="px-3 py-2 bg-background">
+                    <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+                      {option.description.split(',').map((item, i) => (
+                        <li key={i} className="leading-tight">{item.trim()}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
     

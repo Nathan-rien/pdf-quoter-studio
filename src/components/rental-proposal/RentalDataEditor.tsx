@@ -513,6 +513,103 @@ export function RentalDataEditor() {
               />
             </CardContent>
           </Card>
+
+          {/* Options additionnelles - Page 5 */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Options additionnelles</CardTitle>
+                <CardDescription>Services supplémentaires affichés sur la page 5</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={activeAdminOptions.length === 0}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Importer depuis Admin
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-3">
+                      <div className="font-medium text-sm">Options disponibles</div>
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {activeAdminOptions.map((option) => (
+                          <label
+                            key={option.id}
+                            className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={selectedAdminOptions.includes(option.id)}
+                              onCheckedChange={() => toggleAdminOption(option.id)}
+                              className="mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{option.title}</div>
+                              {option.price && (
+                                <div className="text-xs text-muted-foreground">
+                                  {option.price.amount} {option.price.unit}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        disabled={selectedAdminOptions.length === 0}
+                        onClick={handleImportSelected}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter {selectedAdminOptions.length > 0 && `(${selectedAdminOptions.length})`}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button variant="outline" size="sm" onClick={() => addOptionService('', '', null)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {optionsServices.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Aucune option additionnelle</p>
+                ) : (
+                  optionsServices.map((opt) => (
+                    <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                      <Switch checked={opt.selected} onCheckedChange={() => toggleOptionService(opt.id)} className="mt-2" />
+                      <Input
+                        placeholder="Nom"
+                        value={opt.name}
+                        onChange={(e) => updateOptionService(opt.id, { name: e.target.value })}
+                        className="w-40"
+                      />
+                      <Textarea
+                        placeholder="Description"
+                        value={opt.description}
+                        onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
+                        className="flex-1 min-h-[40px] resize-y"
+                        rows={2}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Prix"
+                        value={opt.price ?? ''}
+                        onChange={(e) => updateOptionService(opt.id, { price: e.target.value ? parseFloat(e.target.value) : null })}
+                        className="w-24"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)} className="mt-1">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Nos Options Tab (Page 6) */}
