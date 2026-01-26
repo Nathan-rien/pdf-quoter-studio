@@ -29,6 +29,7 @@ import {
 import type { PDFPageNumber } from "@/types/pdf-template";
 import type { ShapeType } from "@/types/template-editor";
 import { IconLibraryDialog } from "./IconLibraryDialog";
+import { CreatePageDialog } from "./CreatePageDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +62,7 @@ export function EditorSidebar() {
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState<number | null>(null);
+  const [createPageDialogOpen, setCreatePageDialogOpen] = useState(false);
   
   const { 
     selectedPageNumber, 
@@ -118,10 +120,16 @@ export function EditorSidebar() {
 
   const handleAddPage = () => {
     if (!isEditable) return;
-    const newPage = addPage('Nouvelle page', selectedPageNumber);
+    setCreatePageDialogOpen(true);
+  };
+
+  const handleConfirmAddPage = (title: string, afterPageNumber: number | null) => {
+    const newPage = addPage(title, afterPageNumber ?? undefined);
     if (newPage) {
       toast.success(`Page ${newPage.pageNumber} ajoutée`);
+      setSelectedPage(newPage.pageNumber as PDFPageNumber);
     }
+    setCreatePageDialogOpen(false);
   };
 
   const handleDeletePageClick = (pageNumber: number, e: React.MouseEvent) => {
@@ -358,6 +366,14 @@ export function EditorSidebar() {
             open={iconDialogOpen}
             onOpenChange={setIconDialogOpen}
             onSelect={handleIconSelect}
+          />
+
+          {/* Dialog de création de page */}
+          <CreatePageDialog
+            open={createPageDialogOpen}
+            onOpenChange={setCreatePageDialogOpen}
+            onConfirm={handleConfirmAddPage}
+            defaultAfterPage={selectedPageNumber}
           />
         </CardContent>
       </Card>

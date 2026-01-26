@@ -1849,9 +1849,12 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     saveToHistory(state);
 
     // Trouver l'index d'insertion
-    const insertIndex = afterPageNumber 
-      ? currentVersion.pages.findIndex(p => p.pageNumber === afterPageNumber) + 1
-      : currentVersion.pages.length;
+    // afterPageNumber = 0 signifie "au début", null/undefined = "à la fin"
+    const insertIndex = afterPageNumber === 0
+      ? 0
+      : afterPageNumber 
+        ? currentVersion.pages.findIndex(p => p.pageNumber === afterPageNumber) + 1
+        : currentVersion.pages.length;
 
     // Trouver le prochain numéro de page disponible (temporaire, sera renuméroté)
     const maxPageNumber = Math.max(...currentVersion.pages.map(p => p.pageNumber), 0);
