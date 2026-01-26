@@ -323,37 +323,79 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     });
   }
 
-  // Totals extraction - Cybertek shows totals as a block after the table
-  // Look for the section after "Offre Locative" / totals labels. We prefer amounts >= 1000 to avoid catching the monthly rent.
-  const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
-  const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines.slice(-60);
-
-  // Extract all monetary amounts from the tail section (sometimes the € is separated)
-  const moneyPattern = new RegExp(`${money}(?:\\s*€|\\s*EUR)?`, 'gi');
-  const allAmounts: number[] = [];
-
-  for (const line of tail) {
-    const matches = [...line.matchAll(moneyPattern)];
-    for (const m of matches) {
-      const v = parseNumber(m[1]);
-      if (v !== null) allAmounts.push(v);
+  // Totals extraction - Strategy 1: Look for amounts after "Loyer mensuel" marker
+  // Cybertek PDFs show totals (HT, TVA, TTC) as 3 consecutive amounts without labels
+  const loyerIdx = lines.findIndex((l) => /Loyer\s+mensuel/i.test(l));
+  
+  if (loyerIdx !== -1) {
+    const afterLoyer = lines.slice(loyerIdx + 1);
+    const moneyPattern = new RegExp(`${money}\\s*€`, 'gi');
+    const amounts: number[] = [];
+    
+    for (const line of afterLoyer) {
+      const matches = [...line.matchAll(moneyPattern)];
+      for (const m of matches) {
+        const v = parseNumber(m[1]);
+        // Filter: > 100€ to exclude small fees, but include TVA amounts
+        if (v !== null && v >= 100) amounts.push(v);
+      }
+    }
+    
+    // Take the first 3 significant amounts as HT, TVA, TTC
+    if (amounts.length >= 3) {
+      const [ht, tva, ttc] = amounts.slice(0, 3);
+      
+      // Validation: TTC should be close to HT + TVA (5% tolerance)
+      const expectedTTC = ht + tva;
+      if (Math.abs(ttc - expectedTTC) / expectedTTC < 0.05) {
+        result.totaux!.totalHT = ht;
+        result.totaux!.tva = tva;
+        result.totaux!.totalTTC = ttc;
+        console.log('Cybertek totals extracted (after Loyer mensuel):', result.totaux);
+      }
     }
   }
 
-  // Keep only significant amounts (>= 1000) so we don't pick the monthly rent (e.g. 463,62 €)
-  const significantAmounts = allAmounts.filter((n) => n >= 1000);
+  // Strategy 2: Fallback - look in the tail section after table
+  if (result.totaux!.totalHT === null) {
+    const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
+    const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines.slice(-60);
 
-  // Take the last 3 significant amounts as Total HT, TVA 20%, Total TTC
-  if (significantAmounts.length >= 3) {
-    const last3 = significantAmounts.slice(-3);
-    if (last3[2] > last3[0] && last3[2] > last3[1]) {
-      result.totaux!.totalHT = last3[0];
-      result.totaux!.tva = last3[1];
-      result.totaux!.totalTTC = last3[2];
+    const moneyPattern = new RegExp(`${money}(?:\\s*€|\\s*EUR)?`, 'gi');
+    const allAmounts: number[] = [];
+
+    for (const line of tail) {
+      const matches = [...line.matchAll(moneyPattern)];
+      for (const m of matches) {
+        const v = parseNumber(m[1]);
+        if (v !== null) allAmounts.push(v);
+      }
+    }
+
+    // Keep amounts >= 100 (lowered from 1000 to catch smaller TVA)
+    const significantAmounts = allAmounts.filter((n) => n >= 100);
+
+    // Try to find a valid triplet with TTC > HT and TTC > TVA validation
+    if (significantAmounts.length >= 3) {
+      const last3 = significantAmounts.slice(-3);
+      const [potentialHT, potentialTVA, potentialTTC] = last3;
+      
+      // Validate: TTC should be close to HT + TVA
+      const expectedTTC = potentialHT + potentialTVA;
+      if (Math.abs(potentialTTC - expectedTTC) / expectedTTC < 0.05) {
+        result.totaux!.totalHT = potentialHT;
+        result.totaux!.tva = potentialTVA;
+        result.totaux!.totalTTC = potentialTTC;
+      } else if (potentialTTC > potentialHT && potentialTTC > potentialTVA) {
+        // Fallback: just check TTC is largest
+        result.totaux!.totalHT = potentialHT;
+        result.totaux!.tva = potentialTVA;
+        result.totaux!.totalTTC = potentialTTC;
+      }
     }
   }
 
-  // Fallback: try explicit label patterns if block extraction failed
+  // Strategy 3: Fallback - try explicit label patterns
   if (result.totaux!.totalHT === null) {
     const totalHTMatch = [...text.matchAll(
       new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
