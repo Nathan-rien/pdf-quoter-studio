@@ -68,7 +68,6 @@ export function CreatePageDialog({
       afterPageNumber = isNaN(parsed) ? null : parsed;
     }
 
-    console.log('[CreatePageDialog] Position:', position, '-> afterPageNumber:', afterPageNumber);
     onConfirm(title.trim() || "Nouvelle page", afterPageNumber);
   };
 
