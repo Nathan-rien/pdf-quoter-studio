@@ -1,79 +1,145 @@
 
 
-# Plan : Corriger l'extraction des totaux Cybertek
+# Plan : Corriger le parsing Cybertek (Adresse, Totaux, Ligne Installation)
 
-## Problème identifié
+## Problèmes identifiés
 
-Dans le PDF Cybertek, les totaux (14 700,00 €, 2 940,00 €, 17 640,00 €) sont affichés **sans labels** dans la dernière colonne du tableau. Le parser actuel :
+### 1. Adresse non récupérée
+Le parser Cybertek cherche des patterns très spécifiques mais ne récupère pas correctement le bloc "ADRESSE DE LIVRAISON":
+- **Actuellement** : regex trop spécifique (`DOMAINE DE RABA + RUE/AVENUE/COURS...`)
+- **Attendu** : Extraction multi-lignes après "ADRESSE DE LIVRAISON"
 
-1. S'arrête à "Offre Locative" (`stopRe`) avant d'avoir vu les lignes de totaux
-2. Les patterns de fallback cherchent des labels ("Total HT", "TVA 20%", "Total TTC") qui ne sont pas présents sur ces lignes
+### 2. Données Matrice non populées  
+Les totaux (Total HT, TVA, TTC) ne sont pas visibles dans le texte extrait du PDF Cybertek. Ils doivent être **calculés** à partir des lignes produits :
+- Total HT = 2 176 + 3 222 + 216 + 8 112 + 974 = **14 700,00 €**
+- TVA 20% = 14 700 × 0.20 = **2 940,00 €**
+- Total TTC = 14 700 × 1.20 = **17 640,00 €**
 
-## Solution
+### 3. Ligne "Installation" manquante
+Le parser cherche les lignes commençant par "Installation" mais le PDF Cybertek montre:
+- REF = "Installation"
+- DESIGNATION = "Prestation d'installation sur les sites de Bordeaux..."
 
-Modifier la logique d'extraction des totaux dans `parseCybertekText()` pour :
+Le problème : la ligne parsée commence par "Prestation d'installation" car le texte est concaténé différemment.
 
-1. **Chercher les 3 dernières lignes avec des montants significatifs** (après "Loyer mensuel")
-2. **Valider la cohérence** : TTC ≈ HT + TVA et TVA ≈ HT × 0.20
+---
+
+## Modifications requises
 
 ### Fichier : `src/lib/pdf-import-parser.ts`
 
-### Modification 1 : Améliorer l'extraction des totaux (lignes 326-386)
+### Modification 1 : Extraire l'adresse depuis "ADRESSE DE LIVRAISON"
 
-**Avant :** Le code cherche les montants >= 1000 € dans le "tail" du document, mais le filtre et la validation sont trop stricts.
-
-**Après :** Ajouter une nouvelle stratégie spécifique pour Cybertek :
+**Lignes 122-141** - Ajouter une extraction multi-lignes après "ADRESSE DE LIVRAISON":
 
 ```typescript
-// Après l'extraction des lignes produits (ligne ~325)
-
-// Stratégie Cybertek : les 3 dernières lignes avec montants > 100 € 
-// situées APRÈS "Loyer mensuel" sont probablement Total HT, TVA, TTC
-const loyerIdx = lines.findIndex((l) => /Loyer\s+mensuel/i.test(l));
-if (loyerIdx !== -1) {
-  const afterLoyer = lines.slice(loyerIdx + 1);
-  
-  // Extraire tous les montants significatifs (> 100 €) après "Loyer mensuel"
-  const amounts: number[] = [];
-  for (const line of afterLoyer) {
-    const matches = [...line.matchAll(new RegExp(`${money}\\s*€`, 'gi'))];
-    for (const m of matches) {
-      const v = parseNumber(m[1]);
-      if (v !== null && v >= 100) amounts.push(v);
-    }
-  }
-  
-  // Prendre les 3 premiers montants significatifs comme HT, TVA, TTC
-  if (amounts.length >= 3) {
-    const [ht, tva, ttc] = amounts.slice(0, 3);
+// Cybertek: Extract address from ADRESSE DE LIVRAISON block
+const livraisonIdx = lines.findIndex((l) => /ADRESSE\s+DE\s+LIVRAISON/i.test(l));
+if (livraisonIdx !== -1) {
+  // Skip header lines (GROUPE CYBERTEK, etc.) - look for client name pattern
+  for (let i = livraisonIdx + 1; i < Math.min(livraisonIdx + 10, lines.length); i++) {
+    const line = lines[i];
     
-    // Validation : TTC devrait être proche de HT + TVA (tolérance 5%)
-    const expectedTTC = ht + tva;
-    if (Math.abs(ttc - expectedTTC) / expectedTTC < 0.05) {
-      result.totaux!.totalHT = ht;
-      result.totaux!.tva = tva;
-      result.totaux!.totalTTC = ttc;
+    // Skip company info lines
+    if (/S\.?A\.?S\.?\s+GROUPE\s+CYBERTEK|SIEGE\s+SOCIAL|AU\s+CAPITAL|RCS|TVA\s*:/i.test(line)) {
+      continue;
+    }
+    
+    // Stop at next section marker
+    if (/ADRESSE\s+DE\s+FACTURATION|N°\s*client|Devis\s+du/i.test(line)) {
+      break;
+    }
+    
+    // Client name (first significant line after headers)
+    if (!result.client!.nom && /^[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+$/.test(line) && line.length > 5) {
+      result.client!.nom = line.trim();
+      continue;
+    }
+    
+    // Address line (contains street keywords or numbers)
+    if (!result.client!.adresse && /\d+|RUE|AVENUE|COURS|BOULEVARD|DOMAINE|CHEMIN/i.test(line)) {
+      result.client!.adresse = line.trim();
+      continue;
+    }
+    
+    // Postal code + City (5 digits + city name)
+    const cpVille = line.match(/^(\d{5})\s+(.+?)(?:\s+FR)?$/i);
+    if (cpVille) {
+      result.client!.codePostal = cpVille[1];
+      result.client!.ville = cpVille[2].replace(/\s+FR$/i, '').trim();
+      break;
     }
   }
 }
 ```
 
-### Modification 2 : Ajuster le filtre de montants (ligne 344)
+### Modification 2 : Calculer les totaux si non trouvés
 
-Le filtre actuel `>= 1000` exclut potentiellement certaines TVA. Changer en `>= 100` avec une validation plus intelligente basée sur la cohérence HT + TVA = TTC.
+**Lignes 396-427** - Ajouter une stratégie de calcul après les fallbacks:
 
-## Résultat attendu
+```typescript
+// Strategy 4: Calculate totals from line items if still not found
+if (result.totaux!.totalHT === null && result.lignes!.length > 0) {
+  const calculatedTotalHT = result.lignes!.reduce(
+    (sum, line) => sum + (line.totalHT || 0), 
+    0
+  );
+  
+  if (calculatedTotalHT > 0) {
+    result.totaux!.totalHT = Math.round(calculatedTotalHT * 100) / 100;
+    result.totaux!.tva = Math.round(calculatedTotalHT * 0.20 * 100) / 100;
+    result.totaux!.totalTTC = Math.round(calculatedTotalHT * 1.20 * 100) / 100;
+    console.log('Cybertek - Totals calculated from line items:', result.totaux);
+  }
+}
+```
 
-| Donnée | Avant (probablement null) | Après |
-|--------|---------------------------|-------|
-| Total HT | null ou incorrect | 14 700,00 € |
-| TVA 20% | null ou incorrect | 2 940,00 € |
-| Total TTC | null ou incorrect | 17 640,00 € |
+### Modification 3 : Ajouter "Prestation" dans les références spéciales
 
-## Impact
+**Ligne 199** - Étendre la liste `specialRefs`:
+
+```typescript
+// Special refs without dash - including service/prestation lines
+const specialRefs = ['Installation', 'Frais de livraison', 'Prestation'];
+```
+
+Et modifier la logique de matching pour être plus flexible (lignes 236-265):
+
+```typescript
+// Special refs: match at start OR check if "Installation" is the reference column
+const specialRefMatch = specialRefs.find((sr) => 
+  l.toLowerCase().startsWith(sr.toLowerCase()) ||
+  (sr === 'Installation' && /^Installation\s+/i.test(l))
+);
+
+// Also handle case where "Installation" appears as a standalone ref followed by description
+if (!specialRefMatch && /^Installation$/i.test(l.trim())) {
+  // This is likely the REF "Installation" - look for designation in next line
+  // ... handle this case
+}
+```
+
+---
+
+## Résumé des résultats attendus
+
+| Donnée | Avant | Après |
+|--------|-------|-------|
+| **Nom client** | GROUPE KEDGE BUSINESS SCHOOL ✓ | GROUPE KEDGE BUSINESS SCHOOL ✓ |
+| **Adresse** | null ❌ | DOMAINE DE RABA 680 COURS DE LA LIBERATION ✓ |
+| **Code postal** | 33400 ✓ | 33400 ✓ |
+| **Ville** | TALENCE FR ✓ | TALENCE ✓ (sans "FR") |
+| **Total HT** | null ❌ | 14 700,00 € ✓ (calculé) |
+| **TVA 20%** | null ❌ | 2 940,00 € ✓ (calculé) |
+| **Total TTC** | null ❌ | 17 640,00 € ✓ (calculé) |
+| **Ligne Installation** | manquante ❌ | Présente ✓ |
+
+---
+
+## Impact technique
 
 - **Fichier modifié** : `src/lib/pdf-import-parser.ts`
-- **Fonction modifiée** : `parseCybertekText()` (section extraction totaux)
-- **Aucun impact sur** : Le parsing Grosbill (fonction séparée)
-- **Rétrocompatibilité** : Les patterns existants restent en fallback
+- **Fonction modifiée** : `parseCybertekText()`
+- **Aucun impact sur** : Le parser Grosbill (fonction séparée)
+- **Rétrocompatibilité** : Les extractions existantes restent en fallback
 
