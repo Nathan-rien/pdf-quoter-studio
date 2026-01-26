@@ -89,6 +89,9 @@ interface RentalProposalState {
   // Nom personnalisé de la proposition
   proposalName: string;
   
+  // Template sélectionné pour la proposition
+  selectedTemplateId: string | null;
+  
   // Workflow
   currentStep: RentalWorkflowStep;
   hasUnsavedChanges: boolean;
@@ -104,6 +107,9 @@ interface RentalProposalActions {
   
   // Proposal name
   updateProposalName: (name: string) => void;
+  
+  // Template selection
+  selectTemplateForProposal: (templateId: string) => void;
   
   // Matrice data
   updateMatriceField: <K extends keyof MatriceData>(field: K, value: MatriceData[K]) => void;
@@ -186,6 +192,7 @@ const initialState: RentalProposalState = {
   optionsServices: [],
   nosOptions: [],
   proposalName: '',
+  selectedTemplateId: null,
   currentStep: 'import',
   hasUnsavedChanges: false,
   isActive: false,
@@ -244,6 +251,10 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
 
       updateProposalName: (name) => {
         set({ proposalName: name, hasUnsavedChanges: true });
+      },
+
+      selectTemplateForProposal: (templateId) => {
+        set({ selectedTemplateId: templateId, hasUnsavedChanges: true });
       },
 
       updateMatriceField: (field, value) => {
@@ -436,9 +447,9 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           case 'template':
             return state.pdfImportStatus.isImported && state.lignesData.length > 0;
           case 'preview':
-            return state.pdfImportStatus.isImported && state.lignesData.length > 0;
+            return state.pdfImportStatus.isImported && state.lignesData.length > 0 && state.selectedTemplateId !== null;
           case 'export':
-            return state.pdfImportStatus.isImported && state.lignesData.length > 0;
+            return state.pdfImportStatus.isImported && state.lignesData.length > 0 && state.selectedTemplateId !== null;
           default:
             return true;
         }
@@ -470,6 +481,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         optionsServices: state.optionsServices,
         nosOptions: state.nosOptions,
         proposalName: state.proposalName,
+        selectedTemplateId: state.selectedTemplateId,
         currentStep: state.currentStep,
         isActive: state.isActive,
       }),

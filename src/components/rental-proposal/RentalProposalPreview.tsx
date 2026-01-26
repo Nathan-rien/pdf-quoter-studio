@@ -59,21 +59,28 @@ export function RentalProposalPreview() {
     optionsServices,
     nosOptions,
     proposalName,
+    selectedTemplateId,
     updateProposalName,
     getCalculatedValues,
     getSelectedCommercial,
   } = useRentalProposalStore();
 
   const { 
-    getActiveTemplate, 
+    getActiveTemplate,
+    allTemplates,
     getTemplateLatestVersion, 
     preparePreviewEditing, 
     getCurrentVersionForPreview,
     allVersions 
   } = useTemplateEditorStore();
   
-  // Calculer activeTemplate AVANT le useCallback (dépendance)
-  const activeTemplate = getActiveTemplate();
+  // Utiliser le template sélectionné dans le workflow, ou fallback sur le template actif
+  const activeTemplate = React.useMemo(() => {
+    if (selectedTemplateId) {
+      return allTemplates.find(t => t.id === selectedTemplateId) || getActiveTemplate();
+    }
+    return getActiveTemplate();
+  }, [selectedTemplateId, allTemplates, getActiveTemplate]);
   
   // Helper pour obtenir la version courante du template
   const getCurrentVersion = React.useCallback((): TemplateVersion | null => {

@@ -7,7 +7,7 @@ import { PDFImportZone } from '@/components/data-editor/PDFImportZone';
 import { RentalDataEditor } from './RentalDataEditor';
 import { RentalProposalPreview } from './RentalProposalPreview';
 import { RentalProposalExport } from './RentalProposalExport';
-import { TemplateListView } from '@/components/template-editor/TemplateListView';
+import { TemplateSelector } from './TemplateSelector';
 import { useRentalProposalStore, RentalWorkflowStep } from '@/stores/rentalProposalStore';
 import { cn } from '@/lib/utils';
 
@@ -94,19 +94,7 @@ export function RentalWorkflow() {
         return <RentalDataEditor key="step-data" />;
 
       case 'template':
-        return (
-          <Card key="step-template">
-            <CardHeader>
-              <CardTitle>Sélection du template</CardTitle>
-              <CardDescription>
-                Choisissez le template à utiliser pour générer la proposition.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TemplateListView />
-            </CardContent>
-          </Card>
-        );
+        return <TemplateSelector key="step-template" />;
 
       case 'preview':
         return <RentalProposalPreview key="step-preview" />;
