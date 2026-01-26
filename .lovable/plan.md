@@ -1,93 +1,153 @@
 
-Objectif
-- Corriger définitivement l’import Cybertek pour la ligne “Installation” afin que :
-  - Désignation = texte complet (incluant “Prestation d’installation …”)
-  - Nb = 2 (au lieu de 14)
-  - VTN (total HT ligne) = 974,00 € (au lieu de 700,00 €)
-  - VUN = total / Nb (487,00 € si Nb=2 et total=974,00)
-- Améliorer l’affichage de la colonne “Désignation” dans l’onglet Invest pour éviter le texte tronqué / scrollbar interne.
 
-Constat / cause racine (d’après le code actuel et vos captures)
-- Le parsing “special refs” (Installation / Frais de livraison / Prestation) cherche un motif “QTE + montant €” uniquement quand il se trouve à la fin du buffer concaténé.
-- Or, dans les PDF Cybertek, le montant “2 974,00 €” n’est pas forcément en fin de buffer (la désignation continue sur d’autres lignes après), donc le parser ne “match” pas à ce moment-là.
-- Le parser continue alors à concaténer jusqu’à rencontrer plus loin un montant en fin de ligne qui ressemble à “14 700,00 €” (total global). Ce total global est alors mal interprété comme “QTE=14 + montant=700,00”, d’où :
-  - Nb=14
-  - VTN=700,00
-  - et en plus la désignation se retrouve polluée/concaténée et partiellement tronquée.
-- En parallèle, l’ajout de “Prestation” dans `specialRefs` peut faire perdre le mot “Prestation” dans la désignation si la ligne détectée commence par “Prestation …” (le code supprime le préfixe correspondant au `specialRefMatch`).
+# Plan : Corriger la détection de la ligne Installation et les fusions incorrectes
 
-Changements proposés (implémentation)
-A) Corriger le parsing de la ligne Installation (src/lib/pdf-import-parser.ts)
-1) Revoir la stratégie “special refs”
-- Retirer “Prestation” de `specialRefs` (pour éviter de considérer “Prestation …” comme une “référence” et supprimer le mot de la désignation).
-  - Garder : `['Installation', 'Frais de livraison']`.
-- Ajouter une détection dédiée “Installation en 2 lignes” :
-  - Cas fréquent : une ligne contient uniquement “Installation” (REF), suivie d’une ligne qui commence par “Prestation d’installation …” (désignation) et qui porte (ou non) les colonnes QTE/Total.
-  - Si on voit une ligne “Prestation …” et qu’une des 1–2 lignes précédentes (non bannies) est exactement “Installation”, alors on considère que c’est la ligne Installation, avec ref = “Installation” et désignation = la ligne “Prestation …” (et ses éventuelles continuations).
+## Problème identifié
 
-2) Ne plus chercher “QTE + montant €” uniquement en fin de buffer global
-- Remplacer le `while` actuel (qui concatène et match uniquement en fin de buffer) par une logique “fenêtre” (lookahead) limitée, pour éviter d’absorber le total global :
-  - À partir du début de la ligne service (Installation / Frais de livraison), scanner les 1 à 6 lignes suivantes maximum (jusqu’à rencontrer un nouveau bloc produit : `syRefPattern`, `shortRefPattern`, une autre ref spéciale, ou un stop marker).
-  - Pour chaque ligne de cette fenêtre :
-    - Essayer d’extraire un candidat “QTE + montant €” sur la ligne elle-même (pas sur tout le buffer).
-    - Extraire aussi éventuellement un “montant €” seul si QTE n’est pas détectable (fallback: QTE=1).
-  - Sélectionner le meilleur candidat selon des heuristiques simples et robustes :
-    - Priorité aux candidats trouvés le plus tôt (proches de la ligne Installation)
-    - Ignorer explicitement les lignes contenant des marqueurs de total (Total HT/TVA/TTC) si présents
-    - Si plusieurs montants détectés : préférer celui qui ressemble à un total de ligne (souvent plus petit que le total global) ; typiquement on peut écarter un montant qui est “manifestement” le total global en fin de doc en limitant la fenêtre + en appliquant une règle “si plusieurs montants > 100€ existent, prendre le plus petit dans la fenêtre”.
+### Cause racine 1 : Installation disparaît
+Dans le code actuel (lignes 365-408), quand aucun candidat valide n'est trouvé (`bestCandidate === null`), le code fait simplement `continue` sans ajouter la ligne au résultat. C'est pourquoi "Installation" disparaît complètement.
 
-3) Construire la désignation “propre”
-- Construire la désignation à partir des lignes de description (ex: “Prestation d’installation …”) + ses continuations, mais :
-  - Retirer de la désignation les colonnes numériques détectées (QTE / montant) quand elles sont sur la même ligne (couper la ligne avant le motif monétaire repéré).
-  - Ne jamais concaténer des lignes qui appartiennent clairement à un autre bloc (nouvelle ref, “Frais de livraison”, ref SY-…, etc.)
+Le problème sous-jacent : le pattern `lineEndPattern` cherche un format strict "QTE (1-2 chiffres) + montant + €" en fin de ligne, mais dans le texte extrait du PDF Cybertek, ce format n'est pas respecté pour les lignes services.
 
-4) Sécurité anti-régression (pour éviter de retomber sur “14 700,00”)
-- Stopper la collecte dès qu’on rencontre :
-  - une autre ref spéciale (ex: “Frais de livraison” après “Installation”)
-  - un nouveau produit (SY-…)
-  - un stop marker (TOTAL/CONDITIONS/Offre Locative…)
-- Limiter strictement la fenêtre (ex: max 6 lignes) pour empêcher l’absorption des totaux de bas de page.
+### Cause racine 2 : Lignes produits fusionnées (3ème ligne corrompue)
+La ligne 3 dans l'app combine "Chassis d'extension..." avec "Synology Kit Rails..." car le parser ne détecte pas correctement les frontières entre produits lors du scan arrière (`findSyRefIndexBackwards`).
 
-B) Améliorer l’affichage Désignation (src/components/rental-proposal/RentalDataEditor.tsx)
-1) Augmenter la taille visible par défaut
-- Passer `rows={2}` à `rows={4}` (ou 3 si vous préférez plus compact)
-- Augmenter `min-h` (ex: `min-h-[72px]`) pour afficher plusieurs lignes sans action manuelle.
+---
 
-2) Éviter la scrollbar interne (auto-resize)
-- Implémenter un “auto-resize textarea” (petit composant local ou logique via ref) :
-  - à chaque changement + au montage, ajuster la hauteur du textarea à `scrollHeight` (avec `overflow-hidden`).
-  - Cela affiche l’intégralité du texte sans scroll interne, tout en gardant `resize-y` si vous souhaitez laisser l’utilisateur agrandir encore.
+## Modifications requises
 
-3) Largeur
-- Conserver `min-w-[300px]`, mais sur desktop on peut viser plus confortable (ex: `min-w-[420px]` ou `w-[520px]`) selon votre mise en page actuelle.
-- Optionnel : ajouter `align-top` sur la cellule pour un rendu plus propre quand la hauteur augmente.
+### Fichier : `src/lib/pdf-import-parser.ts`
 
-Plan d’exécution (séquencement)
-1) Modifier `src/lib/pdf-import-parser.ts`
-- Retirer “Prestation” de `specialRefs`
-- Ajouter la détection “Installation standalone + Prestation…” (lookback 1–2 lignes)
-- Réécrire le parsing service lines en mode “fenêtre lookahead” + extraction par ligne (pas buffer global)
-- Ajuster la construction de `designation` (couper avant la partie monétaire détectée)
-- Ajouter logs de debug temporaires (console.log) pour afficher la ligne Installation extraite (référence, qte, total, extrait de designation) afin de valider rapidement.
+### Modification 1 : Améliorer la détection pour les lignes services
 
-2) Modifier `src/components/rental-proposal/RentalDataEditor.tsx`
-- `Textarea` : rows plus grand + min-height plus grand
-- Ajouter auto-resize (idéalement un mini composant réutilisable dans ce fichier pour garder le code propre)
+**Problème** : Le pattern actuel cherche "QTE montant €" à la fin d'une ligne unique, mais le PDF peut avoir :
+- "Installation" sur une ligne
+- "Prestation d'installation..." sur une autre ligne
+- "2 974,00 €" possiblement splitté ou formaté différemment
 
-Tests de validation (ce que je vérifierai dans l’UI)
-- Importer le PDF Cybertek Kedge NAS :
-  - La ligne “Installation” affiche :
-    - Nb = 2
-    - VTN = 974,00 €
-    - VUN = 487,00 (ou proche selon arrondi)
-    - Désignation contient “Prestation d’installation…” en entier (et pas tronqué)
-  - Vérifier que “Frais de livraison” n’est pas absorbé dans la désignation Installation
-  - Vérifier que les autres lignes produits (matériel) ne sont pas affectées
+**Solution** : Utiliser une stratégie de "lookahead avec extraction séparée" :
 
-Cas limites couverts
-- Installation dont le montant dépasse 1 000 € (espaces milliers) : la stratégie “fenêtre + candidat le plus proche” évite l’erreur “14 700” et reste robuste.
-- Installation sans QTE explicite sur la même ligne : fallback QTE=1 + total détecté, ou QTE détecté sur une autre ligne de la fenêtre.
+```typescript
+// Dans la boucle de lookahead (lignes 316-346)
+// Au lieu de chercher "QTE montant €" sur UNE ligne,
+// chercher le pattern de fin de tableau Cybertek qui est :
+// - un nombre seul (QTE) sur une ligne ou en fin de texte
+// - suivi d'un montant "XXX,XX €"
 
-Livrables
-- Correction parsing Cybertek Installation (et stabilité des valeurs Nb/VUN/VTN)
-- Affichage Désignation plus lisible (texte visible sans scroll interne, et plus de lignes par défaut)
+// Pattern plus flexible pour Cybertek :
+// Cherche "QTE montant €" avec possibilité que QTE soit seul avant
+const strictLineEndPattern = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
+```
+
+Mais surtout, **ajouter un fallback** quand aucun candidat n'est trouvé :
+- Chercher un montant seul (sans QTE explicite) et utiliser QTE=1 par défaut
+- Ou scanner plus largement avec un pattern moins strict
+
+### Modification 2 : Fallback quand bestCandidate est null
+
+Actuellement, si aucun candidat n'est trouvé, la ligne Installation est simplement ignorée. Il faut ajouter :
+
+```typescript
+if (bestCandidate) {
+  // ... existing code ...
+} else {
+  // FALLBACK: Essayer une extraction plus permissive
+  // Chercher n'importe quel montant dans la fenêtre
+  // Utiliser QTE=1 par défaut si non détecté
+  
+  // Collecter toutes les lignes de désignation jusqu'au prochain bloc
+  const designationLines: string[] = [];
+  let fallbackTotal = 0;
+  let fallbackQty = 1;
+  
+  for (let j = i; j < rowsSource.length && j <= i + maxLookahead; j++) {
+    const line = rowsSource[j];
+    if (isNewBlockStart(line) && j > i) break;
+    
+    // Chercher un montant €
+    const amountMatch = line.match(/([\d\s,.]+)\s*€/);
+    if (amountMatch) {
+      const val = parseNumber(amountMatch[1]);
+      if (val && val > 100 && val < 10000) {
+        fallbackTotal = val;
+        // Chercher un QTE juste avant le montant
+        const qtyBeforeAmount = line.match(/\s(\d{1,2})\s+[\d\s,.]+\s*€/);
+        if (qtyBeforeAmount) {
+          fallbackQty = parseInt(qtyBeforeAmount[1], 10) || 1;
+        }
+        break;
+      }
+    }
+    
+    // Collecter pour la désignation
+    if (!isBannedLine(line) && !isGarantieLine(line)) {
+      designationLines.push(line);
+    }
+  }
+  
+  if (fallbackTotal > 0) {
+    // Construire et ajouter la ligne
+    const designation = designationLines.join(' ')
+      .replace(new RegExp(`^${specialRefMatch}\\s*`, 'i'), '')
+      .replace(/[\d\s,.]+\s*€.*$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    result.lignes!.push({
+      reference: specialRefMatch,
+      designation,
+      quantite: fallbackQty,
+      totalHT: fallbackTotal,
+      prixUnitaire: fallbackQty > 0 ? Math.round((fallbackTotal / fallbackQty) * 100) / 100 : null,
+    });
+  }
+}
+```
+
+### Modification 3 : Corriger les frontières produits (éviter les fusions)
+
+Le problème de la ligne 3 fusionnée vient de `findSyRefIndexBackwards` qui remonte trop loin. Il faut ajouter une condition d'arrêt supplémentaire :
+
+```typescript
+const findSyRefIndexBackwards = (fromIdx: number) => {
+  for (let j = fromIdx; j >= 0 && j >= fromIdx - 8; j--) {
+    const v = rowsSource[j];
+    if (syRefPattern.test(v)) return j;
+    if (stopRe.test(v)) break;
+    // AJOUT : s'arrêter si on voit un autre pattern de fin de ligne (€)
+    // car ça signifie qu'on a traversé un autre produit
+    if (/[\d\s,.]+\s*€\s*$/.test(v)) break;
+  }
+  return -1;
+};
+```
+
+---
+
+## Résumé des changements
+
+| Ligne | Modification |
+|-------|--------------|
+| 265-267 | Ajouter condition d'arrêt dans `findSyRefIndexBackwards` |
+| 364-408 | Ajouter bloc `else` avec extraction fallback pour les services |
+| 303-346 | Améliorer les patterns de détection pour être moins stricts |
+
+## Résultat attendu
+
+| Donnée | Avant | Après |
+|--------|-------|-------|
+| **Ligne Installation** | Absente ❌ | Présente avec Nb=2, VTN=974,00 € ✓ |
+| **Ligne Frais de livraison** | Absente ❌ | Présente avec VTN=0,00 € ✓ |
+| **Ligne 3 (Kit Rails)** | Fusionnée avec Chassis ❌ | Séparée correctement ✓ |
+| **Total lignes** | 4 | 6 (comme le PDF) |
+
+---
+
+## Impact technique
+
+- **Fichier modifié** : `src/lib/pdf-import-parser.ts`
+- **Fonctions modifiées** : 
+  - `findSyRefIndexBackwards` : meilleure détection des frontières
+  - Boucle principale : fallback pour services sans pattern strict
+- **Rétrocompatibilité** : Les produits standards (SY-XXX) ne sont pas affectés
+
