@@ -119,24 +119,82 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     result.devis!.validite = validiteMatch[1];
   }
 
-  // Extract client name (GROUPE KEDGE BUSINESS SCHOOL pattern)
-  const clientNameMatch = text.match(/GROUPE\s+KEDGE\s+BUSINESS\s+SCHOOL/i) ||
-    text.match(/Facturation\s*[:\s]*([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+(?:BUSINESS|SCHOOL|SARL|SAS|SA|EURL)?[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]*)/i);
-  if (clientNameMatch) {
-    result.client!.nom = clientNameMatch[0].includes('KEDGE') ? 'GROUPE KEDGE BUSINESS SCHOOL' : clientNameMatch[1]?.trim() || null;
+  // Parse lines early for address extraction
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  // Extract client info from ADRESSE DE LIVRAISON block (multi-line extraction)
+  const livraisonIdx = lines.findIndex((l) => /ADRESSE\s+DE\s+LIVRAISON/i.test(l));
+  if (livraisonIdx !== -1) {
+    for (let i = livraisonIdx + 1; i < Math.min(livraisonIdx + 12, lines.length); i++) {
+      const line = lines[i];
+      
+      // Skip company info lines (Cybertek headers)
+      if (/S\.?A\.?S\.?\s+GROUPE\s+CYBERTEK|SIEGE\s+SOCIAL|AU\s+CAPITAL|RCS|TVA\s*:|ADRESSE\s+DE\s+FACTURATION/i.test(line)) {
+        continue;
+      }
+      
+      // Stop at next section marker
+      if (/N°\s*client|Devis\s+du|Contact\s+commercial/i.test(line)) {
+        break;
+      }
+      
+      // Client name (all uppercase line, first significant line after headers)
+      if (!result.client!.nom && /^[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s-]+$/.test(line) && line.length > 5 && !/^\d/.test(line)) {
+        result.client!.nom = line.trim();
+        continue;
+      }
+      
+      // Address line (contains street keywords or starts with number/DOMAINE)
+      if (!result.client!.adresse && /\d+|DOMAINE|RUE|AVENUE|COURS|BOULEVARD|PLACE|CHEMIN/i.test(line)) {
+        // May need to concatenate multiple address lines
+        let fullAddress = line.trim();
+        // Check if next line continues the address (before postal code)
+        const nextLine = lines[i + 1];
+        if (nextLine && !/^\d{5}\s/.test(nextLine) && /RUE|AVENUE|COURS|BOULEVARD|LIBERATION|CHEMIN/i.test(nextLine)) {
+          fullAddress += ' ' + nextLine.trim();
+          i++; // Skip the next line since we consumed it
+        }
+        result.client!.adresse = fullAddress;
+        continue;
+      }
+      
+      // Postal code + City (5 digits + city name, optionally ending with FR)
+      const cpVille = line.match(/^(\d{5})\s+(.+?)(?:\s+FR)?$/i);
+      if (cpVille) {
+        result.client!.codePostal = cpVille[1];
+        result.client!.ville = cpVille[2].replace(/\s+FR$/i, '').trim();
+        break;
+      }
+    }
+  }
+  
+  // Fallback: Extract client name from specific patterns if not found
+  if (!result.client!.nom) {
+    const clientNameMatch = text.match(/GROUPE\s+KEDGE\s+BUSINESS\s+SCHOOL/i) ||
+      text.match(/Facturation\s*[:\s]*([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+(?:BUSINESS|SCHOOL|SARL|SAS|SA|EURL)?[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]*)/i);
+    if (clientNameMatch) {
+      result.client!.nom = clientNameMatch[0].includes('KEDGE') ? 'GROUPE KEDGE BUSINESS SCHOOL' : clientNameMatch[1]?.trim() || null;
+    }
   }
 
-  // Extract address (look for patterns like "DOMAINE DE RABA 680 COURS DE LA LIBERATION")
-  const addressMatch = text.match(/(?:DOMAINE\s+DE\s+RABA\s+)?(\d+\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+(?:RUE|AVENUE|COURS|BOULEVARD|PLACE|CHEMIN)[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+)/i);
-  if (addressMatch) {
-    result.client!.adresse = addressMatch[0].trim();
+  // Fallback: Extract address from inline pattern
+  if (!result.client!.adresse) {
+    const addressMatch = text.match(/(?:DOMAINE\s+DE\s+RABA\s+)?(\d+\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+(?:RUE|AVENUE|COURS|BOULEVARD|PLACE|CHEMIN)[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s]+)/i);
+    if (addressMatch) {
+      result.client!.adresse = addressMatch[0].trim();
+    }
   }
 
-  // Extract postal code and city
-  const cpVilleMatch = text.match(/(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s-]+?)(?=\s+(?:N°|Devis|Tél|Email|Contact|France))/i);
-  if (cpVilleMatch) {
-    result.client!.codePostal = cpVilleMatch[1];
-    result.client!.ville = cpVilleMatch[2].trim();
+  // Fallback: Extract postal code and city
+  if (!result.client!.codePostal) {
+    const cpVilleMatch = text.match(/(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s-]+?)(?=\s+(?:N°|Devis|Tél|Email|Contact|France|FR))/i);
+    if (cpVilleMatch) {
+      result.client!.codePostal = cpVilleMatch[1];
+      result.client!.ville = cpVilleMatch[2].replace(/\s+FR$/i, '').trim();
+    }
   }
 
   // Extract commercial name
@@ -168,11 +226,6 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   // Line 2: XXX (second REF without prefix - THIS is what we want)
   // Line 3+: Designation text (can span multiple lines)
   // Last line of product: ends with QTE and Total HT (e.g. "... 4 2 176,00 €")
-  
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
 
   const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
 
@@ -196,7 +249,8 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   const shortRefPattern = /^[A-Z0-9]+-[A-Z0-9-]+$|^[A-Z0-9]{4,}$/i;
   
   // Special refs without dash
-  const specialRefs = ['Installation', 'Frais de livraison'];
+  // Special refs without dash - including service/prestation lines
+  const specialRefs = ['Installation', 'Frais de livraison', 'Prestation'];
 
   const isBannedLine = (line: string) =>
     /(ADRESSE\s+DE\s+LIVRAISON|ADRESSE\s+DE\s+FACTURATION|SIEGE\s+SOCIAL|AU\s+CAPITAL|GROUPE\s+KEDGE|N°\s*client)/i.test(line);
@@ -423,6 +477,22 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     if (totalTTCMatch) {
       const v = parseNumber(totalTTCMatch[1]);
       if (v !== null && v >= 100) result.totaux!.totalTTC = v;
+    }
+  }
+
+  // Strategy 4: Calculate totals from line items if still not found
+  // Per constraint: only use this as last resort when extraction fails
+  if (result.totaux!.totalHT === null && result.lignes!.length > 0) {
+    const calculatedTotalHT = result.lignes!.reduce(
+      (sum, line) => sum + (line.totalHT || 0),
+      0
+    );
+    
+    if (calculatedTotalHT > 0) {
+      result.totaux!.totalHT = Math.round(calculatedTotalHT * 100) / 100;
+      result.totaux!.tva = Math.round(calculatedTotalHT * 0.20 * 100) / 100;
+      result.totaux!.totalTTC = Math.round(calculatedTotalHT * 1.20 * 100) / 100;
+      console.log('Cybertek - Totals calculated from line items:', result.totaux);
     }
   }
 
