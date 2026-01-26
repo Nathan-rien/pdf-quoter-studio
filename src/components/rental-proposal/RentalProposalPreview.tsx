@@ -489,19 +489,23 @@ export function RentalProposalPreview() {
         className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden"
         style={{ maxWidth: CANVAS_DISPLAY_MAX_WIDTH }}
       >
-        {staticElements.length > 0 ? (
-          <>
-            {staticElements.map(el => renderTemplateElement(el))}
-            {renderDynamicContent?.()}
-          </>
-        ) : fallbackContent || (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">Page {pageNum}</p>
-              <p className="text-sm mt-2">Aucun contenu dans le template</p>
+        {/* Toujours afficher les éléments statiques s'ils existent */}
+        {staticElements.map(el => renderTemplateElement(el))}
+
+        {/* Toujours appeler le contenu dynamique s'il existe */}
+        {renderDynamicContent?.()}
+
+        {/* Fallback seulement si AUCUN contenu (ni statique ni dynamique) */}
+        {staticElements.length === 0 && !renderDynamicContent && (
+          fallbackContent || (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Page {pageNum}</p>
+                <p className="text-sm mt-2">Aucun contenu dans le template</p>
+              </div>
             </div>
-          </div>
+          )
         )}
         <PageFooter pageNum={pageNum} />
       </div>
