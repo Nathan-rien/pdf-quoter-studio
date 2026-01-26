@@ -236,8 +236,18 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       /QTE/i.test(l)
   );
 
-  const stopRe = /^(Offre\s+Locative|TOTAL\s*HT|Total\s*HT|TVA\s*20|Total\s*TTC|CONDITIONS)/i;
+  // Less aggressive stopRe: do NOT stop on "TOTAL HT" / "Total HT" / "TVA 20" / "Total TTC"
+  // because services like "Installation" and "Frais de livraison" appear AFTER these totals
+  // Only stop on truly terminal markers
+  const stopRe = /^(Offre\s+Locative|CONDITIONS\s+GENERALES)/i;
+  
+  // Secondary stop pattern for row-by-row break (used for backtracking limits)
+  const softStopRe = /^(TOTAL\s*HT|Total\s*HT|TVA\s*20|Total\s*TTC)/i;
+  
   const rowsSource = tableStartIdx !== -1 ? lines.slice(tableStartIdx + 1) : lines;
+  
+  console.log('[Cybertek Parser] Table rows count:', rowsSource.length);
+  console.log('[Cybertek Parser] Sample rows (last 30):', rowsSource.slice(-30));
 
   // Pattern for the end of a product row: QTE followed by Total HT amount
   const rowEndRegex = new RegExp(`(\\d+)\\s+${money}\\s*€\\s*$`, 'i');
@@ -261,7 +271,8 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     for (let j = fromIdx; j >= 0 && j >= fromIdx - 8; j--) {
       const v = rowsSource[j];
       if (syRefPattern.test(v)) return j;
-      if (stopRe.test(v)) break;
+      // Stop on both hard and soft stop patterns for backtracking
+      if (stopRe.test(v) || softStopRe.test(v)) break;
       // Stop if we hit another product's end line (contains amount €)
       // This prevents merging with previous products
       if (j < fromIdx && /[\d\s,.]+\s*€\s*$/.test(v)) break;
@@ -272,7 +283,8 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   const findShortRefForward = (fromIdx: number) => {
     for (let k = fromIdx + 1; k < rowsSource.length && k <= fromIdx + 6; k++) {
       const v = rowsSource[k];
-      if (stopRe.test(v) || syRefPattern.test(v)) break;
+      // For product refs, use soft stop to avoid crossing into totals section
+      if (stopRe.test(v) || softStopRe.test(v) || syRefPattern.test(v)) break;
       if (isBannedLine(v) || isGarantieLine(v)) continue;
       if (shortRefPattern.test(v) && !/^SY-/i.test(v)) return v;
     }
@@ -287,6 +299,8 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     const l = rowsSource[i];
 
     if (stopRe.test(l)) break;
+    // Skip soft stop lines (Total HT, TVA, etc.) but don't break - continue scanning for services
+    if (softStopRe.test(l)) continue;
     if (/Dont\s+eco-?taxe/i.test(l)) continue;
     if (isBannedLine(l) || isGarantieLine(l)) continue;
 
