@@ -21,6 +21,8 @@ import { ENTITIES, getCommerciauxByEntity, CommercialEntity } from '@/data/comme
 export function RentalDataEditor() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
+  const [isNosOptionsPopoverOpen, setIsNosOptionsPopoverOpen] = useState(false);
+  const [selectedNosAdminOptions, setSelectedNosAdminOptions] = useState<string[]>([]);
 
   const {
     clientData,
@@ -28,6 +30,7 @@ export function RentalDataEditor() {
     lignesData,
     servicesInclus,
     optionsServices,
+    nosOptions,
     pdfImportStatus,
     commercialData,
     updateClientField,
@@ -40,6 +43,10 @@ export function RentalDataEditor() {
     updateOptionService,
     deleteOptionService,
     toggleOptionService,
+    addNosOption,
+    updateNosOption,
+    deleteNosOption,
+    toggleNosOption,
     getCalculatedValues,
     updateCommercialEntity,
     selectCommercial,
@@ -80,6 +87,35 @@ export function RentalDataEditor() {
     setIsPopoverOpen(false);
   };
 
+  const toggleNosAdminOption = (optionId: string) => {
+    setSelectedNosAdminOptions(prev => 
+      prev.includes(optionId) 
+        ? prev.filter(id => id !== optionId)
+        : [...prev, optionId]
+    );
+  };
+
+  const handleImportNosOptionsSelected = () => {
+    selectedNosAdminOptions.forEach(optionId => {
+      const option = activeAdminOptions.find(opt => opt.id === optionId);
+      if (option) {
+        // Concaténer les services pour la description
+        const descriptionParts = option.services.map(s => {
+          const text = typeof s === 'string' ? s : s.text;
+          const subItems = typeof s === 'string' ? [] : (s.subItems || []);
+          if (subItems.length > 0) {
+            return `${text}\n  - ${subItems.join('\n  - ')}`;
+          }
+          return text;
+        });
+        const description = descriptionParts.join(', ');
+        addNosOption(option.title, description, option.price?.amount ?? null);
+      }
+    });
+    setSelectedNosAdminOptions([]);
+    setIsNosOptionsPopoverOpen(false);
+  };
+
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
     return value.toFixed(2);
@@ -115,7 +151,7 @@ export function RentalDataEditor() {
       </Card>
 
       <Tabs defaultValue="client" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="client" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Client
@@ -124,9 +160,16 @@ export function RentalDataEditor() {
             <Calculator className="h-4 w-4" />
             Matrice
           </TabsTrigger>
-          <TabsTrigger value="options" className="flex items-center gap-2">
+          <TabsTrigger value="services" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Services inclus
+          </TabsTrigger>
+          <TabsTrigger value="nosoptions" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Nos Options
+            {nosOptions.filter(o => o.selected).length > 0 && (
+              <Badge variant="secondary" className="ml-1">{nosOptions.filter(o => o.selected).length}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="invest" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
@@ -447,8 +490,8 @@ export function RentalDataEditor() {
           </Card>
         </TabsContent>
 
-        {/* Options Tab */}
-        <TabsContent value="options" className="mt-4 space-y-4">
+        {/* Services inclus Tab (Page 5) */}
+        <TabsContent value="services" className="mt-4 space-y-4">
           {/* Bloc permanent "Services inclus" - toujours affiché */}
           <Card className="border-primary/30 bg-primary/5">
             <CardHeader className="pb-2">
@@ -470,16 +513,28 @@ export function RentalDataEditor() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Options additionnelles */}
+        {/* Nos Options Tab (Page 6) */}
+        <TabsContent value="nosoptions" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Nos Options</CardTitle>
+                <Badge variant="secondary" className="text-xs">Page 6</Badge>
+              </div>
+              <CardDescription>Options sélectionnables affichées sur la page 6</CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Options additionnelles</CardTitle>
+                <CardTitle className="text-lg">Options disponibles</CardTitle>
                 <CardDescription>Services supplémentaires sélectionnables</CardDescription>
               </div>
               <div className="flex gap-2">
-                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                <Popover open={isNosOptionsPopoverOpen} onOpenChange={setIsNosOptionsPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" disabled={activeAdminOptions.length === 0}>
                       <Download className="h-4 w-4 mr-2" />
@@ -496,8 +551,8 @@ export function RentalDataEditor() {
                             className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
                           >
                             <Checkbox
-                              checked={selectedAdminOptions.includes(option.id)}
-                              onCheckedChange={() => toggleAdminOption(option.id)}
+                              checked={selectedNosAdminOptions.includes(option.id)}
+                              onCheckedChange={() => toggleNosAdminOption(option.id)}
                               className="mt-0.5"
                             />
                             <div className="flex-1 min-w-0">
@@ -514,16 +569,16 @@ export function RentalDataEditor() {
                       <Button 
                         size="sm" 
                         className="w-full"
-                        disabled={selectedAdminOptions.length === 0}
-                        onClick={handleImportSelected}
+                        disabled={selectedNosAdminOptions.length === 0}
+                        onClick={handleImportNosOptionsSelected}
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        Ajouter {selectedAdminOptions.length > 0 && `(${selectedAdminOptions.length})`}
+                        Ajouter {selectedNosAdminOptions.length > 0 && `(${selectedNosAdminOptions.length})`}
                       </Button>
                     </div>
                   </PopoverContent>
                 </Popover>
-                <Button variant="outline" size="sm" onClick={() => addOptionService('', '', null)}>
+                <Button variant="outline" size="sm" onClick={() => addNosOption('', '', null)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter
                 </Button>
@@ -531,22 +586,22 @@ export function RentalDataEditor() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {optionsServices.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Aucune option additionnelle</p>
+                {nosOptions.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Aucune option</p>
                 ) : (
-                  optionsServices.map((opt) => (
+                  nosOptions.map((opt) => (
                     <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                      <Switch checked={opt.selected} onCheckedChange={() => toggleOptionService(opt.id)} className="mt-2" />
+                      <Switch checked={opt.selected} onCheckedChange={() => toggleNosOption(opt.id)} className="mt-2" />
                       <Input
                         placeholder="Nom"
                         value={opt.name}
-                        onChange={(e) => updateOptionService(opt.id, { name: e.target.value })}
+                        onChange={(e) => updateNosOption(opt.id, { name: e.target.value })}
                         className="w-40"
                       />
                       <Textarea
                         placeholder="Description"
                         value={opt.description}
-                        onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
+                        onChange={(e) => updateNosOption(opt.id, { description: e.target.value })}
                         className="flex-1 min-h-[40px] resize-y"
                         rows={2}
                       />
@@ -555,10 +610,10 @@ export function RentalDataEditor() {
                         step="0.01"
                         placeholder="Prix"
                         value={opt.price ?? ''}
-                        onChange={(e) => updateOptionService(opt.id, { price: e.target.value ? parseFloat(e.target.value) : null })}
+                        onChange={(e) => updateNosOption(opt.id, { price: e.target.value ? parseFloat(e.target.value) : null })}
                         className="w-24"
                       />
-                      <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)} className="mt-1">
+                      <Button variant="ghost" size="icon" onClick={() => deleteNosOption(opt.id)} className="mt-1">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>

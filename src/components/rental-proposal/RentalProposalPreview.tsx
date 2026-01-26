@@ -57,6 +57,7 @@ export function RentalProposalPreview() {
     lignesData,
     servicesInclus,
     optionsServices,
+    nosOptions,
     proposalName,
     updateProposalName,
     getCalculatedValues,
@@ -156,6 +157,7 @@ export function RentalProposalPreview() {
   
   const calculatedValues = getCalculatedValues();
   const selectedOptions = optionsServices.filter(opt => opt.selected);
+  const selectedNosOptions = nosOptions.filter(opt => opt.selected);
   
   // Total pages: dynamique selon la version publiée du template
   const currentVersion = getCurrentVersion();
@@ -683,7 +685,94 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(4 as PDFPageNumber, staticElements, renderProductTable);
   };
 
-  // Page Options Services - numéro de page dynamique selon les zones
+  // Page 5 - Services inclus uniquement (bloc permanent)
+  const renderServicesInclusPage = () => {
+    const staticElements = getStaticPageElements(5 as PDFPageNumber);
+    
+    const renderServicesContent = () => (
+      <div 
+        className="absolute z-40"
+        style={{
+          left: '3%',
+          top: '12%',
+          width: '94%',
+          maxHeight: '75%',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Bloc permanent "Services inclus" - style header gris + puces */}
+        <div className="mb-3 border rounded overflow-hidden">
+          <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+            <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
+            <span className="font-semibold text-[11px]">Services Inclus</span>
+          </div>
+          <div className="px-3 py-2 bg-background">
+            <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+              {servicesInclus.description.split(',').map((item, i) => (
+                <li key={i} className="leading-tight">{item.trim()}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+    
+    return renderPageWithEditMode(5 as PDFPageNumber, staticElements, renderServicesContent);
+  };
+
+  // Page 6 - Nos Options (options sélectionnables)
+  const renderNosOptionsPage = () => {
+    const staticElements = getStaticPageElements(6 as PDFPageNumber);
+    
+    const renderNosOptionsContent = () => (
+      <div 
+        className="absolute z-40"
+        style={{
+          left: '3%',
+          top: '12%',
+          width: '94%',
+          maxHeight: '75%',
+          overflow: 'hidden',
+        }}
+      >
+        {selectedNosOptions.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Aucune option sélectionnée</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {selectedNosOptions.map((option) => (
+              <div key={option.id} className="border rounded overflow-hidden">
+                <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-foreground/70" />
+                  <span className="font-semibold text-[11px]">{option.name}</span>
+                  {option.price !== null && (
+                    <span className="ml-auto text-[9px] text-primary font-medium">
+                      {formatNumber(option.price)} €/mois
+                    </span>
+                  )}
+                </div>
+                {option.description && (
+                  <div className="px-3 py-2 bg-background">
+                    <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+                      {option.description.split(',').map((item, i) => (
+                        <li key={i} className="leading-tight">{item.trim()}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+    
+    return renderPageWithEditMode(6 as PDFPageNumber, staticElements, renderNosOptionsContent);
+  };
+
+  // Page Options Services - ancien rendu (conservé pour rétrocompatibilité)
   const renderOptionsPage = (pageNumber: PDFPageNumber) => {
     const pageOptions = selectedOptions.slice(0, OPTIONS_PER_PAGE);
     const staticElements = getStaticPageElements(pageNumber);
@@ -783,16 +872,19 @@ export function RentalProposalPreview() {
       return renderProductPage();
     }
     
-    // Si la page courante contient la zone options_block, afficher les options
-    if (optionsPage && currentPreviewPage === optionsPage) {
-      return renderOptionsPage(optionsPage as PDFPageNumber);
+    // Page 5 : Services inclus (toujours)
+    if (currentPreviewPage === 5) {
+      return renderServicesInclusPage();
+    }
+    
+    // Page 6 : Nos Options
+    if (currentPreviewPage === 6) {
+      return renderNosOptionsPage();
     }
     
     // Pages statiques connues (si elles existent dans la version)
     if (currentPreviewPage === 2) return renderStaticPage(2, 'Nos engagements');
     if (currentPreviewPage === 3) return renderStaticPage(3, 'Conditions de location');
-    if (currentPreviewPage === 5 && optionsPage !== 5) return renderStaticPage(5, 'Offre matériel');
-    if (currentPreviewPage === 6 && optionsPage !== 6) return renderStaticPage(6, 'Votre offre de service');
     
     // Pages génériques (7, 8 ou autres) - rendu statique basé sur les éléments du template
     return renderGenericStaticPage(currentPreviewPage);
@@ -866,7 +958,7 @@ export function RentalProposalPreview() {
                 </div>
               )}
               <p className="text-sm text-muted-foreground">
-                {lignesData.length} ligne(s) • {selectedOptions.length} option(s) sélectionnée(s)
+                {lignesData.length} ligne(s) • {selectedNosOptions.length} option(s) sélectionnée(s)
               </p>
             </div>
           </div>
