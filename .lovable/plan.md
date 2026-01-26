@@ -1,154 +1,190 @@
 
-# Plan : Corriger l'extraction complète de la désignation "Installation"
+
+# Plan : Éléments statiques qui suivent la zone dynamique
 
 ## Problème identifié
 
-D'après les logs, la structure du PDF est :
+Sur la Page 4 "Votre offre neuf + rachat", les éléments texte statiques ("Avantages", "Condition de l'offre") sont positionnés de manière absolue selon leurs coordonnées dans le template. Cependant, le tableau Invest dynamique a une hauteur variable selon le nombre de produits. 
 
-```
-Ligne 1: "Prestation d'installation sur les sites de Bordeaux et Marseille :"
-Ligne 2: "Deplacement sur site / Installation de 2x 16Go de RAM dans"
-Ligne 3: "2 974,00 € Installation"     ← QTE=2, Total=974€, marqueur "Installation"
-Ligne 4: "chaque NAS + Ajout d'un tiroir d'extension avec 12 disques 8To"
-Ligne 5: "sur chaque NAS"
-Ligne 6: "1 0,00 € Frais de livraison" ← Fin du bloc
-```
+**Résultat** : quand le tableau est petit, un large espace vide apparaît entre le tableau et les textes en dessous.
 
-**Résultat actuel** :
-- Montant : 2974€ (FAUX — le 2 est la quantité, pas une partie du montant)
-- Désignation : s'arrête à la ligne 2 (manque lignes 4-5)
-
-**Résultat attendu** :
-- Montant : 974€ (VTN total)
-- Désignation : "Prestation d'installation sur les sites de Bordeaux et Marseille : Deplacement sur site / Installation de 2x 16Go de RAM dans chaque NAS + Ajout d'un tiroir d'extension avec 12 disques 8To sur chaque NAS"
+**Objectif** : Les éléments situés sous la zone dynamique doivent "suivre" automatiquement et rester collés juste après le tableau, quelle que soit sa hauteur.
 
 ---
 
-## Cause racine
+## Approche technique
 
-Le parser actuel collecte la désignation **avant** la ligne contenant le montant, puis s'arrête. 
-Or dans ce PDF, la désignation **continue après** la ligne du montant.
+### Option A : Flux relatif conditionnel (recommandée)
 
-Logique actuelle du fallback (lignes ~461-495) :
-```typescript
-if (fallbackTotal === 0 || j < fallbackEndIdx) {
-  fallbackDesignationLines.push(line);
-}
-```
-→ Dès qu'on trouve le montant (`fallbackTotal > 0`), on arrête de collecter.
+Au lieu de rendre tous les éléments en `position: absolute`, on identifie ceux situés **sous** la zone dynamique et on les rend en **flux relatif** (flow layout), juste après le tableau.
+
+**Principe :**
+1. Identifier la zone dynamique `invest_table_page4` et sa position Y (`top: 28%` dans l'éditeur)
+2. Partitionner les éléments statiques de la page en deux groupes :
+   - **Groupe "au-dessus"** : éléments dont `position.y` < zone dynamique top → rendu absolu
+   - **Groupe "en-dessous"** : éléments dont `position.y` > zone dynamique bottom → rendu en flux relatif après le tableau
+
+### Option B : Nouvelle propriété "flowBelowDynamic"
+
+Ajouter un flag optionnel `flowBelowDynamicZone?: string` sur les éléments du template. Si défini, l'élément sera rendu dans le flux après la zone dynamique spécifiée.
 
 ---
 
-## Solution
+## Solution retenue : Option A (automatique)
 
-### Modification 1 : Collecter la désignation APRÈS la ligne du montant
+Plus simple et ne nécessite pas de modification du modèle de données. On détecte automatiquement les éléments "en dessous" via leurs coordonnées.
 
-Dans le bloc de scan des services (`specialRefMatch === 'Installation'`), après avoir détecté la ligne contenant le montant :
+---
 
-1. **Continuer à scanner** les lignes suivantes jusqu'à un marqueur de fin (ex: `Frais de livraison`, `Offre Locative`, prochain produit SY-)
-2. **Ajouter ces lignes** à `fallbackDesignationLines`
+## Modifications prévues
 
-```typescript
-// Après la boucle de collecte du montant, continuer pour récupérer la suite de la désignation
-if (fallbackTotal > 0) {
-  for (let k = fallbackEndIdx + 1; k < rowsSource.length && k <= fallbackEndIdx + 4; k++) {
-    const line = rowsSource[k];
-    
-    // Arrêter si on atteint un nouveau bloc
-    if (isFraisLivraisonLine(line) || 
-        stopRe.test(line) || 
-        syRefPattern.test(line) ||
-        /Offre\s+Locative/i.test(line)) {
-      break;
-    }
-    
-    // Ignorer les lignes bannies
-    if (isBannedLine(line) || isGarantieLine(line)) continue;
-    
-    // Ajouter à la désignation
-    fallbackDesignationLines.push(line);
-  }
-}
+### 1. `RentalProposalPreview.tsx` - Fonction `renderProductPage()`
+
+**Logique actuelle :**
+```tsx
+const renderProductPage = () => {
+  const staticElements = getStaticPageElements(4);
+  
+  const renderProductTable = () => (
+    <div className="absolute" style={{ top: '15%', ... }}>
+      {/* Tableau + totaux */}
+    </div>
+  );
+  
+  return renderPageWithEditMode(4, staticElements, renderProductTable);
+};
 ```
 
-### Modification 2 : Corriger l'extraction du montant (974€ au lieu de 2974€)
-
-Le pattern actuel lit `2 974,00` comme un seul montant. 
-Il faut détecter que le `2` est la QTE et `974,00` est le montant.
-
-Format de la ligne : `2 974,00 € Installation`
-
-Pattern corrigé :
-```typescript
-// Détecter spécifiquement le pattern "QTE (espace) MONTANT €" pour Installation
-const installAmountPattern = /^(\d{1,2})\s+([\d\s,.]+)\s*€/;
-const match = line.match(installAmountPattern);
-if (match) {
-  fallbackQty = parseInt(match[1], 10);      // 2
-  fallbackTotal = parseNumber(match[2]);     // 974.00
-}
+**Logique modifiée :**
+```tsx
+const renderProductPage = () => {
+  const staticElements = getStaticPageElements(4);
+  
+  // Seuil Y (en pixels canvas 650x919) pour séparer "au-dessus" / "en-dessous"
+  const dynamicZoneBottomY = 400; // ~43% de 919 (28% top + 15% height env.)
+  
+  // Partition des éléments
+  const elementsAbove = staticElements.filter(el => el.position.y < dynamicZoneBottomY);
+  const elementsBelow = staticElements.filter(el => el.position.y >= dynamicZoneBottomY);
+  
+  // Rendu mixte : absolu pour "above", flux pour "below"
+  return (
+    <div className="relative h-full">
+      {/* Éléments au-dessus : position absolue classique */}
+      {elementsAbove.map(el => renderTemplateElement(el))}
+      
+      {/* Conteneur flux : tableau + éléments en-dessous */}
+      <div className="absolute left-[3%] top-[15%] w-[94%]">
+        {/* Tableau dynamique */}
+        <div className="...">...</div>
+        
+        {/* Totaux */}
+        <div className="mt-2">...</div>
+        
+        {/* Éléments "below" rendus en flux relatif */}
+        <div className="mt-4 relative">
+          {elementsBelow.map(el => renderFlowElement(el))}
+        </div>
+      </div>
+      
+      <PageFooter />
+    </div>
+  );
+};
 ```
 
-### Modification 3 : Nettoyer la désignation finale
+### 2. Nouvelle fonction `renderFlowElement()`
 
-Retirer :
-- Le marqueur "Installation" s'il est collé à la fin de la ligne du montant
-- Les espaces multiples
-- Les chiffres orphelins
+Rend un élément du template en **position relative** au lieu d'absolue, en conservant ses styles (police, couleur, etc.) mais en ignorant `position.x/y`.
 
----
+```tsx
+const renderFlowElement = (element: EditableElement) => {
+  // Même logique de rendu que renderTemplateElement()
+  // mais sans position: absolute
+  // Garde le margin-bottom pour espacer les blocs
+};
+```
 
-## Fichier modifié
+### 3. Calcul dynamique du seuil
 
-`src/lib/pdf-import-parser.ts`
+Pour être robuste, le seuil Y pourrait être calculé à partir de la zone dynamique réelle :
 
-### Zones à modifier
+```tsx
+const dynamicZone = currentVersion?.pages
+  .find(p => p.pageNumber === 4)
+  ?.dynamicZones.find(z => z.type === 'invest_table');
 
-1. **Lignes ~461-496** (fallback scan) : Ajouter une boucle de continuation après la détection du montant pour collecter les lignes 4-5
-2. **Lignes ~469-480** (extraction montant) : Améliorer la regex pour séparer correctement QTE (2) du montant (974,00)
-3. **Lignes ~500-507** (construction désignation) : S'assurer que les lignes après le montant sont incluses
-
----
-
-## Résultat attendu après correction
-
-| Champ | Avant | Après |
-|-------|-------|-------|
-| Désignation | "...Installation de 2x 16Go de RAM dans" | "...Installation de 2x 16Go de RAM dans chaque NAS + Ajout d'un tiroir d'extension avec 12 disques 8To sur chaque NAS" |
-| Quantité | 2 | 2 (inchangé) |
-| VTN | 2 974,00 € | 974,00 € |
+const zoneTopPercent = dynamicZone?.position?.top ?? 28;
+const zoneHeightPercent = dynamicZone?.position?.height ?? 15;
+const dynamicZoneBottomY = ((zoneTopPercent + zoneHeightPercent) / 100) * CANVAS_SCALE.height;
+```
 
 ---
 
-## Détail technique
+## Fichiers modifiés
+
+| Fichier | Changement |
+|---------|------------|
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Refactoriser `renderProductPage()` pour séparer les éléments au-dessus/en-dessous et les rendre différemment |
+
+---
+
+## Résultat attendu
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ PDF extrait (rowsSource)                                        │
-├─────────────────────────────────────────────────────────────────┤
-│ [i]   "Prestation d'installation sur les sites de..."          │
-│ [i+1] "Deplacement sur site / Installation de 2x 16Go..."      │
-│ [i+2] "2 974,00 € Installation"  ← QTE=2, Total=974€           │
-│ [i+3] "chaque NAS + Ajout d'un tiroir..."                      │ ← À COLLECTER
-│ [i+4] "sur chaque NAS"                                         │ ← À COLLECTER
-│ [i+5] "1 0,00 € Frais de livraison"  ← STOP                    │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────┐
+│  Éléments au-dessus (position: abs)    │  ← Titre, sous-titre
+├────────────────────────────────────────┤
+│  ┌────────────────────────────────┐    │
+│  │  Tableau Invest (dynamique)    │    │  ← Hauteur variable
+│  │  - Produit 1                   │    │
+│  │  - Produit 2                   │    │
+│  └────────────────────────────────┘    │
+│  ┌────────────────────────────────┐    │
+│  │  Totaux                        │    │  ← Toujours collé
+│  └────────────────────────────────┘    │
+│                                        │
+│  Avantages :                           │  ← FLUX : suit le tableau
+│  • Point 1                             │
+│  • Point 2                             │
+│                                        │
+│  Condition de l'offre :                │  ← FLUX : suit "Avantages"
+│  • Condition 1                         │
+│                                        │
+├────────────────────────────────────────┤
+│  Footer                                │
+└────────────────────────────────────────┘
 ```
-
-**Logique corrigée :**
-1. Détecter "Prestation d'installation..." → déclenche le mode Installation
-2. Collecter lignes i, i+1 pour la désignation
-3. Ligne i+2 : extraire QTE=2, Total=974€ (regex améliorée)
-4. **NOUVEAU** : Continuer à scanner i+3, i+4 → ajouter à la désignation
-5. Ligne i+5 : "Frais de livraison" → STOP
 
 ---
 
-## Risques
+## Considérations WYSIWYG
 
-- **Risque** : Collecter des lignes non pertinentes après le montant
-  - **Garde-fou** : Limiter la fenêtre post-montant à 4 lignes max
-  - **Garde-fou** : S'arrêter immédiatement sur les marqueurs de fin
+Dans l'éditeur de template, les éléments restent positionnés de manière absolue (drag & drop). L'aperçu et l'export PDF appliquent une logique de **flux conditionnel** pour les éléments sous les zones dynamiques.
 
-- **Risque** : Regex trop permissive pour le montant
-  - **Garde-fou** : Vérifier que le montant est dans une plage raisonnable (100-5000€ pour les services)
+Cette divergence est acceptable car :
+- L'éditeur est un outil de **placement visuel** (où positionner les éléments)
+- L'aperçu/export est le **rendu final** (où le contenu dynamique dicte la mise en page)
+
+---
+
+## Détails techniques
+
+### Seuil de partition
+
+Le seuil Y sera calculé dynamiquement :
+- Récupérer la zone `invest_table_page4` depuis `currentVersion`
+- Calculer `bottomY = (zone.position.top + zone.position.height) / 100 * CANVAS_SCALE.height`
+- Si la zone n'a pas de position personnalisée, utiliser les valeurs par défaut (`top: 28%`, `height: 48%`)
+
+### Tri des éléments "below"
+
+Les éléments du groupe "en-dessous" seront triés par `position.y` croissant pour respecter l'ordre visuel défini dans l'éditeur.
+
+### Conservation du style
+
+Chaque élément conserve :
+- Police, taille, couleur, gras, italique
+- Alignement du texte
+- Largeur maximale (pour le retour à la ligne)
+
