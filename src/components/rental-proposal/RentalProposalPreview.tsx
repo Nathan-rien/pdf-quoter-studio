@@ -650,9 +650,16 @@ export function RentalProposalPreview() {
     const dynamicZoneBottomY = ((zoneTopPercent + zoneHeightPercent) / 100) * CANVAS_SCALE.height;
     
     // Partitionner les éléments statiques
-    const elementsAbove = staticElements.filter(el => el.position.y < dynamicZoneBottomY);
+    // Les images (logos) restent toujours en position absolue, pas de flux relatif
+    const elementsAbove = staticElements.filter(el => 
+      el.position.y < dynamicZoneBottomY || 
+      el.type === 'image' // Les logos restent toujours en position absolue
+    );
     const elementsBelow = staticElements
-      .filter(el => el.position.y >= dynamicZoneBottomY)
+      .filter(el => 
+        el.position.y >= dynamicZoneBottomY && 
+        el.type === 'text' // Seuls les textes suivent le flux relatif
+      )
       .sort((a, b) => a.position.y - b.position.y); // Tri par Y croissant pour respecter l'ordre visuel
     
     // Fonction pour rendre un élément en flux relatif (sans position absolue)
