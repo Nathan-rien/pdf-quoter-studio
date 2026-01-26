@@ -287,13 +287,20 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     if (/Dont\s+eco-?taxe/i.test(l)) continue;
     if (isBannedLine(l) || isGarantieLine(l)) continue;
 
-    // Special refs first (Installation, Frais de livraison)
+    // Special refs first (Installation, Frais de livraison, Prestation)
     const specialRefMatch = specialRefs.find((sr) => l.toLowerCase().startsWith(sr.toLowerCase()));
     if (specialRefMatch) {
       let buffer = l;
       let j = i;
+      
+      // Improved pattern: strictly match "QTE (1-2 digits) + Amount + €" at the END
+      // This avoids capturing numbers like "16Go", "2x", "12 disques" within the description
+      // \b ensures we match a word boundary (not part of "16Go")
+      // (\d{1,2}) limits quantity to 1-2 digits
+      const prestationEndRegex = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
+      
       while (j < rowsSource.length - 1) {
-        const endMatch = buffer.match(rowEndRegex);
+        const endMatch = buffer.match(prestationEndRegex);
         if (endMatch) {
           const quantite = parseInt(endMatch[1], 10) || 1;
           const totalHT = parseNumber(endMatch[2]) || 0;

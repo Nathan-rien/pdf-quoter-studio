@@ -736,7 +736,7 @@ export function RentalDataEditor() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Désignation</TableHead>
+                      <TableHead className="min-w-[300px]">Désignation</TableHead>
                       <TableHead className="w-24 text-right">Nb</TableHead>
                       <TableHead className="w-28 text-right">VUN</TableHead>
                       <TableHead className="w-28 text-right">VTN</TableHead>
@@ -753,11 +753,12 @@ export function RentalDataEditor() {
                     ) : (
                       lignesData.map((ligne, index) => (
                         <TableRow key={index}>
-                          <TableCell>
-                            <Input
+                          <TableCell className="min-w-[300px]">
+                            <Textarea
                               value={ligne.designation}
                               onChange={(e) => updateLigne(index, { designation: e.target.value })}
-                              className="h-8"
+                              className="min-h-[40px] resize-y"
+                              rows={2}
                             />
                           </TableCell>
                           <TableCell>
