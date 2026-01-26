@@ -26,6 +26,10 @@ interface ImportResult {
   debug?: {
     snippet: string;
     candidates: string[];
+    // Enhanced debug info
+    installationContext?: string;
+    rksContext?: string;
+    extractedLines?: Array<{ ref: string | null; qty: number; total: number }>;
   };
   error?: string;
 }
@@ -71,6 +75,24 @@ export function PDFImportZone({
       const snippet = raw.slice(start, Math.min(raw.length, start + 800));
       const candidates = [...snippet.matchAll(new RegExp(`${money}\\s*€`, 'g'))].map((m) => m[1]).slice(0, 12);
 
+      // Enhanced debug: Extract context around "Installation" and "SY-RKS02"
+      const installationIdx = raw.indexOf('Installation');
+      const installationContext = installationIdx !== -1 
+        ? raw.slice(Math.max(0, installationIdx - 50), Math.min(raw.length, installationIdx + 600))
+        : 'NOT FOUND in rawText';
+      
+      const rksIdx = raw.search(/SY-RKS02/i);
+      const rksContext = rksIdx !== -1
+        ? raw.slice(Math.max(0, rksIdx - 50), Math.min(raw.length, rksIdx + 400))
+        : 'NOT FOUND in rawText';
+      
+      // Extracted lines summary
+      const extractedLines = result.lignes.map(l => ({
+        ref: l.reference,
+        qty: l.quantite,
+        total: l.totalHT,
+      }));
+
       setImportResult({
         success: true,
         fileName: file.name,
@@ -81,7 +103,7 @@ export function PDFImportZone({
           tva: result.totaux.tva,
           totalTTC: result.totaux.totalTTC,
         },
-        debug: { snippet, candidates },
+        debug: { snippet, candidates, installationContext, rksContext, extractedLines },
       });
       
       onImportSuccess(result, file.name);
@@ -170,17 +192,56 @@ export function PDFImportZone({
                         Totaux extraits — HT: {importResult.totals.totalHT ?? '—'} | TVA: {importResult.totals.tva ?? '—'} | TTC: {importResult.totals.totalTTC ?? '—'}
                       </p>
                     )}
-                    {importResult.debug?.snippet && (
+                    {importResult.debug && (
                       <details className="text-xs">
-                        <summary className="cursor-pointer text-muted-foreground">Voir debug</summary>
-                        {importResult.debug.candidates.length > 0 && (
-                          <div className="mt-2 text-muted-foreground">
-                            Candidats détectés: {importResult.debug.candidates.join(' | ')}
+                        <summary className="cursor-pointer text-muted-foreground font-medium">🔍 Voir debug parsing</summary>
+                        
+                        {/* Extracted lines summary */}
+                        {importResult.debug.extractedLines && importResult.debug.extractedLines.length > 0 && (
+                          <div className="mt-3 p-2 rounded-md border bg-primary/5">
+                            <div className="font-medium text-foreground mb-1">Lignes extraites ({importResult.debug.extractedLines.length}):</div>
+                            <ul className="list-disc list-inside text-muted-foreground">
+                              {importResult.debug.extractedLines.map((l, idx) => (
+                                <li key={idx}>
+                                  <span className="font-mono">{l.ref || '(null)'}</span> — Qté: {l.qty}, Total: {l.total} €
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
-                        <pre className="mt-2 max-h-64 overflow-auto rounded-md border bg-muted p-2 text-[11px] leading-snug text-foreground">
+                        
+                        {/* Installation context */}
+                        <div className="mt-3">
+                          <div className="font-medium text-foreground">Contexte "Installation":</div>
+                          <pre className="mt-1 max-h-40 overflow-auto rounded-md border bg-muted p-2 text-[11px] leading-snug text-foreground whitespace-pre-wrap">
+{importResult.debug.installationContext || 'N/A'}
+                          </pre>
+                        </div>
+                        
+                        {/* RKS-02 context */}
+                        <div className="mt-3">
+                          <div className="font-medium text-foreground">Contexte "SY-RKS02":</div>
+                          <pre className="mt-1 max-h-40 overflow-auto rounded-md border bg-muted p-2 text-[11px] leading-snug text-foreground whitespace-pre-wrap">
+{importResult.debug.rksContext || 'N/A'}
+                          </pre>
+                        </div>
+                        
+                        {/* Totals candidates */}
+                        {importResult.debug.candidates && importResult.debug.candidates.length > 0 && (
+                          <div className="mt-3 text-muted-foreground">
+                            <span className="font-medium text-foreground">Candidats totaux:</span> {importResult.debug.candidates.join(' | ')}
+                          </div>
+                        )}
+                        
+                        {/* Raw snippet */}
+                        {importResult.debug.snippet && (
+                          <div className="mt-3">
+                            <div className="font-medium text-foreground">Extrait brut (zone totaux):</div>
+                            <pre className="mt-1 max-h-48 overflow-auto rounded-md border bg-muted p-2 text-[11px] leading-snug text-foreground whitespace-pre-wrap">
 {importResult.debug.snippet}
-                        </pre>
+                            </pre>
+                          </div>
+                        )}
                       </details>
                     )}
                   </div>
