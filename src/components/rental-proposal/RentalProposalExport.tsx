@@ -1,9 +1,12 @@
 /**
  * Composant d'export PDF pour la proposition de location
  * Génère un PDF téléchargeable ou envoie par email
+ * 
+ * IMPORTANT: Utilise le template sélectionné (selectedTemplateId) et génère
+ * le HTML fidèle aux éléments du template (images, styles, positions)
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
 import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
+import { generatePDFDocumentHTML, clearImageCache } from '@/lib/pdf-html-generator';
 
 export function RentalProposalExport() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -38,19 +42,27 @@ export function RentalProposalExport() {
     lignesData,
     servicesInclus,
     optionsServices,
+    nosOptions,
     proposalName,
-    pdfImportStatus,
+    selectedTemplateId,
     getCalculatedValues,
+    getSelectedCommercial,
   } = useRentalProposalStore();
 
-  const { getActiveTemplate, getTemplateLatestVersion } = useTemplateEditorStore();
+  const { getActiveTemplate, getTemplateLatestVersion, allTemplates } = useTemplateEditorStore();
   
-  const activeTemplate = getActiveTemplate();
+  // Utiliser le template sélectionné dans le workflow, ou fallback sur le template actif
+  const activeTemplate = useMemo(() => {
+    if (selectedTemplateId) {
+      return allTemplates.find(t => t.id === selectedTemplateId) || getActiveTemplate();
+    }
+    return getActiveTemplate();
+  }, [selectedTemplateId, allTemplates, getActiveTemplate]);
+  
   const calculatedValues = getCalculatedValues();
+  const selectedCommercial = getSelectedCommercial();
   const selectedOptions = optionsServices.filter(opt => opt.selected);
-  
-  const optionsPagesCount = Math.max(1, Math.ceil(selectedOptions.length / OPTIONS_PER_PAGE));
-  const linesPagesCount = Math.max(1, Math.ceil(lignesData.length / LINES_PER_PAGE));
+  const selectedNosOptions = nosOptions.filter(opt => opt.selected);
   
   // Utiliser le nombre réel de pages de la version publiée
   const latestVersion = activeTemplate ? getTemplateLatestVersion(activeTemplate.id) : null;
@@ -93,6 +105,12 @@ export function RentalProposalExport() {
     setIsGenerating(true);
     
     try {
+      // Vider le cache d'images pour éviter les données obsolètes
+      clearImageCache();
+      
+      // Générer le contenu HTML du PDF avec le template sélectionné
+      const htmlContent = await generatePDFContentFromTemplate();
+      
       // Créer une fenêtre d'impression avec le contenu formaté
       const printWindow = window.open('', '_blank', 'width=800,height=600');
       
@@ -107,9 +125,6 @@ export function RentalProposalExport() {
       }
 
       const fileName = generateFileName();
-      
-      // Générer le contenu HTML du PDF
-      const htmlContent = generatePDFContent();
       
       printWindow.document.write(htmlContent);
       printWindow.document.close();
@@ -148,40 +163,230 @@ export function RentalProposalExport() {
     }
   };
 
-  const generatePDFContent = () => {
+  /**
+   * Génère le contenu dynamique (client, produits, options, signature) pour chaque page
+   */
+  const generateDynamicContentByPage = useCallback((): Record<number, string> => {
+    const dynamicContent: Record<number, string> = {};
     const date = new Date().toLocaleDateString('fr-FR');
     
-    // Générer les lignes produits HTML
-    const productLinesHTML = lignesData.map((ligne, idx) => `
+    // Page 1 : Données client et commercial
+    dynamicContent[1] = `
+      <div class="dynamic-content" style="position: absolute; bottom: 40px; left: 12px; right: 12px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+              <span style="font-weight: 600; font-size: 10px;">Client</span>
+            </div>
+            <div style="font-size: 9px;">
+              <p style="font-weight: 600; margin: 0;">${clientData.nom || 'Nom du client'}</p>
+              <p style="color: #6b7280; margin: 2px 0;">${clientData.adresse || ''}</p>
+              <p style="color: #6b7280; margin: 2px 0;">${clientData.codePostal} ${clientData.ville}</p>
+              ${clientData.email ? `<p style="color: #6b7280; margin: 2px 0;">${clientData.email}</p>` : ''}
+            </div>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+              <span style="font-weight: 600; font-size: 10px;">Votre interlocuteur</span>
+            </div>
+            ${selectedCommercial ? `
+              <div style="font-size: 9px;">
+                <p style="font-weight: 600; margin: 0;">${selectedCommercial.nom}</p>
+                ${selectedCommercial.telephone ? `<p style="color: #6b7280; margin: 2px 0;">${selectedCommercial.telephone}</p>` : ''}
+                <p style="color: #6b7280; margin: 2px 0;">${selectedCommercial.email}</p>
+              </div>
+            ` : '<p style="font-size: 9px; color: #9ca3af; font-style: italic;">Non sélectionné</p>'}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Page 4 : Tableau des produits
+    const productLinesHTML = lignesData.slice(0, LINES_PER_PAGE).map((ligne) => `
       <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${ligne.designation || '-'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${ligne.quantite}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
       </tr>
     `).join('');
-
-    // Générer les options HTML
-    const optionsHTML = selectedOptions.map(opt => `
-      <div style="padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
+    
+    dynamicContent[4] = `
+      <div class="dynamic-content" style="position: absolute; left: 3%; top: 15%; width: 94%; z-index: 40;">
+        <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 8px; text-align: left; font-weight: 600;">Désignation</th>
+              <th style="padding: 8px; text-align: center; width: 60px;">Qté</th>
+              <th style="padding: 8px; text-align: right; width: 80px;">P.U. HT</th>
+              <th style="padding: 8px; text-align: right; width: 80px;">Total HT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${productLinesHTML}
+          </tbody>
+        </table>
+        
+        <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+          <div class="summary-box" style="min-width: 180px;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
+              <span style="color: #6b7280;">Sous-total HT :</span>
+              <span style="font-weight: 600;">${formatNumber(matriceData.montantInvestissement)} €</span>
+            </div>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 6px 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
+              <span>Total investissement :</span>
+              <span style="color: #2563eb;">${formatNumber(matriceData.montantInvestissement)} € HT</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Page 5 : Services inclus et options
+    const optionsHTML = selectedOptions.slice(0, OPTIONS_PER_PAGE).map(opt => `
+      <div class="option-card">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
               <span style="color: #22c55e;">✓</span>
-              <span style="font-weight: 600;">${opt.name}</span>
+              <span style="font-weight: 600; font-size: 10px;">${opt.name}</span>
             </div>
-            ${opt.description ? `<p style="color: #6b7280; font-size: 14px; margin: 0 0 0 24px; white-space: pre-wrap;">${opt.description}</p>` : ''}
+            ${opt.description ? `<p style="color: #6b7280; font-size: 9px; margin: 0 0 0 20px; white-space: pre-wrap;">${opt.description}</p>` : ''}
           </div>
           ${opt.price !== null ? `
             <div style="text-align: right;">
-              <span style="font-weight: 600; color: #2563eb;">${formatNumber(opt.price)} €</span>
-              <span style="display: block; font-size: 12px; color: #9ca3af;">/mois</span>
+              <span style="font-weight: 600; color: #2563eb; font-size: 10px;">${formatNumber(opt.price)} €</span>
+              <span style="display: block; font-size: 8px; color: #9ca3af;">/mois</span>
             </div>
           ` : ''}
         </div>
       </div>
     `).join('');
-
+    
+    dynamicContent[5] = `
+      <div class="dynamic-content" style="position: absolute; left: 3%; top: 12%; width: 94%; z-index: 40;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <h4 style="margin: 0 0 8px 0; color: #2563eb; font-size: 12px;">✓ Services inclus</h4>
+          <p style="margin: 0; color: #4b5563; font-size: 10px; white-space: pre-wrap;">${servicesInclus.description}</p>
+        </div>
+        ${selectedOptions.length > 0 ? optionsHTML : '<p style="text-align: center; padding: 20px; color: #9ca3af; font-size: 10px;">Aucune option additionnelle sélectionnée</p>'}
+      </div>
+    `;
+    
+    // Page 6 : Nos options
+    if (selectedNosOptions.length > 0) {
+      const nosOptionsHTML = selectedNosOptions.map(opt => `
+        <div class="option-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                <span style="color: #22c55e;">✓</span>
+                <span style="font-weight: 600; font-size: 10px;">${opt.name}</span>
+              </div>
+              ${opt.description ? `<p style="color: #6b7280; font-size: 9px; margin: 0 0 0 20px;">${opt.description}</p>` : ''}
+            </div>
+            ${opt.price !== null ? `
+              <div style="text-align: right;">
+                <span style="font-weight: 600; color: #2563eb; font-size: 10px;">${formatNumber(opt.price)} €</span>
+                <span style="display: block; font-size: 8px; color: #9ca3af;">/mois</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+      
+      dynamicContent[6] = `
+        <div class="dynamic-content" style="position: absolute; left: 3%; top: 12%; width: 94%; z-index: 40;">
+          <h4 style="margin: 0 0 12px 0; font-size: 12px;">Nos options</h4>
+          ${nosOptionsHTML}
+        </div>
+      `;
+    }
+    
+    // Dernière page : Récapitulatif et signature
+    const lastPage = totalPages;
+    dynamicContent[lastPage] = `
+      <div class="dynamic-content" style="position: absolute; left: 5%; top: 10%; width: 90%; z-index: 40;">
+        <h3 style="margin: 0 0 16px 0; font-size: 14px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Récapitulatif de votre offre</h3>
+        
+        <div class="summary-box" style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 6px;">
+            <span style="color: #6b7280;">Investissement HT :</span>
+            <span style="font-weight: 600;">${formatNumber(matriceData.montantInvestissement)} €</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 6px;">
+            <span style="color: #6b7280;">Durée :</span>
+            <span style="font-weight: 600;">${matriceData.duree} mois</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 6px;">
+            <span style="color: #6b7280;">Loyer mensuel HT :</span>
+            <span style="font-weight: 600; color: #2563eb;">${formatNumber(calculatedValues.loyerMensuel)} €</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px;">
+            <span style="color: #6b7280;">Loyer avec services :</span>
+            <span style="font-weight: 600; color: #2563eb;">${formatNumber(calculatedValues.loyerServicesInclus)} €</span>
+          </div>
+        </div>
+        
+        <div class="total-box" style="margin-bottom: 24px;">
+          <p style="font-weight: 600; color: #16a34a; margin: 0; font-size: 11px;">
+            Coût total du contrat : ${formatNumber(calculatedValues.coutContrat)} €
+          </p>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 9px; margin-bottom: 24px;">
+          Le présent document constitue une proposition de location financière. Durée de validité : 30 jours.
+        </p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px;">
+          <div>
+            <p style="font-weight: 600; font-size: 10px; margin-bottom: 4px;">Le client</p>
+            <p style="color: #6b7280; font-size: 9px;">${clientData.nom || 'Nom du client'}</p>
+            <div class="signature-box">Signature</div>
+            <p style="color: #6b7280; font-size: 9px; margin-top: 8px;">Date : ___/___/______</p>
+          </div>
+          <div>
+            <p style="font-weight: 600; font-size: 10px; margin-bottom: 4px;">Pour la société</p>
+            <p style="color: #6b7280; font-size: 9px;">${activeTemplate?.name || 'CybertekPro'}</p>
+            <div class="signature-box">Signature</div>
+            <p style="color: #6b7280; font-size: 9px; margin-top: 8px;">Date : ___/___/______</p>
+          </div>
+        </div>
+        
+        <div style="text-align: center; font-size: 9px; color: #9ca3af; margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+          <p>Document généré automatiquement - ${date}</p>
+        </div>
+      </div>
+    `;
+    
+    return dynamicContent;
+  }, [clientData, matriceData, lignesData, servicesInclus, optionsServices, nosOptions, selectedCommercial, calculatedValues, totalPages, activeTemplate, selectedOptions, selectedNosOptions]);
+  
+  /**
+   * Génère le contenu HTML complet du PDF à partir du template sélectionné
+   */
+  const generatePDFContentFromTemplate = useCallback(async (): Promise<string> => {
+    if (!latestVersion || latestVersion.pages.length === 0) {
+      console.warn('[Export] No template version found, using fallback');
+      return generateFallbackPDFContent();
+    }
+    
+    console.log(`[Export] Generating PDF from template: ${activeTemplate?.name}, version ${latestVersion.versionNumber}`);
+    
+    // Générer le contenu dynamique pour chaque page
+    const dynamicContentByPage = generateDynamicContentByPage();
+    
+    // Générer le document HTML complet
+    return generatePDFDocumentHTML(latestVersion, dynamicContentByPage);
+  }, [latestVersion, activeTemplate, generateDynamicContentByPage]);
+  
+  /**
+   * Fallback : génère un PDF basique si aucun template n'est disponible
+   */
+  const generateFallbackPDFContent = (): string => {
+    const date = new Date().toLocaleDateString('fr-FR');
+    
     return `
       <!DOCTYPE html>
       <html>
@@ -192,7 +397,6 @@ export function RentalProposalExport() {
           @media print {
             body { margin: 0; padding: 0; }
             .page-break { page-break-after: always; }
-            .no-print { display: none; }
           }
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -204,184 +408,38 @@ export function RentalProposalExport() {
           }
           h1 { color: #2563eb; margin-bottom: 8px; }
           h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 32px; }
-          h3 { color: #4b5563; margin-top: 24px; }
-          table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-          th { background: #f3f4f6; padding: 12px 8px; text-align: left; font-weight: 600; }
-          .header { text-align: center; padding: 40px 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 32px; }
-          .client-box { background: #f9fafb; padding: 20px; border-radius: 8px; margin: 24px 0; }
-          .summary-box { background: #eff6ff; padding: 20px; border-radius: 8px; margin: 24px 0; border: 1px solid #bfdbfe; }
-          .total-box { background: #f0fdf4; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid #bbf7d0; }
-          .footer { text-align: center; font-size: 12px; color: #9ca3af; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
-          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-          .signature-box { border: 2px dashed #d1d5db; height: 100px; display: flex; align-items: center; justify-content: center; color: #9ca3af; border-radius: 8px; margin-top: 8px; }
+          .header { text-align: center; padding: 40px 0; }
+          .summary-box { background: #eff6ff; padding: 20px; border-radius: 8px; margin: 24px 0; }
         </style>
       </head>
       <body>
-        <!-- Page 1: Couverture -->
         <div class="header">
           <h1>Proposition de Location</h1>
-          <p style="color: #6b7280;">Financière Professionnelle</p>
-          
-          <div class="client-box" style="max-width: 400px; margin: 32px auto; text-align: left;">
-            <h3 style="margin-top: 0;">Client</h3>
-            <p style="font-weight: 600; margin: 0;">${clientData.nom || 'Nom du client'}</p>
-            <p style="color: #6b7280; margin: 4px 0;">${clientData.adresse || ''}</p>
-            <p style="color: #6b7280; margin: 4px 0;">${clientData.codePostal} ${clientData.ville}</p>
-            ${clientData.email ? `<p style="color: #6b7280; margin: 4px 0;">${clientData.email}</p>` : ''}
-            ${clientData.telephone ? `<p style="color: #6b7280; margin: 4px 0;">${clientData.telephone}</p>` : ''}
-          </div>
-          
-          <p style="color: #9ca3af; font-size: 14px;">Document généré le ${date}</p>
-          ${activeTemplate ? `<p style="color: #9ca3af; font-size: 12px;">Template : ${activeTemplate.name}</p>` : ''}
+          <p style="color: #6b7280;">Document généré le ${date}</p>
+          <p style="margin-top: 20px;"><strong>Client :</strong> ${clientData.nom || 'Non renseigné'}</p>
         </div>
         
         <div class="page-break"></div>
         
-        <!-- Page 2: Détail du matériel -->
-        <h2>Détail du matériel</h2>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Désignation</th>
-              <th style="text-align: right; width: 80px;">Qté</th>
-              <th style="text-align: right; width: 100px;">P.U. HT</th>
-              <th style="text-align: right; width: 100px;">Total HT</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${productLinesHTML}
-          </tbody>
-        </table>
-        
-        <div style="text-align: right; margin-top: 16px;">
-          <div class="summary-box" style="display: inline-block; text-align: left; min-width: 250px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-              <span style="color: #6b7280;">Sous-total HT :</span>
-              <span style="font-weight: 600;">${formatNumber(matriceData.montantInvestissement)} €</span>
-            </div>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 8px 0;">
-            <div style="display: flex; justify-content: space-between; font-weight: 600;">
-              <span>Total investissement :</span>
-              <span style="color: #2563eb;">${formatNumber(matriceData.montantInvestissement)} € HT</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="page-break"></div>
-        
-        <!-- Page 3: Options de services -->
-        <h2>Vos options de services</h2>
-        <p style="color: #6b7280;">Services inclus dans votre contrat de location</p>
-        
-        <!-- Bloc permanent Services inclus -->
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-          <h4 style="margin: 0 0 8px 0; color: #2563eb; font-size: 16px;">✓ Services inclus <span style="background: #dbeafe; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 8px;">Permanent</span></h4>
-          <p style="margin: 0; color: #4b5563; white-space: pre-wrap;">${servicesInclus.description}</p>
-        </div>
-        
-        ${selectedOptions.length === 0 ? `
-          <div style="text-align: center; padding: 40px; color: #9ca3af;">
-            <p>Aucune option additionnelle sélectionnée</p>
-          </div>
-        ` : optionsHTML}
-        
-        ${selectedOptions.length > 0 ? `
-          <div class="grid-2" style="margin-top: 24px;">
-            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px;">
-              <p style="color: #6b7280; font-size: 14px; margin: 0 0 4px 0;">Durée du contrat</p>
-              <p style="font-weight: 600; margin: 0;">${matriceData.duree} mois</p>
-            </div>
-            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px;">
-              <p style="color: #6b7280; font-size: 14px; margin: 0 0 4px 0;">Loyer mensuel</p>
-              <p style="font-weight: 600; color: #2563eb; margin: 0;">${formatNumber(calculatedValues.loyerServicesInclus)} € HT</p>
-            </div>
-          </div>
-        ` : ''}
-        
-        <div class="page-break"></div>
-        
-        <!-- Page 4: Récapitulatif -->
-        <h2>Récapitulatif de votre offre</h2>
-        
+        <h2>Récapitulatif</h2>
         <div class="summary-box">
-          <h3 style="margin-top: 0;">Investissement</h3>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: #6b7280;">Montant total HT :</span>
-            <span style="font-weight: 600;">${formatNumber(matriceData.montantInvestissement)} €</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280;">Nombre de lignes :</span>
-            <span>${lignesData.length}</span>
-          </div>
-        </div>
-        
-        <div class="summary-box">
-          <h3 style="margin-top: 0;">Conditions de location</h3>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: #6b7280;">Durée :</span>
-            <span style="font-weight: 600;">${matriceData.duree} mois</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: #6b7280;">Refinanceur :</span>
-            <span>${matriceData.refinanceur}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <span style="color: #6b7280;">Coefficient :</span>
-            <span>${calculatedValues.coefficient ?? '-'}</span>
-          </div>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 12px 0;">
-          <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px;">
-            <span>Loyer mensuel HT :</span>
-            <span style="color: #2563eb;">${formatNumber(calculatedValues.loyerMensuel)} €</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-weight: 600;">
-            <span>Loyer avec services :</span>
-            <span style="color: #2563eb;">${formatNumber(calculatedValues.loyerServicesInclus)} €</span>
-          </div>
-        </div>
-        
-        <div class="total-box">
-          <p style="font-weight: 600; color: #16a34a; margin: 0;">
-            Coût total du contrat : ${formatNumber(calculatedValues.coutContrat)} €
-          </p>
-        </div>
-        
-        <div class="page-break"></div>
-        
-        <!-- Page 5: Signature -->
-        <h2>Conditions et signature</h2>
-        
-        <p style="color: #6b7280;">
-          Le présent document constitue une proposition de location financière.
-          Les conditions définitives seront précisées dans le contrat de location.
-        </p>
-        <p style="color: #6b7280;">
-          Durée de validité de l'offre : 30 jours à compter de la date d'émission.
-        </p>
-        
-        <div class="grid-2" style="margin-top: 40px;">
-          <div>
-            <p style="font-weight: 600;">Le client</p>
-            <p style="color: #6b7280; font-size: 14px;">${clientData.nom || 'Nom du client'}</p>
-            <div class="signature-box">Signature</div>
-            <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">Date : ___/___/______</p>
-          </div>
-          <div>
-            <p style="font-weight: 600;">Pour la société</p>
-            <p style="color: #6b7280; font-size: 14px;">CybertekPro</p>
-            <div class="signature-box">Signature</div>
-            <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">Date : ___/___/______</p>
-          </div>
-        </div>
-        
-        <div class="footer">
-          <p>Document généré automatiquement - ${date}</p>
-          <p>${activeTemplate?.name || 'Proposition Commerciale'}</p>
+          <p><strong>Investissement :</strong> ${formatNumber(matriceData.montantInvestissement)} € HT</p>
+          <p><strong>Durée :</strong> ${matriceData.duree} mois</p>
+          <p><strong>Loyer mensuel :</strong> ${formatNumber(calculatedValues.loyerMensuel)} € HT</p>
+          <p><strong>Nombre de lignes :</strong> ${lignesData.length}</p>
         </div>
       </body>
       </html>
     `;
+  };
+  
+  /**
+   * Génère le contenu PDF pour l'email (version synchrone avec fallback)
+   */
+  const generatePDFContent = (): string => {
+    // Pour l'email, on utilise le fallback synchrone
+    // TODO: Implémenter une version async pour l'email également
+    return generateFallbackPDFContent();
   };
 
   return (
