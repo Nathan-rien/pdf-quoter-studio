@@ -1,102 +1,108 @@
 
-# Plan : Corriger la duplication de template avec lazy loading
+# Plan : Charger les pages source avant duplication
 
 ## Problème identifié
 
-Lors de la duplication d'un template, si la version source n'a pas encore ses pages chargées (lazy loading), la version dupliquée hérite de `pages: []`. Ensuite, quand on ouvre le template dupliqué :
+Lors de la duplication du template CybertekPro vers GrosbillPro :
 
-1. Le système détecte `pages.length === 0`
-2. Il appelle `loadVersionPages(version.id)` pour charger depuis le cloud
-3. **Erreur 1** : L'ID `version-1769436183828-0` n'est pas converti en UUID valide avant la requête
-4. **Erreur 2** : Le template dupliqué n'existe pas encore en base de données (pas synchronisé)
+1. Les pages de la version source ne sont pas chargées en mémoire (lazy loading)
+2. `duplicateTemplate()` est **synchrone** et détecte `v.pages.length === 0`
+3. Le fallback utilise `PDF_TEMPLATE_ELEMENTS` = éléments par défaut (placeholder "Image", textes basiques)
+4. Le template dupliqué affiche le design par défaut au lieu du design personnalisé de CybertekPro
+
+**Résultat** : Le template dupliqué n'hérite pas du contenu visuel du template source.
+
+---
 
 ## Solution
 
-Deux corrections sont nécessaires :
+Rendre la duplication **asynchrone** pour charger les pages depuis le cloud AVANT de les cloner.
 
-### Correction 1 : Convertir l'ID en UUID dans `loadVersionPages`
+### Flux corrigé
 
-Dans `src/hooks/useTemplateSync.ts`, modifier la fonction `loadVersionPages` pour utiliser `toValidUUID` :
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. Utilisateur clique "Dupliquer"                               │
+├─────────────────────────────────────────────────────────────────┤
+│ 2. Identifier la version source à dupliquer                     │
+├─────────────────────────────────────────────────────────────────┤
+│ 3. Si pages.length === 0 (lazy loading)                         │
+│    → Charger les pages depuis le cloud via loadVersionPages()   │
+│    → Attendre le résultat                                       │
+├─────────────────────────────────────────────────────────────────┤
+│ 4. Dupliquer avec les VRAIES pages (design personnalisé)        │
+│    → Cloner les éléments, zones dynamiques, etc.                │
+├─────────────────────────────────────────────────────────────────┤
+│ 5. Template dupliqué = copie fidèle du template source          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Modifications prévues
+
+### 1. `src/stores/templateEditorStore.ts` - Rendre `duplicateTemplate` asynchrone
+
+Modifier la fonction pour accepter un paramètre optionnel `sourcePages` chargées au préalable :
 
 ```typescript
 // AVANT
-const { data, error } = await supabase
-  .from('template_versions')
-  .select('pages')
-  .eq('id', versionId)  // ID brut
-  .maybeSingle();
+duplicateTemplate: (templateId, newName, description, includeAllVersions = false) => {
+  // ... synchrone, utilise fallback si pages vides
+}
 
 // APRÈS
-const { data, error } = await supabase
-  .from('template_versions')
-  .select('pages')
-  .eq('id', toValidUUID(versionId))  // ID converti en UUID
-  .maybeSingle();
-```
-
-### Correction 2 : Charger les pages source AVANT la duplication
-
-Dans `src/stores/templateEditorStore.ts`, la fonction `duplicateTemplate` doit s'assurer que les pages source sont chargées. Deux approches possibles :
-
-**Option A (synchrone - recommandée)** : Vérifier si les pages sont vides et utiliser les pages par défaut
-
-```typescript
-duplicateTemplate: (templateId, newName, description, includeAllVersions = false) => {
-  // ... code existant ...
-  
-  // Cloner les versions avec nouveaux IDs
-  const duplicatedVersions: TemplateVersion[] = versionsToDuplicate.map((v, index) => {
-    // Si les pages source sont vides (lazy loading), utiliser les pages par défaut
-    const sourcePages = v.pages.length > 0 ? v.pages : createDefaultPages();
-    
-    return {
-      ...v,
-      id: `version-${Date.now()}-${index}`,
-      templateId: newTemplateId,
-      // ... reste du code ...
-      pages: sourcePages.map(page => ({
-        // ... clonage des pages ...
-      }))
-    };
-  });
+duplicateTemplate: (templateId, newName, description, includeAllVersions = false, preloadedPages?: Record<string, TemplatePageContent[]>) => {
+  // ... utilise preloadedPages si fourni, sinon fallback
 }
 ```
 
-**Option B (alternative)** : Rendre `duplicateTemplate` asynchrone et charger les pages avant duplication
+### 2. `src/components/template-editor/DuplicateTemplateDialog.tsx` - Charger les pages avant
 
-Cette option est plus complexe car elle nécessite de modifier la signature de la fonction et tous ses appels.
-
-### Correction 3 : Ne pas tenter de charger depuis le cloud si la version n'existe pas en base
-
-Ajouter une vérification dans le `useEffect` de `TemplateEditorLayout.tsx` :
+Modifier `handleDuplicate` pour :
+1. Identifier les versions à dupliquer
+2. Pour chaque version avec `pages.length === 0`, charger les pages depuis le cloud
+3. Passer les pages chargées à `duplicateTemplate()`
 
 ```typescript
-useEffect(() => {
-  const loadPagesIfEmpty = async () => {
-    if (
-      currentVersion && 
-      currentVersion.id && 
-      (!currentVersion.pages || currentVersion.pages.length === 0) &&
-      !isLoadingVersion
-    ) {
-      // Ne pas charger si la version n'existe pas encore en base (ID local non synchronisé)
-      const isLocalOnlyVersion = currentVersion.id.startsWith('version-');
-      
-      if (isLocalOnlyVersion) {
-        // Version locale : utiliser les pages par défaut
-        console.log('Version locale détectée, utilisation des pages par défaut');
-        // Mettre à jour avec les pages par défaut
-        useTemplateEditorStore.getState().updateCurrentVersionPages(createDefaultPages());
-        return;
-      }
-      
-      console.log('Pages vides détectées, chargement depuis le cloud...');
-      await loadVersionPages(currentVersion.id);
-    }
-  };
+const handleDuplicate = async () => {
+  setIsLoading(true);
   
-  loadPagesIfEmpty();
-}, [currentVersion?.id, currentVersion?.pages?.length, isLoadingVersion, loadVersionPages]);
+  // 1. Récupérer les versions du template source
+  const sourceVersions = allVersions.filter(v => v.templateId === template.id);
+  const versionToDuplicate = getLatestPublishedOrLatest(sourceVersions);
+  
+  // 2. Si pages non chargées, les charger depuis le cloud
+  let preloadedPages: Record<string, TemplatePageContent[]> = {};
+  
+  if (versionToDuplicate && (!versionToDuplicate.pages || versionToDuplicate.pages.length === 0)) {
+    const pages = await loadVersionPages(versionToDuplicate.id);
+    if (pages) {
+      preloadedPages[versionToDuplicate.id] = pages;
+    }
+  }
+  
+  // 3. Dupliquer avec les pages préchargées
+  const newTemplate = duplicateTemplate(template.id, name, description, includeAllVersions, preloadedPages);
+};
+```
+
+### 3. `src/stores/templateEditorStore.ts` - Utiliser les pages préchargées
+
+Dans `duplicateTemplate`, utiliser les pages préchargées si disponibles :
+
+```typescript
+const duplicatedVersions = versionsToDuplicate.map((v, index) => {
+  // Priorité : pages préchargées > pages en mémoire > pages par défaut
+  const sourcePages = 
+    (preloadedPages && preloadedPages[v.id]) || 
+    (v.pages && v.pages.length > 0 ? v.pages : null) ||
+    createDefaultPages();
+  
+  return {
+    // ... clonage avec sourcePages
+  };
+});
 ```
 
 ---
@@ -105,37 +111,39 @@ useEffect(() => {
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/hooks/useTemplateSync.ts` | Ligne ~213 : utiliser `toValidUUID(versionId)` dans la requête |
-| `src/stores/templateEditorStore.ts` | Ligne ~394 : utiliser `createDefaultPages()` si les pages source sont vides |
-| `src/components/template-editor/TemplateEditorLayout.tsx` | Ligne ~97 : ajouter une vérification pour les versions locales |
+| `src/stores/templateEditorStore.ts` | Ajouter paramètre `preloadedPages` à `duplicateTemplate` |
+| `src/components/template-editor/DuplicateTemplateDialog.tsx` | Charger les pages depuis le cloud avant de dupliquer |
 
 ---
 
-## Flux corrigé
+## Détails techniques
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. Utilisateur duplique un template                             │
-├─────────────────────────────────────────────────────────────────┤
-│ 2. duplicateTemplate() vérifie v.pages                          │
-│    → Si vide : utilise createDefaultPages()                     │
-│    → Sinon : clone les pages existantes                         │
-├─────────────────────────────────────────────────────────────────┤
-│ 3. Nouvelle version créée avec pages valides                    │
-│    → ID: "version-1769436183828-0"                              │
-│    → pages: [Page1, Page2, ..., Page8]                          │
-├─────────────────────────────────────────────────────────────────┤
-│ 4. Utilisateur ouvre le template dupliqué                       │
-│    → pages.length > 0 : pas de chargement cloud nécessaire      │
-│    → Canvas affiche les pages correctement                      │
-└─────────────────────────────────────────────────────────────────┘
+### Accès à `loadVersionPages` dans le Dialog
+
+Le Dialog doit importer `useTemplateSync` pour accéder à `loadVersionPages` :
+
+```typescript
+import { useTemplateSync } from '@/hooks/useTemplateSync';
+
+// Dans le composant
+const { loadVersionPages } = useTemplateSync();
 ```
+
+### Gestion du chargement
+
+Le bouton "Dupliquer" affichera "Chargement..." puis "Duplication..." pour indiquer les deux phases.
+
+### Fallback de sécurité
+
+Si le chargement des pages échoue (erreur réseau, version inexistante), on conserve le fallback vers les pages par défaut pour éviter un blocage.
 
 ---
 
 ## Résultat attendu
 
-- Le template dupliqué s'ouvre immédiatement avec 8 pages valides
-- Aucune erreur "Erreur lors du chargement de la version"
-- Le canvas affiche les éléments du template source (ou les éléments par défaut si la source n'était pas chargée)
-- La synchronisation vers le cloud fonctionne correctement grâce à `toValidUUID`
+| Élément | Avant | Après |
+|---------|-------|-------|
+| Page 1 GrosbillPro | Placeholder "Image" + textes basiques | Image de fond + design CybertekPro |
+| Nombre de pages | 6 (défaut) | 8 (comme source) |
+| Éléments | Par défaut | Copie fidèle du template source |
+| Logo | Absent | Présent (comme source) |
