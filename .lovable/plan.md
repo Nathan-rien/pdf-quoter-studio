@@ -1,153 +1,111 @@
 
 
-# Plan : Corriger la détection de la ligne Installation et les fusions incorrectes
+# Plan : Corriger la détection de la ligne "Installation" dans le parser Cybertek
 
-## Problème identifié
+## Analyse du problème
 
-### Cause racine 1 : Installation disparaît
-Dans le code actuel (lignes 365-408), quand aucun candidat valide n'est trouvé (`bestCandidate === null`), le code fait simplement `continue` sans ajouter la ligne au résultat. C'est pourquoi "Installation" disparaît complètement.
+D'après les logs et les captures d'écran :
+- **3 lignes extraites** : Mémoire, Chassis, Disque dur
+- **2 lignes manquantes** : Kit Rails RKS-02, Installation (+ Frais de livraison à 0€)
 
-Le problème sous-jacent : le pattern `lineEndPattern` cherche un format strict "QTE (1-2 chiffres) + montant + €" en fin de ligne, mais dans le texte extrait du PDF Cybertek, ce format n'est pas respecté pour les lignes services.
+### Cause racine identifiée
 
-### Cause racine 2 : Lignes produits fusionnées (3ème ligne corrompue)
-La ligne 3 dans l'app combine "Chassis d'extension..." avec "Synology Kit Rails..." car le parser ne détecte pas correctement les frontières entre produits lors du scan arrière (`findSyRefIndexBackwards`).
+1. **La ligne "Kit Rails RKS-02"** (SY-RKS02) n'est pas extraite → probablement absorbée dans une autre ligne ou le pattern `syRefPattern` ne la détecte pas
+2. **La ligne "Installation"** n'est pas détectée → le texte extrait du PDF ne contient peut-être pas cette ligne dans le bon format, ou le `stopRe` interrompt le parsing avant d'y arriver
 
----
+Le pattern `stopRe` actuel est :
+```typescript
+const stopRe = /^(Offre\s+Locative|TOTAL\s*HT|Total\s*HT|TVA\s*20|Total\s*TTC|CONDITIONS)/i;
+```
+
+Si le PDF contient "TOTAL HT" ou similaire **avant** la ligne "Installation", le parsing s'arrête prématurément.
 
 ## Modifications requises
 
 ### Fichier : `src/lib/pdf-import-parser.ts`
 
-### Modification 1 : Améliorer la détection pour les lignes services
+#### Modification 1 : Ajouter des logs de debug pour diagnostiquer
 
-**Problème** : Le pattern actuel cherche "QTE montant €" à la fin d'une ligne unique, mais le PDF peut avoir :
-- "Installation" sur une ligne
-- "Prestation d'installation..." sur une autre ligne
-- "2 974,00 €" possiblement splitté ou formaté différemment
-
-**Solution** : Utiliser une stratégie de "lookahead avec extraction séparée" :
+Ajouter un log qui affiche **toutes les lignes** du `rowsSource` pour comprendre où se situent "Installation" et "Frais de livraison" par rapport aux marqueurs d'arrêt.
 
 ```typescript
-// Dans la boucle de lookahead (lignes 316-346)
-// Au lieu de chercher "QTE montant €" sur UNE ligne,
-// chercher le pattern de fin de tableau Cybertek qui est :
-// - un nombre seul (QTE) sur une ligne ou en fin de texte
-// - suivi d'un montant "XXX,XX €"
-
-// Pattern plus flexible pour Cybertek :
-// Cherche "QTE montant €" avec possibilité que QTE soit seul avant
-const strictLineEndPattern = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
+// Après la ligne 240 (construction de rowsSource)
+console.log('[Cybertek Parser] Table rows count:', rowsSource.length);
+console.log('[Cybertek Parser] Sample rows (last 20):', rowsSource.slice(-20));
 ```
 
-Mais surtout, **ajouter un fallback** quand aucun candidat n'est trouvé :
-- Chercher un montant seul (sans QTE explicite) et utiliser QTE=1 par défaut
-- Ou scanner plus largement avec un pattern moins strict
+#### Modification 2 : Ajuster le `stopRe` pour ne pas s'arrêter trop tôt
 
-### Modification 2 : Fallback quand bestCandidate est null
+Le problème : le pattern `stopRe` contient `TOTAL\s*HT` qui peut matcher une ligne de sous-total **avant** les services.
 
-Actuellement, si aucun candidat n'est trouvé, la ligne Installation est simplement ignorée. Il faut ajouter :
+Solution : Ne pas arrêter sur le premier "Total HT" rencontré. Modifier le `stopRe` pour être plus spécifique :
 
 ```typescript
-if (bestCandidate) {
-  // ... existing code ...
-} else {
-  // FALLBACK: Essayer une extraction plus permissive
-  // Chercher n'importe quel montant dans la fenêtre
-  // Utiliser QTE=1 par défaut si non détecté
-  
-  // Collecter toutes les lignes de désignation jusqu'au prochain bloc
-  const designationLines: string[] = [];
-  let fallbackTotal = 0;
-  let fallbackQty = 1;
-  
-  for (let j = i; j < rowsSource.length && j <= i + maxLookahead; j++) {
-    const line = rowsSource[j];
-    if (isNewBlockStart(line) && j > i) break;
-    
-    // Chercher un montant €
-    const amountMatch = line.match(/([\d\s,.]+)\s*€/);
-    if (amountMatch) {
-      const val = parseNumber(amountMatch[1]);
-      if (val && val > 100 && val < 10000) {
-        fallbackTotal = val;
-        // Chercher un QTE juste avant le montant
-        const qtyBeforeAmount = line.match(/\s(\d{1,2})\s+[\d\s,.]+\s*€/);
-        if (qtyBeforeAmount) {
-          fallbackQty = parseInt(qtyBeforeAmount[1], 10) || 1;
-        }
-        break;
-      }
+// Au lieu de stopper sur n'importe quel "Total HT", 
+// stopper uniquement sur les marqueurs de fin de tableau définitifs
+const stopRe = /^(Offre\s+Locative|CONDITIONS|Prix\s+Total\s+de\s+vente|PRIX\s+TOTAL)/i;
+```
+
+OU : Parcourir **tout** le tableau avant de s'arrêter, puis filtrer les lignes après.
+
+#### Modification 3 : Scan en deux passes
+
+1. **Première passe** : Extraire les produits standards (SY-XXX)
+2. **Deuxième passe** : Parcourir **tout** le texte pour trouver les lignes "Installation" et "Frais de livraison"
+
+Cette approche garantit que les services ne sont pas ignorés même s'ils apparaissent après des marqueurs de total.
+
+```typescript
+// Après la boucle principale (ligne 542), ajouter une recherche dédiée
+// Scan for "Installation" anywhere in the document
+const installIdx = lines.findIndex(l => /^Installation$/i.test(l.trim()));
+if (installIdx !== -1) {
+  // Extract the following lines for designation and amounts
+  // ...
+}
+```
+
+#### Modification 4 : Recherche de "Installation" dans tout le document
+
+Implémenter une recherche spécifique qui ne dépend pas de l'ordre des lignes :
+
+```typescript
+// Après le parsing standard, chercher explicitement les services
+// si non trouvés dans result.lignes
+const hasInstallation = result.lignes.some(l => 
+  l.reference?.toLowerCase().includes('installation')
+);
+
+if (!hasInstallation) {
+  // Chercher "Installation" dans TOUTES les lignes
+  for (let i = 0; i < lines.length; i++) {
+    if (/^Installation$/i.test(lines[i].trim())) {
+      // Fenêtre lookahead pour récupérer désignation + montant
+      // ...
     }
-    
-    // Collecter pour la désignation
-    if (!isBannedLine(line) && !isGarantieLine(line)) {
-      designationLines.push(line);
-    }
-  }
-  
-  if (fallbackTotal > 0) {
-    // Construire et ajouter la ligne
-    const designation = designationLines.join(' ')
-      .replace(new RegExp(`^${specialRefMatch}\\s*`, 'i'), '')
-      .replace(/[\d\s,.]+\s*€.*$/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    result.lignes!.push({
-      reference: specialRefMatch,
-      designation,
-      quantite: fallbackQty,
-      totalHT: fallbackTotal,
-      prixUnitaire: fallbackQty > 0 ? Math.round((fallbackTotal / fallbackQty) * 100) / 100 : null,
-    });
   }
 }
 ```
 
-### Modification 3 : Corriger les frontières produits (éviter les fusions)
+## Résumé technique
 
-Le problème de la ligne 3 fusionnée vient de `findSyRefIndexBackwards` qui remonte trop loin. Il faut ajouter une condition d'arrêt supplémentaire :
-
-```typescript
-const findSyRefIndexBackwards = (fromIdx: number) => {
-  for (let j = fromIdx; j >= 0 && j >= fromIdx - 8; j--) {
-    const v = rowsSource[j];
-    if (syRefPattern.test(v)) return j;
-    if (stopRe.test(v)) break;
-    // AJOUT : s'arrêter si on voit un autre pattern de fin de ligne (€)
-    // car ça signifie qu'on a traversé un autre produit
-    if (/[\d\s,.]+\s*€\s*$/.test(v)) break;
-  }
-  return -1;
-};
-```
-
----
-
-## Résumé des changements
-
-| Ligne | Modification |
-|-------|--------------|
-| 265-267 | Ajouter condition d'arrêt dans `findSyRefIndexBackwards` |
-| 364-408 | Ajouter bloc `else` avec extraction fallback pour les services |
-| 303-346 | Améliorer les patterns de détection pour être moins stricts |
+| Modification | Description |
+|--------------|-------------|
+| 1. Logs de debug | Afficher `rowsSource.slice(-20)` pour voir les dernières lignes du tableau |
+| 2. `stopRe` moins agressif | Ne pas stopper sur "Total HT" mais seulement sur "Offre Locative" ou "CONDITIONS" |
+| 3. Scan dédié services | Rechercher "Installation" et "Frais de livraison" dans **tout** le document après le parsing standard |
+| 4. Fallback texte complet | Si les services ne sont pas trouvés, parcourir `lines` (pas `rowsSource`) |
 
 ## Résultat attendu
 
-| Donnée | Avant | Après |
-|--------|-------|-------|
-| **Ligne Installation** | Absente ❌ | Présente avec Nb=2, VTN=974,00 € ✓ |
-| **Ligne Frais de livraison** | Absente ❌ | Présente avec VTN=0,00 € ✓ |
-| **Ligne 3 (Kit Rails)** | Fusionnée avec Chassis ❌ | Séparée correctement ✓ |
-| **Total lignes** | 4 | 6 (comme le PDF) |
+| Ligne | Avant | Après |
+|-------|-------|-------|
+| Mémoire Synology | ✅ | ✅ |
+| Chassis RX1217RP | ✅ | ✅ |
+| Kit Rails RKS-02 | ❌ | ✅ |
+| Disque dur HAT5320 | ✅ | ✅ |
+| Installation | ❌ | ✅ (Nb=2, VTN=974€) |
+| Frais de livraison | ❌ | ✅ (VTN=0€) |
 
----
-
-## Impact technique
-
-- **Fichier modifié** : `src/lib/pdf-import-parser.ts`
-- **Fonctions modifiées** : 
-  - `findSyRefIndexBackwards` : meilleure détection des frontières
-  - Boucle principale : fallback pour services sans pattern strict
-- **Rétrocompatibilité** : Les produits standards (SY-XXX) ne sont pas affectés
+**Total lignes** : 6 au lieu de 3
 
