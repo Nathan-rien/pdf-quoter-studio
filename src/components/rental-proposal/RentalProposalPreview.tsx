@@ -706,13 +706,13 @@ export function RentalProposalPreview() {
         }}
       >
         {/* Bloc permanent "Services inclus" - style header gris + puces */}
-        <div className="mb-3 border rounded overflow-hidden">
-          <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-            <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
-            <span className="font-semibold text-[11px]">Services Inclus</span>
+        <div className="mb-4 border rounded overflow-hidden">
+          <div className="bg-muted px-4 py-2 flex items-center gap-2">
+            <div className="w-2.5 h-5 bg-foreground/80 rounded-sm" />
+            <span className="font-semibold text-[14px]">Services Inclus</span>
           </div>
-          <div className="px-3 py-2 bg-background">
-            <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+          <div className="px-4 py-3 bg-background">
+            <ul className="text-[10px] text-muted-foreground space-y-1 list-disc list-inside">
               {servicesInclus.description.split(',').map((item, i) => (
                 <li key={i} className="leading-tight">{item.trim()}</li>
               ))}
@@ -722,21 +722,21 @@ export function RentalProposalPreview() {
 
         {/* Options additionnelles sélectionnées (depuis optionsServices) */}
         {pageOptions.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {pageOptions.map((option) => (
               <div key={option.id} className="border rounded overflow-hidden">
-                <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-foreground/70" />
-                  <span className="font-semibold text-[11px]">{option.name}</span>
+                <div className="bg-muted px-4 py-2 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-foreground/70" />
+                  <span className="font-semibold text-[14px]">{option.name}</span>
                   {option.price !== null && (
-                    <span className="ml-auto text-[9px] text-primary font-medium">
+                    <span className="ml-auto text-[11px] text-primary font-medium">
                       {formatNumber(option.price)} €/mois
                     </span>
                   )}
                 </div>
                 {option.description && (
-                  <div className="px-3 py-2 bg-background">
-                    <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+                  <div className="px-4 py-3 bg-background">
+                    <ul className="text-[10px] text-muted-foreground space-y-1 list-disc list-inside">
                       {option.description.split(',').map((item, i) => (
                         <li key={i} className="leading-tight">{item.trim()}</li>
                       ))}
@@ -774,21 +774,21 @@ export function RentalProposalPreview() {
             <p className="text-sm">Aucune option sélectionnée</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {selectedNosOptions.map((option) => (
               <div key={option.id} className="border rounded overflow-hidden">
-                <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-                  <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-                  <span className="font-semibold text-[11px]">{option.name}</span>
+                <div className="bg-muted px-4 py-2 flex items-center gap-2">
+                  <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
+                  <span className="font-semibold text-[14px]">{option.name}</span>
                   {option.price !== null && (
-                    <span className="ml-auto text-[9px] text-primary font-medium">
+                    <span className="ml-auto text-[11px] text-primary font-medium">
                       {formatNumber(option.price)} €/mois
                     </span>
                   )}
                 </div>
                 {option.description && (
-                  <div className="px-3 py-2 bg-background">
-                    <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
+                  <div className="px-4 py-3 bg-background">
+                    <ul className="text-[10px] text-muted-foreground space-y-1 list-disc list-inside">
                       {option.description.split(',').map((item, i) => (
                         <li key={i} className="leading-tight">{item.trim()}</li>
                       ))}
