@@ -260,13 +260,16 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   // Pattern for the short ref (2nd line, without SY- prefix)
   const shortRefPattern = /^[A-Z0-9]+-[A-Z0-9-]+$|^[A-Z0-9]{4,}$/i;
   
-  // Special refs without dash - only Installation and Frais de livraison
-  // "Prestation" is NOT included to preserve it in the designation text
-  const specialRefs = ['Installation', 'Frais de livraison'];
-  
-  // Regex patterns for permissive service detection (not dependent on startsWith)
-  const installationPattern = /^\s*Installation\b/i;
-  const fraisLivraisonPattern = /^\s*Frais\s+de\s+livraison\b/i;
+  // Service lines (Installation / Frais de livraison)
+  // NOTE: Cybertek PDFs often write the service ref as "Prestation d’installation ..." and
+  // the delivery line as "1 0,00 € Frais de livraison" (keyword not at start).
+  const installationRefLineRe = /^\s*Installation\b/i;
+  const prestationInstallationLineRe = /^\s*Prestation\s+d[’']installation\b/i;
+  const isInstallationStartLine = (line: string) =>
+    installationRefLineRe.test(line) || prestationInstallationLineRe.test(line);
+
+  const fraisLivraisonLineRe = /Frais\s+de\s+livraison/i;
+  const isFraisLivraisonLine = (line: string) => fraisLivraisonLineRe.test(line);
 
   const isBannedLine = (line: string) =>
     /(ADRESSE\s+DE\s+LIVRAISON|ADRESSE\s+DE\s+FACTURATION|SIEGE\s+SOCIAL|AU\s+CAPITAL|GROUPE\s+KEDGE|N°\s*client)/i.test(line);
@@ -328,8 +331,8 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     // Special refs first (Installation, Frais de livraison)
     // Using windowed lookahead to avoid absorbing global totals like "14 700,00 €"
     // FIXED: Use permissive regex patterns instead of strict startsWith()
-    const isInstallation = installationPattern.test(l);
-    const isFraisLivraison = fraisLivraisonPattern.test(l);
+    const isInstallation = isInstallationStartLine(l);
+    const isFraisLivraison = isFraisLivraisonLine(l);
     const specialRefMatch = isInstallation ? 'Installation' : (isFraisLivraison ? 'Frais de livraison' : null);
     if (specialRefMatch) {
       // Windowed lookahead: scan up to 6 lines maximum to find QTE + total
@@ -344,9 +347,9 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       const lineEndPattern = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
       
       // Pattern to detect another special ref or product start (stop conditions)
-      const isNewBlockStart = (line: string) => 
-        syRefPattern.test(line) || 
-        specialRefs.some(sr => line.toLowerCase().startsWith(sr.toLowerCase()) && line !== l) ||
+      const isNewBlockStart = (line: string) =>
+        syRefPattern.test(line) ||
+        ((isInstallationStartLine(line) || isFraisLivraisonLine(line)) && line !== l) ||
         stopRe.test(line) ||
         /^Total/i.test(line);
       
@@ -424,10 +427,11 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         }
         
         // Clean up designation: remove the reference prefix, collapse whitespace
-        let designation = designationParts.join(' ')
-          .replace(new RegExp(`^${specialRefMatch}\\s*`, 'i'), '')
-          .replace(/\s+/g, ' ')
-          .trim();
+        let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
+        // Only strip a literal leading "Installation" label; keep "Prestation d’installation..."
+        if (/^\s*Installation\b/i.test(designation)) {
+          designation = designation.replace(/^\s*Installation\s*/i, '').trim();
+        }
         
         console.log('[Cybertek Parser] Service line extracted:', {
           reference: specialRefMatch,
@@ -493,11 +497,13 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         // Build and add the line if we found a total (even if 0 for "Frais de livraison")
         // We need at least some designation content OR a valid total
         if (fallbackTotal > 0 || (specialRefMatch.toLowerCase().includes('frais') && fallbackDesignationLines.length > 0)) {
-          const designation = fallbackDesignationLines.join(' ')
-            .replace(new RegExp(`^${specialRefMatch}\\s*`, 'i'), '')
+          let designation = fallbackDesignationLines.join(' ')
             .replace(/[\d\s,.]+\s*€.*$/, '')
             .replace(/\s+/g, ' ')
             .trim();
+          if (/^\s*Installation\b/i.test(designation)) {
+            designation = designation.replace(/^\s*Installation\s*/i, '').trim();
+          }
           
           console.log('[Cybertek Parser] Service line (fallback):', {
             reference: specialRefMatch,
@@ -595,8 +601,8 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Look for "Installation" anywhere in the document
-      if (installationPattern.test(line)) {
+      // Look for the service header line (often "Prestation d’installation ...")
+      if (isInstallationStartLine(line)) {
         console.log('[Cybertek Parser] Recovery: found Installation at line', i, ':', line);
         
         // Collect designation from subsequent lines (up to 25 lines lookahead)
@@ -612,7 +618,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
           // Stop conditions: next product, end markers
           if (j > i && (
             syRefPattern.test(currentLine) ||
-            fraisLivraisonPattern.test(currentLine) ||
+            isFraisLivraisonLine(currentLine) ||
             stopRe.test(currentLine) ||
             /^Offre\s+Locative/i.test(currentLine)
           )) {
@@ -637,7 +643,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
               
               // Add text before the amount
               const textPart = currentLine.slice(0, currentLine.indexOf(lastMatch[0])).trim();
-              if (textPart && !installationPattern.test(textPart)) {
+               if (textPart && !isInstallationStartLine(textPart)) {
                 designationParts.push(textPart);
               }
               continue;
@@ -658,7 +664,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
               foundAmount = true;
               
               const textPart = currentLine.slice(0, currentLine.indexOf(amountOnly[0])).trim();
-              if (textPart && !installationPattern.test(textPart)) {
+               if (textPart && !isInstallationStartLine(textPart)) {
                 designationParts.push(textPart);
               }
               continue;
@@ -668,7 +674,13 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
           // Collect line for designation if no amount found yet
           if (!foundAmount && j > i) {
             // Clean the line (remove "Installation" prefix if present)
-            let cleanLine = currentLine.replace(/^\s*Installation\s*/i, '').trim();
+             // Keep the full wording ("Prestation d’installation ...")
+             let cleanLine = currentLine;
+             if (/^\s*Installation\b/i.test(cleanLine)) {
+               cleanLine = cleanLine.replace(/^\s*Installation\s*/i, '').trim();
+             } else {
+               cleanLine = cleanLine.trim();
+             }
             if (cleanLine && !/^\d+$/.test(cleanLine)) {
               designationParts.push(cleanLine);
             }
@@ -713,36 +725,40 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Look for SY-RKS02 reference
+      // Look for SY-RKS02 reference (may be embedded in a longer line)
       if (/SY-RKS02/i.test(line)) {
         console.log('[Cybertek Parser] Recovery: found SY-RKS02 at line', i, ':', line);
         
-        // Scan window of 20 lines to collect designation and amount
-        const maxWindow = 20;
+        // Scan window to collect designation + amount.
+        // IMPORTANT: In extracted text, the designation often sits on the PREVIOUS line
+        // and the amount can be on a dedicated line ("2 216,00 €").
+        const maxWindow = 25;
         const designationParts: string[] = [];
         let recoveredQty = 1;
         let recoveredTotal = 0;
-        let foundAmount = false;
+        let amountLineIdx = -1;
+
+        const startIdx = Math.max(0, i - 2);
         
-        for (let j = i; j < lines.length && j <= i + maxWindow && !foundAmount; j++) {
+        for (let j = startIdx; j < lines.length && j <= i + maxWindow; j++) {
           const currentLine = lines[j];
           
           // Stop if we hit another SY- product or terminal markers
           if (j > i && (
             (syRefPattern.test(currentLine) && !/SY-RKS02/i.test(currentLine)) ||
-            installationPattern.test(currentLine) ||
-            fraisLivraisonPattern.test(currentLine) ||
+            isInstallationStartLine(currentLine) ||
+            isFraisLivraisonLine(currentLine) ||
             stopRe.test(currentLine)
           )) {
             break;
           }
           
-          // Skip banned/garantie lines for designation but still check for amounts
-          const skipForDesignation = isBannedLine(currentLine) || isGarantieLine(currentLine);
+          // Skip banned lines for designation but still check for amounts
+          const skipForDesignation = isBannedLine(currentLine);
           
           // Try to extract QTE + amount
           const amountMatches = [...currentLine.matchAll(/(\d{1,2})\s+([\d\s,.]+)\s*€/gi)];
-          if (amountMatches.length > 0) {
+          if (amountMatches.length > 0 && recoveredTotal === 0) {
             const lastMatch = amountMatches[amountMatches.length - 1];
             const qty = parseInt(lastMatch[1], 10) || 1;
             const total = parseNumber(lastMatch[2]) || 0;
@@ -751,35 +767,30 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
             if (total > 0 && total < 1000) {
               recoveredQty = qty;
               recoveredTotal = total;
-              foundAmount = true;
-              
-              if (!skipForDesignation) {
-                const textPart = currentLine.slice(0, currentLine.indexOf(lastMatch[0])).trim();
-                if (textPart && !/^SY-/i.test(textPart)) {
-                  designationParts.push(textPart);
-                }
-              }
-              continue;
+              amountLineIdx = j;
             }
           }
           
-          // Collect line for designation
-          if (!foundAmount && !skipForDesignation && j > i) {
-            // Skip lines that are just the short ref
-            if (shortRefPattern.test(currentLine) && currentLine.length < 20) continue;
-            // Skip SY- prefix lines
-            if (/^SY-/i.test(currentLine)) continue;
-            // Skip Garantie lines
-            if (isGarantieLine(currentLine)) continue;
-            
-            designationParts.push(currentLine);
+          // Collect line for designation (including after the amount line to capture "CMA -01" + "Garantie")
+          if (!skipForDesignation) {
+            // Skip the pure amount-only line ("2 216,00 €") but keep other lines.
+            if (/^\s*\d{1,2}\s+[\d\s,.]+\s*€\s*$/i.test(currentLine)) continue;
+
+            let clean = currentLine
+              .replace(/\bSY-RKS02\b/gi, '')
+              .trim();
+
+            // Drop a lonely SY code line
+            if (/^SY-\w+/i.test(clean) && clean.length <= 12) continue;
+
+            if (clean) designationParts.push(clean);
           }
         }
         
         if (recoveredTotal > 0) {
-          const designation = designationParts.join(' ')
+          const designation = designationParts
+            .join(' ')
             .replace(/\s+/g, ' ')
-            .replace(/Garantie\s*:.*$/i, '') // Remove warranty info at end
             .trim();
           
           console.log('[Cybertek Parser] Recovery: RKS-02 extracted', {
@@ -809,7 +820,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   
   if (!hasFraisLivraison) {
     for (let i = 0; i < lines.length; i++) {
-      if (fraisLivraisonPattern.test(lines[i])) {
+      if (isFraisLivraisonLine(lines[i])) {
         // Look for amount on this line or next few lines
         for (let j = i; j < lines.length && j <= i + 5; j++) {
           const amountMatch = lines[j].match(/([\d\s,.]+)\s*€/);
