@@ -634,18 +634,85 @@ export function RentalProposalPreview() {
   };
 
   // Pages produits (dynamiques) - Page 4 fixe avec éléments statiques du template
+  // Les éléments situés sous la zone dynamique suivent le tableau en flux relatif
   const renderProductPage = () => {
     const pageLines = lignesData.slice(0, LINES_PER_PAGE);
     const staticElements = getStaticPageElements(4 as PDFPageNumber);
     
-    const renderProductTable = () => (
+    // Calculer le seuil Y pour séparer éléments au-dessus / en-dessous de la zone dynamique
+    const version = getCurrentVersion();
+    const page4 = version?.pages.find(p => p.pageNumber === 4);
+    const investZone = page4?.dynamicZones.find(z => z.type === 'invest_table');
+    
+    // Position de la zone dynamique (valeurs par défaut si non personnalisée)
+    const zoneTopPercent = investZone?.position?.top ?? 28;
+    const zoneHeightPercent = investZone?.position?.height ?? 48;
+    const dynamicZoneBottomY = ((zoneTopPercent + zoneHeightPercent) / 100) * CANVAS_SCALE.height;
+    
+    // Partitionner les éléments statiques
+    const elementsAbove = staticElements.filter(el => el.position.y < dynamicZoneBottomY);
+    const elementsBelow = staticElements
+      .filter(el => el.position.y >= dynamicZoneBottomY)
+      .sort((a, b) => a.position.y - b.position.y); // Tri par Y croissant pour respecter l'ordre visuel
+    
+    // Fonction pour rendre un élément en flux relatif (sans position absolue)
+    const renderFlowElement = (element: EditableElement) => {
+      if (element.type !== 'text') {
+        // Pour les non-textes, on garde le rendu normal (rare pour les éléments "below")
+        return renderTemplateElement(element);
+      }
+      
+      const content = element.content as TextContent;
+      const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
+      const fontValue = fontDef?.value || 'Outfit, sans-serif';
+      const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
+      
+      // Calcul de la largeur max en pourcentage (identique à getSharedElementStyle)
+      const maxWidthPercent = Math.max(Math.min((element.size.width / CANVAS_SCALE.width) * 100, 100), 5);
+      
+      return (
+        <div
+          key={element.id}
+          className="mb-2"
+          style={{
+            width: 'fit-content',
+            maxWidth: `${maxWidthPercent}%`,
+            zIndex: previewZIndex(element),
+          }}
+        >
+          <div 
+            className="px-0.5 py-px"
+            style={{
+              fontFamily: fontValue,
+              fontSize: `${scaledFontSize}px`,
+              color: content.color || '#1f2937',
+              fontWeight: content.bold ? 'bold' : 'normal',
+              fontStyle: content.italic ? 'italic' : 'normal',
+              textDecoration: content.underline ? 'underline' : 'none',
+              lineHeight: 1.2,
+              textAlign: content.textAlign || 'left',
+              width: '100%',
+            }}
+          >
+            <div className="whitespace-pre-wrap break-words">
+              {content.htmlContent ? (
+                <div dangerouslySetInnerHTML={{ __html: content.htmlContent }} />
+              ) : (
+                content.text || ''
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+    
+    const renderProductTableWithFlowElements = () => (
       <div 
         className="absolute bg-white"
         style={{
           left: '3%',
           top: '15%',
           width: '94%',
-          maxHeight: '40%',
         }}
       >
         {/* Tableau des produits */}
@@ -683,10 +750,18 @@ export function RentalProposalPreview() {
             </div>
           </div>
         </div>
+        
+        {/* Éléments statiques "en-dessous" rendus en flux relatif */}
+        {elementsBelow.length > 0 && (
+          <div className="mt-4">
+            {elementsBelow.map(el => renderFlowElement(el))}
+          </div>
+        )}
       </div>
     );
     
-    return renderPageWithEditMode(4 as PDFPageNumber, staticElements, renderProductTable);
+    // Utiliser uniquement les éléments "au-dessus" pour le rendu absolu standard
+    return renderPageWithEditMode(4 as PDFPageNumber, elementsAbove, renderProductTableWithFlowElements);
   };
 
   // Page 5 - Services inclus (bloc permanent + options additionnelles sélectionnées)
