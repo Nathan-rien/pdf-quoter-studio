@@ -383,26 +383,38 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     }
 
     // Cloner les versions avec nouveaux IDs
-    const duplicatedVersions: TemplateVersion[] = versionsToDuplicate.map((v, index) => ({
-      ...v,
-      id: `version-${Date.now()}-${index}`,
-      templateId: newTemplateId,
-      versionNumber: index + 1,
-      status: 'brouillon' as const,
-      createdAt: new Date(),
-      publishedAt: null,
-      pages: v.pages.map(page => ({
-        ...page,
-        elements: page.elements.map(el => ({
-          ...el,
-          id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          position: { ...el.position },
-          size: { ...el.size },
-          content: el.content ? { ...el.content } : el.content
-        })),
-        dynamicZones: page.dynamicZones.map(zone => ({ ...zone }))
-      }))
-    }));
+    // Si les pages source sont vides (lazy loading non chargé), utiliser les pages par défaut
+    const duplicatedVersions: TemplateVersion[] = versionsToDuplicate.map((v, index) => {
+      // Récupérer les pages source ou créer les pages par défaut
+      const sourcePages = v.pages && v.pages.length > 0 
+        ? v.pages 
+        : PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
+            pageNumber: pageConfig.pageNumber as PDFPageNumber,
+            elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
+            dynamicZones: pageConfig.dynamicZones as DynamicZone[]
+          }));
+      
+      return {
+        ...v,
+        id: `version-${Date.now()}-${index}`,
+        templateId: newTemplateId,
+        versionNumber: index + 1,
+        status: 'brouillon' as const,
+        createdAt: new Date(),
+        publishedAt: null,
+        pages: sourcePages.map(page => ({
+          ...page,
+          elements: page.elements.map(el => ({
+            ...el,
+            id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            position: { ...el.position },
+            size: { ...el.size },
+            content: el.content ? { ...el.content } : el.content
+          })),
+          dynamicZones: page.dynamicZones.map(zone => ({ ...zone }))
+        }))
+      };
+    });
 
     // Si aucune version n'a été dupliquée, créer une version initiale
     if (duplicatedVersions.length === 0) {
