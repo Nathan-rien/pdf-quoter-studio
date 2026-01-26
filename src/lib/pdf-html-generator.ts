@@ -8,8 +8,15 @@
  * - Rend les icônes Lucide en SVG inline
  */
 
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX } from './canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CANVAS_DISPLAY_MAX_WIDTH } from './canvas-constants';
 import { ALLOWED_FONTS } from './template-styles';
+
+/**
+ * Facteur de mise à l'échelle pour le PDF
+ * Le PDF est rendu en A4 (210mm = ~794px), mais les valeurs px sont optimisées 
+ * pour le canvas preview (580px). Ce ratio compense la différence.
+ */
+const PDF_PX_SCALE = 794 / CANVAS_DISPLAY_MAX_WIDTH; // ≈ 1.369
 import { getSharedElementStyle, resolveImageUrl } from './template-render-utils';
 import { renderIconSVG } from './lucide-svg-paths';
 import type { 
@@ -115,8 +122,9 @@ function renderTextElementToHTML(element: EditableElement): string {
   
   const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
   const fontValue = fontDef?.value || 'sans-serif';
-  const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
-  const indentPx = (content.indentLevel || 0) * LIST_INDENT_PX;
+  // Appliquer PDF_PX_SCALE pour compenser la différence preview (580px) vs PDF A4 (794px)
+  const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE * PDF_PX_SCALE, 6);
+  const indentPx = (content.indentLevel || 0) * LIST_INDENT_PX * PDF_PX_SCALE;
   
   const textStyle: React.CSSProperties = {
     ...style,
@@ -193,11 +201,11 @@ function renderShapeElementToHTML(element: EditableElement): string {
   const content = element.content as ShapeContent;
   const positionStyle = getSharedElementStyle({ element });
   
-  // Ligne spéciale (horizontale ou verticale)
+  // Ligne spéciale (horizontale ou verticale) - Appliquer PDF_PX_SCALE
   if (content.shapeType === 'line' || content.shapeType === 'line-vertical') {
     const isVertical = content.shapeType === 'line-vertical';
     const lineStyle = content.lineStyle || 'solid';
-    const lineWidth = content.border?.width || 2;
+    const lineWidth = (content.border?.width || 2) * PDF_PX_SCALE;
     const lineColor = content.border?.color || '#1f2937';
     
     const wrapperStyle: React.CSSProperties = {
@@ -232,7 +240,10 @@ function renderShapeElementToHTML(element: EditableElement): string {
     </div>`;
   }
   
-  // Formes standard
+  // Formes standard - Appliquer PDF_PX_SCALE aux valeurs px
+  const scaledCornerRadius = (content.cornerRadius || 0) * PDF_PX_SCALE;
+  const scaledBorderWidth = content.border?.width ? content.border.width * PDF_PX_SCALE : 0;
+  
   const shapeStyle: React.CSSProperties = {
     ...positionStyle,
     zIndex: normalizeZIndex(element), // Normalisation z-index WYSIWYG
@@ -240,14 +251,15 @@ function renderShapeElementToHTML(element: EditableElement): string {
     opacity: (content.backgroundOpacity ?? 100) / 100,
     borderRadius: content.shapeType === 'circle' || content.shapeType === 'ellipse'
       ? '50%'
-      : `${content.cornerRadius || 0}px`,
+      : `${scaledCornerRadius}px`,
     transform: content.rotation ? `rotate(${content.rotation}deg)` : undefined,
-    border: content.border?.enabled ? `${content.border.width}px solid ${content.border.color}` : undefined,
+    border: content.border?.enabled ? `${scaledBorderWidth}px solid ${content.border.color}` : undefined,
   };
   
-  // Contenu interne de la forme
+  // Contenu interne de la forme - Appliquer PDF_PX_SCALE
   let innerContent = '';
   if (content.innerContent) {
+    const scaledPadding = (content.innerContent.padding || 0) * PDF_PX_SCALE;
     const innerStyle: React.CSSProperties = {
       width: '100%',
       height: '100%',
@@ -256,14 +268,15 @@ function renderShapeElementToHTML(element: EditableElement): string {
         : content.innerContent.alignment.horizontal === 'right' ? 'flex-end' : 'center',
       alignItems: content.innerContent.alignment.vertical === 'top' ? 'flex-start'
         : content.innerContent.alignment.vertical === 'bottom' ? 'flex-end' : 'center',
-      padding: `${content.innerContent.padding || 0}px`,
+      padding: `${scaledPadding}px`,
     };
     
     let textHtml = '';
     if (content.innerContent.text) {
       const t = content.innerContent.text;
+      const scaledInnerFontSize = Math.max(t.fontSize * PREVIEW_FONT_SCALE * PDF_PX_SCALE, 6);
       const textStyle: React.CSSProperties = {
-        fontSize: `${Math.max(t.fontSize * PREVIEW_FONT_SCALE, 6)}px`,
+        fontSize: `${scaledInnerFontSize}px`,
         color: t.color,
         fontWeight: t.bold ? 'bold' : 'normal',
         fontStyle: t.italic ? 'italic' : 'normal',
@@ -271,11 +284,11 @@ function renderShapeElementToHTML(element: EditableElement): string {
       textHtml = `<span style="${styleToString(textStyle)}">${escapeHTML(t.content)}</span>`;
     }
     
-    // Rendu SVG inline des icônes internes
+    // Rendu SVG inline des icônes internes - Appliquer PDF_PX_SCALE
     let iconHtml = '';
     if (content.innerContent.icon) {
       const icon = content.innerContent.icon;
-      const scaledIconSize = Math.max(icon.size * PREVIEW_ICON_SCALE, 8);
+      const scaledIconSize = Math.max(icon.size * PREVIEW_ICON_SCALE * PDF_PX_SCALE, 8);
       iconHtml = renderIconSVG(icon.name, scaledIconSize, icon.color);
     }
     
@@ -291,7 +304,8 @@ function renderShapeElementToHTML(element: EditableElement): string {
 function renderIconElementToHTML(element: EditableElement): string {
   const content = element.content as IconContent;
   const style = getSharedElementStyle({ element });
-  const scaledSize = Math.max(content.size * PREVIEW_ICON_SCALE, 8);
+  // Appliquer PDF_PX_SCALE pour compenser la différence preview vs PDF
+  const scaledSize = Math.max(content.size * PREVIEW_ICON_SCALE * PDF_PX_SCALE, 8);
   
   const iconStyle: React.CSSProperties = {
     ...style,
@@ -302,7 +316,7 @@ function renderIconElementToHTML(element: EditableElement): string {
     transform: content.rotation ? `rotate(${content.rotation}deg)` : undefined,
   };
   
-  // Rendu SVG inline de l'icône Lucide
+  // Rendu SVG inline de l'icône Lucide avec taille mise à l'échelle
   const svgHtml = renderIconSVG(content.iconName, scaledSize, content.color, content.strokeWidth);
   
   return `<div style="${styleToString(iconStyle)}">${svgHtml}</div>`;
@@ -347,8 +361,10 @@ export async function renderPageToHTML(
     sortedElements.map(el => renderElementToHTML(el))
   );
   
+  // Utiliser les dimensions du canvas source (CANVAS_SCALE) pour garantir 
+  // une interprétation identique des pourcentages entre preview et PDF
   return `
-    <div class="page" style="position: relative; width: 210mm; height: 297mm; overflow: hidden; background: white; page-break-after: always;">
+    <div class="page">
       ${elementsHTML.join('\n')}
       ${dynamicContentHTML || ''}
     </div>
@@ -416,6 +432,7 @@ export async function generatePDFDocumentHTML(
         }
         
         .page {
+          /* Dimensions A4 en mm pour correspondance exacte avec l'impression */
           width: 210mm;
           height: 297mm;
           position: relative;
