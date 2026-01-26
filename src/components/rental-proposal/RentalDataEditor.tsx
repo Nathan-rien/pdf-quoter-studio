@@ -3,6 +3,7 @@ import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOf
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -736,7 +737,7 @@ export function RentalDataEditor() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[300px]">Désignation</TableHead>
+                      <TableHead className="min-w-[420px]">Désignation</TableHead>
                       <TableHead className="w-24 text-right">Nb</TableHead>
                       <TableHead className="w-28 text-right">VUN</TableHead>
                       <TableHead className="w-28 text-right">VTN</TableHead>
@@ -753,12 +754,12 @@ export function RentalDataEditor() {
                     ) : (
                       lignesData.map((ligne, index) => (
                         <TableRow key={index}>
-                          <TableCell className="min-w-[300px]">
-                            <Textarea
+                          <TableCell className="min-w-[420px] align-top">
+                            <AutoResizeTextarea
                               value={ligne.designation}
                               onChange={(e) => updateLigne(index, { designation: e.target.value })}
-                              className="min-h-[40px] resize-y"
-                              rows={2}
+                              className="min-h-[72px]"
+                              rows={3}
                             />
                           </TableCell>
                           <TableCell>
