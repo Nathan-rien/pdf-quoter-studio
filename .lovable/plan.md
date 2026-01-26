@@ -1,158 +1,112 @@
 
-# Plan : Corriger le rendu PDF de la Page 7 pour correspondre au template
+# Plan : Corriger le rendu PDF Page 7 - Icônes manquantes et CSS d'impression
 
-## Problème constaté
+## Diagnostic
 
-La page 7 du PDF généré ne correspond pas au rendu de l'aperçu du template :
+### Icônes manquantes (logs console)
+Les logs de la console identifient précisément 4 icônes manquantes utilisées sur la Page 7 du template actif :
 
-| Élément | Aperçu (Template) | PDF Généré |
-|---------|------------------|------------|
-| Fonds colorés des cartes | Bleu marine visible | Absents |
-| Icônes dans les cartes | Présentes (Recycle, Shield, Wrench, etc.) | Absentes |
-| Couleur du texte | Blanc sur fond sombre | Noir/gris partout |
+| Icône | Usage dans le template |
+|-------|------------------------|
+| `UserCog` | "Intervention sur site" |
+| `Route` | "Logistique" |
+| `BookmarkCheck` | "Maintenance et garantie" |
+| `HeartHandshake` | "Données RSE" |
 
-## Causes identifiées
+### Fonds des cartes absents
+Malgré l'option "Graphiques d'arrière-plan" activée dans Chrome, les fonds bleu marine (#1e3a5f) des cartes ne s'affichent pas. Cela indique que le CSS `print-color-adjust: exact` n'est pas injecté dans le HTML généré.
 
-### 1. Icônes manquantes dans le mapping SVG
+## Solution technique
 
-Le fichier `src/lib/lucide-svg-paths.ts` contient environ 100 icônes, mais plusieurs icônes utilisées dans le template de page 7 sont absentes. Quand `renderIconSVG()` ne trouve pas une icône, elle retourne une chaîne vide :
+### 1. Ajouter les 4 icônes manquantes
+
+Dans `src/lib/lucide-svg-paths.ts`, ajouter les paths SVG pour :
 
 ```typescript
-if (!path) {
-  console.warn(`[PDF] Icon "${iconName}" not found in SVG paths mapping`);
-  return '';  // Icône non affichée
+// Intervention sur site - Utilisateur avec engrenage
+UserCog: '<path d="M10 15H6a4 4 0 0 0-4 4v2"/><path d="m14.305 16.53.923-.382"/><path d="m15.228 13.852-.923-.383"/><path d="m16.852 12.228-.383-.923"/><path d="m16.852 17.772-.383.924"/><path d="m19.148 12.228.383-.923"/><path d="m19.53 18.696-.382-.924"/><path d="m20.772 13.852.924-.383"/><path d="m20.772 16.148.924.383"/><circle cx="18" cy="15" r="3"/><circle cx="9" cy="7" r="4"/>',
+
+// Logistique - Route avec points
+Route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
+
+// Maintenance et garantie - Marque-page avec check
+BookmarkCheck: '<path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/><path d="m9 10 2 2 4-4"/>',
+
+// Données RSE - Coeur avec poignée de main
+HeartHandshake: '<path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"/>',
+```
+
+### 2. Ajouter le CSS `print-color-adjust`
+
+Dans `src/lib/pdf-html-generator.ts`, modifier la fonction `generatePDFDocumentHTML` pour ajouter les propriétés CSS qui forcent l'impression des couleurs de fond :
+
+```css
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+.page {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 ```
 
-D'après les images, les icônes potentiellement manquantes :
-- `RefreshCcw` ou `RotateCcw` (flèches circulaires)
-- `Network` (réseau/connexions)
-- `ShieldAlert` ou variantes
-- `Settings2`, `Cog`
-- `BadgeCheck`, `CircleCheck`
-- `PackageCheck`
-- `TruckIcon` (si différent de `Truck`)
-- `Wrench` combinée (ex: `WrenchIcon`)
-- Moniteurs (`Monitor`, `Laptop`)
-- Graphiques (`BarChart`, `LineChart`)
-
-### 2. Structure des éléments
-
-Les cartes de la page 7 sont probablement des **shapes** (rectangles arrondis) avec :
-- `backgroundColor` : couleur de fond (ex: `#1e3a5f` bleu marine)
-- `border` : bordure arrondie
-- `innerContent.icon` : icône interne
-
-Le code de `renderShapeElementToHTML` semble correct pour les backgrounds, mais si les icônes sont absentes, les cartes apparaissent vides.
-
-## Solution proposée
-
-### Étape 1 : Ajouter les icônes manquantes dans `lucide-svg-paths.ts`
-
-Ajouter les paths SVG pour toutes les icônes utilisées dans le template Page 7 :
-
-```typescript
-// À ajouter dans LUCIDE_SVG_PATHS
-
-// Icônes circulaires
-RefreshCcw: '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>...',
-RotateCcw: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>...',
-
-// Sécurité
-ShieldAlert: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>...',
-ShieldQuestion: '...',
-LockKeyhole: '...',
-
-// Tech/Réseau
-Network: '<rect x="16" y="16" width="6" height="6" rx="1"/>...',
-Workflow: '...',
-CircuitBoard: '...',
-
-// Services
-Cog: '<path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/>...',
-Settings2: '...',
-WrenchIcon: '...',
-
-// Validation
-BadgeCheck: '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/>...',
-CircleCheckBig: '...',
-SquareCheck: '...',
-PackageCheck: '...',
-
-// Transport
-Package2: '...',
-Truck: '...' // Déjà présent, vérifier si complet
-```
-
-### Étape 2 : Vérifier le rendu des shapes avec background
-
-S'assurer que `renderShapeElementToHTML` applique correctement :
-- `backgroundColor` (déjà fait ligne 239)
-- `opacity` (déjà fait ligne 240)
-- `borderRadius` (déjà fait lignes 241-243)
-- `border` (déjà fait ligne 245)
-
-**Point de vigilance** : Le `backgroundColor` peut être `undefined` si la valeur est `'transparent'`. Vérifier que les templates utilisent bien des couleurs hex (#1e3a5f) et non 'transparent'.
-
-### Étape 3 : Améliorer le logging pour debug
-
-Ajouter un log des icônes demandées pour identifier celles manquantes :
-
-```typescript
-export function renderIconSVG(iconName: string, size: number, color: string, strokeWidth: number = 2): string {
-  const path = LUCIDE_SVG_PATHS[iconName];
-  
-  if (!path) {
-    // Log détaillé pour identifier les icônes à ajouter
-    console.warn(`[PDF Export] Missing SVG path for icon: "${iconName}". Add it to LUCIDE_SVG_PATHS.`);
-    return `<span style="display:inline-block;width:${size}px;height:${size}px;background:#ddd;border-radius:50%;font-size:8px;text-align:center;line-height:${size}px;">?</span>`;
-  }
-  
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
-}
-```
-
-### Étape 4 : Liste des icônes à ajouter (prioritaires)
-
-D'après l'analyse des screenshots, ajouter dans l'ordre de priorité :
-
-1. **RefreshCcw** - Reprise et Reconditionnement (flèches circulaires)
-2. **Network** - CyberSécurité / Intervention sur site
-3. **BadgeCheck** - Maintenance et garantie (badge avec check)
-4. **PackageOpen** ou **Box** - Logistique
-5. **SquareCheck** - Checkbox cochée
-6. **Wrench** - Services atelier (déjà présent, vérifier)
-7. **Monitor** + **Smartphone** - Lease Back (déjà présents)
-8. **FileSpreadsheet** ou **BarChart** - Données RSE
+Ces propriétés CSS forcent les navigateurs à imprimer les couleurs d'arrière-plan, même lorsqu'ils sont configurés par défaut pour les ignorer (économie d'encre).
 
 ## Fichiers à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/lib/lucide-svg-paths.ts` | Ajouter 15-20 icônes SVG manquantes |
-| `src/lib/pdf-html-generator.ts` | (Optionnel) Améliorer le fallback pour icônes manquantes |
+| `src/lib/lucide-svg-paths.ts` | Ajouter 4 paths SVG (UserCog, Route, BookmarkCheck, HeartHandshake) |
+| `src/lib/pdf-html-generator.ts` | Ajouter CSS `print-color-adjust: exact` dans les styles globaux |
 
-## Étapes de test
+## Détail technique
 
-1. Ouvrir l'éditeur de template sur la Page 7
-2. Noter les noms exacts des icônes utilisées (visibles dans le panneau de propriétés)
-3. Ajouter les paths SVG correspondants dans `lucide-svg-paths.ts`
-4. Générer un PDF et comparer avec l'aperçu
+### Paths SVG extraits de lucide.dev
 
-## Risques et mitigations
+Les paths ont été extraits directement depuis le site officiel lucide.dev pour garantir la compatibilité avec la version 0.462.0 installée :
 
-### Risque : Nombre d'icônes à ajouter
+- **UserCog** : Icône composée de 10 paths (user + engrenage animé)
+- **Route** : 2 cercles + 1 path pour la route sinueuse
+- **BookmarkCheck** : Marque-page avec un checkmark interne
+- **HeartHandshake** : Coeur avec motif de poignée de main stylisée
 
-Lucide contient 1400+ icônes, mais seule une fraction est utilisée dans les templates.
+### CSS Print-Color-Adjust
 
-**Mitigation** : Ajouter uniquement les icônes effectivement utilisées dans les templates existants (environ 30-50 icônes).
+```css
+-webkit-print-color-adjust: exact !important;
+print-color-adjust: exact !important;
+color-adjust: exact !important;
+```
 
-### Risque : Mise à jour des paths SVG
+Cette propriété CSS standard (et ses préfixes vendeur) force le navigateur à :
+1. Imprimer les couleurs de fond (`background-color`)
+2. Imprimer les images de fond (`background-image`)
+3. Conserver l'opacité des éléments
 
-Les paths SVG peuvent changer entre versions de Lucide.
+Le `!important` garantit que ces règles prennent le dessus sur les paramètres par défaut du navigateur.
 
-**Mitigation** : Documenter la version de Lucide utilisée (0.462.0) et vérifier les paths lors des mises à jour.
+## Comportement attendu après correction
 
-## Complexité estimée
+| Page 7 | Avant | Après |
+|--------|-------|-------|
+| Carte "Intervention sur site" | ? (placeholder) | Icône UserCog visible |
+| Carte "Logistique" | ? (placeholder) | Icône Route visible |
+| Carte "Maintenance et garantie" | ? (placeholder) | Icône BookmarkCheck visible |
+| Carte "Données RSE" | ? (placeholder) | Icône HeartHandshake visible |
+| Fonds bleu marine | Absents/blancs | Visibles (#1e3a5f) |
+| Fonds gris | Absents/blancs | Visibles (#f3f4f6) |
 
-**Moyenne** - Le travail principal est de récupérer les paths SVG corrects pour les icônes manquantes depuis lucide.dev et de les ajouter au fichier de mapping.
+## Tests de validation
+
+1. Générer un PDF via Chrome > Imprimer
+2. Vérifier que les 8 cartes de la Page 7 affichent :
+   - Leurs icônes respectives (pas de "?")
+   - Leurs fonds colorés (bleu marine ou gris clair)
+   - Le texte avec la bonne couleur (blanc sur fond sombre, noir sur fond clair)
+3. Comparer visuellement avec l'aperçu du workflow
