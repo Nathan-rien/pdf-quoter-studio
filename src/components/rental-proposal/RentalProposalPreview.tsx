@@ -774,7 +774,7 @@ export function RentalProposalPreview() {
             {selectedNosOptions.map((option) => (
               <div key={option.id} className="border rounded overflow-hidden">
                 <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-foreground/70" />
+                  <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
                   <span className="font-semibold text-[11px]">{option.name}</span>
                   {option.price !== null && (
                     <span className="ml-auto text-[9px] text-primary font-medium">
