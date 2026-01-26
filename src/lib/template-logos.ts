@@ -8,6 +8,7 @@ import cbproWhtFilledBaseline from '@/assets/logos/cbpro-wht-filled-baseline.svg
 import cbproWhtStroke from '@/assets/logos/cbpro-wht-stroke.svg';
 import cbproWhtStrokeBaseline from '@/assets/logos/cbpro-wht-stroke-baseline.svg';
 import grosbillColor from '@/assets/logos/grosbill-color.svg';
+import grosbillWhtFilledBaseline from '@/assets/logos/grosbill-wht-filled-baseline.png';
 import { CANVAS_SCALE } from '@/lib/canvas-constants';
 
 export interface TemplateLogo {
@@ -81,6 +82,16 @@ export const TEMPLATE_LOGOS: TemplateLogo[] = [
     style: 'filled',
     hasBaseline: true,
     previewBg: 'light'
+  },
+  {
+    id: 'grosbill-wht-filled-baseline',
+    name: 'GrosbillPro Blanc',
+    description: 'Logo GrosbillPro blanc avec baseline',
+    url: grosbillWhtFilledBaseline,
+    variant: 'white',
+    style: 'filled',
+    hasBaseline: true,
+    previewBg: 'dark'
   }
 ];
 
