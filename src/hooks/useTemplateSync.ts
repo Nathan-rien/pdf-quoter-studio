@@ -210,7 +210,7 @@ export function useTemplateSync() {
       const { data, error } = await supabase
         .from('template_versions')
         .select('pages')
-        .eq('id', versionId)
+        .eq('id', toValidUUID(versionId))
         .maybeSingle();
 
       if (error) {

@@ -92,6 +92,7 @@ export function TemplateEditorLayout() {
   const templateVersions = currentTemplateId ? getTemplateVersions(currentTemplateId) : [];
 
   // Auto-load pages from cloud if current version has empty pages
+  // But skip for local-only versions (not yet synced to cloud)
   useEffect(() => {
     const loadPagesIfEmpty = async () => {
       if (
@@ -100,6 +101,17 @@ export function TemplateEditorLayout() {
         (!currentVersion.pages || currentVersion.pages.length === 0) &&
         !isLoadingVersion
       ) {
+        // Check if this is a local-only version (not synced to cloud yet)
+        // Local IDs start with "version-" while cloud IDs are UUIDs
+        const isLocalOnlyVersion = currentVersion.id.startsWith('version-');
+        
+        if (isLocalOnlyVersion) {
+          // For local versions without pages, we should not try to load from cloud
+          // The pages should have been populated during creation/duplication
+          console.log('Version locale détectée avec pages vides - pas de chargement cloud');
+          return;
+        }
+        
         console.log('Pages vides détectées, chargement depuis le cloud...');
         await loadVersionPages(currentVersion.id);
       }
