@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
+import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { DuplicateTemplateDialog } from './DuplicateTemplateDialog';
 import { CreateTemplateDialog } from './CreateTemplateDialog';
 import type { PDFTemplate } from '@/types/template-editor';
@@ -28,6 +29,7 @@ export function TemplateListView() {
   const [duplicateTemplate, setDuplicateTemplate] = useState<PDFTemplate | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<PDFTemplate | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { 
     allTemplates, 
@@ -35,6 +37,8 @@ export function TemplateListView() {
     deleteTemplate,
     getTemplateLatestVersion
   } = useTemplateEditorStore();
+
+  const { deleteTemplateFromDatabase } = useTemplateSync();
 
   const handleEditTemplate = (template: PDFTemplate) => {
     selectTemplate(template.id);
@@ -52,14 +56,24 @@ export function TemplateListView() {
     setTemplateToDelete(template);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (templateToDelete) {
-      const success = deleteTemplate(templateToDelete.id);
-      if (success) {
-        toast.success(`Template "${templateToDelete.name}" supprimé`);
+      setIsDeleting(true);
+      
+      // 1. Supprimer de la base de données d'abord
+      const dbSuccess = await deleteTemplateFromDatabase(templateToDelete.id);
+      
+      if (dbSuccess) {
+        // 2. Supprimer du store local
+        const success = deleteTemplate(templateToDelete.id);
+        if (success) {
+          toast.success(`Template "${templateToDelete.name}" supprimé`);
+        }
       } else {
-        toast.error('Erreur lors de la suppression');
+        toast.error('Erreur lors de la suppression du template');
       }
+      
+      setIsDeleting(false);
       setTemplateToDelete(null);
     }
   };
@@ -199,7 +213,7 @@ export function TemplateListView() {
         onOpenChange={setShowCreateDialog}
       />
 
-      <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
+      <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !isDeleting && !open && setTemplateToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer le template ?</AlertDialogTitle>
@@ -208,9 +222,13 @@ export function TemplateListView() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Supprimer
+            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Suppression...' : 'Supprimer'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
