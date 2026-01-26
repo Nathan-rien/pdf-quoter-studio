@@ -1,123 +1,154 @@
 
-Objectif
-- Faire apparaître correctement dans l’onglet **Données → Invest** les 2 lignes manquantes du devis Cybertek :
-  1) **Synology Kit Rails coulissants RKS-02** (QTE 2, Total 216,00 €)
-  2) **Installation** avec la désignation complète (QTE 2, Total 974,00 €)
-- Rendre le parser plus robuste aux variations d’extraction PDF (colonnes concaténées, montants pas forcément en “fin de ligne”, QTE et montant séparés sur 2 lignes, etc.).
-- Ajouter un mode debug “sans devtools” pour voir ce que le parser voit (afin d’arrêter les itérations à l’aveugle).
+# Plan : Corriger l'extraction complète de la désignation "Installation"
 
-Constat (à partir de votre capture)
-- Le tableau PDF contient bien 5 lignes “métier” :
-  - D4EC-2666-16G (ok)
-  - RX1217RP (ok)
-  - RKS-02 (manquante)
-  - HAT5320-8T (ok)
-  - Installation (manquante)
-  - Frais de livraison (souvent à 0,00 — pas forcément critique mais idéalement présent)
-- Le code actuel du parser Cybertek dépend fortement de regex “fin de ligne” (`… €\s*$`) :
-  - `rowEndRegex` pour les produits
-  - `lineEndPattern` / `amountOnlyMatch` pour Installation/Frais
-- Or l’extraction pdfjs peut produire des lignes où :
-  - le montant n’est pas le dernier token de la ligne (donc `\s*$` échoue)
-  - la QTE et le montant sont séparés sur 2 lignes
-  - la ligne “Installation” peut être isolée (REF seul), puis la désignation et les chiffres apparaissent ensuite
+## Problème identifié
 
-Hypothèses techniques les plus probables (racines)
-1) “Kit Rails RKS-02” n’est pas détectée car la regex de fin de ligne ne matche pas (montant pas en fin de ligne) OU le backtracking (`findSyRefIndexBackwards`) remonte trop peu (fenêtre de 8 lignes) sur ce produit.
-2) “Installation” n’est pas détectée car :
-   - `specialRefMatch` ne se déclenche pas (le texte de la ligne ne “commence” pas par Installation à cause d’un préfixe / alignement)
-   - OU `lineEndPattern` ne matche jamais car “2 974,00 €” n’est pas sous la forme attendue sur une seule ligne (ou pas en fin de ligne)
-   - OU la QTE et le montant sont fragmentés sur des lignes différentes.
+D'après les logs, la structure du PDF est :
 
-Solution proposée (robuste, en 3 couches)
-A) Rendre la détection “montant de ligne” tolérante (ne plus dépendre de la fin de ligne)
-Fichier : `src/lib/pdf-import-parser.ts`
+```
+Ligne 1: "Prestation d'installation sur les sites de Bordeaux et Marseille :"
+Ligne 2: "Deplacement sur site / Installation de 2x 16Go de RAM dans"
+Ligne 3: "2 974,00 € Installation"     ← QTE=2, Total=974€, marqueur "Installation"
+Ligne 4: "chaque NAS + Ajout d'un tiroir d'extension avec 12 disques 8To"
+Ligne 5: "sur chaque NAS"
+Ligne 6: "1 0,00 € Frais de livraison" ← Fin du bloc
+```
 
-1) Produits standards (SY-…)
-- Modifier `rowEndRegex` pour qu’il puisse matcher même si le `€` n’est pas en fin de ligne :
-  - Passer d’un match “ancré fin de ligne” à un match “dans la ligne”, puis sélectionner le **dernier** couple (QTE, montant) trouvé sur la ligne.
-- Ajuster le calcul de `leftPart` (désignation) :
-  - Au lieu de `lastIndexOf(endMatch[0])` basé sur un match ancré, utiliser l’index réel du match retenu (idéalement via `matchAll` + `index`) afin de couper proprement avant la zone chiffres.
-- Étendre la fenêtre de backtracking `findSyRefIndexBackwards` :
-  - passer de 8 à ~15 lignes (ou “jusqu’au stop marker”), car le bloc “Kit Rails” peut être plus “étalé” (images + retours à la ligne).
-- Conserver le garde-fou anti-fusion (stopper si on recroise une ligne contenant `€`) mais le baser de préférence sur un pattern “QTE+montant” plutôt que tout `€` si ça devient trop agressif.
+**Résultat actuel** :
+- Montant : 2974€ (FAUX — le 2 est la quantité, pas une partie du montant)
+- Désignation : s'arrête à la ligne 2 (manque lignes 4-5)
 
-Impact attendu :
-- La ligne SY-RKS02 / RKS-02 redevient détectable même si la ligne QTE+Total n’est pas parfaitement formatée.
+**Résultat attendu** :
+- Montant : 974€ (VTN total)
+- Désignation : "Prestation d'installation sur les sites de Bordeaux et Marseille : Deplacement sur site / Installation de 2x 16Go de RAM dans chaque NAS + Ajout d'un tiroir d'extension avec 12 disques 8To sur chaque NAS"
 
-2) Services (Installation / Frais de livraison)
-- Remplacer la détection `startsWith("Installation")` par une regex plus permissive en début de ligne :
-  - `^\s*Installation\b` et `^\s*Frais de livraison\b`
-  - (pour absorber d’éventuels espaces, caractères invisibles, ou préfixes mineurs)
-- Remplacer `lineEndPattern` et `amountOnlyMatch` (actuellement plutôt ancrés fin de ligne) par une recherche “dernier montant € de la ligne” :
-  - Rechercher tous les tokens monétaires présents sur chaque ligne de la fenêtre, prendre le dernier.
-  - Essayer d’extraire la QTE juste avant ce token (si la ligne contient “2 974,00 €”).
-- Ajouter une gestion “QTE sur une ligne, montant sur la suivante” (cas fréquent en extraction) :
-  - Si une ligne est uniquement `^\s*\d{1,2}\s*$` et la suivante contient un montant `€`, combiner en (QTE, montant).
+---
 
-B) Ajouter un “recovery pass” ciblé si les lignes restent absentes
-Fichier : `src/lib/pdf-import-parser.ts`
+## Cause racine
 
-Même après A), il peut rester des cas où la structure est trop fragmentée. Pour stopper les allers-retours, on ajoute un fallback final :
+Le parser actuel collecte la désignation **avant** la ligne contenant le montant, puis s'arrête. 
+Or dans ce PDF, la désignation **continue après** la ligne du montant.
 
-1) Recovery “Installation”
-- Si `result.lignes` ne contient aucune référence “Installation” :
-  - Scanner `lines` (le document entier) à la recherche de la première occurrence de `Installation` (ligne exacte OU ligne contenant “Installation” seule dans la colonne REF reconstruite).
-  - Construire une fenêtre de 15–25 lignes après cette occurrence :
-    - Récupérer la désignation “Prestation d’installation …” (concaténer jusqu’au prochain “Frais de livraison”, “Offre Locative”, ou prochain produit SY-…)
-    - Récupérer la QTE+Total via les règles de A2 (y compris le cas QTE séparée)
-  - Pusher la ligne dans `result.lignes` même si la détection précédente n’a pas “vu” un pattern standard.
+Logique actuelle du fallback (lignes ~461-495) :
+```typescript
+if (fallbackTotal === 0 || j < fallbackEndIdx) {
+  fallbackDesignationLines.push(line);
+}
+```
+→ Dès qu'on trouve le montant (`fallbackTotal > 0`), on arrête de collecter.
 
-2) Recovery “Kit Rails RKS-02”
-- Si `result.lignes` ne contient pas une ligne dont `reference` est “RKS-02” (ou qui contient “RKS-02” dans la designation) :
-  - Chercher `SY-RKS02` dans `lines`
-  - Fenêtre de 20 lignes : collecter designation (en excluant `Garantie:`) + récupérer QTE+Total
-  - Construire `reference` = “RKS-02” (ou “RKS02” selon ce que l’extraction renvoie) et `prixUnitaire = total/qty`.
+---
 
-C) Debug exploitable (sans DevTools) pour comprendre le texte réellement extrait
-Problème actuel : les `console.log('[Cybertek Parser] ...')` ne vous remontent pas de façon fiable.
+## Solution
 
-Amélioration :
-- Dans `src/components/data-editor/PDFImportZone.tsx` (ou dans un composant de debug existant), afficher dans le `<details>` “Voir debug” :
-  - Un extrait du `rawText` autour du mot “Installation” (par ex. 600–1200 caractères autour)
-  - Un extrait autour de “SY-RKS02”
-  - La liste des lignes `result.lignes` (référence + qte + total) après parsing
-- Cela permet de valider immédiatement :
-  - Est-ce que “Installation” est présent dans le texte extrait ?
-  - Est-ce que “SY-RKS02” est présent ?
-  - Est-ce que les chiffres “2 974,00 €” apparaissent comme un seul token ou séparés ?
+### Modification 1 : Collecter la désignation APRÈS la ligne du montant
 
-Nettoyage
-- Une fois la correction validée, retirer les logs console bruyants ajoutés dans `parseCybertekText` (ou les placer derrière un flag debug).
+Dans le bloc de scan des services (`specialRefMatch === 'Installation'`), après avoir détecté la ligne contenant le montant :
 
-Plan d’exécution (séquencement)
-1) Modifier `src/lib/pdf-import-parser.ts` :
-   - (A1) rendre `rowEndRegex` non dépendant de `€\s*$` + sélectionner le dernier match
-   - (A1) étendre `findSyRefIndexBackwards` (8 → 15) + ajuster garde-fous si besoin
-   - (A2) rendre `specialRefMatch` plus permissif (regex) + extraction “dernier montant de ligne”
-   - (A2) gérer le cas QTE et montant sur lignes séparées
-2) Ajouter le “recovery pass” final (B) dans `parseCybertekText` pour Installation + SY-RKS02 si toujours absents.
-3) Ajouter le debug UI (C) dans `PDFImportZone` pour rendre visibles les preuves de parsing.
-4) Re-test avec votre PDF “Devis Kedge NAS…” :
-   - Invest doit afficher 5 lignes (ou 6 si “Frais de livraison” est aussi ajoutée)
-   - “Kit Rails RKS-02” : QTE 2, VTN 216,00, designation complète
-   - “Installation” : QTE 2, VTN 974,00, designation complète (texte long)
-5) Une fois OK : retirer/limiter le debug (ou le garder derrière un toggle).
+1. **Continuer à scanner** les lignes suivantes jusqu'à un marqueur de fin (ex: `Frais de livraison`, `Offre Locative`, prochain produit SY-)
+2. **Ajouter ces lignes** à `fallbackDesignationLines`
 
-Critères de validation (alignés avec votre screenshot)
-- Onglet Données → Invest :
-  - Ligne “Synology Kit Rails coulissants RKS-02 …” présente
-  - Ligne “Installation” présente avec “Prestation d’installation …” complet
-  - Les autres lignes existantes restent inchangées (mémoire, chassis, disques)
-  - Les montants correspondent au PDF (216,00 et 974,00)
+```typescript
+// Après la boucle de collecte du montant, continuer pour récupérer la suite de la désignation
+if (fallbackTotal > 0) {
+  for (let k = fallbackEndIdx + 1; k < rowsSource.length && k <= fallbackEndIdx + 4; k++) {
+    const line = rowsSource[k];
+    
+    // Arrêter si on atteint un nouveau bloc
+    if (isFraisLivraisonLine(line) || 
+        stopRe.test(line) || 
+        syRefPattern.test(line) ||
+        /Offre\s+Locative/i.test(line)) {
+      break;
+    }
+    
+    // Ignorer les lignes bannies
+    if (isBannedLine(line) || isGarantieLine(line)) continue;
+    
+    // Ajouter à la désignation
+    fallbackDesignationLines.push(line);
+  }
+}
+```
 
-Risques & garde-fous
-- Risque : en rendant les regex moins strictes, on pourrait matcher des nombres non pertinents.
-  - Garde-fou : toujours privilégier le **dernier** montant “€” du groupe de lignes d’un item, et limiter la fenêtre de collecte (lookahead).
-  - Garde-fou : ignorer les montants manifestement “totaux globaux” (ex: 14 700,00) via fenêtre et heuristique (si on est dans le bloc Installation et qu’on rencontre “Offre Locative”, on stoppe la collecte).
-- Risque : “Frais de livraison 0,00” peut être filtré par des conditions `> 0`.
-  - Ajuster pour accepter explicitement 0,00 € sur cette ligne.
+### Modification 2 : Corriger l'extraction du montant (974€ au lieu de 2974€)
 
-Livrables
-- Parser Cybertek robuste : Installation + RKS-02 extraites systématiquement sur ce devis.
-- Debug UI permettant de diagnostiquer tout nouveau devis Cybertek sans passer par la console.
+Le pattern actuel lit `2 974,00` comme un seul montant. 
+Il faut détecter que le `2` est la QTE et `974,00` est le montant.
+
+Format de la ligne : `2 974,00 € Installation`
+
+Pattern corrigé :
+```typescript
+// Détecter spécifiquement le pattern "QTE (espace) MONTANT €" pour Installation
+const installAmountPattern = /^(\d{1,2})\s+([\d\s,.]+)\s*€/;
+const match = line.match(installAmountPattern);
+if (match) {
+  fallbackQty = parseInt(match[1], 10);      // 2
+  fallbackTotal = parseNumber(match[2]);     // 974.00
+}
+```
+
+### Modification 3 : Nettoyer la désignation finale
+
+Retirer :
+- Le marqueur "Installation" s'il est collé à la fin de la ligne du montant
+- Les espaces multiples
+- Les chiffres orphelins
+
+---
+
+## Fichier modifié
+
+`src/lib/pdf-import-parser.ts`
+
+### Zones à modifier
+
+1. **Lignes ~461-496** (fallback scan) : Ajouter une boucle de continuation après la détection du montant pour collecter les lignes 4-5
+2. **Lignes ~469-480** (extraction montant) : Améliorer la regex pour séparer correctement QTE (2) du montant (974,00)
+3. **Lignes ~500-507** (construction désignation) : S'assurer que les lignes après le montant sont incluses
+
+---
+
+## Résultat attendu après correction
+
+| Champ | Avant | Après |
+|-------|-------|-------|
+| Désignation | "...Installation de 2x 16Go de RAM dans" | "...Installation de 2x 16Go de RAM dans chaque NAS + Ajout d'un tiroir d'extension avec 12 disques 8To sur chaque NAS" |
+| Quantité | 2 | 2 (inchangé) |
+| VTN | 2 974,00 € | 974,00 € |
+
+---
+
+## Détail technique
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ PDF extrait (rowsSource)                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ [i]   "Prestation d'installation sur les sites de..."          │
+│ [i+1] "Deplacement sur site / Installation de 2x 16Go..."      │
+│ [i+2] "2 974,00 € Installation"  ← QTE=2, Total=974€           │
+│ [i+3] "chaque NAS + Ajout d'un tiroir..."                      │ ← À COLLECTER
+│ [i+4] "sur chaque NAS"                                         │ ← À COLLECTER
+│ [i+5] "1 0,00 € Frais de livraison"  ← STOP                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Logique corrigée :**
+1. Détecter "Prestation d'installation..." → déclenche le mode Installation
+2. Collecter lignes i, i+1 pour la désignation
+3. Ligne i+2 : extraire QTE=2, Total=974€ (regex améliorée)
+4. **NOUVEAU** : Continuer à scanner i+3, i+4 → ajouter à la désignation
+5. Ligne i+5 : "Frais de livraison" → STOP
+
+---
+
+## Risques
+
+- **Risque** : Collecter des lignes non pertinentes après le montant
+  - **Garde-fou** : Limiter la fenêtre post-montant à 4 lignes max
+  - **Garde-fou** : S'arrêter immédiatement sur les marqueurs de fin
+
+- **Risque** : Regex trop permissive pour le montant
+  - **Garde-fou** : Vérifier que le montant est dans une plage raisonnable (100-5000€ pour les services)
