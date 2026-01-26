@@ -403,6 +403,9 @@ export async function generatePDFDocumentHTML(
           box-sizing: border-box;
           margin: 0;
           padding: 0;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
         }
         
         body {
@@ -418,6 +421,8 @@ export async function generatePDFDocumentHTML(
           position: relative;
           overflow: hidden;
           background: white;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
         
         img {
