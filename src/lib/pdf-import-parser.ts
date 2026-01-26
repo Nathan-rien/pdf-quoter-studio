@@ -457,6 +457,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         let fallbackTotal = 0;
         let fallbackQty = 1;
         let fallbackEndIdx = i;
+        let amountLineIdx = -1;
         
         for (let j = i; j < rowsSource.length && j <= i + maxLookahead; j++) {
           const line = rowsSource[j];
@@ -468,30 +469,70 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
           // Look for any amount € on this line
           const amountMatch = line.match(/([\d\s,.]+)\s*€/);
           if (amountMatch && fallbackTotal === 0) {
-            const val = parseNumber(amountMatch[1]);
-            // Accept amounts between 0 and 10000 for service lines
-            if (val !== null && val >= 0 && val < 10000) {
-              fallbackTotal = val;
+            // Special handling for Installation: detect "QTE MONTANT €" pattern
+            // e.g., "2 974,00 € Installation" where 2 is QTE and 974,00 is the amount
+            const installQtyAmountPattern = /^(\d{1,2})\s+([\d]+(?:[,.][\d]{2})?)\s*€/;
+            const installMatch = line.match(installQtyAmountPattern);
+            
+            if (installMatch && specialRefMatch === 'Installation') {
+              // Pattern matched: "2 974,00 €" → QTE=2, Amount=974.00
+              fallbackQty = parseInt(installMatch[1], 10) || 1;
+              fallbackTotal = parseNumber(installMatch[2]) ?? 0;
               fallbackEndIdx = j;
-              
-              // Try to find a QTE before the amount (e.g., "2 974,00 €")
-              const qtyBeforeAmount = line.match(/\b(\d{1,2})\s+[\d\s,.]+\s*€/);
-              if (qtyBeforeAmount) {
-                fallbackQty = parseInt(qtyBeforeAmount[1], 10) || 1;
+              amountLineIdx = j;
+              console.log('[Cybertek Parser] Installation amount detected:', { qty: fallbackQty, total: fallbackTotal, line });
+            } else {
+              const val = parseNumber(amountMatch[1]);
+              // Accept amounts between 0 and 10000 for service lines
+              if (val !== null && val >= 0 && val < 10000) {
+                fallbackTotal = val;
+                fallbackEndIdx = j;
+                amountLineIdx = j;
+                
+                // Try to find a QTE before the amount (e.g., "2 974,00 €")
+                const qtyBeforeAmount = line.match(/\b(\d{1,2})\s+[\d\s,.]+\s*€/);
+                if (qtyBeforeAmount) {
+                  fallbackQty = parseInt(qtyBeforeAmount[1], 10) || 1;
+                }
               }
-              
-              // Add the text part before the amount to designation
-              const textPart = line.slice(0, line.indexOf(amountMatch[0])).trim();
-              if (textPart) {
-                fallbackDesignationLines.push(textPart);
-              }
-              continue;
             }
+            
+            // Add the text part before the amount to designation (if any)
+            const textPart = line.slice(0, line.indexOf(amountMatch[0])).trim();
+            if (textPart) {
+              fallbackDesignationLines.push(textPart);
+            }
+            continue;
           }
           
           // Collect line for designation if no amount found yet
-          if (fallbackTotal === 0 || j < fallbackEndIdx) {
+          if (fallbackTotal === 0) {
             fallbackDesignationLines.push(line);
+          }
+        }
+        
+        // NEW: After finding the amount, continue scanning for designation continuation
+        // Lines AFTER the amount line may still be part of the designation
+        if (fallbackTotal > 0 && amountLineIdx >= 0) {
+          for (let k = amountLineIdx + 1; k < rowsSource.length && k <= amountLineIdx + 4; k++) {
+            const line = rowsSource[k];
+            
+            // Stop if we hit a new block marker
+            if (isFraisLivraisonLine(line) || 
+                stopRe.test(line) || 
+                syRefPattern.test(line) ||
+                /Offre\s+Locative/i.test(line) ||
+                /TOTAL\s*H\.?T/i.test(line)) {
+              break;
+            }
+            
+            // Skip banned lines and lines with amounts (likely new products)
+            if (isBannedLine(line) || isGarantieLine(line)) continue;
+            if (/\d+[,.\s]+\d{2}\s*€/.test(line)) break;
+            
+            // Add to designation
+            fallbackDesignationLines.push(line);
+            fallbackEndIdx = k;
           }
         }
         
@@ -500,6 +541,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         if (fallbackTotal > 0 || (specialRefMatch.toLowerCase().includes('frais') && fallbackDesignationLines.length > 0)) {
           let designation = fallbackDesignationLines.join(' ')
             .replace(/[\d\s,.]+\s*€.*$/, '')
+            .replace(/\bInstallation\s*$/i, '') // Remove trailing "Installation" marker
             .replace(/\s+/g, ' ')
             .trim();
           if (/^\s*Installation\b/i.test(designation)) {
@@ -510,7 +552,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
             reference: specialRefMatch,
             qty: fallbackQty,
             total: fallbackTotal,
-            designation: designation.substring(0, 100) + (designation.length > 100 ? '...' : ''),
+            designation: designation.substring(0, 150) + (designation.length > 150 ? '...' : ''),
           });
           
           result.lignes!.push({
