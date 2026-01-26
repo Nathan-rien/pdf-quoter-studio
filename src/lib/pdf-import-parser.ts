@@ -262,6 +262,9 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       const v = rowsSource[j];
       if (syRefPattern.test(v)) return j;
       if (stopRe.test(v)) break;
+      // Stop if we hit another product's end line (contains amount €)
+      // This prevents merging with previous products
+      if (j < fromIdx && /[\d\s,.]+\s*€\s*$/.test(v)) break;
     }
     return -1;
   };
@@ -404,6 +407,77 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         });
         
         i = endLineIdx;
+      } else {
+        // FALLBACK: When no strict pattern matched, try permissive extraction
+        // Look for any amount € in the window and collect designation lines
+        const fallbackDesignationLines: string[] = [];
+        let fallbackTotal = 0;
+        let fallbackQty = 1;
+        let fallbackEndIdx = i;
+        
+        for (let j = i; j < rowsSource.length && j <= i + maxLookahead; j++) {
+          const line = rowsSource[j];
+          
+          // Stop if we hit a new block (but allow current line to be collected)
+          if (j > i && isNewBlockStart(line)) break;
+          if (isBannedLine(line) || isGarantieLine(line)) continue;
+          
+          // Look for any amount € on this line
+          const amountMatch = line.match(/([\d\s,.]+)\s*€/);
+          if (amountMatch && fallbackTotal === 0) {
+            const val = parseNumber(amountMatch[1]);
+            // Accept amounts between 0 and 10000 for service lines
+            if (val !== null && val >= 0 && val < 10000) {
+              fallbackTotal = val;
+              fallbackEndIdx = j;
+              
+              // Try to find a QTE before the amount (e.g., "2 974,00 €")
+              const qtyBeforeAmount = line.match(/\b(\d{1,2})\s+[\d\s,.]+\s*€/);
+              if (qtyBeforeAmount) {
+                fallbackQty = parseInt(qtyBeforeAmount[1], 10) || 1;
+              }
+              
+              // Add the text part before the amount to designation
+              const textPart = line.slice(0, line.indexOf(amountMatch[0])).trim();
+              if (textPart) {
+                fallbackDesignationLines.push(textPart);
+              }
+              continue;
+            }
+          }
+          
+          // Collect line for designation if no amount found yet
+          if (fallbackTotal === 0 || j < fallbackEndIdx) {
+            fallbackDesignationLines.push(line);
+          }
+        }
+        
+        // Build and add the line if we found a total (even if 0 for "Frais de livraison")
+        // We need at least some designation content OR a valid total
+        if (fallbackTotal > 0 || (specialRefMatch.toLowerCase().includes('frais') && fallbackDesignationLines.length > 0)) {
+          const designation = fallbackDesignationLines.join(' ')
+            .replace(new RegExp(`^${specialRefMatch}\\s*`, 'i'), '')
+            .replace(/[\d\s,.]+\s*€.*$/, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          console.log('[Cybertek Parser] Service line (fallback):', {
+            reference: specialRefMatch,
+            qty: fallbackQty,
+            total: fallbackTotal,
+            designation: designation.substring(0, 100) + (designation.length > 100 ? '...' : ''),
+          });
+          
+          result.lignes!.push({
+            reference: specialRefMatch,
+            designation,
+            quantite: fallbackQty,
+            totalHT: fallbackTotal,
+            prixUnitaire: fallbackQty > 0 ? Math.round((fallbackTotal / fallbackQty) * 100) / 100 : null,
+          });
+          
+          i = fallbackEndIdx;
+        }
       }
       continue;
     }
