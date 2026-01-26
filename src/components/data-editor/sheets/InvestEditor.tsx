@@ -12,7 +12,7 @@ const investColumns: ColumnDef<InvestRow>[] = [
     key: 'designation', 
     header: 'Matériel 2025', 
     type: 'text', 
-    width: '42%',
+    width: '50%',
     placeholder: 'Description du matériel...',
     required: true,
   },

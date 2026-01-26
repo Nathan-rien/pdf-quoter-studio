@@ -248,9 +248,9 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   // Pattern for the short ref (2nd line, without SY- prefix)
   const shortRefPattern = /^[A-Z0-9]+-[A-Z0-9-]+$|^[A-Z0-9]{4,}$/i;
   
-  // Special refs without dash
-  // Special refs without dash - including service/prestation lines
-  const specialRefs = ['Installation', 'Frais de livraison', 'Prestation'];
+  // Special refs without dash - only Installation and Frais de livraison
+  // "Prestation" is NOT included to preserve it in the designation text
+  const specialRefs = ['Installation', 'Frais de livraison'];
 
   const isBannedLine = (line: string) =>
     /(ADRESSE\s+DE\s+LIVRAISON|ADRESSE\s+DE\s+FACTURATION|SIEGE\s+SOCIAL|AU\s+CAPITAL|GROUPE\s+KEDGE|N°\s*client)/i.test(line);
@@ -287,40 +287,123 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     if (/Dont\s+eco-?taxe/i.test(l)) continue;
     if (isBannedLine(l) || isGarantieLine(l)) continue;
 
-    // Special refs first (Installation, Frais de livraison, Prestation)
+    // Special refs first (Installation, Frais de livraison)
+    // Using windowed lookahead to avoid absorbing global totals like "14 700,00 €"
     const specialRefMatch = specialRefs.find((sr) => l.toLowerCase().startsWith(sr.toLowerCase()));
     if (specialRefMatch) {
-      let buffer = l;
-      let j = i;
+      // Windowed lookahead: scan up to 6 lines maximum to find QTE + total
+      const maxLookahead = 6;
+      const designationParts: string[] = [];
+      let foundQty = 0;
+      let foundTotal = 0;
+      let endLineIdx = i;
       
-      // Improved pattern: strictly match "QTE (1-2 digits) + Amount + €" at the END
-      // This avoids capturing numbers like "16Go", "2x", "12 disques" within the description
-      // \b ensures we match a word boundary (not part of "16Go")
-      // (\d{1,2}) limits quantity to 1-2 digits
-      const prestationEndRegex = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
+      // Pattern to extract "QTE (1-2 digits) + Amount + €" at end of a SINGLE line
+      // More restrictive: we check EACH line individually, not an accumulated buffer
+      const lineEndPattern = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
       
-      while (j < rowsSource.length - 1) {
-        const endMatch = buffer.match(prestationEndRegex);
-        if (endMatch) {
-          const quantite = parseInt(endMatch[1], 10) || 1;
-          const totalHT = parseNumber(endMatch[2]) || 0;
-          const leftPart = buffer.slice(0, buffer.lastIndexOf(endMatch[0])).trim();
-          const designation = leftPart.replace(new RegExp(`^${specialRefMatch}`, 'i'), '').trim();
-
-          result.lignes!.push({
-            reference: specialRefMatch,
-            designation,
-            quantite,
-            totalHT,
-            prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
-          });
-
-          i = j;
-          break;
+      // Pattern to detect another special ref or product start (stop conditions)
+      const isNewBlockStart = (line: string) => 
+        syRefPattern.test(line) || 
+        specialRefs.some(sr => line.toLowerCase().startsWith(sr.toLowerCase()) && line !== l) ||
+        stopRe.test(line) ||
+        /^Total/i.test(line);
+      
+      // Collect candidate amounts from each line in the window
+      interface Candidate { lineIdx: number; qty: number; total: number; linePart: string; }
+      const candidates: Candidate[] = [];
+      
+      for (let j = i; j < rowsSource.length && j <= i + maxLookahead; j++) {
+        const currentLine = rowsSource[j];
+        
+        // Stop if we hit a new block
+        if (j > i && isNewBlockStart(currentLine)) break;
+        if (isBannedLine(currentLine) || isGarantieLine(currentLine)) continue;
+        
+        // Try to extract QTE + total from THIS line specifically
+        const lineMatch = currentLine.match(lineEndPattern);
+        if (lineMatch) {
+          const qty = parseInt(lineMatch[1], 10) || 1;
+          const total = parseNumber(lineMatch[2]) || 0;
+          
+          // Skip if this looks like a global total (> 10000 € and qty > 10)
+          // Heuristic: service lines typically have qty < 10 and total < 5000
+          if (total > 0 && total < 50000 && qty <= 20) {
+            const linePart = currentLine.slice(0, currentLine.lastIndexOf(lineMatch[0])).trim();
+            candidates.push({ lineIdx: j, qty, total, linePart });
+          }
         }
-        j++;
-        if (stopRe.test(rowsSource[j])) break;
-        buffer = buffer + ' ' + rowsSource[j];
+        
+        // Also try to detect just an amount (fallback: qty=1)
+        const amountOnlyMatch = currentLine.match(/([\d\s,.]+)\s*€\s*$/);
+        if (amountOnlyMatch && !lineMatch) {
+          const total = parseNumber(amountOnlyMatch[1]) || 0;
+          if (total > 0 && total < 10000) {
+            const linePart = currentLine.slice(0, currentLine.lastIndexOf(amountOnlyMatch[0])).trim();
+            candidates.push({ lineIdx: j, qty: 1, total, linePart });
+          }
+        }
+      }
+      
+      // Select best candidate: earliest line with valid qty+total
+      // Prefer candidates with qty > 1 (explicit quantity), then smallest total
+      let bestCandidate: Candidate | null = null;
+      
+      if (candidates.length > 0) {
+        // Sort by: line index (earlier is better), then prefer explicit qty, then smaller totals
+        candidates.sort((a, b) => {
+          // Prefer earlier lines
+          if (a.lineIdx !== b.lineIdx) return a.lineIdx - b.lineIdx;
+          // Prefer explicit qty > 1 over fallback qty=1
+          if ((a.qty > 1) !== (b.qty > 1)) return b.qty > 1 ? 1 : -1;
+          // Prefer smaller totals (less likely to be global total)
+          return a.total - b.total;
+        });
+        bestCandidate = candidates[0];
+      }
+      
+      if (bestCandidate) {
+        foundQty = bestCandidate.qty;
+        foundTotal = bestCandidate.total;
+        endLineIdx = bestCandidate.lineIdx;
+        
+        // Build designation from lines between start and the candidate line
+        for (let j = i; j <= endLineIdx; j++) {
+          const currentLine = rowsSource[j];
+          if (isBannedLine(currentLine) || isGarantieLine(currentLine)) continue;
+          
+          if (j === endLineIdx) {
+            // For the line with the amount, use only the text part before the amount
+            if (bestCandidate.linePart) {
+              designationParts.push(bestCandidate.linePart);
+            }
+          } else {
+            designationParts.push(currentLine);
+          }
+        }
+        
+        // Clean up designation: remove the reference prefix, collapse whitespace
+        let designation = designationParts.join(' ')
+          .replace(new RegExp(`^${specialRefMatch}\\s*`, 'i'), '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        console.log('[Cybertek Parser] Service line extracted:', {
+          reference: specialRefMatch,
+          qty: foundQty,
+          total: foundTotal,
+          designation: designation.substring(0, 100) + (designation.length > 100 ? '...' : ''),
+        });
+        
+        result.lignes!.push({
+          reference: specialRefMatch,
+          designation,
+          quantite: foundQty,
+          totalHT: foundTotal,
+          prixUnitaire: foundQty > 0 ? Math.round((foundTotal / foundQty) * 100) / 100 : null,
+        });
+        
+        i = endLineIdx;
       }
       continue;
     }
