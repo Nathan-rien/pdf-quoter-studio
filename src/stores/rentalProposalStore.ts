@@ -41,7 +41,7 @@ interface MatriceData {
 }
 
 // Options service pour le calcul des services inclus
-interface OptionService {
+export interface OptionService {
   id: string;
   name: string;
   description: string;
@@ -80,8 +80,11 @@ interface RentalProposalState {
   // Services inclus (bloc permanent - toujours affiché en haut de page 5)
   servicesInclus: ServicesInclus;
   
-  // Options services additionnelles
+  // Options services additionnelles (page 5 - ancien système, conservé pour rétrocompatibilité)
   optionsServices: OptionService[];
+  
+  // Nos Options (nouvel onglet - alimente page 6)
+  nosOptions: OptionService[];
   
   // Nom personnalisé de la proposition
   proposalName: string;
@@ -113,11 +116,17 @@ interface RentalProposalActions {
   // Services inclus (bloc permanent)
   updateServicesInclus: (description: string) => void;
   
-  // Options services additionnelles
+  // Options services additionnelles (page 5)
   addOptionService: (name: string, description: string, price: number | null) => void;
   updateOptionService: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
   deleteOptionService: (id: string) => void;
   toggleOptionService: (id: string) => void;
+  
+  // Nos Options (page 6)
+  addNosOption: (name: string, description: string, price: number | null) => void;
+  updateNosOption: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
+  deleteNosOption: (id: string) => void;
+  toggleNosOption: (id: string) => void;
   
   // Commercial
   updateCommercialEntity: (entity: CommercialEntity | null) => void;
@@ -175,6 +184,7 @@ const initialState: RentalProposalState = {
   lignesData: [],
   servicesInclus: initialServicesInclus,
   optionsServices: [],
+  nosOptions: [],
   proposalName: '',
   currentStep: 'import',
   hasUnsavedChanges: false,
@@ -320,6 +330,43 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         }));
       },
 
+      // Nos Options actions (page 6)
+      addNosOption: (name, description, price) => {
+        const id = `nosopt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        set(state => ({
+          nosOptions: [
+            ...state.nosOptions,
+            { id, name, description, price, selected: true },
+          ],
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateNosOption: (id, updates) => {
+        set(state => ({
+          nosOptions: state.nosOptions.map(opt =>
+            opt.id === id ? { ...opt, ...updates } : opt
+          ),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      deleteNosOption: (id) => {
+        set(state => ({
+          nosOptions: state.nosOptions.filter(opt => opt.id !== id),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      toggleNosOption: (id) => {
+        set(state => ({
+          nosOptions: state.nosOptions.map(opt =>
+            opt.id === id ? { ...opt, selected: !opt.selected } : opt
+          ),
+          hasUnsavedChanges: true,
+        }));
+      },
+
       // Commercial actions
       updateCommercialEntity: (entity) => {
         set({ 
@@ -421,6 +468,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         matriceData: state.matriceData,
         lignesData: state.lignesData,
         optionsServices: state.optionsServices,
+        nosOptions: state.nosOptions,
         proposalName: state.proposalName,
         currentStep: state.currentStep,
         isActive: state.isActive,
@@ -472,6 +520,9 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             }
             if (!Array.isArray(state.optionsServices)) {
               state.optionsServices = [];
+            }
+            if (!Array.isArray(state.nosOptions)) {
+              state.nosOptions = [];
             }
           }
         } catch (validationError) {
