@@ -64,9 +64,11 @@ export function CreatePageDialog({
     } else if (position === "end") {
       afterPageNumber = null; // Insérer à la fin
     } else if (position.startsWith("after-")) {
-      afterPageNumber = parseInt(position.replace("after-", ""), 10);
+      const parsed = parseInt(position.replace("after-", ""), 10);
+      afterPageNumber = isNaN(parsed) ? null : parsed;
     }
 
+    console.log('[CreatePageDialog] Position:', position, '-> afterPageNumber:', afterPageNumber);
     onConfirm(title.trim() || "Nouvelle page", afterPageNumber);
   };
 

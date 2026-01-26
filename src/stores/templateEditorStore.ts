@@ -1850,12 +1850,20 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
     // Trouver l'index d'insertion
     // afterPageNumber = 0 signifie "au début", null/undefined = "à la fin"
-    const insertIndex = afterPageNumber === 0
-      ? 0
-      : afterPageNumber 
-        ? currentVersion.pages.findIndex(p => p.pageNumber === afterPageNumber) + 1
-        : currentVersion.pages.length;
-
+    console.log('[addPage] afterPageNumber:', afterPageNumber, 'typeof:', typeof afterPageNumber);
+    console.log('[addPage] pages:', currentVersion.pages.map(p => p.pageNumber));
+    
+    let insertIndex: number;
+    if (afterPageNumber === 0) {
+      insertIndex = 0;
+    } else if (afterPageNumber !== undefined && afterPageNumber !== null) {
+      const foundIndex = currentVersion.pages.findIndex(p => p.pageNumber === afterPageNumber);
+      console.log('[addPage] foundIndex for page', afterPageNumber, ':', foundIndex);
+      insertIndex = foundIndex >= 0 ? foundIndex + 1 : currentVersion.pages.length;
+    } else {
+      insertIndex = currentVersion.pages.length;
+    }
+    console.log('[addPage] insertIndex:', insertIndex);
     // Trouver le prochain numéro de page disponible (temporaire, sera renuméroté)
     const maxPageNumber = Math.max(...currentVersion.pages.map(p => p.pageNumber), 0);
     const tempPageNumber = maxPageNumber + 1;
