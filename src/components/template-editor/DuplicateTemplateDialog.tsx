@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { Copy } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
-import type { PDFTemplate } from '@/types/template-editor';
+import { useTemplateSync } from '@/hooks/useTemplateSync';
+import type { PDFTemplate, TemplatePageContent } from '@/types/template-editor';
 import { toast } from 'sonner';
 
 interface DuplicateTemplateDialogProps {
@@ -36,8 +37,10 @@ export function DuplicateTemplateDialog({
   const [description, setDescription] = useState(template.description);
   const [includeAllVersions, setIncludeAllVersions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<'idle' | 'loading' | 'duplicating'>('idle');
 
-  const { duplicateTemplate } = useTemplateEditorStore();
+  const { duplicateTemplate, allVersions } = useTemplateEditorStore();
+  const { loadVersionPages } = useTemplateSync();
 
   const handleDuplicate = async () => {
     if (!name.trim()) {
@@ -46,16 +49,53 @@ export function DuplicateTemplateDialog({
     }
 
     setIsLoading(true);
+    
     try {
-      const newTemplate = duplicateTemplate(template.id, name.trim(), description, includeAllVersions);
+      // 1. Identifier les versions à dupliquer
+      const sourceVersions = allVersions.filter(v => v.templateId === template.id);
+      let versionsToDuplicate = sourceVersions;
+      
+      if (!includeAllVersions) {
+        const publishedVersions = sourceVersions.filter(v => v.status === 'publie');
+        const latestVersion = publishedVersions.length > 0
+          ? publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+          : sourceVersions.length > 0
+            ? sourceVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+            : null;
+        versionsToDuplicate = latestVersion ? [latestVersion] : [];
+      }
+
+      // 2. Charger les pages depuis le cloud si nécessaire (lazy loading)
+      const preloadedPages: Record<string, TemplatePageContent[]> = {};
+      
+      for (const version of versionsToDuplicate) {
+        if (!version.pages || version.pages.length === 0) {
+          setLoadingPhase('loading');
+          console.log(`Chargement des pages depuis le cloud pour version ${version.id}...`);
+          const pages = await loadVersionPages(version.id);
+          if (pages) {
+            preloadedPages[version.id] = pages;
+            console.log(`Pages chargées: ${pages.length} pages`);
+          }
+        }
+      }
+
+      // 3. Dupliquer avec les pages préchargées
+      setLoadingPhase('duplicating');
+      const newTemplate = duplicateTemplate(template.id, name.trim(), description, includeAllVersions, preloadedPages);
+      
       if (newTemplate) {
         toast.success(`Template "${newTemplate.name}" créé avec succès`);
         onOpenChange(false);
       } else {
         toast.error('Erreur lors de la duplication');
       }
+    } catch (error) {
+      console.error('Erreur duplication:', error);
+      toast.error('Erreur lors de la duplication');
     } finally {
       setIsLoading(false);
+      setLoadingPhase('idle');
     }
   };
 
@@ -107,11 +147,12 @@ export function DuplicateTemplateDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Annuler
           </Button>
           <Button onClick={handleDuplicate} disabled={isLoading || !name.trim()}>
-            {isLoading ? 'Duplication...' : 'Dupliquer'}
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loadingPhase === 'loading' ? 'Chargement...' : loadingPhase === 'duplicating' ? 'Duplication...' : 'Dupliquer'}
           </Button>
         </DialogFooter>
       </DialogContent>
