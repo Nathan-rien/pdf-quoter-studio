@@ -118,7 +118,9 @@ function renderTextElementToHTML(element: EditableElement): string {
   const positionStyle = getSharedElementStyle({ element });
   
   const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
-  const fontValue = fontDef?.value || 'sans-serif';
+  // IMPORTANT: fallback identique à l'Aperçu (RentalProposalPreview)
+  // Un fallback différent change les métriques (wrap) et provoque des chevauchements sur les pages denses (ex: page 3)
+  const fontValue = fontDef?.value || 'Outfit, sans-serif';
   const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
   const indentPx = (content.indentLevel || 0) * LIST_INDENT_PX;
   
@@ -379,7 +381,8 @@ export async function renderPageToHTML(
  * Cela garantit une parité WYSIWYG parfaite avec RentalProposalPreview
  */
 const PDF_BASE_WIDTH = CANVAS_DISPLAY_MAX_WIDTH; // 580px - identique à l'Aperçu
-const PDF_BASE_HEIGHT = Math.round(PDF_BASE_WIDTH * (297 / 210)); // ≈ 820px - ratio A4
+// IMPORTANT: ne pas arrondir -> évite des écarts de pagination (Chrome) et des débordements inter-pages
+const PDF_BASE_HEIGHT = PDF_BASE_WIDTH * (297 / 210); // ≈ 820.095... - ratio A4
 
 /**
  * Génère le document PDF complet en HTML
@@ -399,7 +402,12 @@ export async function generatePDFDocumentHTML(
   // Calcul du facteur de scale pour A4 (210mm à 96dpi = ~793.7px)
   // Basé sur la largeur du canvas PDF (580px) pour correspondre à l'Aperçu
   const A4_WIDTH_CSS_PX = (210 / 25.4) * 96; // ≈ 793.7008
-  const PRINT_SCALE = A4_WIDTH_CSS_PX / PDF_BASE_WIDTH; // ≈ 1.368
+  const A4_HEIGHT_CSS_PX = (297 / 25.4) * 96; // ≈ 1122.5197
+  // Sécurise la pagination : garantit que ça rentre dans A4 en largeur ET hauteur
+  const PRINT_SCALE = Math.min(
+    A4_WIDTH_CSS_PX / PDF_BASE_WIDTH,
+    A4_HEIGHT_CSS_PX / PDF_BASE_HEIGHT
+  );
   
   return `
     <!DOCTYPE html>
@@ -422,11 +430,16 @@ export async function generatePDFDocumentHTML(
           }
           /* Le wrapper feuille A4 gère les sauts de page */
           .page-sheet {
+            display: block;
             page-break-after: always;
             page-break-inside: avoid;
+            /* Modern equivalents (Chrome) */
+            break-after: page;
+            break-inside: avoid;
           }
           .page-sheet:last-child {
             page-break-after: auto;
+            break-after: auto;
           }
           /* Le canvas interne est scalé uniformément pour remplir la feuille A4 */
           .page {
