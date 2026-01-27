@@ -8,7 +8,7 @@
  * - Rend les icônes Lucide en SVG inline
  */
 
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX } from './canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CANVAS_DISPLAY_MAX_WIDTH } from './canvas-constants';
 import { ALLOWED_FONTS } from './template-styles';
 import { getSharedElementStyle, resolveImageUrl } from './template-render-utils';
 import { renderIconSVG } from './lucide-svg-paths';
@@ -375,6 +375,13 @@ export async function renderPageToHTML(
 }
 
 /**
+ * Dimensions du canvas PDF alignées sur l'Aperçu (580px de large, ratio A4)
+ * Cela garantit une parité WYSIWYG parfaite avec RentalProposalPreview
+ */
+const PDF_BASE_WIDTH = CANVAS_DISPLAY_MAX_WIDTH; // 580px - identique à l'Aperçu
+const PDF_BASE_HEIGHT = Math.round(PDF_BASE_WIDTH * (297 / 210)); // ≈ 820px - ratio A4
+
+/**
  * Génère le document PDF complet en HTML
  */
 export async function generatePDFDocumentHTML(
@@ -390,8 +397,9 @@ export async function generatePDFDocumentHTML(
   );
   
   // Calcul du facteur de scale pour A4 (210mm à 96dpi = ~793.7px)
+  // Basé sur la largeur du canvas PDF (580px) pour correspondre à l'Aperçu
   const A4_WIDTH_CSS_PX = (210 / 25.4) * 96; // ≈ 793.7008
-  const PRINT_SCALE = A4_WIDTH_CSS_PX / CANVAS_SCALE.width; // ≈ 1.22108
+  const PRINT_SCALE = A4_WIDTH_CSS_PX / PDF_BASE_WIDTH; // ≈ 1.368
   
   return `
     <!DOCTYPE html>
@@ -485,11 +493,11 @@ export async function generatePDFDocumentHTML(
           position: relative;
         }
         
-        /* Canvas interne : dimensions fixes identiques à CANVAS_SCALE */
-        /* En print, il sera scalé uniformément via transform: scale() */
+        /* Canvas interne : dimensions identiques à l'Aperçu (580x820) */
+        /* En print, il sera scalé uniformément via transform: scale() pour remplir A4 */
         .page {
-          width: ${CANVAS_SCALE.width}px;
-          height: ${CANVAS_SCALE.height}px;
+          width: ${PDF_BASE_WIDTH}px;
+          height: ${PDF_BASE_HEIGHT}px;
           position: relative;
           overflow: hidden;
           background: white;
@@ -497,11 +505,11 @@ export async function generatePDFDocumentHTML(
           print-color-adjust: exact !important;
         }
         
-        /* En mode écran (prévisualisation), on scale aussi pour aperçu A4 */
+        /* En mode écran (prévisualisation), on garde les mêmes dimensions */
         @media screen {
           .page-sheet {
-            width: ${CANVAS_SCALE.width}px;
-            height: ${CANVAS_SCALE.height}px;
+            width: ${PDF_BASE_WIDTH}px;
+            height: ${PDF_BASE_HEIGHT}px;
           }
         }
         
