@@ -145,7 +145,9 @@ function renderTextElementToHTML(element: EditableElement): string {
     lineHeight: 1.2,
     textAlign: content.textAlign || 'left',
     whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
+    // IMPORTANT: matcher Tailwind `break-words` (Aperçu) => overflow-wrap, pas word-break
+    overflowWrap: 'break-word',
+    wordBreak: 'normal',
   };
   
   // Contenu : htmlContent ou génération manuelle des lignes
