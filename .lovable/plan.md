@@ -1,112 +1,76 @@
 
-# Plan : Corriger le rendu PDF Page 7 - Icônes manquantes et CSS d'impression
+Objectif
+- Revenir à une fidélité WYSIWYG stricte entre le template (éditeur/aperçu) et le PDF généré, en supprimant :
+  1) les puces “automatiques” (bullet points) ajoutées dans le PDF
+  2) les décalages de texte (offset vertical/horizontal) par rapport au template source
 
-## Diagnostic
+Constat (cause racine)
+- Les blocs concernés (ex: Page 3 “Économique / Écologique”) sont enregistrés avec du HTML enrichi (`htmlContent`) contenant des balises de liste et de titres, notamment `<ul>`, `<li>`, `<h3>`, `<p>`.
+- Dans l’app (éditeur + aperçu), Tailwind applique un “reset” (preflight) qui neutralise le rendu navigateur par défaut :
+  - `ul/ol` n’affichent pas de puces
+  - `h3` n’a pas une taille “heading” automatique (il hérite du font-size)
+- Dans le PDF, on ne charge pas Tailwind : on injecte notre propre CSS. Résultat :
+  - Les `<ul><li>` reprennent les puces par défaut du navigateur → “bullet points qui se rajoutent”
+  - Les `<h3>` reprennent une taille de titre par défaut (em-based) → le texte “descend”, ce qui décale l’ensemble du bloc
 
-### Icônes manquantes (logs console)
-Les logs de la console identifient précisément 4 icônes manquantes utilisées sur la Page 7 du template actif :
+Solution (principe)
+- Aligner le CSS du moteur PDF sur le reset Tailwind minimum nécessaire pour que le HTML enrichi (`htmlContent`) rende EXACTEMENT comme dans l’aperçu.
+- En complément, aligner la structure de rendu texte du PDF sur la structure de l’aperçu (wrapper interne “px-0.5 py-px”) pour éliminer les micro-décalages.
 
-| Icône | Usage dans le template |
-|-------|------------------------|
-| `UserCog` | "Intervention sur site" |
-| `Route` | "Logistique" |
-| `BookmarkCheck` | "Maintenance et garantie" |
-| `HeartHandshake` | "Données RSE" |
+Changements prévus (code)
 
-### Fonds des cartes absents
-Malgré l'option "Graphiques d'arrière-plan" activée dans Chrome, les fonds bleu marine (#1e3a5f) des cartes ne s'affichent pas. Cela indique que le CSS `print-color-adjust: exact` n'est pas injecté dans le HTML généré.
+1) Ajouter un “preflight minimal” spécifique aux contenus Rich Text dans `src/lib/pdf-html-generator.ts`
+- Dans le `<style>` injecté par `generatePDFDocumentHTML`, ajouter des règles qui neutralisent le rendu par défaut des balises riches :
+  - Listes :
+    - `ul, ol { list-style: none; margin: 0; padding: 0; }`
+    - `li { margin: 0; padding: 0; }`
+  - Titres :
+    - `h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }`
+  - Paragraphes / blocs :
+    - `p { margin: 0; }`
+  - Optionnel (selon résultat) :
+    - `strong, b { font-weight: bolder; }` (souvent déjà OK)
+    - `em { font-style: italic; }` (déjà default)
+- Résultat attendu :
+  - Plus aucune puce automatique issue de `<ul>/<li>`
+  - Plus de “grossissement” inattendu des titres `<h3>` → retour à l’alignement du template
 
-## Solution technique
+2) Harmoniser la structure de rendu “text element” entre PDF et Preview
+- Aujourd’hui, l’aperçu rend :
+  - un wrapper externe positionné (absolute)
+  - un wrapper interne avec padding Tailwind `px-0.5 py-px` (équivalent ~2px/1px)
+  - puis le contenu (htmlContent ou texte)
+- Le PDF rend tout dans un seul `<div>` avec styles inline.
+- Modification : reproduire la structure de l’aperçu dans `renderTextElementToHTML` :
+  - wrapper externe : style position/left/top/maxWidth via `getSharedElementStyle` + zIndex normalisé
+  - wrapper interne : padding fixe équivalent à `px-0.5 py-px` + styles typo (fontFamily/fontSize/lineHeight/etc.)
+  - contenu :
+    - si `htmlContent` : l’injecter dans une sous-div avec `padding-left` (indent) comme dans l’aperçu
+    - sinon : générer les lignes avec `<div style="padding-left: ...">` (indent par ligne), et préfixes `•` / `1.` selon `listType` (comme EditorCanvas/Preview)
+- Résultat attendu :
+  - Le “point d’ancrage” du texte (haut-gauche) se comporte pareil entre preview et PDF
+  - Les micro-décalages liés aux paddings/wrappers disparaissent
 
-### 1. Ajouter les 4 icônes manquantes
+3) Validation ciblée (tests)
+- Test A (Page 3, sections Économique/Écologique) :
+  - Vérifier qu’aucune puce noire automatique n’apparaît dans le PDF
+  - Vérifier que l’alignement vertical du bloc est identique au template sauvegardé
+- Test B (une page avec HTML riche contenant des titres) :
+  - Vérifier que la taille des “titres” dans htmlContent ne gonfle pas en PDF
+- Test C (régression) :
+  - Vérifier que les éléments “texte simple” (sans htmlContent) conservent bien :
+    - lineHeight 1.2
+    - indentLevel / listType (les “listes” gérées par notre système continuent de marcher)
 
-Dans `src/lib/lucide-svg-paths.ts`, ajouter les paths SVG pour :
+Fichiers concernés
+- `src/lib/pdf-html-generator.ts`
+  - Ajout CSS reset minimal pour `ul/ol/li/h1..h6/p`
+  - Ajustement de `renderTextElementToHTML` pour matcher la structure de rendu de l’aperçu
 
-```typescript
-// Intervention sur site - Utilisateur avec engrenage
-UserCog: '<path d="M10 15H6a4 4 0 0 0-4 4v2"/><path d="m14.305 16.53.923-.382"/><path d="m15.228 13.852-.923-.383"/><path d="m16.852 12.228-.383-.923"/><path d="m16.852 17.772-.383.924"/><path d="m19.148 12.228.383-.923"/><path d="m19.53 18.696-.382-.924"/><path d="m20.772 13.852.924-.383"/><path d="m20.772 16.148.924.383"/><circle cx="18" cy="15" r="3"/><circle cx="9" cy="7" r="4"/>',
+Risques & garde-fous
+- Risque : si quelqu’un utilise volontairement des listes HTML (`<ul>`) et veut des puces visibles en PDF
+  - Aujourd’hui, l’app (preview) ne les affiche déjà pas (reset Tailwind), donc pour la “parité WYSIWYG”, on doit aussi les désactiver côté PDF.
+  - Les listes “officielles” doivent passer par `listType: bullet/numbered` (notre mécanisme), qui reste supporté.
 
-// Logistique - Route avec points
-Route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
-
-// Maintenance et garantie - Marque-page avec check
-BookmarkCheck: '<path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/><path d="m9 10 2 2 4-4"/>',
-
-// Données RSE - Coeur avec poignée de main
-HeartHandshake: '<path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"/>',
-```
-
-### 2. Ajouter le CSS `print-color-adjust`
-
-Dans `src/lib/pdf-html-generator.ts`, modifier la fonction `generatePDFDocumentHTML` pour ajouter les propriétés CSS qui forcent l'impression des couleurs de fond :
-
-```css
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-  color-adjust: exact !important;
-}
-
-.page {
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-}
-```
-
-Ces propriétés CSS forcent les navigateurs à imprimer les couleurs d'arrière-plan, même lorsqu'ils sont configurés par défaut pour les ignorer (économie d'encre).
-
-## Fichiers à modifier
-
-| Fichier | Modification |
-|---------|--------------|
-| `src/lib/lucide-svg-paths.ts` | Ajouter 4 paths SVG (UserCog, Route, BookmarkCheck, HeartHandshake) |
-| `src/lib/pdf-html-generator.ts` | Ajouter CSS `print-color-adjust: exact` dans les styles globaux |
-
-## Détail technique
-
-### Paths SVG extraits de lucide.dev
-
-Les paths ont été extraits directement depuis le site officiel lucide.dev pour garantir la compatibilité avec la version 0.462.0 installée :
-
-- **UserCog** : Icône composée de 10 paths (user + engrenage animé)
-- **Route** : 2 cercles + 1 path pour la route sinueuse
-- **BookmarkCheck** : Marque-page avec un checkmark interne
-- **HeartHandshake** : Coeur avec motif de poignée de main stylisée
-
-### CSS Print-Color-Adjust
-
-```css
--webkit-print-color-adjust: exact !important;
-print-color-adjust: exact !important;
-color-adjust: exact !important;
-```
-
-Cette propriété CSS standard (et ses préfixes vendeur) force le navigateur à :
-1. Imprimer les couleurs de fond (`background-color`)
-2. Imprimer les images de fond (`background-image`)
-3. Conserver l'opacité des éléments
-
-Le `!important` garantit que ces règles prennent le dessus sur les paramètres par défaut du navigateur.
-
-## Comportement attendu après correction
-
-| Page 7 | Avant | Après |
-|--------|-------|-------|
-| Carte "Intervention sur site" | ? (placeholder) | Icône UserCog visible |
-| Carte "Logistique" | ? (placeholder) | Icône Route visible |
-| Carte "Maintenance et garantie" | ? (placeholder) | Icône BookmarkCheck visible |
-| Carte "Données RSE" | ? (placeholder) | Icône HeartHandshake visible |
-| Fonds bleu marine | Absents/blancs | Visibles (#1e3a5f) |
-| Fonds gris | Absents/blancs | Visibles (#f3f4f6) |
-
-## Tests de validation
-
-1. Générer un PDF via Chrome > Imprimer
-2. Vérifier que les 8 cartes de la Page 7 affichent :
-   - Leurs icônes respectives (pas de "?")
-   - Leurs fonds colorés (bleu marine ou gris clair)
-   - Le texte avec la bonne couleur (blanc sur fond sombre, noir sur fond clair)
-3. Comparer visuellement avec l'aperçu du workflow
+Livrable
+- Un PDF dont le rendu texte (positions + absence de puces automatiques) correspond au template sauvegardé, notamment sur la Page 3 montrée dans vos captures.
