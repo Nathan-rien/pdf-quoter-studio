@@ -108,19 +108,30 @@ function styleToString(style: React.CSSProperties): string {
 
 /**
  * Rend un élément texte en HTML
+ * Structure harmonisée avec RentalProposalPreview :
+ * - Wrapper externe : position absolute + zIndex normalisé
+ * - Wrapper interne : padding px-0.5 py-px (~2px/1px) + styles typo
+ * - Contenu : htmlContent ou texte brut avec gestion listType
  */
 function renderTextElementToHTML(element: EditableElement): string {
   const content = element.content as TextContent;
-  const style = getSharedElementStyle({ element });
+  const positionStyle = getSharedElementStyle({ element });
   
   const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
   const fontValue = fontDef?.value || 'sans-serif';
   const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
   const indentPx = (content.indentLevel || 0) * LIST_INDENT_PX;
   
-  const textStyle: React.CSSProperties = {
-    ...style,
-    zIndex: normalizeZIndex(element), // Normalisation z-index WYSIWYG
+  // Wrapper externe : positionnement absolu (identique à getSharedElementStyle)
+  const outerStyle: React.CSSProperties = {
+    ...positionStyle,
+    zIndex: normalizeZIndex(element),
+  };
+  
+  // Wrapper interne : padding équivalent à Tailwind "px-0.5 py-px" (~2px horizontal, 1px vertical)
+  // + styles typographiques pour héritage dans htmlContent
+  const innerStyle: React.CSSProperties = {
+    padding: '1px 2px',
     fontFamily: fontValue,
     fontSize: `${scaledFontSize}px`,
     color: content.color || '#1f2937',
@@ -129,15 +140,16 @@ function renderTextElementToHTML(element: EditableElement): string {
     textDecoration: content.underline ? 'underline' : 'none',
     lineHeight: 1.2,
     textAlign: content.textAlign || 'left',
-    paddingLeft: indentPx > 0 ? `${indentPx}px` : undefined,
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
   };
   
-  // Utiliser le contenu HTML enrichi s'il existe, sinon le texte brut
+  // Contenu : htmlContent ou génération manuelle des lignes
   let textContent: string;
   if (content.htmlContent) {
-    textContent = content.htmlContent;
+    // Wrapper pour l'indentation si nécessaire
+    const contentStyle = indentPx > 0 ? `padding-left: ${indentPx}px;` : '';
+    textContent = contentStyle ? `<div style="${contentStyle}">${content.htmlContent}</div>` : content.htmlContent;
   } else {
     const text = content.text || '';
     const lines = text.split('\n');
@@ -145,11 +157,12 @@ function renderTextElementToHTML(element: EditableElement): string {
       let prefix = '';
       if (content.listType === 'bullet') prefix = '• ';
       if (content.listType === 'numbered') prefix = `${i + 1}. `;
-      return `<div>${prefix}${escapeHTML(line) || '&nbsp;'}</div>`;
+      const lineIndent = indentPx > 0 ? `padding-left: ${indentPx}px;` : '';
+      return `<div style="${lineIndent}">${prefix}${escapeHTML(line) || '&nbsp;'}</div>`;
     }).join('');
   }
   
-  return `<div style="${styleToString(textStyle)}">${textContent}</div>`;
+  return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}">${textContent}</div></div>`;
 }
 
 /**
@@ -408,6 +421,32 @@ export async function generatePDFDocumentHTML(
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
           color-adjust: exact !important;
+        }
+        
+        /* Preflight minimal pour Rich Text - neutralise les styles navigateur par défaut */
+        /* Aligné sur Tailwind Preflight pour garantir la parité WYSIWYG */
+        ul, ol {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        li {
+          margin: 0;
+          padding: 0;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-size: inherit;
+          font-weight: inherit;
+          margin: 0;
+        }
+        p {
+          margin: 0;
+        }
+        strong, b {
+          font-weight: bolder;
+        }
+        em, i {
+          font-style: italic;
         }
         
         body {
