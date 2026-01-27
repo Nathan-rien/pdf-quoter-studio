@@ -130,7 +130,9 @@ function renderTextElementToHTML(element: EditableElement): string {
   
   // Wrapper interne : padding équivalent à Tailwind "px-0.5 py-px" (~2px horizontal, 1px vertical)
   // + styles typographiques pour héritage dans htmlContent
+  // width: 100% pour matcher la structure de l'aperçu
   const innerStyle: React.CSSProperties = {
+    width: '100%',
     padding: '1px 2px',
     fontFamily: fontValue,
     fontSize: `${scaledFontSize}px`,
@@ -348,6 +350,7 @@ function sortByZIndex(elements: EditableElement[]): EditableElement[] {
 
 /**
  * Génère le HTML d'une page du template
+ * Utilise un wrapper .page-sheet (A4) + .page (canvas 650x919) pour un scaling uniforme
  */
 export async function renderPageToHTML(
   page: TemplatePageContent,
@@ -360,12 +363,13 @@ export async function renderPageToHTML(
     sortedElements.map(el => renderElementToHTML(el))
   );
   
-  // Utiliser les dimensions du canvas source (CANVAS_SCALE) pour garantir 
-  // une interprétation identique des pourcentages entre preview et PDF
+  // Structure : .page-sheet (A4 en print) > .page (canvas source, scalé uniformément)
   return `
-    <div class="page">
-      ${elementsHTML.join('\n')}
-      ${dynamicContentHTML || ''}
+    <div class="page-sheet">
+      <div class="page">
+        ${elementsHTML.join('\n')}
+        ${dynamicContentHTML || ''}
+      </div>
     </div>
   `;
 }
@@ -385,15 +389,20 @@ export async function generatePDFDocumentHTML(
     })
   );
   
+  // Calcul du facteur de scale pour A4 (210mm à 96dpi = ~793.7px)
+  const A4_WIDTH_CSS_PX = (210 / 25.4) * 96; // ≈ 793.7008
+  const PRINT_SCALE = A4_WIDTH_CSS_PX / CANVAS_SCALE.width; // ≈ 1.22108
+  
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
       <title>Proposition de Location</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
-        
         @media print {
           @page { 
             size: A4 portrait; 
@@ -402,15 +411,19 @@ export async function generatePDFDocumentHTML(
           html, body {
             margin: 0;
             padding: 0;
-            width: 210mm;
-            height: 297mm;
           }
-          .page {
+          /* Le wrapper feuille A4 gère les sauts de page */
+          .page-sheet {
             page-break-after: always;
             page-break-inside: avoid;
           }
-          .page:last-child {
+          .page-sheet:last-child {
             page-break-after: auto;
+          }
+          /* Le canvas interne est scalé uniformément pour remplir la feuille A4 */
+          .page {
+            transform: scale(${PRINT_SCALE.toFixed(6)});
+            transform-origin: top left;
           }
         }
         
@@ -423,24 +436,31 @@ export async function generatePDFDocumentHTML(
           color-adjust: exact !important;
         }
         
-        /* Preflight minimal pour Rich Text - neutralise les styles navigateur par défaut */
-        /* Aligné sur Tailwind Preflight pour garantir la parité WYSIWYG */
+        /* Preflight STRICT pour Rich Text - neutralise complètement les styles navigateur par défaut */
+        /* Aligné sur Tailwind Preflight + renforcé avec !important pour garantir la parité WYSIWYG */
         ul, ol {
-          list-style: none;
-          margin: 0;
-          padding: 0;
+          list-style: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         li {
-          margin: 0;
-          padding: 0;
+          list-style: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          display: block;
+        }
+        /* Suppression du ::marker pour Chrome/Safari */
+        li::marker {
+          content: "" !important;
+          display: none !important;
         }
         h1, h2, h3, h4, h5, h6 {
-          font-size: inherit;
-          font-weight: inherit;
-          margin: 0;
+          font-size: inherit !important;
+          font-weight: inherit !important;
+          margin: 0 !important;
         }
         p {
-          margin: 0;
+          margin: 0 !important;
         }
         strong, b {
           font-weight: bolder;
@@ -456,11 +476,20 @@ export async function generatePDFDocumentHTML(
           background: white;
         }
         
+        /* Wrapper feuille A4 : dimensionné en mm pour l'impression */
+        .page-sheet {
+          width: 210mm;
+          height: 297mm;
+          overflow: hidden;
+          background: white;
+          position: relative;
+        }
+        
+        /* Canvas interne : dimensions fixes identiques à CANVAS_SCALE */
+        /* En print, il sera scalé uniformément via transform: scale() */
         .page {
-          /* Dimensions identiques à CANVAS_SCALE pour une fidélité WYSIWYG parfaite */
-          /* Le navigateur met à l'échelle automatiquement pour A4 lors de l'impression */
-          width: 650px;
-          height: 919px;
+          width: ${CANVAS_SCALE.width}px;
+          height: ${CANVAS_SCALE.height}px;
           position: relative;
           overflow: hidden;
           background: white;
@@ -468,11 +497,11 @@ export async function generatePDFDocumentHTML(
           print-color-adjust: exact !important;
         }
         
-        @media print {
-          .page {
-            /* Le navigateur met à l'échelle pour A4 automatiquement */
-            width: 210mm;
-            height: 297mm;
+        /* En mode écran (prévisualisation), on scale aussi pour aperçu A4 */
+        @media screen {
+          .page-sheet {
+            width: ${CANVAS_SCALE.width}px;
+            height: ${CANVAS_SCALE.height}px;
           }
         }
         

@@ -101,6 +101,50 @@ export function RentalProposalExport() {
     }
   };
 
+  /**
+   * Attend le chargement complet des fonts et images dans une fenêtre
+   */
+  const waitForAssetsReady = async (win: Window): Promise<void> => {
+    const TIMEOUT_MS = 5000;
+    
+    // 1) Attendre que les polices soient chargées
+    try {
+      const fontsPromise = (win.document as any).fonts?.ready;
+      if (fontsPromise) {
+        await Promise.race([
+          fontsPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Fonts timeout')), TIMEOUT_MS))
+        ]);
+      }
+    } catch (err) {
+      console.warn('[PDF Export] Fonts loading timeout or error:', err);
+    }
+    
+    // 2) Attendre que toutes les images soient décodées
+    const images = Array.from(win.document.querySelectorAll('img')) as HTMLImageElement[];
+    const imagePromises = images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, TIMEOUT_MS);
+        img.onload = () => { clearTimeout(timeout); resolve(); };
+        img.onerror = () => { clearTimeout(timeout); resolve(); };
+        // Utiliser decode() si disponible (meilleure garantie)
+        if (typeof img.decode === 'function') {
+          img.decode().then(() => { clearTimeout(timeout); resolve(); }).catch(() => { clearTimeout(timeout); resolve(); });
+        }
+      });
+    });
+    
+    await Promise.all(imagePromises);
+    
+    // 3) Laisser 2 cycles de layout pour stabiliser le rendu
+    await new Promise<void>(resolve => {
+      win.requestAnimationFrame(() => {
+        win.requestAnimationFrame(() => resolve());
+      });
+    });
+  };
+
   const handleDownloadPDF = async () => {
     setIsGenerating(true);
     
@@ -129,24 +173,42 @@ export function RentalProposalExport() {
       printWindow.document.write(htmlContent);
       printWindow.document.close();
       
-      // Attendre le chargement puis imprimer
-      printWindow.onload = () => {
-        setTimeout(async () => {
+      // Attendre le chargement complet de la fenêtre
+      printWindow.onload = async () => {
+        try {
+          // Attendre fonts + images + 2x rAF
+          await waitForAssetsReady(printWindow);
+          
+          // Imprimer
           printWindow.print();
-          printWindow.close();
-          
-          // Sauvegarder dans l'historique
-          await saveToHistory(htmlContent, 'success');
-          
-          setIsGenerating(false);
-          setIsGenerated(true);
-          
-          toast({
-            title: "PDF généré",
-            description: `Le document "${fileName}" a été préparé pour le téléchargement.`,
-          });
-        }, 500);
+        } catch (err) {
+          console.error('[PDF Export] Error during asset loading:', err);
+        }
       };
+      
+      // Gérer la fermeture et l'historique via onafterprint
+      printWindow.onafterprint = async () => {
+        printWindow.close();
+        
+        // Sauvegarder dans l'historique
+        await saveToHistory(htmlContent, 'success');
+        
+        setIsGenerating(false);
+        setIsGenerated(true);
+        
+        toast({
+          title: "PDF généré",
+          description: `Le document "${fileName}" a été préparé pour le téléchargement.`,
+        });
+      };
+      
+      // Fallback si onafterprint n'est pas déclenché (certains navigateurs)
+      // Timeout de sécurité après 30s
+      setTimeout(() => {
+        if (isGenerating) {
+          setIsGenerating(false);
+        }
+      }, 30000);
 
     } catch (error) {
       console.error('Erreur lors de la génération du PDF:', error);
