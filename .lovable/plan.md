@@ -1,94 +1,110 @@
 
-Objectif
-- Obtenir une parité WYSIWYG “définitive” entre le template (éditeur/aperçu) et le PDF généré, sans décalage de texte ni apparition de puces/listes inattendues.
+# Plan de Correction Définitive : Parité WYSIWYG Aperçu → PDF
 
-Constat à partir de votre capture (PDF vs éditeur)
-- Les décalages restants ressemblent à un problème de “scaling non uniforme” lors de l’impression :
-  - Les positions/dimensions des éléments (en %) suivent bien le redimensionnement de la page imprimée.
-  - Mais certaines valeurs “absolues” en px (typo, padding interne, etc.) peuvent ne pas être à la même échelle au moment du rendu print, surtout si la page passe de 650px×919px (canvas source) à 210mm×297mm (A4).
-- Il y a aussi un risque fort que l’impression se déclenche avant que les polices Google (DM Sans/Inter/Outfit) soient effectivement chargées dans la fenêtre d’impression. Dans ce cas :
-  - Le navigateur imprime avec une police de fallback (métriques différentes),
-  - Puis la police finale se charge (trop tard),
-  - Résultat : wrapping différent, hauteurs de lignes différentes, et donc décalage.
-- Enfin, les “bullet points” peuvent réapparaître si :
-  - le HTML riche contient des styles inline sur les listes (ex: list-style-type),
-  - ou si le reset n’écrase pas assez agressivement (ex: ::marker).
+## Problème Identifié
 
-Approche de correctif “définitif” (2 volets)
+Le décalage entre l'Aperçu et le PDF provient d'une **divergence dans les bases de calcul** :
 
-Volet A — Rendre le scaling d’impression strictement uniforme (le plus important)
-But : garantir que TOUT (positions %, tailles %, polices px, padding px, bordures px, SVG icons, etc.) soit mis à l’échelle de manière identique au moment du print.
+| Composant | Conteneur | Base de calcul | Font scale |
+|-----------|-----------|----------------|------------|
+| **Aperçu** (RentalProposalPreview) | `aspect-[210/297]` + `maxWidth: 580px` | Positions en % de 650x919, rendu dans 580px effectifs | `fontSize * 0.4` |
+| **PDF** (pdf-html-generator) | `.page` 650x919px → scalé 1.22x pour A4 | Positions en % de 650x919, rendu dans 650px avant scaling | `fontSize * 0.4` |
 
-1) Introduire un wrapper “feuille A4” et une page interne “canvas”
-- Dans `src/lib/pdf-html-generator.ts` :
-  - Modifier `renderPageToHTML()` pour générer :
-    - un conteneur `.page-sheet` dimensionné en A4 (210mm × 297mm),
-    - qui contient un `.page` dimensionné STRICTEMENT comme le canvas source (650px × 919px),
-    - et appliquer un `transform: scale(S)` (ou `zoom`) sur `.page` en mode print pour remplir exactement la feuille A4.
-- Pourquoi : on “fige” la base de calcul en 650×919 (comme l’éditeur/aperçu), puis on scale visuellement tout le contenu pour A4. Ça évite le mélange % (qui scale) + px (qui ne scale pas) qui peut créer des offsets.
+Le problème : quand le navigateur imprime la page 650px scalée à 1.22x, les positions relatives (%) s'adaptent, mais les valeurs absolues (fonts, padding) sont calculées sur 650px de base au lieu de 580px. Cela crée un décalage visuel car les textes sont plus espacés proportionnellement.
 
-2) Calcul du scale
-- Toujours dans `src/lib/pdf-html-generator.ts` :
-  - Calculer `S` en JS/TS lors de la génération HTML et l’injecter dans le CSS.
-  - Base recommandée (Chrome) : CSS pixels utilisent 96dpi, donc :
-    - A4_width_css_px = 210 / 25.4 * 96 ≈ 793.7008px
-    - S = A4_width_css_px / 650 ≈ 1.22108
-- Appliquer ce scale uniquement dans `@media print`.
+## Solution : Uniformiser la Base de Rendu
 
-3) Ajuster les règles de pagination
-- Déplacer la règle `page-break-after` sur `.page-sheet` (et non `.page`) pour que chaque wrapper corresponde à une page imprimée.
-- Mettre `overflow: hidden` sur `.page-sheet` pour éviter toute “fuite” hors page si le navigateur arrondit.
+L'approche consiste à générer le HTML du PDF avec **exactement la même structure que l'Aperçu** (580px de largeur), puis laisser le navigateur scaler uniformément toute la page pour A4.
 
-Volet B — Verrouiller le rendu typographique (fonts + reset lists) pour supprimer offsets et puces
-But : empêcher les différences de métriques et les styles navigateur par défaut de s’appliquer en print.
+### Étape 1 : Modifier le conteneur .page dans pdf-html-generator.ts
 
-4) Attendre réellement le chargement des polices et des images avant `print()`
-- Dans `src/components/rental-proposal/RentalProposalExport.tsx` :
-  - Remplacer le simple `setTimeout(..., 500)` par une séquence robuste :
-    1) Attendre que le document de la printWindow soit “ready”
-    2) `await printWindow.document.fonts?.ready` (avec timeout de sécurité)
-    3) Attendre les images : `decode()` si dispo, sinon `load` event (avec timeout)
-    4) Laisser un cycle de layout (1–2 `requestAnimationFrame`)
-    5) Puis seulement `printWindow.print()`
-  - Utiliser `printWindow.onafterprint` pour fermer la fenêtre et déclencher l’historique (évite de fermer trop tôt).
+Passer de `650px x 919px` à `580px x 820px` (ratio A4 préservé : 580 * 297/210 ≈ 820) pour correspondre à l'Aperçu.
 
-5) Renforcer le reset Rich Text contre les bullet points
-- Dans `src/lib/pdf-html-generator.ts`, dans le `<style>` :
-  - Rendre le reset “anti-listes” plus strict pour couvrir :
-    - `ul, ol { list-style: none !important; padding: 0 !important; margin: 0 !important; }`
-    - `li { list-style: none !important; margin: 0 !important; padding: 0 !important; }`
-    - `li::marker { content: "" !important; }` (Chrome)
-  - Conserver le reset des headings / p, mais aussi en `!important` si nécessaire.
+```css
+.page {
+  width: 580px;           /* Identique à CANVAS_DISPLAY_MAX_WIDTH */
+  height: 820px;          /* 580 * (297/210) */
+  position: relative;
+  overflow: hidden;
+  background: white;
+}
+```
 
-6) Micro-parité structurelle du texte
-- Dans `renderTextElementToHTML` (pdf-html-generator), aligner exactement sur l’aperçu :
-  - Ajouter `width: '100%'` au wrapper interne (comme dans EditorCanvas/RentalProposalPreview).
-  - Vérifier que `lineHeight`, `whiteSpace`, `wordBreak` sont sur le même wrapper que dans l’aperçu (c’est déjà le cas), et que le contenu HTML ne casse pas l’héritage.
+### Étape 2 : Ajuster le scale print
 
-Fichiers à modifier (prévu)
-- `src/lib/pdf-html-generator.ts`
-  - Wrapper `.page-sheet` + scaling uniforme en print
-  - Ajustement des règles `@media print` pour page break/overflow
-  - Reset Rich Text renforcé (li + ::marker + !important)
-  - Alignement final `width: 100%` sur inner wrapper texte
-- `src/components/rental-proposal/RentalProposalExport.tsx`
-  - Attente fonts + images + 2x rAF avant `print()`
-  - `onafterprint` pour fermeture propre et sauvegarde historique
+Le nouveau scale pour A4 sera : `793.7 / 580 ≈ 1.368`
 
-Tests de validation (ce que je ferai après implémentation)
-1) Export PDF sur Page 7 (votre capture)
-- Comparer visuellement : positions des 8 cartes, titres, sous-textes et icônes.
-- Vérifier que le texte ne “glisse” plus verticalement dans les cartes.
+```css
+@media print {
+  .page {
+    transform: scale(1.368);
+    transform-origin: top left;
+  }
+}
+```
 
-2) Test RichText (Page 3, Économique/Écologique)
-- Vérifier qu’aucune puce noire navigateur n’apparaît.
-- Vérifier que les titres (h3/h4) ne changent plus la hauteur de bloc.
+### Étape 3 : Recalculer les positions dans getSharedElementStyle
 
-3) Test stabilité (fonts)
-- Déclencher plusieurs exports successifs : le résultat doit être identique (pas “1 export sur 2” différent).
-- Vérifier qu’un export immédiat (sans attendre) ne diffère pas d’un export après 10s (preuve que le wait fonts/images marche).
+Puisque les éléments sont stockés avec des positions en pixels sur un canvas de référence 650x919, il faut appliquer un facteur de conversion pour obtenir des pourcentages corrects dans le conteneur 580x820.
 
-Notes techniques (pour expliquer “pourquoi ça sera définitif”)
-- Le point clé est d’arrêter de changer la “surface de référence” du layout (650px→210mm) au moment du print.
-- Le wrapper A4 + page 650px + scale unique force un scaling identique de toutes les unités, et donc supprime les offsets visibles.
-- Le wait fonts/images supprime les variations aléatoires liées aux polices de fallback et aux décodages tardifs d’images avant l’impression.
+Le ratio de conversion est : `580/650 ≈ 0.892`
+
+Cependant, comme les positions sont déjà en %, elles restent correctes. Ce qui change est la **base de rendu des valeurs absolues** (fonts, padding).
+
+### Étape 4 : Harmoniser les scales de font/icon
+
+Actuellement, pdf-html-generator utilise :
+- `PREVIEW_FONT_SCALE = 0.4`
+- `PREVIEW_ICON_SCALE = 0.6`
+
+Ces valeurs sont calibrées pour un rendu à 580px (Aperçu). Si on garde un conteneur PDF de 580px, les fonts/icons seront identiques.
+
+## Changements de Code Prévus
+
+### Fichier : `src/lib/pdf-html-generator.ts`
+
+1. **Constantes de rendu PDF** : Introduire `PDF_BASE_WIDTH = 580` et `PDF_BASE_HEIGHT = 820` (ratio A4) pour aligner sur l'Aperçu.
+
+2. **CSS .page** : Modifier la taille du canvas interne de 650x919 vers 580x820.
+
+3. **Scale print** : Mettre à jour le calcul du scale :
+   ```typescript
+   const A4_WIDTH_CSS_PX = (210 / 25.4) * 96; // ≈ 793.7
+   const PRINT_SCALE = A4_WIDTH_CSS_PX / 580; // ≈ 1.368
+   ```
+
+4. **Recalcul des positions** : Dans `renderTextElementToHTML`, `renderShapeElementToHTML`, etc., utiliser les nouvelles dimensions de base pour le calcul des pourcentages, OU passer les dimensions au `getSharedElementStyle`.
+
+### Fichier : `src/lib/template-render-utils.ts`
+
+1. **Export d'une fonction de conversion** : Optionnel - ajouter une fonction `getElementStyleForPDF` qui accepte les dimensions cible (580x820) et convertit les positions stockées (base 650x919) en pourcentages appropriés.
+
+## Alternative Simplifiée (Recommandée)
+
+Au lieu de changer les dimensions du canvas, utiliser le **même rendu que l'Aperçu mais avec un scale uniforme**. L'idée :
+
+1. Générer le HTML avec un conteneur de **exactement 580px de large** (comme l'Aperçu).
+2. Les positions restent calculées en % par rapport à `CANVAS_SCALE` (650x919) via `getSharedElementStyle` → elles s'adapteront automatiquement au conteneur de 580px.
+3. Les fonts/padding restent en valeurs absolues calibrées pour 580px → rendu identique à l'Aperçu.
+4. En impression, appliquer un scale uniforme `793.7 / 580 ≈ 1.368` pour remplir la feuille A4.
+
+Cette approche garantit que le HTML généré est **pixel-perfect avec l'Aperçu** avant le scaling print.
+
+## Validation
+
+Après implémentation :
+1. Générer un PDF depuis le bouton "Télécharger le PDF"
+2. Comparer visuellement chaque page avec l'Aperçu
+3. Vérifier que les textes, formes et images sont positionnés de manière identique
+4. Confirmer l'absence de puces automatiques (CSS reset)
+
+## Fichiers Modifiés
+
+- `src/lib/pdf-html-generator.ts` : Nouvelle dimension canvas, scale ajusté, CSS aligné sur Aperçu
+- `src/lib/canvas-constants.ts` : Optionnel - export de `CANVAS_DISPLAY_MAX_WIDTH` pour réutilisation dans le PDF
+
+## Risques
+
+- **Régression potentielle** : Si d'autres composants dépendent des dimensions 650x919, ils ne seront pas affectés car seul le PDF utilise les nouvelles valeurs.
+- **Qualité d'impression** : Le scale 1.368 est légèrement supérieur à 1.22, mais comme la base est plus petite, le résultat visuel sera identique à l'Aperçu.
+
