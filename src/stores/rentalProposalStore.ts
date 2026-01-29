@@ -27,17 +27,24 @@ interface ClientData {
   email: string;
 }
 
+// NEW: Individual proposal type for multi-proposal support
+export interface MatriceProposal {
+  id: string;
+  duree: number | null;
+  refinanceur: Partenaire | null;
+  margeAppliquee: number;
+}
+
 interface MatriceData {
-  // Encart Saisie - Champs modifiables
-  duree: number | null;                    // Modifiable directement (mois)
-  montantInvestissement: number | null;    // = Total HT du PDF OU saisi manuellement
-  
-  // Encart Données - Champs modifiables
-  refinanceur: Partenaire | null;          // Sélection parmi liste fixe
-  margeAppliquee: number;                  // Modifiable (défaut 6%)
-  
+  // Global field shared across all proposals
+  montantInvestissement: number | null;
   // Toggle affichage
   showCoutLocatifAnnuel: boolean;
+  
+  // Legacy fields (kept for backward compatibility, will be migrated to proposals[0])
+  duree: number | null;
+  refinanceur: Partenaire | null;
+  margeAppliquee: number;
 }
 
 // Options service pour le calcul des services inclus
@@ -71,8 +78,11 @@ interface RentalProposalState {
   // Commercial data
   commercialData: CommercialData;
   
-  // Matrice data (replaces devis, location, etc.)
+  // Matrice data (global fields)
   matriceData: MatriceData;
+  
+  // NEW: Array of proposals (max 4 recommended)
+  proposals: MatriceProposal[];
   
   // Lignes produits (Invest tab)
   lignesData: PDFProductLine[];
@@ -111,8 +121,16 @@ interface RentalProposalActions {
   // Template selection
   selectTemplateForProposal: (templateId: string) => void;
   
-  // Matrice data
+  // Matrice data (global fields)
   updateMatriceField: <K extends keyof MatriceData>(field: K, value: MatriceData[K]) => void;
+  
+  // NEW: Proposals CRUD
+  addProposal: () => void;
+  duplicateProposal: (id: string) => void;
+  updateProposal: (id: string, updates: Partial<MatriceProposal>) => void;
+  deleteProposal: (id: string) => void;
+  getProposalCalculations: (id: string) => ReturnType<typeof calculateAllMatriceValues> | null;
+  getAllProposalsCalculations: () => Array<{ proposal: MatriceProposal; calculations: ReturnType<typeof calculateAllMatriceValues> }>;
   
   // Lignes produits
   updateLigne: (index: number, updates: Partial<PDFProductLine>) => void;
@@ -139,7 +157,7 @@ interface RentalProposalActions {
   selectCommercial: (commercialId: string | null) => void;
   getSelectedCommercial: () => Commercial | null;
   
-  // Computed values (getters)
+  // Computed values (getters) - uses first proposal for backward compatibility
   getCalculatedValues: () => ReturnType<typeof calculateAllMatriceValues>;
   getSelectedOptionsPrices: () => (number | null)[];
   
@@ -163,12 +181,24 @@ const initialClientData: ClientData = {
 };
 
 const initialMatriceData: MatriceData = {
-  duree: 36,
   montantInvestissement: null,
+  showCoutLocatifAnnuel: true,
+  // Legacy fields
+  duree: 36,
   refinanceur: 'Lixxbail 1',
   margeAppliquee: 6,
-  showCoutLocatifAnnuel: true,
 };
+
+// Helper to generate unique proposal ID
+const generateProposalId = () => `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+// Default initial proposal
+const createDefaultProposal = (): MatriceProposal => ({
+  id: generateProposalId(),
+  duree: 36,
+  refinanceur: 'Lixxbail 1',
+  margeAppliquee: 6,
+});
 
 const initialPDFImportStatus: PDFImportStatus = {
   isImported: false,
@@ -187,6 +217,7 @@ const initialState: RentalProposalState = {
   clientData: initialClientData,
   commercialData: initialCommercialData,
   matriceData: initialMatriceData,
+  proposals: [createDefaultProposal()],
   lignesData: [],
   servicesInclus: initialServicesInclus,
   optionsServices: [],
@@ -231,9 +262,16 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           matriceData: {
             ...initialMatriceData,
             montantInvestissement,
-            // Extraire la durée du PDF si disponible
+            // Legacy fields - also update for backward compatibility
             duree: result.location.duree ?? 36,
           },
+          // Initialize proposals with PDF duration
+          proposals: [{
+            id: generateProposalId(),
+            duree: result.location.duree ?? 36,
+            refinanceur: 'Lixxbail 1',
+            margeAppliquee: 6,
+          }],
           lignesData: result.lignes,
           proposalName: defaultProposalName,
           currentStep: 'data',
@@ -261,6 +299,95 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set(state => ({
           matriceData: { ...state.matriceData, [field]: value },
           hasUnsavedChanges: true,
+        }));
+      },
+
+      // NEW: Proposals CRUD actions
+      addProposal: () => {
+        set(state => {
+          if (state.proposals.length >= 4) return state; // Max 4 proposals
+          return {
+            proposals: [...state.proposals, createDefaultProposal()],
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      duplicateProposal: (id) => {
+        set(state => {
+          if (state.proposals.length >= 4) return state; // Max 4 proposals
+          const original = state.proposals.find(p => p.id === id);
+          if (!original) return state;
+          
+          const duplicate: MatriceProposal = {
+            ...original,
+            id: generateProposalId(),
+          };
+          
+          // Insert duplicate right after the original
+          const index = state.proposals.findIndex(p => p.id === id);
+          const newProposals = [...state.proposals];
+          newProposals.splice(index + 1, 0, duplicate);
+          
+          return {
+            proposals: newProposals,
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      updateProposal: (id, updates) => {
+        set(state => ({
+          proposals: state.proposals.map(p =>
+            p.id === id ? { ...p, ...updates } : p
+          ),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      deleteProposal: (id) => {
+        set(state => {
+          if (state.proposals.length <= 1) return state; // Keep at least one
+          return {
+            proposals: state.proposals.filter(p => p.id !== id),
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      getProposalCalculations: (id) => {
+        const state = get();
+        const proposal = state.proposals.find(p => p.id === id);
+        if (!proposal) return null;
+        
+        const optionsPrices = state.optionsServices
+          .filter(opt => opt.selected)
+          .map(opt => opt.price);
+        
+        return calculateAllMatriceValues(
+          state.matriceData.montantInvestissement,
+          proposal.duree,
+          proposal.refinanceur,
+          proposal.margeAppliquee,
+          optionsPrices
+        );
+      },
+
+      getAllProposalsCalculations: () => {
+        const state = get();
+        const optionsPrices = state.optionsServices
+          .filter(opt => opt.selected)
+          .map(opt => opt.price);
+        
+        return state.proposals.map(proposal => ({
+          proposal,
+          calculations: calculateAllMatriceValues(
+            state.matriceData.montantInvestissement,
+            proposal.duree,
+            proposal.refinanceur,
+            proposal.margeAppliquee,
+            optionsPrices
+          ),
         }));
       },
 
@@ -412,11 +539,14 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           .filter(opt => opt.selected)
           .map(opt => opt.price);
         
+        // Use first proposal for backward compatibility
+        const firstProposal = state.proposals[0];
+        
         return calculateAllMatriceValues(
           state.matriceData.montantInvestissement,
-          state.matriceData.duree,
-          state.matriceData.refinanceur,
-          state.matriceData.margeAppliquee,
+          firstProposal?.duree ?? state.matriceData.duree,
+          firstProposal?.refinanceur ?? state.matriceData.refinanceur,
+          firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
           optionsPrices
         );
       },
@@ -477,6 +607,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         clientData: state.clientData,
         commercialData: state.commercialData,
         matriceData: state.matriceData,
+        proposals: state.proposals,
         lignesData: state.lignesData,
         optionsServices: state.optionsServices,
         nosOptions: state.nosOptions,
@@ -535,6 +666,16 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             }
             if (!Array.isArray(state.nosOptions)) {
               state.nosOptions = [];
+            }
+            
+            // Migrate proposals: if proposals array is missing/empty, create from legacy matriceData
+            if (!Array.isArray(state.proposals) || state.proposals.length === 0) {
+              state.proposals = [{
+                id: generateProposalId(),
+                duree: state.matriceData?.duree ?? 36,
+                refinanceur: state.matriceData?.refinanceur ?? 'Lixxbail 1',
+                margeAppliquee: state.matriceData?.margeAppliquee ?? 6,
+              }];
             }
           }
         } catch (validationError) {
