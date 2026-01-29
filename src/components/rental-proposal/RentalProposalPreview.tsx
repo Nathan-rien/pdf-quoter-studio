@@ -864,7 +864,7 @@ export function RentalProposalPreview() {
         {/* Nos Options - fusionnées depuis l'onglet "Nos Options" (anciennement Page 6) */}
         {selectedNosOptions.length > 0 && (
           <>
-            <div className="mt-2 mb-1.5 flex items-center gap-2">
+            <div className="mt-4 mb-1.5 flex items-center gap-2">
               <Settings className="h-3 w-3 text-foreground/70" />
               <span className="font-semibold text-[12px]">Nos options</span>
             </div>
@@ -874,7 +874,7 @@ export function RentalProposalPreview() {
                   <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
                     {/* Case vide pour signature client */}
                     <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-                    <span className="font-semibold text-[11px]">{option.name}</span>
+                    <span className="font-semibold text-[11px] text-primary">{option.name}</span>
                     {option.price !== null && (
                       <span className="ml-auto text-[10px] text-primary font-medium">
                         {formatNumber(option.price)} €/mois
