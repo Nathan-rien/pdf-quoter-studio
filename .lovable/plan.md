@@ -1,110 +1,119 @@
 
-# Plan de Correction Définitive : Parité WYSIWYG Aperçu → PDF
+# Plan : Propositions Multiples dans l'onglet Matrice
 
-## Problème Identifié
+## Objectif
+Permettre de creer et gerer plusieurs propositions financieres (combinaisons de duree, marge, refinanceur) depuis l'onglet Matrice, afin d'afficher plusieurs scenarios sur le template PDF genere.
 
-Le décalage entre l'Aperçu et le PDF provient d'une **divergence dans les bases de calcul** :
+## Structure Actuelle
+- Un seul objet `matriceData` dans le store stockant une proposition unique
+- Un seul encart "Saisie" dans RentalDataEditor affichant 4 champs (Montant, Duree, Refinanceur, Marge)
+- Un seul encart "Donnees" affichant les calculs derives
+- La preview/PDF utilise une seule valeur de loyer mensuel
 
-| Composant | Conteneur | Base de calcul | Font scale |
-|-----------|-----------|----------------|------------|
-| **Aperçu** (RentalProposalPreview) | `aspect-[210/297]` + `maxWidth: 580px` | Positions en % de 650x919, rendu dans 580px effectifs | `fontSize * 0.4` |
-| **PDF** (pdf-html-generator) | `.page` 650x919px → scalé 1.22x pour A4 | Positions en % de 650x919, rendu dans 650px avant scaling | `fontSize * 0.4` |
+## Architecture Proposee
 
-Le problème : quand le navigateur imprime la page 650px scalée à 1.22x, les positions relatives (%) s'adaptent, mais les valeurs absolues (fonts, padding) sont calculées sur 650px de base au lieu de 580px. Cela crée un décalage visuel car les textes sont plus espacés proportionnellement.
-
-## Solution : Uniformiser la Base de Rendu
-
-L'approche consiste à générer le HTML du PDF avec **exactement la même structure que l'Aperçu** (580px de largeur), puis laisser le navigateur scaler uniformément toute la page pour A4.
-
-### Étape 1 : Modifier le conteneur .page dans pdf-html-generator.ts
-
-Passer de `650px x 919px` à `580px x 820px` (ratio A4 préservé : 580 * 297/210 ≈ 820) pour correspondre à l'Aperçu.
-
-```css
-.page {
-  width: 580px;           /* Identique à CANVAS_DISPLAY_MAX_WIDTH */
-  height: 820px;          /* 580 * (297/210) */
-  position: relative;
-  overflow: hidden;
-  background: white;
+### 1. Nouveau Type de Donnees
+```text
+MatriceProposal {
+  id: string (unique)
+  duree: number | null
+  refinanceur: Partenaire | null
+  margeAppliquee: number
 }
 ```
+Le `montantInvestissement` reste global (partage entre toutes les propositions).
 
-### Étape 2 : Ajuster le scale print
+### 2. Modifications du Store (rentalProposalStore.ts)
 
-Le nouveau scale pour A4 sera : `793.7 / 580 ≈ 1.368`
+**Nouveau champ** :
+- `proposals: MatriceProposal[]` (tableau de propositions, max 3-4 recommande)
 
-```css
-@media print {
-  .page {
-    transform: scale(1.368);
-    transform-origin: top left;
-  }
-}
+**Nouvelles actions** :
+- `addProposal()` : Cree une nouvelle proposition avec valeurs par defaut
+- `duplicateProposal(id)` : Duplique une proposition existante
+- `updateProposal(id, updates)` : Met a jour une proposition specifique
+- `deleteProposal(id)` : Supprime une proposition (si plus d'une)
+- `getProposalCalculations(id)` : Retourne les calculs pour une proposition specifique
+
+**Migration** :
+- Initialiser `proposals` avec une proposition par defaut correspondant a l'ancien `matriceData`
+- Conserver `matriceData.montantInvestissement` et `matriceData.showCoutLocatifAnnuel` comme champs globaux
+
+### 3. Modifications de l'Interface (RentalDataEditor.tsx)
+
+**Onglet Matrice restructure** :
+
+```text
++-------------------------------------------------------+
+|  Montant investissement HT : [14484]                  |  <- Champ global (partage)
++-------------------------------------------------------+
+
++-- Proposition 1 ------------------------ [Dupliquer] [X] --+
+|  Duree: [36]   Refinanceur: [Lixxbail 1]   Marge: [6%]   |
+|                                                           |
+|  Donnees calculees:                                       |
+|  Invest marge: 15408.51 | Coefficient: 3.0277             |
+|  Loyer mensuel: 466.52 | Cout locatif annuel: 5.32%       |
++-----------------------------------------------------------+
+
++-- Proposition 2 ------------------------ [Dupliquer] [X] --+
+|  Duree: [48]   Refinanceur: [Lixxbail 1]   Marge: [6%]   |
+|                                                           |
+|  Donnees calculees:                                       |
+|  Invest marge: 15408.51 | Coefficient: 2.3821             |
+|  Loyer mensuel: 366.89 | Cout locatif annuel: 4.18%       |
++-----------------------------------------------------------+
+
+                               [+ Ajouter une proposition]
 ```
 
-### Étape 3 : Recalculer les positions dans getSharedElementStyle
+**Boutons d'action par proposition** :
+- Dupliquer : Copie la proposition courante
+- Supprimer (X) : Retire la proposition (desactive si une seule)
 
-Puisque les éléments sont stockés avec des positions en pixels sur un canvas de référence 650x919, il faut appliquer un facteur de conversion pour obtenir des pourcentages corrects dans le conteneur 580x820.
+### 4. Affichage sur le Template/PDF
 
-Le ratio de conversion est : `580/650 ≈ 0.892`
+**Option A (Recommandee)** : Tableau comparatif
+Les propositions sont affichees dans un tableau comparatif sur la zone "location_block" :
 
-Cependant, comme les positions sont déjà en %, elles restent correctes. Ce qui change est la **base de rendu des valeurs absolues** (fonts, padding).
+```text
++-------------+----------------+----------------+----------------+
+|             | Proposition 1  | Proposition 2  | Proposition 3  |
++-------------+----------------+----------------+----------------+
+| Duree       | 36 mois        | 48 mois        | 60 mois        |
+| Loyer HT    | 466.52 EUR       | 366.89 EUR       | 308.25 EUR       |
+| Cout annuel | 5.32%          | 4.18%          | 3.65%          |
++-------------+----------------+----------------+----------------+
+```
 
-### Étape 4 : Harmoniser les scales de font/icon
+**Option B** : Blocs superposes
+Chaque proposition est affichee dans un bloc distinct, empile verticalement.
 
-Actuellement, pdf-html-generator utilise :
-- `PREVIEW_FONT_SCALE = 0.4`
-- `PREVIEW_ICON_SCALE = 0.6`
+### 5. Fichiers a Modifier
 
-Ces valeurs sont calibrées pour un rendu à 580px (Aperçu). Si on garde un conteneur PDF de 580px, les fonts/icons seront identiques.
+| Fichier | Modifications |
+|---------|---------------|
+| `src/stores/rentalProposalStore.ts` | Ajouter type `MatriceProposal`, champ `proposals[]`, actions CRUD |
+| `src/lib/rental-calculations.ts` | Creer `calculateProposalValues(proposal, montant, optionsPrices)` |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Refactoriser onglet Matrice pour afficher plusieurs propositions |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Adapter le rendu pour afficher toutes les propositions |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Injecter les donnees de toutes les propositions dans le PDF |
+| `src/lib/pdf-html-generator.ts` | Adapter le rendu du "location_block" pour le mode multi-propositions |
 
-## Changements de Code Prévus
+### 6. Persistence et Migration
 
-### Fichier : `src/lib/pdf-html-generator.ts`
+- Les donnees existantes sont migrees automatiquement via `onRehydrateStorage`
+- Si `proposals` est vide mais `matriceData` existe, creer une proposition initiale a partir des valeurs existantes
+- Limite recommandee : 4 propositions maximum (contrainte d'espace sur le PDF)
 
-1. **Constantes de rendu PDF** : Introduire `PDF_BASE_WIDTH = 580` et `PDF_BASE_HEIGHT = 820` (ratio A4) pour aligner sur l'Aperçu.
+### 7. Validation
 
-2. **CSS .page** : Modifier la taille du canvas interne de 650x919 vers 580x820.
+- Au moins une proposition doit toujours exister
+- Chaque proposition doit avoir une duree valide (12, 24, 36, 48, 60 mois)
+- Avertissement si plus de 3 propositions (risque de debordement sur le template)
 
-3. **Scale print** : Mettre à jour le calcul du scale :
-   ```typescript
-   const A4_WIDTH_CSS_PX = (210 / 25.4) * 96; // ≈ 793.7
-   const PRINT_SCALE = A4_WIDTH_CSS_PX / 580; // ≈ 1.368
-   ```
+## Estimation
 
-4. **Recalcul des positions** : Dans `renderTextElementToHTML`, `renderShapeElementToHTML`, etc., utiliser les nouvelles dimensions de base pour le calcul des pourcentages, OU passer les dimensions au `getSharedElementStyle`.
-
-### Fichier : `src/lib/template-render-utils.ts`
-
-1. **Export d'une fonction de conversion** : Optionnel - ajouter une fonction `getElementStyleForPDF` qui accepte les dimensions cible (580x820) et convertit les positions stockées (base 650x919) en pourcentages appropriés.
-
-## Alternative Simplifiée (Recommandée)
-
-Au lieu de changer les dimensions du canvas, utiliser le **même rendu que l'Aperçu mais avec un scale uniforme**. L'idée :
-
-1. Générer le HTML avec un conteneur de **exactement 580px de large** (comme l'Aperçu).
-2. Les positions restent calculées en % par rapport à `CANVAS_SCALE` (650x919) via `getSharedElementStyle` → elles s'adapteront automatiquement au conteneur de 580px.
-3. Les fonts/padding restent en valeurs absolues calibrées pour 580px → rendu identique à l'Aperçu.
-4. En impression, appliquer un scale uniforme `793.7 / 580 ≈ 1.368` pour remplir la feuille A4.
-
-Cette approche garantit que le HTML généré est **pixel-perfect avec l'Aperçu** avant le scaling print.
-
-## Validation
-
-Après implémentation :
-1. Générer un PDF depuis le bouton "Télécharger le PDF"
-2. Comparer visuellement chaque page avec l'Aperçu
-3. Vérifier que les textes, formes et images sont positionnés de manière identique
-4. Confirmer l'absence de puces automatiques (CSS reset)
-
-## Fichiers Modifiés
-
-- `src/lib/pdf-html-generator.ts` : Nouvelle dimension canvas, scale ajusté, CSS aligné sur Aperçu
-- `src/lib/canvas-constants.ts` : Optionnel - export de `CANVAS_DISPLAY_MAX_WIDTH` pour réutilisation dans le PDF
-
-## Risques
-
-- **Régression potentielle** : Si d'autres composants dépendent des dimensions 650x919, ils ne seront pas affectés car seul le PDF utilise les nouvelles valeurs.
-- **Qualité d'impression** : Le scale 1.368 est légèrement supérieur à 1.22, mais comme la base est plus petite, le résultat visuel sera identique à l'Aperçu.
-
+- Complexite : Moyenne
+- Impact : Store, UI Matrice, Preview, Export PDF
+- Risques : Espace disponible sur le template pour afficher plusieurs propositions
