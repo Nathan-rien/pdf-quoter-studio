@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
-import { calculateAllMatriceValues, CalculatedMatriceValues } from '@/lib/rental-calculations';
+import { calculateAllMatriceValues } from '@/lib/rental-calculations';
 
 export interface MatriceProposal {
   id: string;
@@ -19,10 +20,13 @@ export interface MatriceProposal {
 interface ProposalCardProps {
   proposal: MatriceProposal;
   index: number;
+  totalProposals: number;
   montantInvestissement: number | null;
   optionsPrices: (number | null)[];
   canDelete: boolean;
   showCoutLocatifAnnuel: boolean;
+  onToggleCoutLocatif: (checked: boolean) => void;
+  onUpdateMontant: (value: number | null) => void;
   onUpdate: (updates: Partial<MatriceProposal>) => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -31,15 +35,17 @@ interface ProposalCardProps {
 export function ProposalCard({
   proposal,
   index,
+  totalProposals,
   montantInvestissement,
   optionsPrices,
   canDelete,
   showCoutLocatifAnnuel,
+  onToggleCoutLocatif,
+  onUpdateMontant,
   onUpdate,
   onDuplicate,
   onDelete,
 }: ProposalCardProps) {
-  // Calculate values for this specific proposal
   const calculatedValues = calculateAllMatriceValues(
     montantInvestissement,
     proposal.duree,
@@ -50,55 +56,61 @@ export function ProposalCard({
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
-    return value.toFixed(2);
+    return value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const formatPercent = (value: number | null) => {
     if (value === null) return '-';
-    return `${value.toFixed(2)} %`;
+    return `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            Proposition {index + 1}
-            <Badge variant="outline" className="text-xs font-normal">
-              {proposal.duree ?? '-'} mois
-            </Badge>
-          </CardTitle>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={onDuplicate}
-              title="Dupliquer cette proposition"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={onDelete}
-              disabled={!canDelete}
-              title="Supprimer cette proposition"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+    <div className="space-y-4">
+      {/* Card Saisie */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              Saisie
+              {totalProposals > 1 && (
+                <Badge variant="outline" className="text-xs font-normal">
+                  Proposition {index + 1}
+                </Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="iconSm"
+                onClick={onDuplicate}
+                title="Dupliquer cette proposition"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="iconSm"
+                onClick={onDelete}
+                disabled={!canDelete}
+                title="Supprimer cette proposition"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Section Saisie - 4 champs en ligne */}
-        <div>
-          <h4 className="text-sm font-medium mb-3 text-muted-foreground">Saisie</h4>
+        </CardHeader>
+        <CardContent>
           <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor={`montant-${proposal.id}`} className="text-xs">Montant invest HT</Label>
-              <div className="flex items-center h-10 px-3 bg-muted rounded-md text-sm">
-                <span>{formatNumber(montantInvestissement)} €</span>
-              </div>
+              <Label htmlFor={`montant-${proposal.id}`} className="text-xs">Montant investissement HT</Label>
+              <Input
+                id={`montant-${proposal.id}`}
+                type="number"
+                min="0"
+                step="0.01"
+                value={montantInvestissement ?? ''}
+                onChange={(e) => onUpdateMontant(e.target.value ? parseFloat(e.target.value) : null)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor={`duree-${proposal.id}`} className="text-xs">Durée (mois)</Label>
@@ -128,7 +140,7 @@ export function ProposalCard({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`marge-${proposal.id}`} className="text-xs">Marge appliquée %</Label>
+              <Label htmlFor={`marge-${proposal.id}`} className="text-xs">Marge appliquée (%)</Label>
               <Input
                 id={`marge-${proposal.id}`}
                 type="number"
@@ -140,94 +152,103 @@ export function ProposalCard({
               />
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Section Données - Structure 3 lignes comme sur le screenshot */}
-        <div>
-          <h4 className="text-sm font-medium mb-3 text-muted-foreground">Données</h4>
-          <div className="space-y-3">
-            {/* Ligne 1 : 4 colonnes */}
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Montant invest</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{formatNumber(montantInvestissement)} € HT</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Investir Margé</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{formatNumber(calculatedValues.investMarge)} € HT</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Services loyers</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{calculatedValues.servicesInclusLoyers ? formatNumber(calculatedValues.servicesInclusLoyers) + ' €' : '- €'}</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Serv loyer inclus</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{calculatedValues.loyerServicesInclus ? formatNumber(calculatedValues.loyerServicesInclus) + ' €' : '- €'}</span>
-                </div>
+      {/* Card Données */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Données</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Ligne 1 : 4 colonnes */}
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Montant investissement</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{formatNumber(montantInvestissement)} € HT</span>
               </div>
             </div>
-
-            {/* Ligne 2 : 4-5 colonnes avec loyer mensuel mis en avant */}
-            <div className={`grid gap-3 ${showCoutLocatifAnnuel ? 'grid-cols-5' : 'grid-cols-4'}`}>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Durée</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{proposal.duree ?? '-'} mois</span>
-                </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Investir Margé</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{formatNumber(calculatedValues.investMarge)} € HT</span>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Coefficient</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{calculatedValues.coefficient ?? '-'}</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Loyer invest msg</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{formatNumber(calculatedValues.loyerMensuelInvestissement)} €</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground font-medium">Loyer mensuel HT</Label>
-                <div className="flex items-center h-9 px-2 bg-primary/10 rounded text-sm border border-primary/20">
-                  <span className="font-semibold">{formatNumber(calculatedValues.loyerMensuel)} €</span>
-                </div>
-              </div>
-              {showCoutLocatifAnnuel && (
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Coût locatif annuel</Label>
-                  <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                    <span>{formatPercent(calculatedValues.coutLocatifAnnuel)}</span>
-                  </div>
-                </div>
-              )}
             </div>
-
-            {/* Ligne 3 : 2 colonnes */}
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Coût du contrat</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{formatNumber(calculatedValues.coutContrat)} €</span>
-                </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Les services comprennent des loyers</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{calculatedValues.servicesInclusLoyers ? formatNumber(calculatedValues.servicesInclusLoyers) + ' €' : '- €'}</span>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Marge Loc</Label>
-                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                  <span>{formatNumber(calculatedValues.margeLoc)} €</span>
-                </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Services de loyer inclus</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{calculatedValues.loyerServicesInclus ? formatNumber(calculatedValues.loyerServicesInclus) + ' €' : '- €'}</span>
               </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          {/* Ligne 2 : 4-5 colonnes */}
+          <div className={`grid gap-3 ${showCoutLocatifAnnuel ? 'grid-cols-5' : 'grid-cols-4'}`}>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Durée</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{proposal.duree ?? '-'} mois</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Coefficient</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{calculatedValues.coefficient ?? '-'}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Loyer investissement mensuel</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{formatNumber(calculatedValues.loyerMensuelInvestissement)} €</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground font-medium">Loyer mensuel HT</Label>
+              <div className="flex items-center h-9 px-2 bg-primary/10 rounded text-sm border border-primary/20">
+                <span className="font-semibold">{formatNumber(calculatedValues.loyerMensuel)} €</span>
+              </div>
+            </div>
+            {showCoutLocatifAnnuel && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Coût locatif annuel</Label>
+                  <Switch
+                    checked={showCoutLocatifAnnuel}
+                    onCheckedChange={onToggleCoutLocatif}
+                    className="scale-75"
+                  />
+                </div>
+                <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                  <span>{formatPercent(calculatedValues.coutLocatifAnnuel)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Ligne 3 : 2 colonnes */}
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Coût du contrat</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{formatNumber(calculatedValues.coutContrat)} €</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Marge Loc</Label>
+              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+                <span>{formatNumber(calculatedValues.margeLoc)} €</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
