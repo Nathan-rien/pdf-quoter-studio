@@ -864,14 +864,14 @@ export function RentalProposalPreview() {
         {/* Nos Options - fusionnées depuis l'onglet "Nos Options" (anciennement Page 6) */}
         {selectedNosOptions.length > 0 && (
           <>
-            <div className="mt-4 mb-1.5 flex items-center gap-2">
+            <div className="mt-6 mb-1.5 flex items-center gap-2">
               <Settings className="h-3 w-3 text-foreground/70" />
               <span className="font-semibold text-[12px]">Nos options</span>
             </div>
             <div className="space-y-1.5">
               {selectedNosOptions.map((option) => (
-                <div key={option.id} className="border rounded overflow-hidden">
-                  <div className="bg-primary/10 px-3 py-1.5 flex items-center gap-2">
+                <div key={option.id} className="border border-primary/20 rounded overflow-hidden bg-primary/5">
+                  <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">
                     {/* Case vide pour signature client */}
                     <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
                     <span className="font-semibold text-[11px]">{option.name}</span>
