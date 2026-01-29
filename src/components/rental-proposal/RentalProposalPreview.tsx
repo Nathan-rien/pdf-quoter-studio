@@ -871,10 +871,10 @@ export function RentalProposalPreview() {
             <div className="space-y-1.5">
               {selectedNosOptions.map((option) => (
                 <div key={option.id} className="border rounded overflow-hidden">
-                  <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+                  <div className="bg-primary/10 px-3 py-1.5 flex items-center gap-2">
                     {/* Case vide pour signature client */}
                     <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-                    <span className="font-semibold text-[11px] text-primary">{option.name}</span>
+                    <span className="font-semibold text-[11px]">{option.name}</span>
                     {option.price !== null && (
                       <span className="ml-auto text-[10px] text-primary font-medium">
                         {formatNumber(option.price)} €/mois
