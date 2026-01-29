@@ -320,81 +320,49 @@ export function RentalDataEditor() {
         </TabsContent>
 
         {/* Matrice Tab */}
-        <TabsContent value="matrice" className="mt-4 space-y-6">
-          {/* Global investment amount */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Montant investissement</CardTitle>
-              <CardDescription>Ce montant est partagé entre toutes les propositions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="montant-invest">Montant investissement HT</Label>
-                  <Input
-                    id="montant-invest"
-                    type="number"
-                    step="0.01"
-                    value={matriceData.montantInvestissement ?? ''}
-                    onChange={(e) => updateMatriceField('montantInvestissement', e.target.value ? parseFloat(e.target.value) : null)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Afficher coût locatif annuel</Label>
-                    <Switch
-                      checked={matriceData.showCoutLocatifAnnuel}
-                      onCheckedChange={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Affiche le pourcentage sur le template</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Proposals list */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium">Propositions</h3>
-                <p className="text-sm text-muted-foreground">
-                  {proposals.length} proposition{proposals.length > 1 ? 's' : ''} • Maximum 4
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => addProposal()}
-                disabled={proposals.length >= 4}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter une proposition
-              </Button>
-            </div>
-
-            {proposals.map((proposal, index) => (
-              <ProposalCard
-                key={proposal.id}
-                proposal={proposal}
-                index={index}
-                montantInvestissement={matriceData.montantInvestissement}
-                optionsPrices={getSelectedOptionsPrices()}
-                canDelete={proposals.length > 1}
-                showCoutLocatifAnnuel={matriceData.showCoutLocatifAnnuel}
-                onUpdate={(updates) => updateProposal(proposal.id, updates)}
-                onDuplicate={() => duplicateProposal(proposal.id)}
-                onDelete={() => deleteProposal(proposal.id)}
+        <TabsContent value="matrice" className="mt-4 space-y-4">
+          {/* Global settings */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Label>Afficher coût locatif annuel</Label>
+              <Switch
+                checked={matriceData.showCoutLocatifAnnuel}
+                onCheckedChange={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
               />
-            ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => addProposal()}
+              disabled={proposals.length >= 4}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter une proposition
+            </Button>
           </div>
+
+          {/* Proposals list with original Saisie/Données structure */}
+          {proposals.map((proposal, index) => (
+            <ProposalCard
+              key={proposal.id}
+              proposal={proposal}
+              index={index}
+              montantInvestissement={matriceData.montantInvestissement}
+              optionsPrices={getSelectedOptionsPrices()}
+              canDelete={proposals.length > 1}
+              showCoutLocatifAnnuel={matriceData.showCoutLocatifAnnuel}
+              onUpdate={(updates) => updateProposal(proposal.id, updates)}
+              onDuplicate={() => duplicateProposal(proposal.id)}
+              onDelete={() => deleteProposal(proposal.id)}
+            />
+          ))}
 
           {/* Warning if 4 proposals */}
           {proposals.length >= 4 && (
             <Card className="border-warning/50 bg-warning/5">
               <CardContent className="p-3 flex items-center gap-2 text-sm text-warning-foreground">
                 <span>⚠️</span>
-                <span>Nombre maximum de propositions atteint (4). Les propositions multiples peuvent nécessiter plus d'espace sur le template.</span>
+                <span>Nombre maximum de propositions atteint (4).</span>
               </CardContent>
             </Card>
           )}
