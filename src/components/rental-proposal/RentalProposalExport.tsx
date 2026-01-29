@@ -354,27 +354,29 @@ export function RentalProposalExport() {
     
     // Générer le HTML des "Nos Options" (fusionnées depuis Page 6)
     const nosOptionsHTML = selectedNosOptions.length > 0 ? `
-      <div style="margin-top: 16px;">
+      <div style="margin-top: 24px;">
         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           <span style="font-weight: 600; font-size: 10px;">Nos options</span>
         </div>
         ${selectedNosOptions.map(opt => `
-          <div style="margin-bottom: 6px; background-color: #dbeafe; border-radius: 4px; padding: 6px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <div>
-                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                  <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
-                  <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
+          <div style="margin-bottom: 6px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; overflow: hidden;">
+            <div style="background-color: #dbeafe; padding: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
+                    <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
+                  </div>
+                  ${opt.description ? `<p style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description}</p>` : ''}
                 </div>
-                ${opt.description ? `<p style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description}</p>` : ''}
+                ${opt.price !== null ? `
+                  <div style="text-align: right;">
+                    <span style="font-weight: 600; color: #2563eb; font-size: 9px;">${formatNumber(opt.price)} €</span>
+                    <span style="display: block; font-size: 7px; color: #9ca3af;">/mois</span>
+                  </div>
+                ` : ''}
               </div>
-              ${opt.price !== null ? `
-                <div style="text-align: right;">
-                  <span style="font-weight: 600; color: #2563eb; font-size: 9px;">${formatNumber(opt.price)} €</span>
-                  <span style="display: block; font-size: 7px; color: #9ca3af;">/mois</span>
-                </div>
-              ` : ''}
             </div>
           </div>
         `).join('')}
