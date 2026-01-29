@@ -1,114 +1,89 @@
 
 
-# Plan : Fusion des services et options sur la Page 5
+# Plan : Optimiser l'espace de la Page 5 (Services)
 
-## Objectif
+## Problème identifié
 
-Regrouper toutes les options de services sur la **Page 5** ("Votre offre de services") et supprimer le contenu dynamique de la Page 6.
+Sur la Page 5 "Votre offre de services", l'option **Pro-Spare** en bas de page n'affiche pas sa description car le contenu dépasse la zone visible (`maxHeight: 75%`).
 
-## Structure actuelle vs Structure cible
+### Causes
+1. **Titres trop grands** : `text-[14px]` pour les noms d'options
+2. **Espacements excessifs** : `mb-4`, `space-y-3`, `py-3` entre les blocs
+3. **Padding internes** : `px-4 py-2` et `px-4 py-3` dans les headers et contenus
 
-### Actuellement
-```text
-Page 5 - "Votre offre de services"
-├── Services inclus (bloc permanent)
-└── Options additionnelles (onglet "Services inclus")
+## Modifications à appliquer
 
-Page 6 - "Votre offre de services"
-└── Nos options (onglet "Nos options")
-```
+### Réductions de taille
 
-### Après modification
-```text
-Page 5 - "Votre offre de services"
-├── Services inclus (bloc permanent)
-├── Options additionnelles (onglet "Services inclus")
-└── [SI options "Nos options" sélectionnées]
-    ├── Titre "Nos options"
-    └── Options depuis l'onglet "Nos options"
+| Élément | Avant | Après |
+|---------|-------|-------|
+| Titres options | `text-[14px]` | `text-[11px]` |
+| Titre section "Nos options" | `text-[14px]` | `text-[12px]` |
+| Descriptions | `text-[10px]` | `text-[9px]` |
+| Icônes (CheckCircle, case vide) | `h-4 w-4` | `h-3 w-3` |
+| Barre "Services Inclus" | `w-2.5 h-5` | `w-2 h-4` |
 
-Page 6 - Devient une page statique (ou supprimée du template)
-```
+### Réductions d'espacement
+
+| Élément | Avant | Après |
+|---------|-------|-------|
+| Marge bloc "Services inclus" | `mb-4` | `mb-2` |
+| Espace entre options | `space-y-3` | `space-y-1.5` |
+| Padding header option | `px-4 py-2` | `px-3 py-1.5` |
+| Padding contenu option | `px-4 py-3` | `px-3 py-1.5` |
+| Titre "Nos options" | `mt-4 mb-3` | `mt-2 mb-1.5` |
+
+### Position verticale
+
+| Élément | Avant | Après |
+|---------|-------|-------|
+| Position top du conteneur | `top: 12%` | `top: 8%` |
+| Hauteur max du conteneur | `maxHeight: 75%` | `maxHeight: 82%` |
 
 ## Fichiers à modifier
 
-### 1. RentalProposalPreview.tsx
+| Fichier | Modifications |
+|---------|---------------|
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Réduire les espacements et tailles dans `renderServicesInclusPage()` (lignes 812-909) |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Appliquer les mêmes réductions dans le HTML généré (lignes 337-396) |
 
-**Fonction `renderServicesInclusPage()` (lignes ~812-874)** :
-- Ajouter le rendu des `selectedNosOptions` après les options additionnelles
-- Insérer un titre "Nos options" conditionnellement affiché si `selectedNosOptions.length > 0`
-- Utiliser le même style visuel (cases à cocher vides □ pour les options "Nos options")
+## Résultat attendu
 
-**Fonction `renderNosOptionsPage()` (lignes ~876-926)** :
-- Supprimer ou vider cette fonction pour ne plus afficher de contenu dynamique sur la page 6
-- La page 6 deviendra une page statique (éléments du template uniquement)
-
-**Fonction `renderCurrentPage()` (ligne ~1034)** :
-- Retirer le cas `currentPreviewPage === 6 → renderNosOptionsPage()`
-- La page 6 utilisera `renderGenericStaticPage(6)` comme les autres pages statiques
-
-### 2. RentalProposalExport.tsx
-
-**Fonction `generateDynamicContentByPage()` (lignes ~337-396)** :
-- Modifier `dynamicContent[5]` pour inclure les "Nos options" après les options additionnelles
-- Supprimer `dynamicContent[6]` (plus d'injection dynamique sur la page 6)
-
-### 3. RentalDataEditor.tsx (optionnel, UI)
-
-- Mettre à jour le badge de l'onglet "Nos options" : remplacer "Page 6" par "Page 5" pour refléter le changement
-
-## Détail technique
-
-### Structure HTML/JSX de la Page 5 après modification
-
-```jsx
-<div className="dynamic-content">
-  {/* Bloc permanent "Services inclus" */}
-  <div className="services-inclus-block">
-    <header>Services Inclus</header>
-    <ul>{servicesInclus.description...}</ul>
-  </div>
-
-  {/* Options additionnelles (depuis onglet "Services inclus") */}
-  {selectedOptions.map(option => (
-    <div className="option-card">
-      <CheckCircle /> {option.name}
-      {option.description}
-    </div>
-  ))}
-
-  {/* NOUVEAU: Nos options (depuis onglet "Nos options") */}
-  {selectedNosOptions.length > 0 && (
-    <>
-      <h4 className="section-title">Nos options</h4>
-      {selectedNosOptions.map(option => (
-        <div className="option-card">
-          <Checkbox vide /> {option.name}
-          {option.description}
-        </div>
-      ))}
-    </>
-  )}
-</div>
+```text
+Page 5 optimisée
+┌─────────────────────────────────────────────┐
+│ Votre offre de services                     │
+│ ┌─────────────────────────────────────────┐ │
+│ │█ Services Inclus                        │ │ ← Compact
+│ │  • Contrat de location...               │ │
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │✓ Pro-Tection                            │ │ ← Titre 11px
+│ │  • Assurance casse...                   │ │ ← Desc 9px
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │✓ Pro-Actif                              │ │
+│ │  • Audit et valorisation...             │ │
+│ └─────────────────────────────────────────┘ │
+│ ⚙ Nos options                              │ ← Titre 12px
+│ ┌─────────────────────────────────────────┐ │
+│ │□ Pro-Optimisée                          │ │
+│ │  • Optimisation fiscale...              │ │
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │□ Pro-maintenance                        │ │
+│ │  • Maintenance préventive...            │ │
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │□ Pro-Spare                              │ │
+│ │  • Stock de matériel... ← VISIBLE       │ │
+│ └─────────────────────────────────────────┘ │
+└─────────────────────────────────────────────┘
 ```
 
-### Différenciation visuelle
+## Points techniques
 
-| Source | Icône | Signification |
-|--------|-------|---------------|
-| Services inclus | Barre verticale | Bloc permanent, toujours présent |
-| Options additionnelles (onglet "Services inclus") | ✓ CheckCircle | Option déjà activée |
-| Nos options (onglet "Nos options") | □ Case vide | Option proposée au client (à cocher sur document imprimé) |
-
-## Points de vigilance
-
-1. **Espace vertical** : Avec potentiellement plus de contenu sur la Page 5, s'assurer que le `maxHeight` ou l'`overflow` est adapté
-2. **Cohérence PDF** : Le HTML généré pour l'export doit refléter exactement l'aperçu React
-3. **Page 6 statique** : Si le template contient des éléments statiques sur la page 6, ils seront toujours affichés
-
-## Estimation
-
-- **Complexité** : Faible à moyenne
-- **Fichiers impactés** : 2 principaux (Preview + Export), 1 optionnel (DataEditor)
-- **Risque de régression** : Faible si les styles sont conservés
+- Les modifications sont appliquées **simultanément** à l'Aperçu (Preview) et à l'Export PDF pour maintenir la cohérence WYSIWYG
+- La réduction de `top: 12%` à `top: 8%` remonte toute la structure de ~30px
+- L'augmentation de `maxHeight: 75%` à `maxHeight: 82%` permet d'afficher plus de contenu avant le footer
 
