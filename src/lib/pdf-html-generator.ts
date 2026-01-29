@@ -10,7 +10,7 @@
 
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CANVAS_DISPLAY_MAX_WIDTH } from './canvas-constants';
 import { ALLOWED_FONTS } from './template-styles';
-import { getSharedElementStyle, resolveImageUrl } from './template-render-utils';
+import { getSharedElementStyle, resolveImageUrl, substituteDynamicPlaceholders } from './template-render-utils';
 import { renderIconSVG } from './lucide-svg-paths';
 import type { 
   EditableElement, 
@@ -150,14 +150,17 @@ function renderTextElementToHTML(element: EditableElement): string {
     wordBreak: 'normal',
   };
   
-  // Contenu : htmlContent ou génération manuelle des lignes
+  // Contenu : htmlContent ou génération manuelle des lignes (avec substitution dynamique)
   let textContent: string;
   if (content.htmlContent) {
+    // Appliquer la substitution dynamique (date, etc.)
+    const processedHtml = substituteDynamicPlaceholders(content.htmlContent);
     // Wrapper pour l'indentation si nécessaire
     const contentStyle = indentPx > 0 ? `padding-left: ${indentPx}px;` : '';
-    textContent = contentStyle ? `<div style="${contentStyle}">${content.htmlContent}</div>` : content.htmlContent;
+    textContent = contentStyle ? `<div style="${contentStyle}">${processedHtml}</div>` : processedHtml;
   } else {
-    const text = content.text || '';
+    // Appliquer la substitution dynamique sur le texte brut
+    const text = substituteDynamicPlaceholders(content.text || '');
     const lines = text.split('\n');
     textContent = lines.map((line, i) => {
       let prefix = '';

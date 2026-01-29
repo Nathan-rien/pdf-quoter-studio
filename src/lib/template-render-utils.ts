@@ -7,6 +7,44 @@ import { CANVAS_SCALE } from './canvas-constants';
 import { getLogoById } from './template-logos';
 import type { EditableElement, ShapeContent, ImageContent } from '@/types/template-editor';
 
+/**
+ * Noms des mois en français pour la substitution de date
+ */
+const MOIS_FR = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+];
+
+/**
+ * Retourne la date actuelle au format "Mois année" en français
+ */
+export const getCurrentDateFR = (): string => {
+  const now = new Date();
+  return `${MOIS_FR[now.getMonth()]} ${now.getFullYear()}`;
+};
+
+/**
+ * Substitue les placeholders dynamiques dans un texte
+ * - {{DATE}} : remplacé par le mois et l'année en cours
+ * - Auto-détection des dates "Mois 20XX" : remplacées par le mois en cours
+ */
+export const substituteDynamicPlaceholders = (text: string): string => {
+  if (!text) return text;
+  
+  const currentDate = getCurrentDateFR();
+  
+  // Remplacer le placeholder explicite {{DATE}}
+  let result = text.replace(/\{\{DATE\}\}/gi, currentDate);
+  
+  // Auto-détection : remplacer "Mois 20XX" par la date actuelle
+  // Pattern : un mois français suivi d'un espace et d'une année 20XX
+  const moisPattern = MOIS_FR.join('|');
+  const dateRegex = new RegExp(`(${moisPattern})\\s+20\\d{2}`, 'gi');
+  result = result.replace(dateRegex, currentDate);
+  
+  return result;
+};
+
 interface ElementStyleOptions {
   element: EditableElement;
   canvasWidth?: number;
