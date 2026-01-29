@@ -1,101 +1,87 @@
 
-# Plan : Améliorer l'espacement et la mise en valeur des options
+# Plan : Faire ressortir la couleur de la carte Option
 
-## Problème identifié
+## Modification demandée
 
-Sur la Page 5 "Votre offre de services" :
-1. L'espace entre le bloc "Services Inclus" et la section "Nos options" est trop réduit
-2. Les titres des cartes dans "Nos options" ne ressortent pas visuellement par rapport aux autres options
+Revenir en arrière sur la couleur bleue des titres et appliquer plutôt une couleur de fond distinctive à la carte Option entière dans la section "Nos options".
 
-## Modifications à appliquer
+## Changements à appliquer
 
-### 1. Augmenter l'espacement avant "Nos options"
+### 1. Revenir en arrière sur les titres
 
-| Élément | Avant | Après |
-|---------|-------|-------|
-| Marge avant "Nos options" (Preview) | `mt-2` | `mt-4` |
-| Marge avant "Nos options" (Export) | `margin-top: 8px` | `margin-top: 16px` |
+| Élément | Actuel | Nouveau |
+|---------|--------|---------|
+| Titre option (Preview) | `text-primary` (bleu) | Couleur par défaut (noir) |
+| Titre option (Export) | `color: #2563eb` (bleu) | Pas de couleur (noir) |
 
-### 2. Différencier les titres des cartes "Nos options"
+### 2. Appliquer une couleur de fond à la carte
 
-Les titres des options dans l'encart "Nos options" auront une couleur légèrement différente (bleu primaire) pour les distinguer des options incluses.
-
-| Élément | Avant | Après |
-|---------|-------|-------|
-| Couleur titre option (Preview) | `text-foreground` (noir) | `text-primary` (bleu) |
-| Couleur titre option (Export) | `#000` (noir) | `#2563eb` (bleu) |
+| Élément | Actuel | Nouveau |
+|---------|--------|---------|
+| Header carte (Preview) | `bg-muted` (gris) | `bg-primary/10` (bleu léger) |
+| Header carte (Export) | `option-card` (gris) | `background-color: #dbeafe` (bleu léger) |
 
 ## Fichiers à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Augmenter `mt-2` → `mt-4` et ajouter `text-primary` aux titres "Nos options" (lignes 867 et 877) |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Augmenter margin-top et ajouter `color: #2563eb` aux titres (lignes 357 et 368) |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Retirer `text-primary` du titre + changer `bg-muted` en `bg-primary/10` (ligne 874 et 877) |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Retirer `color: #2563eb` du titre + ajouter fond bleu clair à la carte (lignes 363 et 368) |
 
 ## Détail des modifications
 
-### RentalProposalPreview.tsx (lignes 867-877)
+### RentalProposalPreview.tsx (lignes 874-877)
 
 ```jsx
 // AVANT
-<div className="mt-2 mb-1.5 flex items-center gap-2">
-  ...
-</div>
-...
-<span className="font-semibold text-[11px]">{option.name}</span>
+<div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+  <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
+  <span className="font-semibold text-[11px] text-primary">{option.name}</span>
 
 // APRÈS
-<div className="mt-4 mb-1.5 flex items-center gap-2">  // mt-2 → mt-4
-  ...
-</div>
-...
-<span className="font-semibold text-[11px] text-primary">{option.name}</span>  // +text-primary
+<div className="bg-primary/10 px-3 py-1.5 flex items-center gap-2">  // bg-muted → bg-primary/10
+  <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
+  <span className="font-semibold text-[11px]">{option.name}</span>  // Retrait de text-primary
 ```
 
-### RentalProposalExport.tsx (lignes 357 et 368)
+### RentalProposalExport.tsx (lignes 363-368)
 
 ```html
 <!-- AVANT -->
-<div style="margin-top: 8px;">
-...
-<span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
+<div class="option-card" style="margin-bottom: 6px;">
+  ...
+  <span style="font-weight: 600; font-size: 9px; color: #2563eb;">${opt.name}</span>
 
 <!-- APRÈS -->
-<div style="margin-top: 16px;">  <!-- 8px → 16px -->
-...
-<span style="font-weight: 600; font-size: 9px; color: #2563eb;">${opt.name}</span>  <!-- +color -->
+<div style="margin-bottom: 6px; background-color: #dbeafe; border-radius: 4px; padding: 6px;">
+  ...
+  <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>  <!-- Retrait du color -->
 ```
 
 ## Résultat attendu
 
 ```text
-Page 5 - Espacement et couleurs améliorés
+Page 5 - Cartes Options avec fond coloré
 ┌─────────────────────────────────────────────┐
 │ ┌─────────────────────────────────────────┐ │
-│ │█ Services Inclus                        │ │ ← Titres noirs
-│ │  • Contrat de location...               │ │
+│ │ Services Inclus          (fond gris)   │ │
 │ └─────────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────────┐ │
-│ │✓ Pro-Tection                            │ │ ← Titres noirs
-│ │  • Assurance casse...                   │ │
+│ │ Pro-Tection              (fond gris)   │ │
 │ └─────────────────────────────────────────┘ │
-│                                             │
-│                  ↕ + espace                 │
 │                                             │
 │ ⚙ Nos options                              │
 │ ┌─────────────────────────────────────────┐ │
-│ │□ Pro-Optimisée                          │ │ ← Titre BLEU
-│ │  • Optimisation fiscale...              │ │
+│ │ Pro-Optimisée       (fond BLEU CLAIR)  │ │ ← Carte colorée
 │ └─────────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────────┐ │
-│ │□ Pro-maintenance                        │ │ ← Titre BLEU
-│ │  • Maintenance préventive...            │ │
+│ │ Pro-maintenance     (fond BLEU CLAIR)  │ │ ← Carte colorée
 │ └─────────────────────────────────────────┘ │
 └─────────────────────────────────────────────┘
 ```
 
 ## Points techniques
 
-- L'espacement `mt-4` (16px) double la marge actuelle pour créer une séparation visuelle claire
-- La couleur `text-primary` (#2563eb bleu) est cohérente avec le thème de l'application
-- Les modifications sont synchronisées entre Preview et Export pour maintenir la cohérence WYSIWYG
+- La couleur `bg-primary/10` (#dbeafe) est un bleu très léger qui ressort subtilement sans être agressif
+- Les titres restent noirs pour une meilleure lisibilité
+- La cohérence WYSIWYG est maintenue entre Preview et Export
