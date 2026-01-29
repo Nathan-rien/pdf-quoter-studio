@@ -334,7 +334,7 @@ export function RentalProposalExport() {
       </div>
     `;
     
-    // Page 5 : Services inclus et options
+    // Page 5 : Services inclus + Options additionnelles + Nos Options (fusionnées)
     const optionsHTML = selectedOptions.slice(0, OPTIONS_PER_PAGE).map(opt => `
       <div class="option-card">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -355,6 +355,35 @@ export function RentalProposalExport() {
       </div>
     `).join('');
     
+    // Générer le HTML des "Nos Options" (fusionnées depuis Page 6)
+    const nosOptionsHTML = selectedNosOptions.length > 0 ? `
+      <div style="margin-top: 16px;">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span style="font-weight: 600; font-size: 12px;">Nos options</span>
+        </div>
+        ${selectedNosOptions.map(opt => `
+          <div class="option-card" style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                  <span style="display: inline-block; width: 12px; height: 12px; border: 1px solid #6b7280; border-radius: 2px;"></span>
+                  <span style="font-weight: 600; font-size: 10px;">${opt.name}</span>
+                </div>
+                ${opt.description ? `<p style="color: #6b7280; font-size: 9px; margin: 0 0 0 20px;">${opt.description}</p>` : ''}
+              </div>
+              ${opt.price !== null ? `
+                <div style="text-align: right;">
+                  <span style="font-weight: 600; color: #2563eb; font-size: 10px;">${formatNumber(opt.price)} €</span>
+                  <span style="display: block; font-size: 8px; color: #9ca3af;">/mois</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+    
     dynamicContent[5] = `
       <div class="dynamic-content" style="position: absolute; left: 3%; top: 12%; width: 94%; z-index: 40;">
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
@@ -362,38 +391,11 @@ export function RentalProposalExport() {
           <p style="margin: 0; color: #4b5563; font-size: 10px; white-space: pre-wrap;">${servicesInclus.description}</p>
         </div>
         ${selectedOptions.length > 0 ? optionsHTML : '<p style="text-align: center; padding: 20px; color: #9ca3af; font-size: 10px;">Aucune option additionnelle sélectionnée</p>'}
+        ${nosOptionsHTML}
       </div>
     `;
     
-    // Page 6 : Nos options
-    if (selectedNosOptions.length > 0) {
-      const nosOptionsHTML = selectedNosOptions.map(opt => `
-        <div class="option-card">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                <span style="color: #22c55e;">✓</span>
-                <span style="font-weight: 600; font-size: 10px;">${opt.name}</span>
-              </div>
-              ${opt.description ? `<p style="color: #6b7280; font-size: 9px; margin: 0 0 0 20px;">${opt.description}</p>` : ''}
-            </div>
-            ${opt.price !== null ? `
-              <div style="text-align: right;">
-                <span style="font-weight: 600; color: #2563eb; font-size: 10px;">${formatNumber(opt.price)} €</span>
-                <span style="display: block; font-size: 8px; color: #9ca3af;">/mois</span>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-      `).join('');
-      
-      dynamicContent[6] = `
-        <div class="dynamic-content" style="position: absolute; left: 3%; top: 12%; width: 94%; z-index: 40;">
-          <h4 style="margin: 0 0 12px 0; font-size: 12px;">Nos options</h4>
-          ${nosOptionsHTML}
-        </div>
-      `;
-    }
+    // Page 6 : Plus de contenu dynamique (Nos Options fusionnées sur Page 5)
     
     // Note: La dernière page (signature) est 100% statique
     // Elle utilise uniquement les éléments définis dans le template (zones signature, mentions légales)
