@@ -1,155 +1,114 @@
 
-# Plan : Afficher les propositions financières sur le template PDF
 
-## Contexte
+# Plan : Fusion des services et options sur la Page 5
 
-L'utilisateur souhaite que les propositions financières créées dans l'onglet "Matrice" (Saisie) apparaissent dans le template PDF, sous le tableau "Désignation" (produits) de la page 4.
+## Objectif
 
-### Format attendu (basé sur le screenshot)
-Chaque proposition s'affiche sous forme d'un tableau compact :
+Regrouper toutes les options de services sur la **Page 5** ("Votre offre de services") et supprimer le contenu dynamique de la Page 6.
 
+## Structure actuelle vs Structure cible
+
+### Actuellement
 ```text
-+------------------------------------------------------------+
-| Location 36 mois                                            |
-+------------------------------------------------------------+
-| Montant investissement                      1670,50€ HT     |
-+------------------------------------------------------------+
-| Loyer mensuel HT                            62,99 € HT      |
-+------------------------------------------------------------+
+Page 5 - "Votre offre de services"
+├── Services inclus (bloc permanent)
+└── Options additionnelles (onglet "Services inclus")
+
+Page 6 - "Votre offre de services"
+└── Nos options (onglet "Nos options")
 ```
 
-Si plusieurs propositions existent (ex: 36 mois et 24 mois), elles s'empilent verticalement les unes sous les autres.
-
-## Architecture actuelle
-
-1. **Store** (`rentalProposalStore.ts`) : 
-   - `proposals: MatriceProposal[]` contient les propositions (durée, refinanceur, marge)
-   - `getAllProposalsCalculations()` retourne les calculs pour chaque proposition
-
-2. **Aperçu** (`RentalProposalPreview.tsx`) :
-   - Page 4 : `renderProductPage()` affiche le tableau des produits + totaux
-   - Les éléments statiques suivent le tableau en flux relatif via `elementsBelow`
-
-3. **Export PDF** (`RentalProposalExport.tsx`) :
-   - `generateDynamicContentByPage()` génère le HTML pour la page 4
-   - Injecte le tableau produits + totaux dans la zone dynamique
-
-## Modifications prévues
-
-### 1. Store - Exposer les données calculées (src/stores/rentalProposalStore.ts)
-
-**Aucune modification nécessaire** : `getAllProposalsCalculations()` existe déjà et retourne les calculs pour toutes les propositions.
-
-### 2. Aperçu - Afficher les propositions sous le tableau (src/components/rental-proposal/RentalProposalPreview.tsx)
-
-Dans la fonction `renderProductPage()` (page 4), après le bloc "Totaux" :
-
+### Après modification
 ```text
-Tableau Désignation (produits)
-     ↓
-Sous-total HT / Total investissement
-     ↓
-[NOUVEAU] Tableaux des propositions de location
-     ↓
-Éléments statiques (Avantages, Conditions...)
-```
+Page 5 - "Votre offre de services"
+├── Services inclus (bloc permanent)
+├── Options additionnelles (onglet "Services inclus")
+└── [SI options "Nos options" sélectionnées]
+    ├── Titre "Nos options"
+    └── Options depuis l'onglet "Nos options"
 
-**Implémentation** :
-- Récupérer `proposals` et `getAllProposalsCalculations()` depuis le store
-- Pour chaque proposition, générer un bloc :
-  - Titre : "Location {durée} mois"
-  - Ligne 1 : "Montant investissement" | "{montant}€ HT"
-  - Ligne 2 : "Loyer mensuel HT" | "{loyer}€ HT"
-- Style : bordure simple, fond blanc, texte compact (9-10px)
-
-### 3. Export PDF - Injecter les propositions dans le HTML (src/components/rental-proposal/RentalProposalExport.tsx)
-
-Dans `generateDynamicContentByPage()`, modifier `dynamicContent[4]` pour ajouter les blocs propositions après les totaux.
-
-**Implémentation** :
-- Récupérer `getAllProposalsCalculations()` depuis le store
-- Générer le HTML des tableaux de proposition avec le même format visuel que l'Aperçu
-- Insérer ce HTML après le bloc "summary-box" (totaux)
-
-## Structure HTML des propositions
-
-```html
-<div class="location-proposals" style="margin-top: 16px;">
-  <!-- Proposition 1 -->
-  <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; border: 1px solid #d1d5db;">
-    <thead>
-      <tr style="background: #f9fafb; border-bottom: 1px solid #d1d5db;">
-        <th colspan="2" style="padding: 8px; text-align: left; font-weight: 600;">Location 36 mois</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr style="border-bottom: 1px solid #e5e7eb;">
-        <td style="padding: 6px 8px;">Montant investissement</td>
-        <td style="padding: 6px 8px; text-align: right;">14 484,00€ HT</td>
-      </tr>
-      <tr>
-        <td style="padding: 6px 8px;">Loyer mensuel HT</td>
-        <td style="padding: 6px 8px; text-align: right; font-weight: 600;">466,52 € HT</td>
-      </tr>
-    </tbody>
-  </table>
-  
-  <!-- Proposition 2 (si présente) -->
-  <table>...</table>
-</div>
+Page 6 - Devient une page statique (ou supprimée du template)
 ```
 
 ## Fichiers à modifier
 
-| Fichier | Modifications |
-|---------|---------------|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Ajouter le rendu des propositions dans `renderProductPage()` après les totaux |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Ajouter le HTML des propositions dans `dynamicContent[4]` |
+### 1. RentalProposalPreview.tsx
 
-## Points techniques
+**Fonction `renderServicesInclusPage()` (lignes ~812-874)** :
+- Ajouter le rendu des `selectedNosOptions` après les options additionnelles
+- Insérer un titre "Nos options" conditionnellement affiché si `selectedNosOptions.length > 0`
+- Utiliser le même style visuel (cases à cocher vides □ pour les options "Nos options")
 
-1. **Ordre d'affichage** : Les propositions s'affichent dans l'ordre du tableau `proposals` (ordre de création/duplication)
-2. **Formatage** : Utiliser `formatNumber()` existant pour les montants (format français)
-3. **Espace** : Les propositions sont insérées entre les totaux et les éléments statiques "below" (Avantages, Conditions)
-4. **Limite visuelle** : Si 4 propositions, prévoir un espacement compact (mb-2 au lieu de mb-3)
+**Fonction `renderNosOptionsPage()` (lignes ~876-926)** :
+- Supprimer ou vider cette fonction pour ne plus afficher de contenu dynamique sur la page 6
+- La page 6 deviendra une page statique (éléments du template uniquement)
 
-## Flux de rendu (Page 4)
+**Fonction `renderCurrentPage()` (ligne ~1034)** :
+- Retirer le cas `currentPreviewPage === 6 → renderNosOptionsPage()`
+- La page 6 utilisera `renderGenericStaticPage(6)` comme les autres pages statiques
 
-```text
-┌─────────────────────────────────────────────────────┐
-│  Votre offre                                        │
-├─────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────┐    │
-│  │ Désignation | Qté | P.U. HT | Total HT      │    │
-│  │ ...                                          │    │
-│  └─────────────────────────────────────────────┘    │
-│                                                     │
-│                   ┌─────────────────┐               │
-│                   │ Sous-total HT   │               │
-│                   │ Total invest    │               │
-│                   └─────────────────┘               │
-│                                                     │
-│  ┌─────────────────────────────────────────────┐    │  ← NOUVEAU
-│  │ Location 36 mois                             │    │
-│  │ Montant investissement      14 484,00€ HT   │    │
-│  │ Loyer mensuel HT               466,52 € HT  │    │
-│  └─────────────────────────────────────────────┘    │
-│                                                     │
-│  ┌─────────────────────────────────────────────┐    │  ← Si 2ème proposition
-│  │ Location 24 mois                             │    │
-│  │ Montant investissement      14 484,00€ HT   │    │
-│  │ Loyer mensuel HT               552,80 € HT  │    │
-│  └─────────────────────────────────────────────┘    │
-│                                                     │
-│  Avantages :                                        │  ← Éléments statiques
-│  • Apport en trésorerie...                         │
-│  Condition de l'offre :                            │
-│  • Les loyers sont payables...                     │
-└─────────────────────────────────────────────────────┘
+### 2. RentalProposalExport.tsx
+
+**Fonction `generateDynamicContentByPage()` (lignes ~337-396)** :
+- Modifier `dynamicContent[5]` pour inclure les "Nos options" après les options additionnelles
+- Supprimer `dynamicContent[6]` (plus d'injection dynamique sur la page 6)
+
+### 3. RentalDataEditor.tsx (optionnel, UI)
+
+- Mettre à jour le badge de l'onglet "Nos options" : remplacer "Page 6" par "Page 5" pour refléter le changement
+
+## Détail technique
+
+### Structure HTML/JSX de la Page 5 après modification
+
+```jsx
+<div className="dynamic-content">
+  {/* Bloc permanent "Services inclus" */}
+  <div className="services-inclus-block">
+    <header>Services Inclus</header>
+    <ul>{servicesInclus.description...}</ul>
+  </div>
+
+  {/* Options additionnelles (depuis onglet "Services inclus") */}
+  {selectedOptions.map(option => (
+    <div className="option-card">
+      <CheckCircle /> {option.name}
+      {option.description}
+    </div>
+  ))}
+
+  {/* NOUVEAU: Nos options (depuis onglet "Nos options") */}
+  {selectedNosOptions.length > 0 && (
+    <>
+      <h4 className="section-title">Nos options</h4>
+      {selectedNosOptions.map(option => (
+        <div className="option-card">
+          <Checkbox vide /> {option.name}
+          {option.description}
+        </div>
+      ))}
+    </>
+  )}
+</div>
 ```
+
+### Différenciation visuelle
+
+| Source | Icône | Signification |
+|--------|-------|---------------|
+| Services inclus | Barre verticale | Bloc permanent, toujours présent |
+| Options additionnelles (onglet "Services inclus") | ✓ CheckCircle | Option déjà activée |
+| Nos options (onglet "Nos options") | □ Case vide | Option proposée au client (à cocher sur document imprimé) |
+
+## Points de vigilance
+
+1. **Espace vertical** : Avec potentiellement plus de contenu sur la Page 5, s'assurer que le `maxHeight` ou l'`overflow` est adapté
+2. **Cohérence PDF** : Le HTML généré pour l'export doit refléter exactement l'aperçu React
+3. **Page 6 statique** : Si le template contient des éléments statiques sur la page 6, ils seront toujours affichés
 
 ## Estimation
 
-- Complexité : Faible
-- Impact : Aperçu (Preview) + Export PDF
-- Fichiers modifiés : 2
+- **Complexité** : Faible à moyenne
+- **Fichiers impactés** : 2 principaux (Preview + Export), 1 optionnel (DataEditor)
+- **Risque de régression** : Faible si les styles sont conservés
+
