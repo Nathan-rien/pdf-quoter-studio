@@ -47,6 +47,7 @@ export function RentalProposalExport() {
     selectedTemplateId,
     getCalculatedValues,
     getSelectedCommercial,
+    getAllProposalsCalculations,
   } = useRentalProposalStore();
 
   const { getActiveTemplate, getTemplateLatestVersion, allTemplates } = useTemplateEditorStore();
@@ -273,6 +274,28 @@ export function RentalProposalExport() {
       </tr>
     `).join('');
     
+    // Générer le HTML des propositions financières
+    const allProposals = getAllProposalsCalculations();
+    const proposalsHTML = allProposals.map(({ proposal, calculations }) => `
+      <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 4px; overflow: hidden;">
+        <thead>
+          <tr style="background: #f3f4f6; border-bottom: 1px solid #d1d5db;">
+            <th colspan="2" style="padding: 8px; text-align: left; font-weight: 600;">Location ${proposal.duree} mois</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 6px 8px;">Montant investissement</td>
+            <td style="padding: 6px 8px; text-align: right;">${formatNumber(matriceData.montantInvestissement)} € HT</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 8px;">Loyer mensuel HT</td>
+            <td style="padding: 6px 8px; text-align: right; font-weight: 600; color: #2563eb;">${formatNumber(calculations.loyerMensuel)} € HT</td>
+          </tr>
+        </tbody>
+      </table>
+    `).join('');
+    
     dynamicContent[4] = `
       <div class="dynamic-content" style="position: absolute; left: 3%; top: 15%; width: 94%; z-index: 40;">
         <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
@@ -302,6 +325,12 @@ export function RentalProposalExport() {
             </div>
           </div>
         </div>
+        
+        ${allProposals.length > 0 ? `
+          <div class="location-proposals" style="margin-top: 16px;">
+            ${proposalsHTML}
+          </div>
+        ` : ''}
       </div>
     `;
     

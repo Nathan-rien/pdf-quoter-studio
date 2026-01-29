@@ -63,6 +63,7 @@ export function RentalProposalPreview() {
     updateProposalName,
     getCalculatedValues,
     getSelectedCommercial,
+    getAllProposalsCalculations,
   } = useRentalProposalStore();
 
   const { 
@@ -764,6 +765,36 @@ export function RentalProposalPreview() {
             </div>
           </div>
         </div>
+        
+        {/* Propositions financières (Location X mois) */}
+        {(() => {
+          const allProposals = getAllProposalsCalculations();
+          if (allProposals.length === 0) return null;
+          
+          return (
+            <div className="mt-4 space-y-3">
+              {allProposals.map(({ proposal, calculations }) => (
+                <div key={proposal.id} className="border rounded overflow-hidden">
+                  <div className="bg-muted px-3 py-2">
+                    <span className="font-semibold text-[11px]">
+                      Location {proposal.duree} mois
+                    </span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    <div className="flex justify-between px-3 py-1.5 text-[10px]">
+                      <span>Montant investissement</span>
+                      <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} € HT</span>
+                    </div>
+                    <div className="flex justify-between px-3 py-1.5 text-[10px]">
+                      <span>Loyer mensuel HT</span>
+                      <span className="font-semibold text-primary">{formatNumber(calculations.loyerMensuel)} € HT</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         
         {/* Éléments statiques "en-dessous" rendus en flux relatif */}
         {elementsBelow.length > 0 && (
