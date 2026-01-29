@@ -1,87 +1,112 @@
 
-# Plan : Faire ressortir la couleur de la carte Option
+# Plan : Couleur bleu clair pour les cartes Options et plus d'espace
 
-## Modification demandée
+## Problème identifié
 
-Revenir en arrière sur la couleur bleue des titres et appliquer plutôt une couleur de fond distinctive à la carte Option entière dans la section "Nos options".
+Sur la Page 5 "Votre offre de services" :
+1. Les cartes "Nos options" ont un fond blanc/gris similaire aux autres cartes au lieu d'un bleu clair distinctif
+2. L'espacement entre la section "Services inclus" et la section "Nos options" n'est pas suffisant
 
-## Changements à appliquer
+## Modifications à appliquer
 
-### 1. Revenir en arrière sur les titres
-
-| Élément | Actuel | Nouveau |
-|---------|--------|---------|
-| Titre option (Preview) | `text-primary` (bleu) | Couleur par défaut (noir) |
-| Titre option (Export) | `color: #2563eb` (bleu) | Pas de couleur (noir) |
-
-### 2. Appliquer une couleur de fond à la carte
+### 1. Appliquer un fond bleu clair à toute la carte Option
 
 | Élément | Actuel | Nouveau |
 |---------|--------|---------|
-| Header carte (Preview) | `bg-muted` (gris) | `bg-primary/10` (bleu léger) |
-| Header carte (Export) | `option-card` (gris) | `background-color: #dbeafe` (bleu léger) |
+| Carte entière (Preview) | `border rounded` (blanc) | `border rounded bg-primary/5` (bleu très léger) |
+| Header carte (Preview) | `bg-primary/10` (bleu léger) | `bg-primary/15` (bleu plus prononcé) |
+| Carte entière (Export) | `background-color: #dbeafe` | Appliquer à toute la carte avec structure cohérente |
+
+### 2. Augmenter l'espacement avant "Nos options"
+
+| Élément | Actuel | Nouveau |
+|---------|--------|---------|
+| Marge avant titre "Nos options" (Preview) | `mt-4` | `mt-6` |
+| Marge avant titre "Nos options" (Export) | `margin-top: 16px` | `margin-top: 24px` |
 
 ## Fichiers à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Retirer `text-primary` du titre + changer `bg-muted` en `bg-primary/10` (ligne 874 et 877) |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Retirer `color: #2563eb` du titre + ajouter fond bleu clair à la carte (lignes 363 et 368) |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Augmenter `mt-4` → `mt-6` + ajouter fond bleu à la carte entière (lignes 867, 873, 874) |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Augmenter margin-top `16px` → `24px` + fond bleu clair cohérent (ligne 357, 363) |
 
 ## Détail des modifications
 
-### RentalProposalPreview.tsx (lignes 874-877)
+### RentalProposalPreview.tsx
 
 ```jsx
-// AVANT
-<div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-  <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-  <span className="font-semibold text-[11px] text-primary">{option.name}</span>
+// AVANT (lignes 867, 873, 874)
+<div className="mt-4 mb-1.5 flex items-center gap-2">
+...
+<div key={option.id} className="border rounded overflow-hidden">
+  <div className="bg-primary/10 px-3 py-1.5 flex items-center gap-2">
 
 // APRÈS
-<div className="bg-primary/10 px-3 py-1.5 flex items-center gap-2">  // bg-muted → bg-primary/10
-  <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-  <span className="font-semibold text-[11px]">{option.name}</span>  // Retrait de text-primary
+<div className="mt-6 mb-1.5 flex items-center gap-2">  // mt-4 → mt-6
+...
+<div key={option.id} className="border border-primary/20 rounded overflow-hidden bg-primary/5">  // fond bleu + bordure bleue
+  <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">  // header plus bleu
 ```
 
-### RentalProposalExport.tsx (lignes 363-368)
+### RentalProposalExport.tsx
 
 ```html
-<!-- AVANT -->
-<div class="option-card" style="margin-bottom: 6px;">
-  ...
-  <span style="font-weight: 600; font-size: 9px; color: #2563eb;">${opt.name}</span>
+<!-- AVANT (lignes 357, 363) -->
+<div style="margin-top: 16px;">
+...
+<div style="margin-bottom: 6px; background-color: #dbeafe; border-radius: 4px; padding: 6px;">
 
 <!-- APRÈS -->
-<div style="margin-bottom: 6px; background-color: #dbeafe; border-radius: 4px; padding: 6px;">
-  ...
-  <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>  <!-- Retrait du color -->
+<div style="margin-top: 24px;">  <!-- 16px → 24px -->
+...
+<div style="margin-bottom: 6px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; overflow: hidden;">
+  <div style="background-color: #dbeafe; padding: 6px;">  <!-- header bleu -->
 ```
+
+## Palette de couleurs utilisée
+
+| Couleur Tailwind | Hex | Usage |
+|------------------|-----|-------|
+| `bg-primary/5` | `#eff6ff` (blue-50) | Fond carte Option |
+| `bg-primary/15` | `#dbeafe` (blue-100) | Header carte Option |
+| `border-primary/20` | `#bfdbfe` (blue-200) | Bordure carte Option |
+| `bg-muted` | Gris | Fond cartes Services Inclus |
 
 ## Résultat attendu
 
 ```text
-Page 5 - Cartes Options avec fond coloré
+Page 5 - Cartes avec distinction de couleur
 ┌─────────────────────────────────────────────┐
 │ ┌─────────────────────────────────────────┐ │
-│ │ Services Inclus          (fond gris)   │ │
+│ │ Services Inclus          (fond GRIS)   │ │
 │ └─────────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────────┐ │
-│ │ Pro-Tection              (fond gris)   │ │
+│ │ Pro-Tection              (fond GRIS)   │ │
 │ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │ Pro-Actif                (fond GRIS)   │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│              ↕ + espace (24px)             │
 │                                             │
 │ ⚙ Nos options                              │
 │ ┌─────────────────────────────────────────┐ │
-│ │ Pro-Optimisée       (fond BLEU CLAIR)  │ │ ← Carte colorée
+│ │ Pro-maintenance     (fond BLEU CLAIR)  │ │ ← Carte bleue
 │ └─────────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────────┐ │
-│ │ Pro-maintenance     (fond BLEU CLAIR)  │ │ ← Carte colorée
+│ │ Pro-Optimisée       (fond BLEU CLAIR)  │ │ ← Carte bleue
+│ └─────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────┐ │
+│ │ Pro-Spare           (fond BLEU CLAIR)  │ │ ← Carte bleue
 │ └─────────────────────────────────────────┘ │
 └─────────────────────────────────────────────┘
 ```
 
 ## Points techniques
 
-- La couleur `bg-primary/10` (#dbeafe) est un bleu très léger qui ressort subtilement sans être agressif
-- Les titres restent noirs pour une meilleure lisibilité
-- La cohérence WYSIWYG est maintenue entre Preview et Export
+- Le fond `bg-primary/5` (#eff6ff) donne un bleu très subtil visible mais pas agressif
+- Le header `bg-primary/15` (#dbeafe) est légèrement plus prononcé pour le titre
+- La bordure `border-primary/20` (#bfdbfe) renforce la distinction avec les cartes grises
+- L'espacement `mt-6` (24px) double presque la marge pour bien séparer les sections
+- Cohérence WYSIWYG maintenue entre Preview et Export
