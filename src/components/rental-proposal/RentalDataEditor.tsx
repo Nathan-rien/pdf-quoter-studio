@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase } from 'lucide-react';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +18,7 @@ import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { BASE_TAUX_DATA } from '@/data/base-taux';
 import { getConditionFinContrat } from '@/data/frais-dossier';
 import { ENTITIES, getCommerciauxByEntity, CommercialEntity } from '@/data/commerciaux';
+import { ProposalCard } from './ProposalCard';
 
 export function RentalDataEditor() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -28,6 +29,7 @@ export function RentalDataEditor() {
   const {
     clientData,
     matriceData,
+    proposals,
     lignesData,
     servicesInclus,
     optionsServices,
@@ -36,6 +38,10 @@ export function RentalDataEditor() {
     commercialData,
     updateClientField,
     updateMatriceField,
+    addProposal,
+    duplicateProposal,
+    updateProposal,
+    deleteProposal,
     updateLigne,
     addLigne,
     deleteLigne,
@@ -49,6 +55,7 @@ export function RentalDataEditor() {
     deleteNosOption,
     toggleNosOption,
     getCalculatedValues,
+    getSelectedOptionsPrices,
     updateCommercialEntity,
     selectCommercial,
     getSelectedCommercial,
@@ -314,13 +321,14 @@ export function RentalDataEditor() {
 
         {/* Matrice Tab */}
         <TabsContent value="matrice" className="mt-4 space-y-6">
-          {/* Encart Saisie (anciennement Location) */}
+          {/* Global investment amount */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Saisie</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Montant investissement</CardTitle>
+              <CardDescription>Ce montant est partagé entre toutes les propositions</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-4 gap-4">
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="montant-invest">Montant investissement HT</Label>
                   <Input
@@ -332,136 +340,66 @@ export function RentalDataEditor() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="duree">Durée (mois)</Label>
-                  <Input
-                    id="duree"
-                    type="number"
-                    min="12"
-                    step="12"
-                    value={matriceData.duree ?? ''}
-                    onChange={(e) => updateMatriceField('duree', e.target.value ? parseInt(e.target.value) : null)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="refinanceur">Refinanceur</Label>
-                  <Select
-                    value={matriceData.refinanceur ?? ''}
-                    onValueChange={(value) => updateMatriceField('refinanceur', value as any)}
-                  >
-                    <SelectTrigger id="refinanceur">
-                      <SelectValue placeholder="Sélectionner..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PARTENAIRES.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="marge-appliquee">Marge appliquée (%)</Label>
-                  <Input
-                    id="marge-appliquee"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    value={matriceData.margeAppliquee}
-                    onChange={(e) => updateMatriceField('margeAppliquee', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Encart Données (anciennement Matrice) */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Données</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label>Montant investissement</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Invest margé</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(calculatedValues.investMarge)} € HT</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Services inclus loyers</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(calculatedValues.servicesInclusLoyers)} €</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Loyer Services Inclus</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(calculatedValues.loyerServicesInclus)} €</span>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-5 gap-4">
-                <div className="space-y-2">
-                  <Label>Durée</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{matriceData.duree ?? '-'} mois</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Coefficient</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{calculatedValues.coefficient ?? '-'}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Loyer mensuel investissement</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(calculatedValues.loyerMensuelInvestissement)} €</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Loyer mensuel HT</Label>
-                  <div className="flex items-center h-10 px-3 bg-primary/10 rounded-md border border-primary/20">
-                    <span className="font-medium">{formatNumber(calculatedValues.loyerMensuel)} €</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Coût locatif annuel</Label>
+                    <Label>Afficher coût locatif annuel</Label>
                     <Switch
                       checked={matriceData.showCoutLocatifAnnuel}
                       onCheckedChange={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
                     />
                   </div>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span className="font-medium">{formatPercent(calculatedValues.coutLocatifAnnuel)}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label>Coût du contrat</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(calculatedValues.coutContrat)} €</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Marge Loc</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span>{formatNumber(calculatedValues.margeLoc)} €</span>
-                  </div>
+                  <p className="text-xs text-muted-foreground">Affiche le pourcentage sur le template</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Encart Condition fin de contrat */}
+          {/* Proposals list */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium">Propositions</h3>
+                <p className="text-sm text-muted-foreground">
+                  {proposals.length} proposition{proposals.length > 1 ? 's' : ''} • Maximum 4
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addProposal()}
+                disabled={proposals.length >= 4}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une proposition
+              </Button>
+            </div>
+
+            {proposals.map((proposal, index) => (
+              <ProposalCard
+                key={proposal.id}
+                proposal={proposal}
+                index={index}
+                montantInvestissement={matriceData.montantInvestissement}
+                optionsPrices={getSelectedOptionsPrices()}
+                canDelete={proposals.length > 1}
+                showCoutLocatifAnnuel={matriceData.showCoutLocatifAnnuel}
+                onUpdate={(updates) => updateProposal(proposal.id, updates)}
+                onDuplicate={() => duplicateProposal(proposal.id)}
+                onDelete={() => deleteProposal(proposal.id)}
+              />
+            ))}
+          </div>
+
+          {/* Warning if 4 proposals */}
+          {proposals.length >= 4 && (
+            <Card className="border-warning/50 bg-warning/5">
+              <CardContent className="p-3 flex items-center gap-2 text-sm text-warning-foreground">
+                <span>⚠️</span>
+                <span>Nombre maximum de propositions atteint (4). Les propositions multiples peuvent nécessiter plus d'espace sur le template.</span>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Encart Condition fin de contrat - using first proposal's refinanceur */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Condition fin de contrat</CardTitle>
@@ -469,12 +407,12 @@ export function RentalDataEditor() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  {matriceData.refinanceur ? (
+                  {proposals[0]?.refinanceur ? (
                     <Badge 
-                      variant={getConditionFinContrat(matriceData.refinanceur) === 'Reprise obligatoire loueur' ? 'destructive' : 'default'}
+                      variant={getConditionFinContrat(proposals[0].refinanceur) === 'Reprise obligatoire loueur' ? 'destructive' : 'default'}
                       className="text-sm"
                     >
-                      {getConditionFinContrat(matriceData.refinanceur) ?? 'Non définie'}
+                      {getConditionFinContrat(proposals[0].refinanceur) ?? 'Non définie'}
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="text-sm">Sélectionnez un refinanceur</Badge>
