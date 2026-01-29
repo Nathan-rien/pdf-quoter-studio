@@ -360,12 +360,12 @@ export function RentalProposalExport() {
           <span style="font-weight: 600; font-size: 10px;">Nos options</span>
         </div>
         ${selectedNosOptions.map(opt => `
-          <div class="option-card" style="margin-bottom: 6px;">
+          <div style="margin-bottom: 6px; background-color: #dbeafe; border-radius: 4px; padding: 6px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
                 <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
                   <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
-                  <span style="font-weight: 600; font-size: 9px; color: #2563eb;">${opt.name}</span>
+                  <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
                 </div>
                 ${opt.description ? `<p style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description}</p>` : ''}
               </div>
