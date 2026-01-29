@@ -35,7 +35,7 @@ import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
-import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl } from '@/lib/template-render-utils';
+import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZoneType } from '@/types/pdf-template';
@@ -246,18 +246,19 @@ export function RentalProposalPreview() {
       // Utilise la constante partagée (sans multiplication par PREVIEW_FONT_SCALE)
       const indentPx = indentLevel * LIST_INDENT_PX;
       
-      // Si contenu HTML enrichi, l'utiliser directement
+      // Si contenu HTML enrichi, appliquer la substitution dynamique
       if (textContent.htmlContent) {
+        const processedHtml = substituteDynamicPlaceholders(textContent.htmlContent);
         return (
           <div 
             style={{ paddingLeft: `${indentPx}px` }}
-            dangerouslySetInnerHTML={{ __html: textContent.htmlContent }}
+            dangerouslySetInnerHTML={{ __html: processedHtml }}
           />
         );
       }
       
-      // Fallback sur le texte brut avec support des listes
-      const text = textContent.text || '';
+      // Fallback sur le texte brut avec support des listes et substitution dynamique
+      const text = substituteDynamicPlaceholders(textContent.text || '');
       const lines = text.split('\n');
       return (
         <>
