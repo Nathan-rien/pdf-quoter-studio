@@ -1,88 +1,155 @@
 
+# Plan : Afficher les propositions financières sur le template PDF
 
-# Plan : Restaurer la structure séparée Saisie / Données
+## Contexte
 
-## Problème identifié
+L'utilisateur souhaite que les propositions financières créées dans l'onglet "Matrice" (Saisie) apparaissent dans le template PDF, sous le tableau "Désignation" (produits) de la page 4.
 
-La structure actuelle combine "Saisie" et "Données" dans une seule Card avec des sous-sections (`<h4>`). Le screenshot montre clairement que ces deux parties doivent être des **Cards séparées** :
-
-- **Card "Saisie"** : 4 champs modifiables en ligne (Montant invest HT, Durée, Refinancement, Marge appliquée)
-- **Card "Données"** : Valeurs calculées en lecture seule sur 3 lignes
-
-## Structure à implémenter (basée sur le screenshot)
+### Format attendu (basé sur le screenshot)
+Chaque proposition s'affiche sous forme d'un tableau compact :
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Saisie                                                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Montant invest HT │ Durée (mois)  │ Refinancement   │ Marge appliquée (%)  │
-│ [31644]           │ [36]          │ [Lixxbail 1 ▼]  │ [6]                  │
-│ (Input)           │ (Input)       │ (Select)        │ (Input)              │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Données                                                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Montant invest    │ Investir Margé     │ Les services...   │ Services de...│
-│ 31644,00 € HT     │ 33663,83 € HT      │ - €               │ - €           │
-│ (Read-only)       │ (Read-only)        │ (Read-only)       │ (Read-only)   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Durée    │ Coefficient │ Loyer invest msg │ Loyer mensuel HT │ [Toggle] Coût│
-│ 36 mois  │ 3.0051      │ 1011,63 €        │ 1011,63 €        │ 5,03 %       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Coût du contrat   │ Marge Loc          │                                   │
-│ 4774,68 €         │ 2019,83 €          │                                   │
-└─────────────────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------+
+| Location 36 mois                                            |
++------------------------------------------------------------+
+| Montant investissement                      1670,50€ HT     |
++------------------------------------------------------------+
+| Loyer mensuel HT                            62,99 € HT      |
++------------------------------------------------------------+
 ```
 
-## Modifications à effectuer
+Si plusieurs propositions existent (ex: 36 mois et 24 mois), elles s'empilent verticalement les unes sous les autres.
 
-### Fichier : `src/components/rental-proposal/ProposalCard.tsx`
+## Architecture actuelle
 
-1. **Séparer en 2 Cards distinctes** au lieu d'une seule Card avec sous-sections
-2. **Card Saisie** :
-   - CardHeader avec titre "Saisie" et boutons Dupliquer/Supprimer (pour propositions multiples)
-   - 4 colonnes avec les champs Input/Select
-   - Labels : "Montant investissement HT", "Durée (mois)", "Refinancement", "Marge appliquée (%)"
+1. **Store** (`rentalProposalStore.ts`) : 
+   - `proposals: MatriceProposal[]` contient les propositions (durée, refinanceur, marge)
+   - `getAllProposalsCalculations()` retourne les calculs pour chaque proposition
 
-3. **Card Données** :
-   - CardHeader avec titre "Données" seul
-   - Ligne 1 (4 colonnes) : Montant investissement, Investir Margé, Les services comprennent des loyers, Services de loyer inclus
-   - Ligne 2 (5 colonnes) : Durée, Coefficient, Loyer investissement mensuel, Loyer mensuel HT (mis en avant), Coût locatif annuel (conditionnel)
-   - Ligne 3 (2 colonnes) : Coût du contrat, Marge Loc
+2. **Aperçu** (`RentalProposalPreview.tsx`) :
+   - Page 4 : `renderProductPage()` affiche le tableau des produits + totaux
+   - Les éléments statiques suivent le tableau en flux relatif via `elementsBelow`
 
-4. **Labels exacts** selon le screenshot :
-   - "Montant investissement" (pas "Montant invest")
-   - "Investir Margé"
-   - "Les services comprennent des loyers"
-   - "Services de loyer inclus"
-   - "Loyer investissement mensuel"
-   - "Loyer mensuel HT"
-   - "Coût locatif annuel" (avec toggle sur la même ligne)
+3. **Export PDF** (`RentalProposalExport.tsx`) :
+   - `generateDynamicContentByPage()` génère le HTML pour la page 4
+   - Injecte le tableau produits + totaux dans la zone dynamique
 
-5. **Styling** :
-   - Champs read-only avec fond `bg-muted` et coins arrondis
-   - Valeurs affichées en noir sur fond gris clair
-   - "Loyer mensuel HT" avec fond bleu/primary pour le mettre en avant
-   - Toggle "Coût locatif annuel" positionné à droite du label (pas à côté de la valeur)
+## Modifications prévues
 
-### Gestion des propositions multiples
+### 1. Store - Exposer les données calculées (src/stores/rentalProposalStore.ts)
 
-Pour les propositions dupliquées :
-- Les boutons Dupliquer/Supprimer restent dans le header de la Card "Saisie"
-- Un wrapper `<div>` englobe les 2 Cards pour chaque proposition
-- Un indicateur "Proposition 1", "Proposition 2" etc. apparaît si plus d'une proposition
+**Aucune modification nécessaire** : `getAllProposalsCalculations()` existe déjà et retourne les calculs pour toutes les propositions.
+
+### 2. Aperçu - Afficher les propositions sous le tableau (src/components/rental-proposal/RentalProposalPreview.tsx)
+
+Dans la fonction `renderProductPage()` (page 4), après le bloc "Totaux" :
+
+```text
+Tableau Désignation (produits)
+     ↓
+Sous-total HT / Total investissement
+     ↓
+[NOUVEAU] Tableaux des propositions de location
+     ↓
+Éléments statiques (Avantages, Conditions...)
+```
+
+**Implémentation** :
+- Récupérer `proposals` et `getAllProposalsCalculations()` depuis le store
+- Pour chaque proposition, générer un bloc :
+  - Titre : "Location {durée} mois"
+  - Ligne 1 : "Montant investissement" | "{montant}€ HT"
+  - Ligne 2 : "Loyer mensuel HT" | "{loyer}€ HT"
+- Style : bordure simple, fond blanc, texte compact (9-10px)
+
+### 3. Export PDF - Injecter les propositions dans le HTML (src/components/rental-proposal/RentalProposalExport.tsx)
+
+Dans `generateDynamicContentByPage()`, modifier `dynamicContent[4]` pour ajouter les blocs propositions après les totaux.
+
+**Implémentation** :
+- Récupérer `getAllProposalsCalculations()` depuis le store
+- Générer le HTML des tableaux de proposition avec le même format visuel que l'Aperçu
+- Insérer ce HTML après le bloc "summary-box" (totaux)
+
+## Structure HTML des propositions
+
+```html
+<div class="location-proposals" style="margin-top: 16px;">
+  <!-- Proposition 1 -->
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; border: 1px solid #d1d5db;">
+    <thead>
+      <tr style="background: #f9fafb; border-bottom: 1px solid #d1d5db;">
+        <th colspan="2" style="padding: 8px; text-align: left; font-weight: 600;">Location 36 mois</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 6px 8px;">Montant investissement</td>
+        <td style="padding: 6px 8px; text-align: right;">14 484,00€ HT</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 8px;">Loyer mensuel HT</td>
+        <td style="padding: 6px 8px; text-align: right; font-weight: 600;">466,52 € HT</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!-- Proposition 2 (si présente) -->
+  <table>...</table>
+</div>
+```
 
 ## Fichiers à modifier
 
-| Fichier | Action |
-|---------|--------|
-| `src/components/rental-proposal/ProposalCard.tsx` | Restructurer en 2 Cards séparées avec les labels exacts du screenshot |
+| Fichier | Modifications |
+|---------|---------------|
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Ajouter le rendu des propositions dans `renderProductPage()` après les totaux |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Ajouter le HTML des propositions dans `dynamicContent[4]` |
 
 ## Points techniques
 
-- Le toggle "Coût locatif annuel" reste global (géré via `matriceData.showCoutLocatifAnnuel`)
-- La prop `showCoutLocatifAnnuel` contrôle l'affichage de la 5ème colonne dans la ligne 2
-- Le champ "Montant investissement HT" dans Saisie doit devenir un vrai Input (actuellement read-only)
-- Formattage des nombres avec 2 décimales et séparateur de milliers français (`,` pour décimales)
+1. **Ordre d'affichage** : Les propositions s'affichent dans l'ordre du tableau `proposals` (ordre de création/duplication)
+2. **Formatage** : Utiliser `formatNumber()` existant pour les montants (format français)
+3. **Espace** : Les propositions sont insérées entre les totaux et les éléments statiques "below" (Avantages, Conditions)
+4. **Limite visuelle** : Si 4 propositions, prévoir un espacement compact (mb-2 au lieu de mb-3)
 
+## Flux de rendu (Page 4)
+
+```text
+┌─────────────────────────────────────────────────────┐
+│  Votre offre                                        │
+├─────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────┐    │
+│  │ Désignation | Qté | P.U. HT | Total HT      │    │
+│  │ ...                                          │    │
+│  └─────────────────────────────────────────────┘    │
+│                                                     │
+│                   ┌─────────────────┐               │
+│                   │ Sous-total HT   │               │
+│                   │ Total invest    │               │
+│                   └─────────────────┘               │
+│                                                     │
+│  ┌─────────────────────────────────────────────┐    │  ← NOUVEAU
+│  │ Location 36 mois                             │    │
+│  │ Montant investissement      14 484,00€ HT   │    │
+│  │ Loyer mensuel HT               466,52 € HT  │    │
+│  └─────────────────────────────────────────────┘    │
+│                                                     │
+│  ┌─────────────────────────────────────────────┐    │  ← Si 2ème proposition
+│  │ Location 24 mois                             │    │
+│  │ Montant investissement      14 484,00€ HT   │    │
+│  │ Loyer mensuel HT               552,80 € HT  │    │
+│  └─────────────────────────────────────────────┘    │
+│                                                     │
+│  Avantages :                                        │  ← Éléments statiques
+│  • Apport en trésorerie...                         │
+│  Condition de l'offre :                            │
+│  • Les loyers sont payables...                     │
+└─────────────────────────────────────────────────────┘
+```
+
+## Estimation
+
+- Complexité : Faible
+- Impact : Aperçu (Preview) + Export PDF
+- Fichiers modifiés : 2
