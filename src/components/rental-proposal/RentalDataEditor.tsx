@@ -522,15 +522,15 @@ export function RentalDataEditor() {
           </Card>
         </TabsContent>
 
-        {/* Nos Options Tab (Page 6) */}
+        {/* Nos Options Tab (fusionnées sur Page 5) */}
         <TabsContent value="nosoptions" className="mt-4 space-y-4">
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Nos Options</CardTitle>
-                <Badge variant="secondary" className="text-xs">Page 6</Badge>
+                <Badge variant="secondary" className="text-xs">Page 5</Badge>
               </div>
-              <CardDescription>Options sélectionnables affichées sur la page 6</CardDescription>
+              <CardDescription>Options sélectionnables affichées sous les Services inclus (page 5)</CardDescription>
             </CardHeader>
           </Card>
 

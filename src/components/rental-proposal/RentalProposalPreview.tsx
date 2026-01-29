@@ -809,7 +809,7 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(4 as PDFPageNumber, elementsAbove, renderProductTableWithFlowElements);
   };
 
-  // Page 5 - Services inclus (bloc permanent + options additionnelles sélectionnées)
+  // Page 5 - Services inclus (bloc permanent + options additionnelles + Nos Options fusionnées)
   const renderServicesInclusPage = () => {
     const staticElements = getStaticPageElements(5 as PDFPageNumber);
     const pageOptions = selectedOptions.slice(0, OPTIONS_PER_PAGE);
@@ -866,6 +866,41 @@ export function RentalProposalPreview() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Nos Options - fusionnées depuis l'onglet "Nos Options" (anciennement Page 6) */}
+        {selectedNosOptions.length > 0 && (
+          <>
+            <div className="mt-4 mb-3 flex items-center gap-2">
+              <Settings className="h-4 w-4 text-foreground/70" />
+              <span className="font-semibold text-[14px]">Nos options</span>
+            </div>
+            <div className="space-y-3">
+              {selectedNosOptions.map((option) => (
+                <div key={option.id} className="border rounded overflow-hidden">
+                  <div className="bg-muted px-4 py-2 flex items-center gap-2">
+                    {/* Case vide pour signature client */}
+                    <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
+                    <span className="font-semibold text-[14px]">{option.name}</span>
+                    {option.price !== null && (
+                      <span className="ml-auto text-[11px] text-primary font-medium">
+                        {formatNumber(option.price)} €/mois
+                      </span>
+                    )}
+                  </div>
+                  {option.description && (
+                    <div className="px-4 py-3 bg-background">
+                      <ul className="text-[10px] text-muted-foreground space-y-1 list-disc list-inside">
+                        {option.description.split(',').map((item, i) => (
+                          <li key={i} className="leading-tight">{item.trim()}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     );
@@ -1030,9 +1065,9 @@ export function RentalProposalPreview() {
       return renderServicesInclusPage();
     }
     
-    // Page 6 : Nos Options
+    // Page 6 : Désormais statique (Nos Options fusionnées sur Page 5)
     if (currentPreviewPage === 6) {
-      return renderNosOptionsPage();
+      return renderGenericStaticPage(6);
     }
     
     // Pages statiques connues (si elles existent dans la version)
