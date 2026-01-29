@@ -1,92 +1,88 @@
 
-# Plan : Restaurer la structure Saisie/Données + Fonction Dupliquer
+
+# Plan : Restaurer la structure séparée Saisie / Données
 
 ## Problème identifié
 
-La modification précédente a changé la structure de l'onglet Matrice :
-- **Avant** : Un encart "Saisie" (4 champs en ligne) + un encart "Données" (valeurs calculées sur 3 lignes)
-- **Après** : Des cartes "Proposition" individuelles avec les champs de saisie et calculs fusionnés
+La structure actuelle combine "Saisie" et "Données" dans une seule Card avec des sous-sections (`<h4>`). Le screenshot montre clairement que ces deux parties doivent être des **Cards séparées** :
 
-L'utilisateur souhaite conserver la structure originale et simplement ajouter une fonction "Dupliquer".
+- **Card "Saisie"** : 4 champs modifiables en ligne (Montant invest HT, Durée, Refinancement, Marge appliquée)
+- **Card "Données"** : Valeurs calculées en lecture seule sur 3 lignes
 
-## Structure à restaurer (visible sur le screenshot)
+## Structure à implémenter (basée sur le screenshot)
 
-### Encart "Saisie" (une seule ligne de 4 champs)
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Saisie                                                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Montant invest HT │ Durée (mois)  │ Refinancement   │ Marge appliquée (%)  │
+│ [31644]           │ [36]          │ [Lixxbail 1 ▼]  │ [6]                  │
+│ (Input)           │ (Input)       │ (Select)        │ (Input)              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Données                                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Montant invest    │ Investir Margé     │ Les services...   │ Services de...│
+│ 31644,00 € HT     │ 33663,83 € HT      │ - €               │ - €           │
+│ (Read-only)       │ (Read-only)        │ (Read-only)       │ (Read-only)   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Durée    │ Coefficient │ Loyer invest msg │ Loyer mensuel HT │ [Toggle] Coût│
+│ 36 mois  │ 3.0051      │ 1011,63 €        │ 1011,63 €        │ 5,03 %       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Coût du contrat   │ Marge Loc          │                                   │
+│ 4774,68 €         │ 2019,83 €          │                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
-+------------------+------------------+------------------+------------------+
-| Montant invest HT| Durée (mois)     | Refinancement    | Marge appliquée %|
-| [31644]          | [36]             | [Lixxbail 1]     | [6]              |
-+------------------+------------------+------------------+------------------+
-                                                               [Dupliquer]
-```
 
-### Encart "Données" (valeurs calculées en lecture seule)
-```
-+------------------+------------------+------------------+------------------+
-| Montant invest   | Investir Margé   | Services loyers  | Serv loyer inclus|
-| 31644,00 € HT    | 33663,83 € HT    | - €              | - €              |
-+------------------+------------------+------------------+------------------+
-| Durée            | Coefficient      | Loyer invest msg | Loyer mensuel HT | Coût locatif [ON/OFF]
-| 36 mois          | 3.0051           | 1011,63 €        | 1011,63 €        | 5,03 %
-+------------------+------------------+------------------+------------------+
-| Coût du contrat  | Marge Loc        |
-| 4774,68 €        | 2019,83 €        |
-+------------------+------------------+
-```
-
-## Modifications prévues
-
-### Fichier : `src/components/rental-proposal/RentalDataEditor.tsx`
-
-1. **Supprimer** l'import et l'utilisation de `ProposalCard`
-2. **Restaurer la section "Saisie"** avec les 4 champs en ligne (grid-cols-4)
-3. **Restaurer la section "Données"** avec toutes les valeurs calculées organisées en 3 lignes
-4. **Ajouter un bouton "Dupliquer"** dans l'encart Saisie (coin supérieur droit de la Card)
-5. **Pour les propositions dupliquées** : Afficher des encarts Saisie/Données supplémentaires avec la même structure, numérotés (Proposition 2, 3, 4...)
-6. **Conserver les actions** : Dupliquer et Supprimer par proposition
+## Modifications à effectuer
 
 ### Fichier : `src/components/rental-proposal/ProposalCard.tsx`
 
-Supprimer ce fichier (non utilisé après refactorisation) ou le garder vide pour éviter les erreurs d'import.
+1. **Séparer en 2 Cards distinctes** au lieu d'une seule Card avec sous-sections
+2. **Card Saisie** :
+   - CardHeader avec titre "Saisie" et boutons Dupliquer/Supprimer (pour propositions multiples)
+   - 4 colonnes avec les champs Input/Select
+   - Labels : "Montant investissement HT", "Durée (mois)", "Refinancement", "Marge appliquée (%)"
 
-## Structure finale de l'onglet Matrice
+3. **Card Données** :
+   - CardHeader avec titre "Données" seul
+   - Ligne 1 (4 colonnes) : Montant investissement, Investir Margé, Les services comprennent des loyers, Services de loyer inclus
+   - Ligne 2 (5 colonnes) : Durée, Coefficient, Loyer investissement mensuel, Loyer mensuel HT (mis en avant), Coût locatif annuel (conditionnel)
+   - Ligne 3 (2 colonnes) : Coût du contrat, Marge Loc
 
-```
-+-- Proposition 1 -------------------------------------- [Dupliquer] [X] --+
-|                                                                          |
-| Saisie                                                                   |
-| +---------------+---------------+---------------+---------------+        |
-| | Mont inv HT   | Durée (mois)  | Refinancement | Marge (%)     |        |
-| | [31644]       | [36]          | [Lixxbail 1]  | [6]           |        |
-| +---------------+---------------+---------------+---------------+        |
-|                                                                          |
-| Données                                                                  |
-| +---------------+---------------+---------------+---------------+        |
-| | Mont invest   | Invest Margé  | Serv loyers   | Serv inclus   |        |
-| | 31644,00 HT   | 33663,83 HT   | - €           | - €           |        |
-| +---------------+---------------+---------------+---------------+        |
-| | Durée         | Coefficient   | Loyer inv msg | Loyer HT      | [Toggle] Coût locatif |
-| | 36 mois       | 3.0051        | 1011,63 €     | 1011,63 €     | 5,03 %  |
-| +---------------+---------------+---------------+---------------+        |
-| | Coût contrat  | Marge Loc     |                               |        |
-| | 4774,68 €     | 2019,83 €     |                               |        |
-| +---------------+---------------+-------------------------------+        |
-+--------------------------------------------------------------------------+
+4. **Labels exacts** selon le screenshot :
+   - "Montant investissement" (pas "Montant invest")
+   - "Investir Margé"
+   - "Les services comprennent des loyers"
+   - "Services de loyer inclus"
+   - "Loyer investissement mensuel"
+   - "Loyer mensuel HT"
+   - "Coût locatif annuel" (avec toggle sur la même ligne)
 
-                                        [+ Ajouter une proposition]
-```
+5. **Styling** :
+   - Champs read-only avec fond `bg-muted` et coins arrondis
+   - Valeurs affichées en noir sur fond gris clair
+   - "Loyer mensuel HT" avec fond bleu/primary pour le mettre en avant
+   - Toggle "Coût locatif annuel" positionné à droite du label (pas à côté de la valeur)
 
-## Points techniques
+### Gestion des propositions multiples
 
-- Le **Montant investissement HT** est maintenant **par proposition** (pas global), car chaque proposition peut avoir un montant différent selon le screenshot
-- Le toggle **Coût locatif annuel** reste global (affecte toutes les propositions)
-- Le bouton **Supprimer** est désactivé si une seule proposition existe
-- Maximum 4 propositions
+Pour les propositions dupliquées :
+- Les boutons Dupliquer/Supprimer restent dans le header de la Card "Saisie"
+- Un wrapper `<div>` englobe les 2 Cards pour chaque proposition
+- Un indicateur "Proposition 1", "Proposition 2" etc. apparaît si plus d'une proposition
 
-## Fichiers modifiés
+## Fichiers à modifier
 
 | Fichier | Action |
 |---------|--------|
-| `src/components/rental-proposal/RentalDataEditor.tsx` | Restaurer structure Saisie/Données, ajouter Dupliquer |
-| `src/components/rental-proposal/ProposalCard.tsx` | Refactoriser pour correspondre à la nouvelle structure |
-| `src/stores/rentalProposalStore.ts` | Ajouter `montantInvestissement` au type `MatriceProposal` si chaque proposition a son propre montant |
+| `src/components/rental-proposal/ProposalCard.tsx` | Restructurer en 2 Cards séparées avec les labels exacts du screenshot |
+
+## Points techniques
+
+- Le toggle "Coût locatif annuel" reste global (géré via `matriceData.showCoutLocatifAnnuel`)
+- La prop `showCoutLocatifAnnuel` contrôle l'affichage de la 5ème colonne dans la ligne 2
+- Le champ "Montant investissement HT" dans Saisie doit devenir un vrai Input (actuellement read-only)
+- Formattage des nombres avec 2 décimales et séparateur de milliers français (`,` pour décimales)
+
