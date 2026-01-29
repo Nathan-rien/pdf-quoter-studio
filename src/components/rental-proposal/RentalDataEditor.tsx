@@ -347,10 +347,13 @@ export function RentalDataEditor() {
               key={proposal.id}
               proposal={proposal}
               index={index}
+              totalProposals={proposals.length}
               montantInvestissement={matriceData.montantInvestissement}
               optionsPrices={getSelectedOptionsPrices()}
               canDelete={proposals.length > 1}
               showCoutLocatifAnnuel={matriceData.showCoutLocatifAnnuel}
+              onToggleCoutLocatif={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
+              onUpdateMontant={(value) => updateMatriceField('montantInvestissement', value)}
               onUpdate={(updates) => updateProposal(proposal.id, updates)}
               onDuplicate={() => duplicateProposal(proposal.id)}
               onDelete={() => deleteProposal(proposal.id)}
