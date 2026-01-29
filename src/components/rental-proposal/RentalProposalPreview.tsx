@@ -554,10 +554,6 @@ export function RentalProposalPreview() {
         <div className="grid grid-cols-2 gap-4">
           {/* Colonne gauche : Client */}
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <User className="h-3 w-3 text-primary" />
-              <span className="font-medium text-[10px]">Client</span>
-            </div>
             <div className="text-[9px] space-y-0.5">
               <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
               <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
@@ -602,10 +598,6 @@ export function RentalProposalPreview() {
           <p className="text-muted-foreground mb-6">Financière Professionnelle</p>
           
           <div className="bg-background rounded-lg p-4 shadow-sm max-w-xs mx-auto">
-            <div className="flex items-center gap-2 mb-3">
-              <User className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Client</span>
-            </div>
             <div className="text-left space-y-1 text-xs">
               <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
               <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>

@@ -238,9 +238,6 @@ export function RentalProposalExport() {
       <div class="dynamic-content" style="position: absolute; bottom: 40px; left: 12px; right: 12px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div>
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <span style="font-weight: 600; font-size: 10px;">Client</span>
-            </div>
             <div style="font-size: 9px;">
               <p style="font-weight: 600; margin: 0;">${clientData.nom || 'Nom du client'}</p>
               <p style="color: #6b7280; margin: 2px 0;">${clientData.adresse || ''}</p>
