@@ -312,7 +312,7 @@ export function RentalProposalExport() {
         <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
           <div class="summary-box" style="min-width: 180px;">
             <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
-              <span>Total investissement :</span>
+              <span>Total investissement :&nbsp;</span>
               <span>${formatNumber(matriceData.montantInvestissement)} € HT</span>
             </div>
           </div>
