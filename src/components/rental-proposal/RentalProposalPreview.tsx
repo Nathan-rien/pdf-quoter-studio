@@ -748,14 +748,9 @@ export function RentalProposalPreview() {
         {/* Totaux immédiatement après le tableau */}
         <div className="mt-2 flex justify-end">
           <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
-            <div className="flex justify-between text-[10px] mb-1 gap-3">
-              <span className="text-muted-foreground">Sous-total HT&nbsp;:</span>
-              <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
-            </div>
-            <Separator className="my-1.5" />
             <div className="flex justify-between font-semibold text-[10px] gap-3">
               <span>Total investissement&nbsp;:</span>
-              <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
+              <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
             </div>
           </div>
         </div>
@@ -781,7 +776,7 @@ export function RentalProposalPreview() {
                     </div>
                     <div className="flex justify-between px-3 py-1.5 text-[10px]">
                       <span>Loyer mensuel HT</span>
-                      <span className="font-semibold text-primary">{formatNumber(calculations.loyerMensuel)} € HT</span>
+                      <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
                     </div>
                   </div>
                 </div>

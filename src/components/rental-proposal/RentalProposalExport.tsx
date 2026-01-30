@@ -287,7 +287,7 @@ export function RentalProposalExport() {
           </tr>
           <tr>
             <td style="padding: 6px 8px;">Loyer mensuel HT</td>
-            <td style="padding: 6px 8px; text-align: right; font-weight: 600; color: #2563eb;">${formatNumber(calculations.loyerMensuel)} € HT</td>
+            <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${formatNumber(calculations.loyerMensuel)} € HT</td>
           </tr>
         </tbody>
       </table>
@@ -311,14 +311,9 @@ export function RentalProposalExport() {
         
         <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
           <div class="summary-box" style="min-width: 180px;">
-            <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
-              <span style="color: #6b7280;">Sous-total HT :</span>
-              <span style="font-weight: 600;">${formatNumber(matriceData.montantInvestissement)} €</span>
-            </div>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 6px 0;">
             <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
               <span>Total investissement :</span>
-              <span style="color: #2563eb;">${formatNumber(matriceData.montantInvestissement)} € HT</span>
+              <span>${formatNumber(matriceData.montantInvestissement)} € HT</span>
             </div>
           </div>
         </div>
@@ -401,7 +396,7 @@ export function RentalProposalExport() {
             <p style="margin: 0; color: #4b5563; font-size: 9px; white-space: pre-wrap;">${servicesInclus.description}</p>
           </div>
         </div>
-        ${selectedOptions.length > 0 ? optionsHTML : '<p style="text-align: center; padding: 12px; color: #9ca3af; font-size: 9px;">Aucune option additionnelle sélectionnée</p>'}
+        ${selectedOptions.length > 0 ? optionsHTML : ''}
         ${nosOptionsHTML}
       </div>
     `;
