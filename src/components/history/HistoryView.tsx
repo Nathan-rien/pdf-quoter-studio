@@ -10,12 +10,21 @@ import {
   Trash2,
   Loader2,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  X
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-interface ProposalExport {
+// Interface pour les données de liste (sans HTML volumineux)
+interface ProposalExportSummary {
   id: string;
   proposal_name: string;
   file_name: string;
@@ -24,29 +33,49 @@ interface ProposalExport {
   status: string;
   row_count: number;
   options_count: number;
-  pdf_html_content: string | null;
   created_at: string;
 }
 
 interface HistoryViewProps {
-  onSelectEntry?: (entry: ProposalExport) => void;
+  onSelectEntry?: (entry: ProposalExportSummary) => void;
 }
 
 export function HistoryView({ onSelectEntry }: HistoryViewProps) {
-  const [exports, setExports] = useState<ProposalExport[]>([]);
+  const [exports, setExports] = useState<ProposalExportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  
+  // États pour la visualisation
+  const [previewingEntry, setPreviewingEntry] = useState<ProposalExportSummary | null>(null);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+
+  // Charger le contenu HTML à la demande
+  const fetchHtmlContent = async (id: string): Promise<string | null> => {
+    const { data, error } = await supabase
+      .from('proposal_exports')
+      .select('pdf_html_content')
+      .eq('id', id)
+      .single();
+    
+    if (error || !data) {
+      console.error('Error fetching HTML content:', error);
+      return null;
+    }
+    return data.pdf_html_content;
+  };
 
   const fetchExports = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Sélection explicite des colonnes (exclut pdf_html_content pour éviter le timeout)
       const { data, error: fetchError } = await supabase
         .from('proposal_exports')
-        .select('*')
+        .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -74,20 +103,57 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
     }).format(new Date(dateStr));
   };
 
-  const handleDownload = async (entry: ProposalExport) => {
-    if (!entry.pdf_html_content) {
+  const handlePreview = async (entry: ProposalExportSummary) => {
+    setLoadingPreviewId(entry.id);
+    
+    try {
+      const htmlContent = await fetchHtmlContent(entry.id);
+      
+      if (!htmlContent) {
+        toast({
+          title: "Visualisation indisponible",
+          description: "Le contenu de ce document n'est plus disponible.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPreviewContent(htmlContent);
+      setPreviewingEntry(entry);
+    } catch (err) {
+      console.error('Error loading preview:', err);
       toast({
-        title: "Téléchargement indisponible",
-        description: "Le contenu de ce document n'est plus disponible.",
+        title: "Erreur",
+        description: "Impossible de charger l'aperçu.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoadingPreviewId(null);
     }
+  };
 
+  const handleClosePreview = () => {
+    setPreviewingEntry(null);
+    setPreviewContent(null);
+  };
+
+  const handleDownload = async (entry: ProposalExportSummary) => {
     setDownloadingId(entry.id);
 
     try {
-      // Ouvrir une fenêtre d'impression avec le contenu HTML sauvegardé
+      // Charger le contenu HTML à la demande
+      const htmlContent = await fetchHtmlContent(entry.id);
+      
+      if (!htmlContent) {
+        toast({
+          title: "Téléchargement indisponible",
+          description: "Le contenu de ce document n'est plus disponible.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Ouvrir une fenêtre d'impression avec le contenu HTML
       const printWindow = window.open('', '_blank', 'width=800,height=600');
       
       if (!printWindow) {
@@ -99,7 +165,7 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
         return;
       }
 
-      printWindow.document.write(entry.pdf_html_content);
+      printWindow.document.write(htmlContent);
       printWindow.document.close();
       
       printWindow.onload = () => {
@@ -124,7 +190,7 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
     }
   };
 
-  const handleDelete = async (entry: ProposalExport) => {
+  const handleDelete = async (entry: ProposalExportSummary) => {
     setDeletingId(entry.id);
 
     try {
@@ -262,20 +328,37 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {entry.status === 'success' && entry.pdf_html_content && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDownload(entry)}
-                        disabled={downloadingId === entry.id}
-                      >
-                        {downloadingId === entry.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Download className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
+                    {entry.status === 'success' && (
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handlePreview(entry)}
+                          disabled={loadingPreviewId === entry.id}
+                          title="Visualiser"
+                        >
+                          {loadingPreviewId === entry.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDownload(entry)}
+                          disabled={downloadingId === entry.id}
+                          title="Télécharger"
+                        >
+                          {downloadingId === entry.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </>
                     )}
                     <Button 
                       variant="ghost" 
@@ -283,6 +366,7 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
                       className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                       onClick={() => handleDelete(entry)}
                       disabled={deletingId === entry.id}
+                      title="Supprimer"
                     >
                       {deletingId === entry.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -311,6 +395,49 @@ export function HistoryView({ onSelectEntry }: HistoryViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de visualisation plein écran */}
+      <Dialog open={!!previewingEntry} onOpenChange={handleClosePreview}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="p-4 border-b shrink-0">
+            <div className="flex items-center justify-between pr-8">
+              <DialogTitle className="truncate">
+                {previewingEntry?.proposal_name}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                {previewingEntry && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownload(previewingEntry)}
+                    disabled={downloadingId === previewingEntry.id}
+                  >
+                    {downloadingId === previewingEntry.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    Télécharger PDF
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden bg-muted/30">
+            {previewContent ? (
+              <iframe
+                srcDoc={previewContent}
+                className="w-full h-full border-0"
+                title="Aperçu de la proposition"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
