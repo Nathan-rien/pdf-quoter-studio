@@ -749,7 +749,7 @@ export function RentalProposalPreview() {
         <div className="mt-2 flex justify-end">
           <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
             <div className="flex justify-between font-semibold text-[10px] gap-3">
-              <span>Total investissement&nbsp;:</span>
+              <span>Total investissement&nbsp;:&nbsp;</span>
               <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
             </div>
           </div>
