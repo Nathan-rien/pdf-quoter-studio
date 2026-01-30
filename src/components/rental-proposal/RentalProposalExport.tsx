@@ -385,9 +385,21 @@ export function RentalProposalExport() {
     
     dynamicContent[5] = `
       <div class="dynamic-content" style="position: absolute; left: 3%; top: 8%; width: 94%; max-height: 82%; overflow: hidden; z-index: 40;">
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
-          <h4 style="margin: 0 0 4px 0; color: #2563eb; font-size: 10px;">✓ Services inclus</h4>
-          <p style="margin: 0; color: #4b5563; font-size: 8px; white-space: pre-wrap;">${servicesInclus.description}</p>
+        <!-- Titre de page avec icône FileCheck -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
+          <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Les services inclus dans votre offre</h2>
+        </div>
+        
+        <!-- Bloc Services location -->
+        <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+          <div style="background: #f3f4f6; padding: 6px 12px; display: flex; align-items: center; gap: 8px;">
+            <div style="width: 8px; height: 16px; background: #374151; border-radius: 2px;"></div>
+            <span style="font-weight: 600; font-size: 11px;">Services location.</span>
+          </div>
+          <div style="padding: 6px 12px; background: white;">
+            <p style="margin: 0; color: #4b5563; font-size: 9px; white-space: pre-wrap;">${servicesInclus.description}</p>
+          </div>
         </div>
         ${selectedOptions.length > 0 ? optionsHTML : '<p style="text-align: center; padding: 12px; color: #9ca3af; font-size: 9px;">Aucune option additionnelle sélectionnée</p>'}
         ${nosOptionsHTML}
