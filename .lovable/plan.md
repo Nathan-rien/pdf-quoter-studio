@@ -1,79 +1,89 @@
 
+# Plan : Ajouter un titre de page et renommer l'encart Services
 
-# Plan : Cibler la règle d'héritage CSS sur le contenu riche uniquement
+## Modifications demandées
 
-## Problème identifié
+1. **Ajouter un titre en haut de la page 5** : "Les services inclus dans votre offre" avec une icône type "Fichier validé" (FileCheck)
+2. **Renommer le titre de l'encart** : "Services Inclus" → "Services location."
 
-La règle CSS ajoutée précédemment pour forcer l'héritage typographique est trop large :
-
-```css
-.page div, .page p, .page span {
-  font-size: inherit !important;
-  font-family: inherit !important;
-  line-height: inherit !important;
-}
-```
-
-Cette règle **écrase les tailles de police inline** définies individuellement sur chaque élément du template, ce qui provoque :
-- Chevauchements de texte (visible sur les pages Services et Avantages)
-- Contenu tronqué ou mal positionné
-- Perte de la fidélité WYSIWYG entre l'éditeur et le PDF
-
-## Solution
-
-1. **Limiter la portée de la règle CSS** à `.rich-text *` au lieu de `.page div, .page p, .page span`
-2. **Ajouter la classe `rich-text`** uniquement sur le wrapper du contenu texte riche
-
-Ainsi, seuls les éléments enfants du contenu HTML riche (balises générées par l'éditeur inline) hériteront des styles, sans écraser les tailles explicites définies sur les éléments du template.
-
-## Fichier à modifier
+## Fichiers à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/lib/pdf-html-generator.ts` | Ajouter classe `rich-text` + cibler la règle CSS |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Ajouter le titre de page + renommer l'encart (aperçu) |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Ajouter le titre de page + renommer l'encart (PDF exporté) |
 
 ## Détail des modifications
 
-### 1. Ajouter la classe `rich-text` au wrapper de contenu (ligne 177)
+### 1. RentalProposalPreview.tsx (lignes 810-833)
 
-```typescript
-// AVANT
-return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div style="${contentWrapperStyle}">${textContent}</div></div></div>`;
-
-// APRÈS
-return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div class="rich-text" style="${contentWrapperStyle}">${textContent}</div></div></div>`;
+**Avant :**
+```jsx
+<div className="absolute z-40" style={{...}}>
+  {/* Bloc permanent "Services inclus" - style header gris + puces */}
+  <div className="mb-2 border rounded overflow-hidden">
+    <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+      <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
+      <span className="font-semibold text-[11px]">Services Inclus</span>
+    </div>
 ```
 
-### 2. Cibler la règle CSS sur `.rich-text *` (lignes 503-507)
+**Après :**
+```jsx
+<div className="absolute z-40" style={{...}}>
+  {/* Titre de page avec icône FileCheck */}
+  <div className="mb-3 flex items-center gap-2">
+    <FileCheck className="h-5 w-5 text-primary" />
+    <h2 className="font-bold text-[14px] text-foreground">Les services inclus dans votre offre</h2>
+  </div>
 
-```css
-/* AVANT */
-.page div, .page p, .page span {
-  font-size: inherit !important;
-  font-family: inherit !important;
-  line-height: inherit !important;
-}
-
-/* APRÈS */
-.rich-text * {
-  font-size: inherit !important;
-  font-family: inherit !important;
-  line-height: inherit !important;
-}
+  {/* Bloc permanent "Services location" - style header gris + puces */}
+  <div className="mb-2 border rounded overflow-hidden">
+    <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+      <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
+      <span className="font-semibold text-[11px]">Services location.</span>
+    </div>
 ```
 
-## Comportement attendu
+### 2. RentalProposalExport.tsx (lignes 386-394)
+
+**Avant :**
+```html
+<div class="dynamic-content" style="...">
+  <div style="background: #eff6ff; ...">
+    <h4 style="...">✓ Services inclus</h4>
+```
+
+**Après :**
+```html
+<div class="dynamic-content" style="...">
+  {/* Titre de page avec icône SVG FileCheck */}
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <svg ...><!-- FileCheck icon --></svg>
+    <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Les services inclus dans votre offre</h2>
+  </div>
+  
+  <div style="background: #f3f4f6; border: 1px solid #e5e7eb; ...">
+    <div style="display: flex; align-items: center; gap: 4px; ...">
+      <div style="width: 8px; height: 16px; background: #374151; border-radius: 2px;"></div>
+      <span style="font-weight: 600; font-size: 9px;">Services location.</span>
+    </div>
+```
+
+### 3. Importer l'icône FileCheck
+
+Ajouter `FileCheck` à l'import de lucide-react dans les deux fichiers.
+
+## Résultat attendu
 
 | Élément | Avant | Après |
 |---------|-------|-------|
-| Texte avec `fontSize: 24px` | Écrasé par `inherit` → taille incorrecte | Conserve `24px` |
-| Contenu riche (htmlContent) | Parfois incorrect | Hérite correctement du parent |
-| Éléments de forme/image | Potentiellement affectés | Non affectés |
+| Titre de page | ∅ (absent) | "Les services inclus dans votre offre" + icône FileCheck |
+| Titre de l'encart | "Services Inclus" | "Services location." |
 
 ## Points techniques
 
-- La classe `.rich-text` est ajoutée uniquement sur le wrapper interne du contenu texte
-- Le sélecteur `.rich-text *` ne cible que les descendants directs du contenu riche (balises `<b>`, `<i>`, `<p>`, etc. générées par l'éditeur)
-- Les autres éléments du template (formes, images, autres textes) conservent leurs styles inline explicites
-- Restaure la parité WYSIWYG entre l'éditeur et le PDF
-
+- L'icône `FileCheck` de Lucide représente un fichier avec une coche de validation
+- Le titre de page utilise une taille de police plus grande (14px dans l'aperçu, 12px dans le PDF)
+- Le style de l'encart "Services location" reste identique (fond gris, barre verticale)
+- La modification s'applique à l'aperçu ET au PDF exporté pour garantir la cohérence
