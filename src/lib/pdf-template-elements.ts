@@ -65,7 +65,7 @@ const PAGE_1_ELEMENTS: EditableElement[] = [
   }),
   createTextElement('p1_date', 1, 'Septembre 2025', { x: 20, y: 150 }, { width: 200, height: 30 }, {
     fontSize: 20,
-    color: '#10b981',
+    color: '#ffffff',
   }),
   createTextElement('p1_client_label', 1, 'Client', { x: 20, y: 220 }, { width: 100, height: 25 }, {
     fontSize: 16,
