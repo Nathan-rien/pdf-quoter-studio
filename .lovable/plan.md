@@ -1,59 +1,151 @@
 
-Objectif
-- Faire en sorte que la date (“Janvier 2026”) apparaisse réellement en blanc (#ffffff) dans le PDF exporté (CybertekPro), même si des règles de rendu/print de Chrome tentent d’appliquer une couleur héritée/grisée.
 
-Constat (déjà vérifié côté backend)
-- La dernière version publiée du template CybertekPro (v110) contient bien l’élément date (id: element-1769773591149-y28ujlttg) avec content.color = #ffffff.
-- Le HTML généré pour l’export PDF passe par src/lib/pdf-html-generator.ts → renderTextElementToHTML().
-- La règle CSS .rich-text * { color: inherit !important; } est bien présente, mais le rendu reste gris chez vous, ce qui indique un override ailleurs (print engine / héritage / content wrapper) ou une partie du rendu qui ne reçoit pas la couleur attendue.
+# Plan : Réparer le chargement de l'historique et ajouter la visualisation
 
-Hypothèse la plus probable
-- Chrome (impression / “Enregistrer en PDF”) applique une couleur par défaut ou une normalisation sur certains nœuds (notamment quand le contenu est injecté sous forme de HTML/texte) malgré la couleur sur le wrapper parent.
-- Dans notre cas, l’élément “date” a htmlContent (même s’il n’y a pas de balises), donc le texte passe par le wrapper .rich-text, et il est possible que la couleur portée par le parent ne soit pas appliquée/prise en compte comme prévu en contexte d’impression.
+## Probleme identifie
 
-Approche de correction (robuste, “force blanche”)
-1) Forcer la couleur au niveau du wrapper .rich-text (pas seulement sur le wrapper parent)
-- Modification prévue dans src/lib/pdf-html-generator.ts, dans renderTextElementToHTML():
-  - Calculer un colorValue = content.color || '#1f2937'
-  - Appliquer colorValue explicitement sur le div .rich-text via un style inline (donc au plus près du texte affiché).
-  - Exemple de structure cible (principe) :
-    - wrapper externe (position)
-    - wrapper interne (typo, inclut color)
-    - wrapper .rich-text (doit aussi inclure color, ex: style="...; color: #ffffff;")
+L'erreur de chargement est causee par un **timeout de la base de donnees**. Les logs PostgreSQL montrent :
+```
+canceling statement due to statement timeout
+```
 
-2) Forcer “!important” côté inline (si nécessaire)
-- Comme on génère du HTML en string, on peut ajouter “color: #ffffff !important;” directement dans l’attribut style du wrapper .rich-text (et/ou du wrapper interne), ce qui est plus fort que la plupart des règles CSS de print.
-- Nota: React.CSSProperties ne supporte pas !important, mais ici on génère une string => on peut l’ajouter manuellement à la fin du style généré.
+**Cause racine** : La requete actuelle utilise `SELECT *` qui inclut la colonne `pdf_html_content`. Chaque proposition stocke environ **3.3 Mo** de HTML. Avec 50 lignes, cela represente potentiellement **165 Mo** a charger, ce qui depasse le timeout de 8 secondes.
 
-3) Sécuriser la CSS print autour de .rich-text
-- Dans le <style> de generatePDFDocumentHTML(), élargir la règle pour couvrir aussi le conteneur lui-même :
-  - .rich-text { color: inherit !important; }
-  - .rich-text, .rich-text * { color: inherit !important; } (optionnel)
-- Objectif: s’assurer que les enfants ET le conteneur suivent la couleur voulue, sans dépendre d’un héritage ambigu.
+## Solution
 
-4) Validation rapide côté UI (pour éliminer une cause “impression”)
-- Dans Chrome, lors du test, activer une fois l’option “Graphiques d’arrière-plan” pour voir si Chrome est en train de “réinterpréter” les couleurs en mode impression.
-- Même si ce n’est pas censé impacter la couleur du texte, c’est un test simple qui permet de confirmer si le problème vient du moteur d’impression plutôt que du HTML/CSS généré.
+### 1. Correction du chargement (timeout)
 
-Plan de test (acceptation)
-- Depuis le workflow, aller sur “Export final” avec le template CybertekPro.
-- Générer le PDF et vérifier la page 1 :
-  - “Janvier 2026” doit être blanc, lisible, et identique au rendu attendu (sans gris).
-- Tester 2 fois :
-  1) Impression/Enregistrer en PDF avec “Graphiques d’arrière-plan” désactivé
-  2) Impression/Enregistrer en PDF avec “Graphiques d’arrière-plan” activé
-- Résultat attendu : dans les deux cas, la date reste blanche (et on ne dépend plus d’un comportement Chrome).
+**Strategie** : Ne pas charger le contenu HTML lors du listing. Le charger uniquement a la demande (telechargement ou visualisation).
 
-Fichiers concernés (modifs prévues)
-- src/lib/pdf-html-generator.ts
-  - renderTextElementToHTML(): ajouter la couleur explicitement sur le wrapper .rich-text (et potentiellement en “!important” inline).
-  - CSS générée: ajouter .rich-text { color: inherit !important; } (et/ou étendre le sélecteur).
+| Fichier | Modification |
+|---------|--------------|
+| `src/components/history/HistoryView.tsx` | Modifier `fetchExports()` pour selectionner uniquement les colonnes necessaires (exclure `pdf_html_content`) |
 
-Risques / effets de bord
-- Faible risque : ce changement améliore la cohérence WYSIWYG de tout le rich-text en PDF.
-- Si certains contenus riches devaient volontairement contenir des couleurs internes (ex: <span style="color:red">), nos règles actuelles (héritage forcé) les neutralisent déjà. Le changement proposé ne fait que rendre ce comportement plus fiable en impression.
+**Avant** :
+```typescript
+const { data, error: fetchError } = await supabase
+  .from('proposal_exports')
+  .select('*')  // Charge ~3.3 Mo par ligne
+```
 
-Ce que je ferai juste après approbation (implémentation)
-- Appliquer les modifications ci-dessus dans src/lib/pdf-html-generator.ts.
-- Vérifier que le HTML généré pour l’élément date contient bien un “color: #ffffff” au niveau du .rich-text.
-- Relancer un export PDF depuis l’UI pour confirmer que la date n’est plus grise.
+**Apres** :
+```typescript
+const { data, error: fetchError } = await supabase
+  .from('proposal_exports')
+  .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at')
+```
+
+### 2. Fonctionnalite de visualisation
+
+Ajouter un bouton "Visualiser" (icone oeil) a cote du bouton "Telecharger" pour chaque proposition.
+
+**Comportement** :
+- Clic sur Visualiser : charge le `pdf_html_content` uniquement pour cette proposition, puis ouvre un Dialog plein ecran avec un iframe affichant le HTML
+- Clic sur Telecharger : charge le HTML puis ouvre la fenetre d'impression (comportement actuel)
+
+| Fichier | Modification |
+|---------|--------------|
+| `src/components/history/HistoryView.tsx` | Ajouter bouton Visualiser, Dialog de visualisation, fonction de chargement a la demande |
+
+### 3. Detail des modifications
+
+#### Interface ProposalExport
+```typescript
+// Nouvelle interface pour les donnees de liste (sans HTML)
+interface ProposalExportSummary {
+  id: string;
+  proposal_name: string;
+  file_name: string;
+  client_name: string | null;
+  template_name: string;
+  status: string;
+  row_count: number;
+  options_count: number;
+  created_at: string;
+}
+```
+
+#### Nouvelle fonction de chargement du contenu
+```typescript
+const fetchHtmlContent = async (id: string): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from('proposal_exports')
+    .select('pdf_html_content')
+    .eq('id', id)
+    .single();
+  
+  if (error || !data) return null;
+  return data.pdf_html_content;
+};
+```
+
+#### Etats supplementaires
+```typescript
+const [previewingEntry, setPreviewingEntry] = useState<ProposalExportSummary | null>(null);
+const [previewContent, setPreviewContent] = useState<string | null>(null);
+const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+```
+
+#### Bouton Visualiser
+```tsx
+<Button 
+  variant="ghost" 
+  size="icon"
+  className="h-8 w-8"
+  onClick={() => handlePreview(entry)}
+  disabled={loadingPreviewId === entry.id}
+>
+  {loadingPreviewId === entry.id ? (
+    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+  ) : (
+    <Eye className="h-3.5 w-3.5" />
+  )}
+</Button>
+```
+
+#### Dialog de visualisation
+```tsx
+<Dialog open={!!previewingEntry} onOpenChange={() => setPreviewingEntry(null)}>
+  <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
+    <DialogHeader className="p-4 border-b">
+      <DialogTitle>{previewingEntry?.proposal_name}</DialogTitle>
+    </DialogHeader>
+    <div className="flex-1 overflow-hidden">
+      {previewContent && (
+        <iframe
+          srcDoc={previewContent}
+          className="w-full h-full border-0"
+          title="Apercu de la proposition"
+        />
+      )}
+    </div>
+  </DialogContent>
+</Dialog>
+```
+
+## Resume des changements
+
+| Composant | Type | Description |
+|-----------|------|-------------|
+| `fetchExports()` | Correction | Select explicite sans `pdf_html_content` |
+| `fetchHtmlContent()` | Ajout | Chargement du HTML a la demande |
+| `handlePreview()` | Ajout | Ouvre la visualisation |
+| `handleDownload()` | Modification | Charge le HTML avant d'ouvrir la fenetre d'impression |
+| Dialog de visualisation | Ajout | Iframe plein ecran pour afficher le PDF HTML |
+| Bouton Eye | Ajout | Icone "oeil" pour visualiser |
+
+## Resultat attendu
+
+| Avant | Apres |
+|-------|-------|
+| Erreur de timeout a chaque chargement | Chargement rapide (~100ms) de la liste |
+| Seulement bouton Telecharger | Boutons Visualiser + Telecharger |
+| Telechargement direct (parfois lent) | Chargement du HTML uniquement a la demande |
+
+## Import a ajouter
+
+```typescript
+import { Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+```
+
