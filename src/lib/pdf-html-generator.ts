@@ -505,6 +505,7 @@ export async function generatePDFDocumentHTML(
           font-size: inherit !important;
           font-family: inherit !important;
           line-height: inherit !important;
+          color: inherit !important;
         }
         
         body {
