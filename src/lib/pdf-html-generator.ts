@@ -174,7 +174,10 @@ function renderTextElementToHTML(element: EditableElement): string {
   // Wrapper intermédiaire identique à l'Aperçu (whitespace-pre-wrap break-words)
   // Garantit la parité WYSIWYG pour le wrapping et l'héritage des styles
   // La classe "rich-text" permet de cibler l'héritage CSS uniquement sur le contenu riche
-  const contentWrapperStyle = 'white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;';
+  // IMPORTANT: On force la couleur directement sur le wrapper .rich-text avec !important
+  // pour garantir que Chrome/print engine n'override pas avec une couleur par défaut
+  const colorValue = content.color || '#1f2937';
+  const contentWrapperStyle = `white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; color: ${colorValue} !important;`;
   return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div class="rich-text" style="${contentWrapperStyle}">${textContent}</div></div></div>`;
 }
 
@@ -500,8 +503,9 @@ export async function generatePDFDocumentHTML(
         }
         
         /* Forcer l'héritage des styles typographiques dans le contenu riche UNIQUEMENT */
-        /* Ciblé sur .rich-text * pour ne pas écraser les tailles inline des autres éléments */
-        .rich-text * {
+        /* Ciblé sur .rich-text et .rich-text * pour garantir la propagation de la couleur */
+        /* IMPORTANT: Le wrapper .rich-text porte la couleur inline avec !important */
+        .rich-text, .rich-text * {
           font-size: inherit !important;
           font-family: inherit !important;
           line-height: inherit !important;
