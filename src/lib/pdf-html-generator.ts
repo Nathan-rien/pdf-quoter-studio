@@ -173,8 +173,9 @@ function renderTextElementToHTML(element: EditableElement): string {
   
   // Wrapper intermédiaire identique à l'Aperçu (whitespace-pre-wrap break-words)
   // Garantit la parité WYSIWYG pour le wrapping et l'héritage des styles
+  // La classe "rich-text" permet de cibler l'héritage CSS uniquement sur le contenu riche
   const contentWrapperStyle = 'white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;';
-  return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div style="${contentWrapperStyle}">${textContent}</div></div></div>`;
+  return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div class="rich-text" style="${contentWrapperStyle}">${textContent}</div></div></div>`;
 }
 
 /**
@@ -498,9 +499,9 @@ export async function generatePDFDocumentHTML(
           font-style: italic;
         }
         
-        /* Forcer l'héritage des styles typographiques dans le contenu riche */
-        /* Garantit que les balises HTML générées par l'éditeur héritent du fontSize parent */
-        .page div, .page p, .page span {
+        /* Forcer l'héritage des styles typographiques dans le contenu riche UNIQUEMENT */
+        /* Ciblé sur .rich-text * pour ne pas écraser les tailles inline des autres éléments */
+        .rich-text * {
           font-size: inherit !important;
           font-family: inherit !important;
           line-height: inherit !important;
