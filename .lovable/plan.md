@@ -1,112 +1,142 @@
 
-# Plan : Couleur bleu clair pour les cartes Options et plus d'espace
+# Plan : Synchroniser le total des lignes Invest avec le Montant Investissement
 
 ## Problème identifié
 
-Sur la Page 5 "Votre offre de services" :
-1. Les cartes "Nos options" ont un fond blanc/gris similaire aux autres cartes au lieu d'un bleu clair distinctif
-2. L'espacement entre la section "Services inclus" et la section "Nos options" n'est pas suffisant
+Dans l'étape "Données" du workflow Proposition, l'onglet "Invest" permet d'ajouter/modifier/supprimer des lignes produits. Chaque ligne a un champ VTN (totalHT) calculé automatiquement.
 
-## Modifications à appliquer
+**Le problème** : Le total des VTN de toutes les lignes n'est pas synchronisé avec le champ `montantInvestissement` utilisé dans l'onglet "Matrice" pour les calculs financiers (loyer mensuel, coût du contrat, marge, etc.).
 
-### 1. Appliquer un fond bleu clair à toute la carte Option
+Actuellement :
+- Import PDF → `montantInvestissement` = Total HT du PDF ✓
+- Modification d'une ligne → `totalHT` de la ligne recalculé ✓
+- Ajout d'une nouvelle ligne → `montantInvestissement` **non mis à jour** ✗
 
-| Élément | Actuel | Nouveau |
-|---------|--------|---------|
-| Carte entière (Preview) | `border rounded` (blanc) | `border rounded bg-primary/5` (bleu très léger) |
-| Header carte (Preview) | `bg-primary/10` (bleu léger) | `bg-primary/15` (bleu plus prononcé) |
-| Carte entière (Export) | `background-color: #dbeafe` | Appliquer à toute la carte avec structure cohérente |
+## Solution
 
-### 2. Augmenter l'espacement avant "Nos options"
+Ajouter une fonction utilitaire pour calculer le total des lignes et mettre à jour automatiquement `montantInvestissement` à chaque modification de `lignesData`.
 
-| Élément | Actuel | Nouveau |
-|---------|--------|---------|
-| Marge avant titre "Nos options" (Preview) | `mt-4` | `mt-6` |
-| Marge avant titre "Nos options" (Export) | `margin-top: 16px` | `margin-top: 24px` |
-
-## Fichiers à modifier
+## Fichier à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Augmenter `mt-4` → `mt-6` + ajouter fond bleu à la carte entière (lignes 867, 873, 874) |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Augmenter margin-top `16px` → `24px` + fond bleu clair cohérent (ligne 357, 363) |
+| `src/stores/rentalProposalStore.ts` | Ajouter la synchronisation du total dans `updateLigne`, `addLigne`, et `deleteLigne` |
 
 ## Détail des modifications
 
-### RentalProposalPreview.tsx
+### 1. Créer une fonction helper pour calculer le total
 
-```jsx
-// AVANT (lignes 867, 873, 874)
-<div className="mt-4 mb-1.5 flex items-center gap-2">
-...
-<div key={option.id} className="border rounded overflow-hidden">
-  <div className="bg-primary/10 px-3 py-1.5 flex items-center gap-2">
-
-// APRÈS
-<div className="mt-6 mb-1.5 flex items-center gap-2">  // mt-4 → mt-6
-...
-<div key={option.id} className="border border-primary/20 rounded overflow-hidden bg-primary/5">  // fond bleu + bordure bleue
-  <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">  // header plus bleu
+```typescript
+// Helper pour calculer le total des lignes
+const calculateLignesTotal = (lignes: PDFProductLine[]): number => {
+  return Math.round(
+    lignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+  ) / 100;
+};
 ```
 
-### RentalProposalExport.tsx
+### 2. Modifier `updateLigne` (ligne ~394)
 
-```html
-<!-- AVANT (lignes 357, 363) -->
-<div style="margin-top: 16px;">
-...
-<div style="margin-bottom: 6px; background-color: #dbeafe; border-radius: 4px; padding: 6px;">
+Après avoir recalculé le `totalHT` d'une ligne, recalculer et mettre à jour `montantInvestissement` :
 
-<!-- APRÈS -->
-<div style="margin-top: 24px;">  <!-- 16px → 24px -->
-...
-<div style="margin-bottom: 6px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; overflow: hidden;">
-  <div style="background-color: #dbeafe; padding: 6px;">  <!-- header bleu -->
+```typescript
+updateLigne: (index, updates) => {
+  set(state => {
+    const newLignes = [...state.lignesData];
+    if (newLignes[index]) {
+      newLignes[index] = { ...newLignes[index], ...updates };
+      // Recalculate totalHT if quantity or unit price changed
+      if (updates.quantite !== undefined || updates.prixUnitaire !== undefined) {
+        const ligne = newLignes[index];
+        if (ligne.prixUnitaire !== null) {
+          ligne.totalHT = Math.round(ligne.prixUnitaire * ligne.quantite * 100) / 100;
+        }
+      }
+    }
+    
+    // Recalculer le montant investissement total
+    const newMontantInvestissement = calculateLignesTotal(newLignes);
+    
+    return { 
+      lignesData: newLignes, 
+      matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+      hasUnsavedChanges: true 
+    };
+  });
+},
 ```
 
-## Palette de couleurs utilisée
+### 3. Modifier `addLigne` (ligne ~411)
 
-| Couleur Tailwind | Hex | Usage |
-|------------------|-----|-------|
-| `bg-primary/5` | `#eff6ff` (blue-50) | Fond carte Option |
-| `bg-primary/15` | `#dbeafe` (blue-100) | Header carte Option |
-| `border-primary/20` | `#bfdbfe` (blue-200) | Bordure carte Option |
-| `bg-muted` | Gris | Fond cartes Services Inclus |
+Après avoir ajouté une nouvelle ligne, recalculer le total (même si la nouvelle ligne a `totalHT: 0`, pour cohérence) :
 
-## Résultat attendu
+```typescript
+addLigne: () => {
+  set(state => {
+    const newLignes = [
+      ...state.lignesData,
+      { reference: null, designation: '', prixUnitaire: null, quantite: 1, totalHT: 0 },
+    ];
+    const newMontantInvestissement = calculateLignesTotal(newLignes);
+    
+    return {
+      lignesData: newLignes,
+      matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+      hasUnsavedChanges: true,
+    };
+  });
+},
+```
+
+### 4. Modifier `deleteLigne` (ligne ~421)
+
+Après avoir supprimé une ligne, recalculer le total :
+
+```typescript
+deleteLigne: (index) => {
+  set(state => {
+    const newLignes = state.lignesData.filter((_, i) => i !== index);
+    const newMontantInvestissement = calculateLignesTotal(newLignes);
+    
+    return {
+      lignesData: newLignes,
+      matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+      hasUnsavedChanges: true,
+    };
+  });
+},
+```
+
+## Flux de données après modification
 
 ```text
-Page 5 - Cartes avec distinction de couleur
-┌─────────────────────────────────────────────┐
-│ ┌─────────────────────────────────────────┐ │
-│ │ Services Inclus          (fond GRIS)   │ │
-│ └─────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────┐ │
-│ │ Pro-Tection              (fond GRIS)   │ │
-│ └─────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────┐ │
-│ │ Pro-Actif                (fond GRIS)   │ │
-│ └─────────────────────────────────────────┘ │
-│                                             │
-│              ↕ + espace (24px)             │
-│                                             │
-│ ⚙ Nos options                              │
-│ ┌─────────────────────────────────────────┐ │
-│ │ Pro-maintenance     (fond BLEU CLAIR)  │ │ ← Carte bleue
-│ └─────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────┐ │
-│ │ Pro-Optimisée       (fond BLEU CLAIR)  │ │ ← Carte bleue
-│ └─────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────┐ │
-│ │ Pro-Spare           (fond BLEU CLAIR)  │ │ ← Carte bleue
-│ └─────────────────────────────────────────┘ │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     Onglet "Invest"                             │
+├─────────────────────────────────────────────────────────────────┤
+│ Ligne 1: Mémoire Synology → Nb: 4 × VUN: 544 = VTN: 2176.00 €  │
+│ Ligne 2: Chassis NAS      → Nb: 2 × VUN: 1611 = VTN: 3222.00 € │
+│ Ligne 3: Disque dur       → Nb: 24 × VUN: 338 = VTN: 8112.00 € │
+│ Ligne 4: Prestation       → Nb: 2 × VUN: 487 = VTN: 974.00 €   │
+│ Ligne 5: (nouvelle)       → Nb: 1 × VUN: 500 = VTN: 500.00 €   │ ← Ajoutée
+│                                                                 │
+│                           Total affiché: 14,984.00 €            │
+└─────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ Synchronisation automatique
+┌─────────────────────────────────────────────────────────────────┐
+│                     Onglet "Matrice"                            │
+├─────────────────────────────────────────────────────────────────┤
+│ Montant investissement HT: 14,984.00 €   ← Mis à jour auto     │
+│                                                                 │
+│ Invest Margé: 15,940.43 €                                       │
+│ Loyer mensuel HT: 553.25 €                                      │
+│ Coût du contrat: 4,933.00 €                                     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Points techniques
 
-- Le fond `bg-primary/5` (#eff6ff) donne un bleu très subtil visible mais pas agressif
-- Le header `bg-primary/15` (#dbeafe) est légèrement plus prononcé pour le titre
-- La bordure `border-primary/20` (#bfdbfe) renforce la distinction avec les cartes grises
-- L'espacement `mt-6` (24px) double presque la marge pour bien séparer les sections
-- Cohérence WYSIWYG maintenue entre Preview et Export
+- L'arrondi à 2 décimales (`Math.round(x * 100) / 100`) est appliqué pour éviter les erreurs de précision floating-point
+- La synchronisation est bidirectionnelle : les modifications dans l'onglet Invest mettent à jour l'onglet Matrice
+- Le champ "Montant investissement HT" dans l'onglet Matrice reste modifiable manuellement (si l'utilisateur veut forcer une valeur différente)
+- Conforme à la mémoire `decimal-precision-handling` pour le traitement des décimales
