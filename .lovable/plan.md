@@ -1,88 +1,94 @@
 
-# Plan : Permettre la désactivation du format Liste
+# Plan : Corriger le décalage de taille de police entre l'Éditeur et le PDF
 
 ## Problème identifié
 
-Dans le panneau des propriétés de l'éditeur de template, les boutons de type de liste (Aucune, Puces, Numérotée) fonctionnent comme un groupe de boutons radio. Le problème est que lorsqu'on clique sur un bouton déjà actif (par exemple "Puces" quand le texte est déjà en mode liste à puces), rien ne se passe au lieu de désactiver le mode liste.
+Les changements de taille de police effectués dans l'éditeur de template ne sont pas reflétés correctement dans le PDF généré. En comparant les screenshots :
+- **Aperçu (image-192)** : Les textes ont des tailles cohérentes et l'espacement est correct
+- **PDF (image-191)** : Les textes se chevauchent et ont des tailles inconsistantes
 
-Actuellement le code fait :
-```jsx
-onPressedChange={() => handleListTypeChange('bullet')}
-```
+## Cause racine
 
-Le handler ignore l'état "pressed" et définit toujours le même type, empêchant la désactivation.
+Dans le générateur HTML du PDF (`pdf-html-generator.ts`), le `fontSize` est appliqué sur un wrapper parent, mais :
+
+1. Le `htmlContent` riche (balises `<b>`, `<i>`, `<div>`, `<p>`) généré par l'éditeur inline peut contenir des éléments qui ne respectent pas l'héritage de `font-size`
+2. Les navigateurs peuvent appliquer leurs styles par défaut aux éléments HTML lors de l'impression
+3. Il manque un wrapper intermédiaire avec les classes `whitespace-pre-wrap break-words` présent dans l'Aperçu React
+
+**Différence structurelle :**
+
+| Composant | Structure |
+|-----------|-----------|
+| Preview (React) | `outerDiv > innerDiv[fontSize] > wrapperDiv.whitespace-pre-wrap > content` |
+| PDF (HTML) | `outerDiv > innerDiv[fontSize] > content` ← **Wrapper manquant** |
 
 ## Solution
 
-Modifier les handlers `onPressedChange` pour qu'ils reçoivent le paramètre `pressed` et agissent en conséquence :
-- Si `pressed === true` : activer le type de liste demandé
-- Si `pressed === false` : désactiver la liste (revenir à `'none'`)
+### 1. Ajouter un wrapper intermédiaire dans le générateur PDF
+
+Modifier `renderTextElementToHTML` pour ajouter un `<div>` supplémentaire autour du contenu, comme dans l'Aperçu.
+
+### 2. Forcer l'héritage de `font-size: inherit` sur tous les éléments enfants
+
+Ajouter des règles CSS dans le document PDF pour garantir que les éléments enfants héritent du `fontSize` parent.
 
 ## Fichier à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/template-editor/ElementProperties.tsx` | Modifier les 3 handlers de Toggle pour les types de liste (lignes 557, 566, 575) |
+| `src/lib/pdf-html-generator.ts` | Ajouter le wrapper intermédiaire + règles CSS d'héritage |
 
 ## Détail des modifications
 
-### Modifier les handlers onPressedChange (lignes 553-580)
+### 1. Modifier `renderTextElementToHTML` (lignes 153-175)
 
-```jsx
-// AVANT
-<Toggle
-  size="sm"
-  pressed={textContent.listType === 'none' || !textContent.listType}
-  onPressedChange={() => handleListTypeChange('none')}
-  ...
->
-<Toggle
-  size="sm"
-  pressed={textContent.listType === 'bullet'}
-  onPressedChange={() => handleListTypeChange('bullet')}
-  ...
->
-<Toggle
-  size="sm"
-  pressed={textContent.listType === 'numbered'}
-  onPressedChange={() => handleListTypeChange('numbered')}
-  ...
->
+Ajouter un wrapper `<div>` avec les mêmes propriétés que le wrapper React :
+
+```typescript
+// AVANT (ligne 174)
+return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}">${textContent}</div></div>`;
 
 // APRÈS
-<Toggle
-  size="sm"
-  pressed={textContent.listType === 'none' || !textContent.listType}
-  onPressedChange={(pressed) => pressed && handleListTypeChange('none')}
-  ...
->
-<Toggle
-  size="sm"
-  pressed={textContent.listType === 'bullet'}
-  onPressedChange={(pressed) => handleListTypeChange(pressed ? 'bullet' : 'none')}
-  ...
->
-<Toggle
-  size="sm"
-  pressed={textContent.listType === 'numbered'}
-  onPressedChange={(pressed) => handleListTypeChange(pressed ? 'numbered' : 'none')}
-  ...
->
+// Wrapper intermédiaire identique à l'Aperçu (whitespace-pre-wrap break-words)
+const contentWrapperStyle = 'white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;';
+return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div style="${contentWrapperStyle}">${textContent}</div></div></div>`;
 ```
 
-## Comportement attendu
+### 2. Ajouter des règles CSS d'héritage forcé (lignes 483-497)
 
-| Action | Résultat |
-|--------|----------|
-| Clic sur "Puces" (inactif) | Active le mode liste à puces |
-| Clic sur "Puces" (actif) | Désactive la liste (revient à "Aucune") |
-| Clic sur "Numérotée" (inactif) | Active le mode liste numérotée |
-| Clic sur "Numérotée" (actif) | Désactive la liste (revient à "Aucune") |
-| Clic sur "Aucune" (inactif) | Active le mode sans liste |
-| Clic sur "Aucune" (déjà actif) | Pas de changement (comportement normal) |
+Dans la section `<style>` du document PDF, après les règles pour `strong, b` :
+
+```css
+/* Forcer l'héritage des styles typographiques dans le contenu riche */
+.page div, .page p, .page span {
+  font-size: inherit !important;
+  font-family: inherit !important;
+  line-height: inherit !important;
+}
+```
+
+## Aperçu du changement
+
+```text
+AVANT (PDF)
+┌──────────────────────────────────────┐
+│ outerDiv (position)                  │
+│  └─ innerDiv (fontSize: 12px)        │
+│      └─ htmlContent (taille ?)       │ ← Styles navigateur peuvent écraser
+└──────────────────────────────────────┘
+
+APRÈS (PDF)
+┌──────────────────────────────────────┐
+│ outerDiv (position)                  │
+│  └─ innerDiv (fontSize: 12px)        │
+│      └─ wrapperDiv (inherit)         │ ← Nouveau wrapper
+│          └─ htmlContent              │ ← Hérite correctement
+└──────────────────────────────────────┘
+```
 
 ## Points techniques
 
-- Le premier Toggle ("Aucune"/Minus) utilise `pressed && handleListTypeChange('none')` car on ne veut pas le désactiver (il n'y a pas de "moins que aucune liste")
-- Les deux autres Toggles utilisent `pressed ? 'type' : 'none'` pour permettre la désactivation vers le mode "none"
-- Cette modification suit le pattern standard des toggle groups où un clic sur un toggle actif le désactive
+- Le wrapper ajoute `white-space: pre-wrap; overflow-wrap: break-word;` pour correspondre aux classes Tailwind de l'Aperçu
+- Les règles CSS `font-size: inherit !important` garantissent que les éléments enfants (div, p, span générés par l'éditeur) héritent de la taille définie sur le parent
+- Pas de changement dans l'Aperçu React (déjà correct)
+- La parité WYSIWYG est restaurée entre l'éditeur et le PDF
