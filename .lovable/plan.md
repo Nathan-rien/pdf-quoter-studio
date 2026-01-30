@@ -1,49 +1,42 @@
 
 
-# Plan : Ajouter un espace après le deux-points
+# Plan : Passer la couleur du texte "mois année" en blanc
 
 ## Problème identifié
 
-Le texte "Total investissement :" n'a pas d'espace après le deux-points, ce qui donne "Total investissement :14 484,00 € HT" au lieu de "Total investissement : 14 480 € HT".
+Sur la page de couverture (Page 1), le texte de la date "Janvier 2026" est affiché en couleur verte (`#10b981`) alors qu'il devrait être en blanc pour une meilleure lisibilité sur le fond sombre.
 
-## Fichiers à modifier
+## Fichier à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Ajouter espace après le `:` |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Vérifier/ajouter espace après le `:` |
+| `src/lib/pdf-template-elements.ts` | Changer la couleur de `#10b981` à `#ffffff` |
 
-## Détail des modifications
+## Détail de la modification
 
-### 1. RentalProposalPreview.tsx (ligne 752)
+### pdf-template-elements.ts (ligne 68)
 
-```tsx
+```typescript
 // AVANT
-<span>Total investissement&nbsp;:</span>
+createTextElement('p1_date', 1, 'Septembre 2025', { x: 20, y: 150 }, { width: 200, height: 30 }, {
+  fontSize: 20,
+  color: '#10b981',  // Vert émeraude
+}),
 
 // APRÈS
-<span>Total investissement&nbsp;:&nbsp;</span>
-```
-
-L'ajout d'un `&nbsp;` (espace insécable) après le deux-points garantit l'espacement correct.
-
-### 2. RentalProposalExport.tsx (ligne 315)
-
-```html
-<!-- AVANT -->
-<span>Total investissement :</span>
-
-<!-- APRÈS -->
-<span>Total investissement :&nbsp;</span>
+createTextElement('p1_date', 1, 'Septembre 2025', { x: 20, y: 150 }, { width: 200, height: 30 }, {
+  fontSize: 20,
+  color: '#ffffff',  // Blanc
+}),
 ```
 
 ## Résultat attendu
 
 | Avant | Après |
 |-------|-------|
-| Total investissement :14 484,00 € HT | Total investissement : 14 484,00 € HT |
+| Janvier 2026 (vert `#10b981`) | Janvier 2026 (blanc `#ffffff`) |
 
 ## Point technique
 
-L'utilisation de `&nbsp;` (espace insécable) est préférable à un simple espace car elle empêche le navigateur de "collapse" l'espace lors du rendu, garantissant ainsi un affichage cohérent dans l'aperçu et le PDF.
+Cette modification s'applique aux **nouveaux templates** créés à partir de ce fichier de base. Pour les templates existants déjà enregistrés dans la base de données, la couleur du texte peut être modifiée directement dans l'éditeur de template en sélectionnant l'élément de date et en changeant sa couleur.
 
