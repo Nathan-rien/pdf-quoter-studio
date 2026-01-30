@@ -554,7 +554,7 @@ export function ElementProperties() {
                 <Toggle
                   size="sm"
                   pressed={textContent.listType === 'none' || !textContent.listType}
-                  onPressedChange={() => handleListTypeChange('none')}
+                  onPressedChange={(pressed) => pressed && handleListTypeChange('none')}
                   disabled={!isEditable}
                   aria-label="Aucune liste"
                 >
@@ -563,7 +563,7 @@ export function ElementProperties() {
                 <Toggle
                   size="sm"
                   pressed={textContent.listType === 'bullet'}
-                  onPressedChange={() => handleListTypeChange('bullet')}
+                  onPressedChange={(pressed) => handleListTypeChange(pressed ? 'bullet' : 'none')}
                   disabled={!isEditable}
                   aria-label="Liste à puces"
                 >
@@ -572,7 +572,7 @@ export function ElementProperties() {
                 <Toggle
                   size="sm"
                   pressed={textContent.listType === 'numbered'}
-                  onPressedChange={() => handleListTypeChange('numbered')}
+                  onPressedChange={(pressed) => handleListTypeChange(pressed ? 'numbered' : 'none')}
                   disabled={!isEditable}
                   aria-label="Liste numérotée"
                 >
