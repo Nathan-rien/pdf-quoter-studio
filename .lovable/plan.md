@@ -1,89 +1,124 @@
 
-# Plan : Ajouter un titre de page et renommer l'encart Services
+# Plan : Nettoyage de l'affichage des pages PDF
 
 ## Modifications demandées
 
-1. **Ajouter un titre en haut de la page 5** : "Les services inclus dans votre offre" avec une icône type "Fichier validé" (FileCheck)
-2. **Renommer le titre de l'encart** : "Services Inclus" → "Services location."
+1. **Page 5 (Votre offre)** : Supprimer la ligne "Sous-total HT"
+2. **Page Votre Offre** : Retirer les couleurs bleues automatiques (Total investissement, Loyer mensuel HT)
+3. **Page Services** : Retirer la mention "Aucune option additionnelle sélectionnée"
 
 ## Fichiers à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Ajouter le titre de page + renommer l'encart (aperçu) |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Ajouter le titre de page + renommer l'encart (PDF exporté) |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Supprimer "Sous-total HT", retirer `text-primary` |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Supprimer "Sous-total HT", retirer `color: #2563eb`, supprimer message "aucune option" |
+
+---
 
 ## Détail des modifications
 
-### 1. RentalProposalPreview.tsx (lignes 810-833)
+### 1. RentalProposalPreview.tsx
 
-**Avant :**
-```jsx
-<div className="absolute z-40" style={{...}}>
-  {/* Bloc permanent "Services inclus" - style header gris + puces */}
-  <div className="mb-2 border rounded overflow-hidden">
-    <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-      <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
-      <span className="font-semibold text-[11px]">Services Inclus</span>
-    </div>
-```
+#### Supprimer "Sous-total HT" (lignes 751-755)
 
-**Après :**
-```jsx
-<div className="absolute z-40" style={{...}}>
-  {/* Titre de page avec icône FileCheck */}
-  <div className="mb-3 flex items-center gap-2">
-    <FileCheck className="h-5 w-5 text-primary" />
-    <h2 className="font-bold text-[14px] text-foreground">Les services inclus dans votre offre</h2>
+Supprimer la div contenant "Sous-total HT" et le Separator associé :
+
+```tsx
+// AVANT
+<div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
+  <div className="flex justify-between text-[10px] mb-1 gap-3">
+    <span className="text-muted-foreground">Sous-total HT :</span>
+    <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} €</span>
   </div>
-
-  {/* Bloc permanent "Services location" - style header gris + puces */}
-  <div className="mb-2 border rounded overflow-hidden">
-    <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-      <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
-      <span className="font-semibold text-[11px]">Services location.</span>
-    </div>
-```
-
-### 2. RentalProposalExport.tsx (lignes 386-394)
-
-**Avant :**
-```html
-<div class="dynamic-content" style="...">
-  <div style="background: #eff6ff; ...">
-    <h4 style="...">✓ Services inclus</h4>
-```
-
-**Après :**
-```html
-<div class="dynamic-content" style="...">
-  {/* Titre de page avec icône SVG FileCheck */}
-  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-    <svg ...><!-- FileCheck icon --></svg>
-    <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Les services inclus dans votre offre</h2>
+  <Separator className="my-1.5" />
+  <div className="flex justify-between font-semibold text-[10px] gap-3">
+    <span>Total investissement :</span>
+    <span className="text-primary">{formatNumber(matriceData.montantInvestissement)} € HT</span>
   </div>
-  
-  <div style="background: #f3f4f6; border: 1px solid #e5e7eb; ...">
-    <div style="display: flex; align-items: center; gap: 4px; ...">
-      <div style="width: 8px; height: 16px; background: #374151; border-radius: 2px;"></div>
-      <span style="font-weight: 600; font-size: 9px;">Services location.</span>
-    </div>
+</div>
+
+// APRÈS
+<div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
+  <div className="flex justify-between font-semibold text-[10px] gap-3">
+    <span>Total investissement :</span>
+    <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
+  </div>
+</div>
 ```
 
-### 3. Importer l'icône FileCheck
+#### Retirer couleur bleue sur "Loyer mensuel HT" (ligne 784)
 
-Ajouter `FileCheck` à l'import de lucide-react dans les deux fichiers.
+```tsx
+// AVANT
+<span className="font-semibold text-primary">{formatNumber(calculations.loyerMensuel)} € HT</span>
 
-## Résultat attendu
+// APRÈS
+<span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
+```
 
-| Élément | Avant | Après |
-|---------|-------|-------|
-| Titre de page | ∅ (absent) | "Les services inclus dans votre offre" + icône FileCheck |
-| Titre de l'encart | "Services Inclus" | "Services location." |
+---
+
+### 2. RentalProposalExport.tsx
+
+#### Supprimer "Sous-total HT" (lignes 314-318)
+
+```html
+<!-- AVANT -->
+<div class="summary-box" style="min-width: 180px;">
+  <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
+    <span style="color: #6b7280;">Sous-total HT :</span>
+    <span style="font-weight: 600;">... €</span>
+  </div>
+  <hr style="...">
+  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
+    <span>Total investissement :</span>
+    <span style="color: #2563eb;">... € HT</span>
+  </div>
+</div>
+
+<!-- APRÈS -->
+<div class="summary-box" style="min-width: 180px;">
+  <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
+    <span>Total investissement :</span>
+    <span>... € HT</span>
+  </div>
+</div>
+```
+
+#### Retirer couleur bleue sur "Loyer mensuel HT" (ligne 290)
+
+```html
+<!-- AVANT -->
+<td style="padding: 6px 8px; text-align: right; font-weight: 600; color: #2563eb;">...</td>
+
+<!-- APRÈS -->
+<td style="padding: 6px 8px; text-align: right; font-weight: 600;">...</td>
+```
+
+#### Supprimer message "Aucune option additionnelle sélectionnée" (ligne 404)
+
+```tsx
+// AVANT
+${selectedOptions.length > 0 ? optionsHTML : '<p style="text-align: center; padding: 12px; color: #9ca3af; font-size: 9px;">Aucune option additionnelle sélectionnée</p>'}
+
+// APRÈS
+${selectedOptions.length > 0 ? optionsHTML : ''}
+```
+
+---
+
+## Résumé des changements
+
+| Page | Élément | Action |
+|------|---------|--------|
+| Page 5 (Votre offre) | Ligne "Sous-total HT" | Supprimée |
+| Page 5 (Votre offre) | "Total investissement" | Couleur bleue retirée |
+| Page 5 (Votre offre) | "Loyer mensuel HT" | Couleur bleue retirée |
+| Page 5 (Services) | "Aucune option additionnelle sélectionnée" | Message supprimé |
 
 ## Points techniques
 
-- L'icône `FileCheck` de Lucide représente un fichier avec une coche de validation
-- Le titre de page utilise une taille de police plus grande (14px dans l'aperçu, 12px dans le PDF)
-- Le style de l'encart "Services location" reste identique (fond gris, barre verticale)
-- La modification s'applique à l'aperçu ET au PDF exporté pour garantir la cohérence
+- Les modifications s'appliquent à l'aperçu (Preview) ET au PDF exporté pour garantir la cohérence WYSIWYG
+- Les valeurs numériques conservent leur mise en forme (gras)
+- L'encart "Total investissement" reste visible mais sans couleur bleue
