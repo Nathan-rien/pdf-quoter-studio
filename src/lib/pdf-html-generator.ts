@@ -171,7 +171,10 @@ function renderTextElementToHTML(element: EditableElement): string {
     }).join('');
   }
   
-  return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}">${textContent}</div></div>`;
+  // Wrapper intermédiaire identique à l'Aperçu (whitespace-pre-wrap break-words)
+  // Garantit la parité WYSIWYG pour le wrapping et l'héritage des styles
+  const contentWrapperStyle = 'white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;';
+  return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div style="${contentWrapperStyle}">${textContent}</div></div></div>`;
 }
 
 /**
@@ -493,6 +496,14 @@ export async function generatePDFDocumentHTML(
         }
         em, i {
           font-style: italic;
+        }
+        
+        /* Forcer l'héritage des styles typographiques dans le contenu riche */
+        /* Garantit que les balises HTML générées par l'éditeur héritent du fontSize parent */
+        .page div, .page p, .page span {
+          font-size: inherit !important;
+          font-family: inherit !important;
+          line-height: inherit !important;
         }
         
         body {
