@@ -15,7 +15,8 @@ import {
   Package, 
   Calculator, 
   Settings, 
-  CheckCircle, 
+  CheckCircle,
+  FileCheck,
   ChevronLeft,
   ChevronRight,
   Edit3,
@@ -818,11 +819,17 @@ export function RentalProposalPreview() {
           overflow: 'hidden',
         }}
       >
-        {/* Bloc permanent "Services inclus" - style header gris + puces */}
+        {/* Titre de page avec icône FileCheck */}
+        <div className="mb-3 flex items-center gap-2">
+          <FileCheck className="h-5 w-5 text-primary" />
+          <h2 className="font-bold text-[14px] text-foreground">Les services inclus dans votre offre</h2>
+        </div>
+
+        {/* Bloc permanent "Services location" - style header gris + puces */}
         <div className="mb-2 border rounded overflow-hidden">
           <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
             <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
-            <span className="font-semibold text-[11px]">Services Inclus</span>
+            <span className="font-semibold text-[11px]">Services location.</span>
           </div>
           <div className="px-3 py-1.5 bg-background">
             <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
