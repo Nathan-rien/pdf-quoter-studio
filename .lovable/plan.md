@@ -1,65 +1,12 @@
 
-# Plan : Corriger le décalage de taille de police entre l'Éditeur et le PDF
+
+# Plan : Cibler la règle d'héritage CSS sur le contenu riche uniquement
 
 ## Problème identifié
 
-Les changements de taille de police effectués dans l'éditeur de template ne sont pas reflétés correctement dans le PDF généré. En comparant les screenshots :
-- **Aperçu (image-192)** : Les textes ont des tailles cohérentes et l'espacement est correct
-- **PDF (image-191)** : Les textes se chevauchent et ont des tailles inconsistantes
-
-## Cause racine
-
-Dans le générateur HTML du PDF (`pdf-html-generator.ts`), le `fontSize` est appliqué sur un wrapper parent, mais :
-
-1. Le `htmlContent` riche (balises `<b>`, `<i>`, `<div>`, `<p>`) généré par l'éditeur inline peut contenir des éléments qui ne respectent pas l'héritage de `font-size`
-2. Les navigateurs peuvent appliquer leurs styles par défaut aux éléments HTML lors de l'impression
-3. Il manque un wrapper intermédiaire avec les classes `whitespace-pre-wrap break-words` présent dans l'Aperçu React
-
-**Différence structurelle :**
-
-| Composant | Structure |
-|-----------|-----------|
-| Preview (React) | `outerDiv > innerDiv[fontSize] > wrapperDiv.whitespace-pre-wrap > content` |
-| PDF (HTML) | `outerDiv > innerDiv[fontSize] > content` ← **Wrapper manquant** |
-
-## Solution
-
-### 1. Ajouter un wrapper intermédiaire dans le générateur PDF
-
-Modifier `renderTextElementToHTML` pour ajouter un `<div>` supplémentaire autour du contenu, comme dans l'Aperçu.
-
-### 2. Forcer l'héritage de `font-size: inherit` sur tous les éléments enfants
-
-Ajouter des règles CSS dans le document PDF pour garantir que les éléments enfants héritent du `fontSize` parent.
-
-## Fichier à modifier
-
-| Fichier | Modification |
-|---------|--------------|
-| `src/lib/pdf-html-generator.ts` | Ajouter le wrapper intermédiaire + règles CSS d'héritage |
-
-## Détail des modifications
-
-### 1. Modifier `renderTextElementToHTML` (lignes 153-175)
-
-Ajouter un wrapper `<div>` avec les mêmes propriétés que le wrapper React :
-
-```typescript
-// AVANT (ligne 174)
-return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}">${textContent}</div></div>`;
-
-// APRÈS
-// Wrapper intermédiaire identique à l'Aperçu (whitespace-pre-wrap break-words)
-const contentWrapperStyle = 'white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;';
-return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div style="${contentWrapperStyle}">${textContent}</div></div></div>`;
-```
-
-### 2. Ajouter des règles CSS d'héritage forcé (lignes 483-497)
-
-Dans la section `<style>` du document PDF, après les règles pour `strong, b` :
+La règle CSS ajoutée précédemment pour forcer l'héritage typographique est trop large :
 
 ```css
-/* Forcer l'héritage des styles typographiques dans le contenu riche */
 .page div, .page p, .page span {
   font-size: inherit !important;
   font-family: inherit !important;
@@ -67,28 +14,66 @@ Dans la section `<style>` du document PDF, après les règles pour `strong, b` :
 }
 ```
 
-## Aperçu du changement
+Cette règle **écrase les tailles de police inline** définies individuellement sur chaque élément du template, ce qui provoque :
+- Chevauchements de texte (visible sur les pages Services et Avantages)
+- Contenu tronqué ou mal positionné
+- Perte de la fidélité WYSIWYG entre l'éditeur et le PDF
 
-```text
-AVANT (PDF)
-┌──────────────────────────────────────┐
-│ outerDiv (position)                  │
-│  └─ innerDiv (fontSize: 12px)        │
-│      └─ htmlContent (taille ?)       │ ← Styles navigateur peuvent écraser
-└──────────────────────────────────────┘
+## Solution
 
-APRÈS (PDF)
-┌──────────────────────────────────────┐
-│ outerDiv (position)                  │
-│  └─ innerDiv (fontSize: 12px)        │
-│      └─ wrapperDiv (inherit)         │ ← Nouveau wrapper
-│          └─ htmlContent              │ ← Hérite correctement
-└──────────────────────────────────────┘
+1. **Limiter la portée de la règle CSS** à `.rich-text *` au lieu de `.page div, .page p, .page span`
+2. **Ajouter la classe `rich-text`** uniquement sur le wrapper du contenu texte riche
+
+Ainsi, seuls les éléments enfants du contenu HTML riche (balises générées par l'éditeur inline) hériteront des styles, sans écraser les tailles explicites définies sur les éléments du template.
+
+## Fichier à modifier
+
+| Fichier | Modification |
+|---------|--------------|
+| `src/lib/pdf-html-generator.ts` | Ajouter classe `rich-text` + cibler la règle CSS |
+
+## Détail des modifications
+
+### 1. Ajouter la classe `rich-text` au wrapper de contenu (ligne 177)
+
+```typescript
+// AVANT
+return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div style="${contentWrapperStyle}">${textContent}</div></div></div>`;
+
+// APRÈS
+return `<div style="${styleToString(outerStyle)}"><div style="${styleToString(innerStyle)}"><div class="rich-text" style="${contentWrapperStyle}">${textContent}</div></div></div>`;
 ```
+
+### 2. Cibler la règle CSS sur `.rich-text *` (lignes 503-507)
+
+```css
+/* AVANT */
+.page div, .page p, .page span {
+  font-size: inherit !important;
+  font-family: inherit !important;
+  line-height: inherit !important;
+}
+
+/* APRÈS */
+.rich-text * {
+  font-size: inherit !important;
+  font-family: inherit !important;
+  line-height: inherit !important;
+}
+```
+
+## Comportement attendu
+
+| Élément | Avant | Après |
+|---------|-------|-------|
+| Texte avec `fontSize: 24px` | Écrasé par `inherit` → taille incorrecte | Conserve `24px` |
+| Contenu riche (htmlContent) | Parfois incorrect | Hérite correctement du parent |
+| Éléments de forme/image | Potentiellement affectés | Non affectés |
 
 ## Points techniques
 
-- Le wrapper ajoute `white-space: pre-wrap; overflow-wrap: break-word;` pour correspondre aux classes Tailwind de l'Aperçu
-- Les règles CSS `font-size: inherit !important` garantissent que les éléments enfants (div, p, span générés par l'éditeur) héritent de la taille définie sur le parent
-- Pas de changement dans l'Aperçu React (déjà correct)
-- La parité WYSIWYG est restaurée entre l'éditeur et le PDF
+- La classe `.rich-text` est ajoutée uniquement sur le wrapper interne du contenu texte
+- Le sélecteur `.rich-text *` ne cible que les descendants directs du contenu riche (balises `<b>`, `<i>`, `<p>`, etc. générées par l'éditeur)
+- Les autres éléments du template (formes, images, autres textes) conservent leurs styles inline explicites
+- Restaure la parité WYSIWYG entre l'éditeur et le PDF
+
