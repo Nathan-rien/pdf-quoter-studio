@@ -404,25 +404,47 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
               }
             }
           }
-          return { lignesData: newLignes, hasUnsavedChanges: true };
+          // Recalculer le montant investissement total
+          const newMontantInvestissement = Math.round(
+            newLignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+          ) / 100;
+          return { 
+            lignesData: newLignes, 
+            matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+            hasUnsavedChanges: true 
+          };
         });
       },
 
       addLigne: () => {
-        set(state => ({
-          lignesData: [
+        set(state => {
+          const newLignes = [
             ...state.lignesData,
             { reference: null, designation: '', prixUnitaire: null, quantite: 1, totalHT: 0 },
-          ],
-          hasUnsavedChanges: true,
-        }));
+          ];
+          const newMontantInvestissement = Math.round(
+            newLignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+          ) / 100;
+          return {
+            lignesData: newLignes,
+            matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+            hasUnsavedChanges: true,
+          };
+        });
       },
 
       deleteLigne: (index) => {
-        set(state => ({
-          lignesData: state.lignesData.filter((_, i) => i !== index),
-          hasUnsavedChanges: true,
-        }));
+        set(state => {
+          const newLignes = state.lignesData.filter((_, i) => i !== index);
+          const newMontantInvestissement = Math.round(
+            newLignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+          ) / 100;
+          return {
+            lignesData: newLignes,
+            matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+            hasUnsavedChanges: true,
+          };
+        });
       },
 
       updateServicesInclus: (description) => {
