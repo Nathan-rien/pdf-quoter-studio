@@ -1,137 +1,161 @@
 
 
-# Plan : Corriger le chargement du template Grosbill dans l'aperçu de proposition
+# Plan : Etendre la palette de couleurs et optimiser l'editeur de template
 
-## Probleme identifie
+## Objectif
 
-L'aperçu de la proposition n'affiche pas le template Grosbill car le **lazy loading des pages** utilise le mauvais template.
+1. Ajouter plus de couleurs dans les palettes de l'editeur
+2. Extraire le composant ColorPicker pour eviter la duplication de code
+3. Optimiser les performances avec React.memo et useMemo
 
-**Cause racine dans `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes 120-159) :
+---
+
+## 1. Extension des palettes de couleurs
+
+### Palette texte/icones/bordures (ALLOWED_COLORS)
+Passer de **22 couleurs** a **40+ couleurs** en ajoutant :
+
+| Categorie | Couleurs ajoutees |
+|-----------|-------------------|
+| Neutres | Gris 500 (#6b7280), Gris 600 (#4b5563), Gris 700 (#374151), Gris 800 (#1f2937) |
+| Bleus | Indigo (#4f46e5), Cyan (#06b6d4), Bleu 300 (#93c5fd), Bleu 950 (#172554) |
+| Verts | Teal (#14b8a6), Lime (#84cc16), Vert 300 (#86efac), Vert 800 (#166534) |
+| Rouges/Orange | Rose fonce (#be185d), Rouge 300 (#fca5a5), Corail (#f87171) |
+| Violets/Roses | Violet 300 (#c4b5fd), Fuchsia fonce (#a21caf), Pink (#f472b6) |
+| Autres | Jaune (#eab308), Brown (#a16207), Slate (#64748b), Zinc (#71717a) |
+
+### Palette fond de forme (SHAPE_BACKGROUND_COLORS)
+Ajouter les memes nouvelles couleurs + leurs variantes pales pour un total de **50+ couleurs**.
+
+---
+
+## 2. Creation du composant ColorPicker reusable
+
+Actuellement, le code de selection de couleur est duplique **6 fois** dans ElementProperties.tsx :
+- Couleur du texte (ligne 753)
+- Couleur de l'icone (ligne 483)
+- Couleur de fond forme (ligne 957)
+- Couleur bordure (ligne 1015)
+- Couleur trait ligne (ligne 1086)
+- Couleur trait ligne (doublon) (ligne 1086)
+
+### Nouveau composant : `ColorPicker.tsx`
 
 ```typescript
-// ACTUEL - INCORRECT
-const template = getActiveTemplate();  // ← Retourne le template actif de l'ÉDITEUR (CybertekPro)
-
-// ATTENDU - CORRECT
-// Devrait utiliser activeTemplate qui est basé sur selectedTemplateId du proposal store
+interface ColorPickerProps {
+  colors: readonly { name: string; value: string; category: string }[];
+  selectedColor: string;
+  onColorChange: (color: string) => void;
+  disabled?: boolean;
+  columns?: 8 | 9 | 10;
+  size?: 'sm' | 'md';
+}
 ```
 
-## Flux du bug
+Avantages :
+- Code DRY (de ~40 lignes par grille a ~1 ligne d'appel)
+- Memoisation integree (React.memo + useMemo pour les groupes de couleurs)
+- Consistance visuelle garantie
 
-```text
-1. Utilisateur sélectionne "Grosbill" dans le workflow Proposition
-   ↓
-2. selectedTemplateId = "086b1fd6-..." (ID Grosbill) ✓
-   ↓
-3. activeTemplate (memo local) = template Grosbill ✓
-   ↓
-4. useEffect loadPages() appelle getActiveTemplate()
-   ↓
-5. getActiveTemplate() retourne le template actif de l'ÉDITEUR (CybertekPro) ✗
-   ↓
-6. Lazy loading charge les pages de CybertekPro au lieu de Grosbill ✗
-   ↓
-7. getStaticPageElements() utilise correctement activeTemplate (Grosbill)
-   mais les pages Grosbill n'ont jamais été chargées → tableau vide
-   ↓
-8. Affichage = contenu par défaut sans style du template
-```
+---
 
-## Solution
+## 3. Optimisations de performance
 
-Modifier l'effet `loadPages` pour utiliser le `activeTemplate` local (qui respecte `selectedTemplateId`) au lieu de `getActiveTemplate()` (qui renvoie le template actif de l'éditeur).
-
-## Fichier a modifier
-
-| Fichier | Modification |
-|---------|--------------|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Corriger l'effet `loadPages` pour utiliser `activeTemplate` et ajouter `selectedTemplateId` aux dépendances |
-
-## Detail des modifications
-
-### Lignes 120-159 : Corriger le lazy loading
-
-**AVANT** :
+### 3.1 Memoisation du composant ColorPicker
 ```typescript
-React.useEffect(() => {
-  const loadPages = async () => {
-    if (!hasLoaded) return;
-    if (pagesLoaded) return;
-    
-    const template = getActiveTemplate();  // ← BUG
-    if (!template) {
-      setPagesLoaded(true);
-      return;
-    }
-    
-    const version = getTemplateLatestVersion(template.id);
-    ...
-  };
-  
-  loadPages();
-}, [hasLoaded, pagesLoaded, getActiveTemplate, getTemplateLatestVersion, loadVersionPages]);
+export const ColorPicker = React.memo(function ColorPicker({...}: ColorPickerProps) {
+  const groupedColors = useMemo(() => {
+    // Grouper les couleurs par categorie une seule fois
+  }, [colors]);
+  ...
+});
 ```
 
-**APRES** :
+### 3.2 Memoisation des handlers dans ElementProperties
+Utiliser useCallback pour les handlers frequemment appeles :
 ```typescript
-React.useEffect(() => {
-  const loadPages = async () => {
-    if (!hasLoaded) return;
-    
-    // Utiliser activeTemplate (basé sur selectedTemplateId) et non getActiveTemplate()
-    if (!activeTemplate) {
-      setPagesLoaded(true);
-      return;
-    }
-    
-    const version = getTemplateLatestVersion(activeTemplate.id);
-    if (!version) {
-      setPagesLoaded(true);
-      return;
-    }
-    
-    // Si les pages ne sont pas chargées (lazy loading), les charger depuis le cloud
-    if (version.pages.length === 0) {
-      console.log('[RentalProposalPreview] Lazy loading pages for version:', version.id, 'template:', activeTemplate.name);
-      const loadedPages = await loadVersionPages(version.id);
-      
-      if (loadedPages && loadedPages.length > 0) {
-        console.log('[RentalProposalPreview] Pages loaded successfully:', loadedPages.length, 'pages');
-        setPagesLoaded(true);
-      } else {
-        console.warn('[RentalProposalPreview] No pages loaded, will retry');
-      }
-      return;
-    }
-    
-    console.log('[RentalProposalPreview] Pages already in store:', version.pages.length, 'pages');
-    setPagesLoaded(true);
-  };
-  
-  // Reset pagesLoaded si le template sélectionné change
-  setPagesLoaded(false);
-  loadPages();
-}, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
+const handleTextChange = useCallback((updates: Partial<TextContent>) => {
+  if (isEditable && textContent) {
+    updateTextContent(selectedElement.id, updates);
+  }
+}, [isEditable, textContent, updateTextContent, selectedElement?.id]);
 ```
 
-### Changements cles
+### 3.3 Virtualisation optionnelle
+Pour les grandes palettes, utiliser un scroll natif optimise avec `will-change: scroll-position`.
 
-1. **Utiliser `activeTemplate`** au lieu de `getActiveTemplate()` pour respecter le template sélectionné dans le workflow de proposition
-2. **Ajouter `activeTemplate` aux dépendances** pour déclencher un rechargement quand l'utilisateur change de template
-3. **Retirer `pagesLoaded` des dépendances** et appeler `setPagesLoaded(false)` au début de l'effet pour forcer le rechargement quand le template change
-4. **Améliorer les logs** pour indiquer quel template est chargé
+---
 
-## Resultat attendu
+## 4. Fichiers a modifier
 
-| Avant | Apres |
-|-------|-------|
-| Template Grosbill non chargé, aperçu vide avec texte par défaut | Template Grosbill correctement affiché avec tous les éléments stylisés |
-| Logs : "No version or empty pages" | Logs : "Pages loaded successfully: 8 pages" pour Grosbill |
+| Fichier | Action |
+|---------|--------|
+| `src/lib/template-styles.ts` | Etendre ALLOWED_COLORS et SHAPE_BACKGROUND_COLORS |
+| `src/components/template-editor/ColorPicker.tsx` | **Nouveau** - Composant reusable |
+| `src/components/template-editor/ElementProperties.tsx` | Remplacer les grilles inline par ColorPicker, ajouter useCallback |
+| `src/components/template-editor/index.ts` | Exporter ColorPicker |
 
-## Tests a effectuer
+---
 
-1. Accéder au workflow Proposition avec un devis importé
-2. Sélectionner le template "Proposition Commerciale GrosbillPro"
-3. Vérifier que l'aperçu affiche correctement le style Grosbill (fond coloré, logos, etc.)
-4. Vérifier que le changement de template (Cybertek ↔ Grosbill) recharge correctement les pages
+## 5. Detail des nouvelles couleurs
+
+### ALLOWED_COLORS (40 couleurs)
+
+```typescript
+// Neutres (8)
+Noir #000000, Gris 800 #1f2937, Gris 700 #374151, Gris 600 #4b5563,
+Gris 500 #6b7280, Gris 400 #9ca3af, Gris 300 #d1d5db, Blanc #ffffff
+
+// Bleus (8)
+Navy #1e3a5f, Bleu 900 #1e3b8a, Bleu 700 #1d4ed8, Bleu 500 #3b82f6,
+Bleu 400 #60a5fa, Bleu 300 #93c5fd, Sky #0ea5e9, Cyan #06b6d4
+
+// Verts (6)
+Vert 800 #166534, Emeraude #10b981, Vert 500 #22c55e, Vert 400 #4ade80,
+Teal #14b8a6, Lime #84cc16
+
+// Rouges/Orange (6)
+Rouge 800 #991b1b, Rouge 500 #ef4444, Rouge 400 #f87171, Orange #f97316,
+Ambre #f59e0b, Jaune #eab308
+
+// Violets/Roses (6)
+Violet 700 #7c3aed, Violet 500 #a855f7, Violet 400 #c084fc, Rose 500 #ec4899,
+Rose 400 #f472b6, Fuchsia #d946ef
+
+// Autres (6)
+Indigo #4f46e5, Slate #64748b, Zinc #71717a, Stone #78716c,
+Brown #a16207, Pink #db2777
+```
+
+### SHAPE_BACKGROUND_COLORS (55 couleurs)
+Toutes les couleurs ci-dessus + leurs variantes pales (50, 100, 200) + Transparent.
+
+---
+
+## 6. Interface utilisateur amelioree
+
+### Affichage par categories
+Le nouveau ColorPicker pourra grouper les couleurs par categorie avec des separateurs visuels subtils :
+
+```
+[Neutres: ● ● ● ● ● ● ● ●]
+[Bleus:   ● ● ● ● ● ● ● ●]
+[Verts:   ● ● ● ● ● ●    ]
+...
+```
+
+### Tooltip enrichi
+Afficher le nom + le code hex au survol : "Bleu 500 (#3b82f6)"
+
+---
+
+## Resume des gains
+
+| Aspect | Avant | Apres |
+|--------|-------|-------|
+| Couleurs texte | 22 | 40 |
+| Couleurs fond | 35 | 55 |
+| Lignes de code grilles | ~240 (6x40) | ~60 (6 appels) |
+| Memoisation | Aucune | Composant + handlers |
+| Consistance | Manuelle | Automatique |
 
