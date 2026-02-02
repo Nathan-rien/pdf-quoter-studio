@@ -9,7 +9,7 @@ export interface PDFProductLine {
 }
 
 export interface PDFParseResult {
-  source: 'cybertek' | 'grosbill' | 'unknown';
+  source: 'cybertek' | 'grosbill' | 'dental' | 'unknown';
   client: {
     nom: string | null;
     adresse: string | null;
@@ -42,7 +42,7 @@ export interface PDFParseResult {
   rawText?: string;
 }
 
-function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | 'unknown' {
+function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | 'dental' | 'unknown' {
   const lowerName = filename.toLowerCase();
   if (lowerName.includes('cybertek') || lowerName.includes('kedge')) {
     return 'cybertek';
@@ -50,16 +50,22 @@ function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | '
   if (lowerName.includes('grosbill') || /devis_\d+_\d+/i.test(lowerName)) {
     return 'grosbill';
   }
+  if (lowerName.includes('dental') || /devis_-_so\d+/i.test(lowerName)) {
+    return 'dental';
+  }
   return 'unknown';
 }
 
-function detectSourceFromText(text: string): 'cybertek' | 'grosbill' | 'unknown' {
+function detectSourceFromText(text: string): 'cybertek' | 'grosbill' | 'dental' | 'unknown' {
   const lowerText = text.toLowerCase();
   if (lowerText.includes('cybertek') || lowerText.includes('groupe cybertek')) {
     return 'cybertek';
   }
   if (lowerText.includes('grosbill')) {
     return 'grosbill';
+  }
+  if (lowerText.includes('3d dental store') || lowerText.includes('3ddentalstore')) {
+    return 'dental';
   }
   return 'unknown';
 }
@@ -1137,6 +1143,196 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   return result;
 }
 
+// ========== DENTAL (3D DENTAL STORE) PARSER ==========
+function parseDentalText(text: string): Partial<PDFParseResult> {
+  const result: Partial<PDFParseResult> = {
+    source: 'dental',
+    lignes: [],
+    client: { nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
+    devis: { reference: null, date: null, validite: null, numeroClient: null },
+    commercial: { nom: null, email: null },
+    location: { duree: null, loyerMensuel: null, montantTotal: null },
+    totaux: { totalHT: null, tva: null, totalTTC: null },
+  };
+
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  // === MÉTADONNÉES DEVIS ===
+  
+  // Référence devis : "Devis # SO74920" or "SO74920"
+  const refMatch = text.match(/(?:Devis\s*#?\s*)?(SO\d+)/i);
+  if (refMatch) result.devis!.reference = refMatch[1];
+  
+  // Date : "Date du devis : 10/12/2025" or "Date du devis 10/12/2025"
+  const dateMatch = text.match(/Date\s+du\s+devis\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if (dateMatch) result.devis!.date = dateMatch[1];
+  
+  // Échéance : "Echéance : 19/12/2025"
+  const echeanceMatch = text.match(/[EÉ]ch[eé]ance\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if (echeanceMatch) result.devis!.validite = echeanceMatch[1];
+  
+  // Référence client : "Référence Client : 6500"
+  const clientNumMatch = text.match(/R[eé]f[eé]rence\s+Client\s*:?\s*(\d+)/i);
+  if (clientNumMatch) result.devis!.numeroClient = clientNumMatch[1];
+  
+  // Commercial : "Vendeur : Ambre-Lise SAVOÏA"
+  const vendeurMatch = text.match(/Vendeur\s*:?\s*([A-Za-zÀ-ÿ\s\-']+?)(?=\s*(?:Référence|Date|Devis|$|\n))/i);
+  if (vendeurMatch) result.commercial!.nom = vendeurMatch[1].trim();
+
+  // === INFORMATIONS CLIENT ===
+  
+  // Look for client name block - typically "CABINET DENTAIRE DR..." or company name in uppercase
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Skip 3D DENTAL STORE header and metadata lines
+    if (/3D\s*DENTAL\s*STORE|Devis\s*#|Date\s+du\s+devis|Vendeur|Description|Quantité|Montant/i.test(line)) continue;
+    
+    // Client name pattern: all uppercase, contains typical client keywords
+    if (!result.client!.nom && /^(CABINET|DR\b|DOCTEUR|CLINIQUE|CENTRE|SELARL|SCP|SCM)/i.test(line)) {
+      result.client!.nom = line.trim();
+      
+      // Look for address in following lines
+      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+        const nextLine = lines[j];
+        
+        // Address line (starts with number or contains street keywords)
+        if (!result.client!.adresse && /^\d+\s+|RUE|AVENUE|BOULEVARD|PLACE|CHEMIN|COURS/i.test(nextLine)) {
+          result.client!.adresse = nextLine.trim();
+          continue;
+        }
+        
+        // Postal code + City
+        const cpMatch = nextLine.match(/^(\d{5})\s+(.+?)(?:\s+France)?$/i);
+        if (cpMatch) {
+          result.client!.codePostal = cpMatch[1];
+          result.client!.ville = cpMatch[2].trim();
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  // === LIGNES PRODUITS ===
+  
+  // Dental format has amounts with patterns like:
+  // "11 000,00 €" for HT amounts
+  // "13 200,00 €" for TTC amounts
+  // Quantities are formatted as "1,000 Unité(s)"
+  
+  const money = '([\\d\\s]+(?:[,.]\\d{2,3})?)';
+  
+  // Pattern for product lines with quantities
+  // Format: Description ... 1,000 Unité(s) ... 11 000,00 € ... 13 200,00 €
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Skip headers and totals
+    if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Informatique|Livraison|Formation|Quantité|Prix)/i.test(line)) continue;
+    if (/Incluse|Inclus/i.test(line) && /0[,.]00/i.test(line)) continue;
+    
+    // Try to match product line with quantity pattern "X,XXX Unité(s)"
+    const qtyMatch = line.match(/(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i);
+    if (!qtyMatch) continue;
+    
+    // Extract amounts from the line (look for € symbols)
+    const amountMatches = [...line.matchAll(/([\d\s]+[,.][\d]{2})\s*€/g)];
+    if (amountMatches.length < 1) continue;
+    
+    // Get quantity
+    const qtyRaw = qtyMatch[1].replace(',', '.');
+    const qty = Math.round(parseFloat(qtyRaw)) || 1;
+    
+    // Get HT amount (typically the second-to-last € amount, or the last one if only 2)
+    // Format: PU HT | TVA% | Montant HT | Montant TTC
+    let totalHT = 0;
+    let prixUnitaire: number | null = null;
+    
+    if (amountMatches.length >= 2) {
+      // Second-to-last is usually Montant HT
+      const htIdx = amountMatches.length >= 3 ? amountMatches.length - 2 : 0;
+      totalHT = parseNumber(amountMatches[htIdx][1]) || 0;
+      
+      // First amount might be unit price
+      if (amountMatches.length >= 3) {
+        prixUnitaire = parseNumber(amountMatches[0][1]);
+      }
+    } else if (amountMatches.length === 1) {
+      totalHT = parseNumber(amountMatches[0][1]) || 0;
+    }
+    
+    // Extract designation (text before quantity)
+    const qtyIndex = line.indexOf(qtyMatch[0]);
+    let designation = line.substring(0, qtyIndex).trim();
+    
+    // Extract reference if present (e.g., "[OF-CAB]" at the start)
+    let reference: string | null = null;
+    const refMatch = designation.match(/^\[([A-Z0-9\-]+)\]\s*/i);
+    if (refMatch) {
+      reference = refMatch[1];
+      designation = designation.substring(refMatch[0].length).trim();
+    }
+    
+    // Skip if no valid data
+    if (!designation || totalHT <= 0) continue;
+    
+    // Skip totals that got matched
+    if (/Sous-total|Montant\s+hors|Total/i.test(designation)) continue;
+    
+    result.lignes!.push({
+      reference,
+      designation,
+      quantite: qty,
+      prixUnitaire: prixUnitaire || (qty > 0 ? Math.round((totalHT / qty) * 100) / 100 : null),
+      totalHT,
+    });
+  }
+
+  // === TOTAUX ===
+  
+  // Look for total amounts at the end of the document
+  // "Montant hors taxes 12 666,00 €"
+  // "Taxes 2 533,20 €"
+  // "Total 15 199,20 €"
+  
+  const totalHTMatch = text.match(/Montant\s+hors\s+taxes[\s\n]*([\d\s]+[,.][\d]{2})\s*€/i);
+  if (totalHTMatch) {
+    result.totaux!.totalHT = parseNumber(totalHTMatch[1]);
+  }
+  
+  // Taxes (TVA)
+  const taxesMatch = text.match(/^Taxes[\s\n]*([\d\s]+[,.][\d]{2})\s*€/im);
+  if (taxesMatch) {
+    result.totaux!.tva = parseNumber(taxesMatch[1]);
+  }
+  
+  // Total TTC - careful not to match "Montant TTC" column headers
+  // Look for standalone "Total" followed by amount
+  const totalTTCMatch = text.match(/^Total[\s\n]+([\d\s]+[,.][\d]{2})\s*€/im);
+  if (totalTTCMatch) {
+    result.totaux!.totalTTC = parseNumber(totalTTCMatch[1]);
+  }
+  
+  // Fallback: Calculate from extracted lines if totals not found
+  if (result.totaux!.totalHT === null && result.lignes!.length > 0) {
+    const sumHT = result.lignes!.reduce((s, l) => s + (l.totalHT || 0), 0);
+    result.totaux!.totalHT = Math.round(sumHT * 100) / 100;
+    result.totaux!.tva = Math.round(sumHT * 0.20 * 100) / 100;
+    result.totaux!.totalTTC = Math.round(sumHT * 1.20 * 100) / 100;
+  }
+
+  console.log('[Dental Parser] Extracted:', {
+    devis: result.devis,
+    client: result.client,
+    commercial: result.commercial,
+    lignesCount: result.lignes?.length,
+    totaux: result.totaux,
+  });
+
+  return result;
+}
+
 // Extract text using pdfjs-dist legacy build (v3.x - no top-level await)
 async function extractTextWithPdfJs(file: File): Promise<string> {
   try {
@@ -1241,6 +1437,8 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
       parsedData = parseCybertekText(rawText);
     } else if (source === 'grosbill') {
       parsedData = parseGrosbillText(rawText);
+    } else if (source === 'dental') {
+      parsedData = parseDentalText(rawText);
     }
     
     console.log('PDF Parser - Parsed data:', parsedData);

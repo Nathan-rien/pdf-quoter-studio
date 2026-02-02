@@ -59,7 +59,7 @@ export interface OptionService {
 interface PDFImportStatus {
   isImported: boolean;
   fileName: string | null;
-  source: 'cybertek' | 'grosbill' | 'unknown' | null;
+  source: 'cybertek' | 'grosbill' | 'dental' | 'unknown' | null;
   importDate: string | null; // Changed to string for JSON serialization
 }
 
