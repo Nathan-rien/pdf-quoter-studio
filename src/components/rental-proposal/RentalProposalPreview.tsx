@@ -721,13 +721,13 @@ export function RentalProposalPreview() {
         className="absolute bg-white"
         style={{
           left: '3%',
-          top: '15%',
+          top: '10%',
           width: '94%',
         }}
       >
         {/* Tableau des produits */}
         <div className="border rounded overflow-hidden">
-          <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1.5 text-[10px] font-medium">
+          <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[10px] font-medium">
             <div className="col-span-6">Désignation</div>
             <div className="col-span-2 text-center">Qté</div>
             <div className="col-span-2 text-right">P.U. HT</div>
@@ -736,7 +736,7 @@ export function RentalProposalPreview() {
           
           <div className="divide-y divide-muted/50">
             {pageLines.map((ligne, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-1 px-2 py-1 text-[9px] items-start">
+              <div key={idx} className="grid grid-cols-12 gap-1 px-2 py-0.5 text-[9px] items-start">
                 <div className="col-span-6 break-words whitespace-normal leading-snug">{ligne.designation || '-'}</div>
                 <div className="col-span-2 text-center">{ligne.quantite}</div>
                 <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
@@ -747,8 +747,8 @@ export function RentalProposalPreview() {
         </div>
         
         {/* Totaux immédiatement après le tableau */}
-        <div className="mt-2 flex justify-end">
-          <div className="bg-primary/5 rounded-lg p-3 min-w-[180px]">
+        <div className="mt-1 flex justify-end">
+          <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
             <div className="flex justify-between font-semibold text-[10px] gap-3">
               <span>Total investissement&nbsp;:&nbsp;</span>
               <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
@@ -762,20 +762,20 @@ export function RentalProposalPreview() {
           if (allProposals.length === 0) return null;
           
           return (
-            <div className="mt-4 space-y-3">
+            <div className="mt-2 space-y-2">
               {allProposals.map(({ proposal, calculations }) => (
                 <div key={proposal.id} className="border rounded overflow-hidden">
-                  <div className="bg-muted px-3 py-2">
+                  <div className="bg-muted px-3 py-1.5">
                     <span className="font-semibold text-[11px]">
                       Location {proposal.duree} mois
                     </span>
                   </div>
                   <div className="divide-y divide-border">
-                    <div className="flex justify-between px-3 py-1.5 text-[10px]">
+                    <div className="flex justify-between px-3 py-1 text-[10px]">
                       <span>Montant investissement</span>
                       <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} € HT</span>
                     </div>
-                    <div className="flex justify-between px-3 py-1.5 text-[10px]">
+                    <div className="flex justify-between px-3 py-1 text-[10px]">
                       <span>Loyer mensuel HT</span>
                       <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
                     </div>
@@ -788,7 +788,7 @@ export function RentalProposalPreview() {
         
         {/* Éléments statiques "en-dessous" rendus en flux relatif */}
         {elementsBelow.length > 0 && (
-          <div className="mt-4">
+          <div className="mt-2">
             {elementsBelow.map(el => renderFlowElement(el))}
           </div>
         )}
