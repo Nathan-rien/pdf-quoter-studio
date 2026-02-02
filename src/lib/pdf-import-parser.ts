@@ -50,7 +50,8 @@ function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | '
   if (lowerName.includes('grosbill') || /devis_\d+_\d+/i.test(lowerName)) {
     return 'grosbill';
   }
-  if (lowerName.includes('dental') || /devis_-_so\d+/i.test(lowerName)) {
+  // FIXED: Support "Devis - SO74920.pdf" (spaces+dashes) and "Devis_-_SO74920.pdf" (underscores)
+  if (lowerName.includes('dental') || /devis[\s_-]+so\d+/i.test(lowerName)) {
     return 'dental';
   }
   return 'unknown';
@@ -1161,112 +1162,110 @@ interface ExtractedTextResult {
 
 function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
   const products: PDFProductLine[] = [];
-  const Y_TOLERANCE = 8; // Increased tolerance for better row grouping
+  const Y_TOLERANCE = 8;
   
   // 1. Group items by Y coordinate (into rows)
   const rowMap = new Map<number, TextItemWithCoords[]>();
   
   for (const item of items) {
     if (!item.str.trim()) continue;
-    
-    // Normalize Y with tolerance
     const normalizedY = Math.round(item.y / Y_TOLERANCE) * Y_TOLERANCE;
-    
-    if (!rowMap.has(normalizedY)) {
-      rowMap.set(normalizedY, []);
-    }
+    if (!rowMap.has(normalizedY)) rowMap.set(normalizedY, []);
     rowMap.get(normalizedY)!.push(item);
   }
   
-  // 2. Sort rows by Y (top to bottom = Y descending in PDF coordinates)
+  // 2. Sort rows by Y (top to bottom = Y descending)
   const sortedRows = Array.from(rowMap.entries())
     .sort((a, b) => b[0] - a[0])
     .map(([_, rowItems]) => rowItems.sort((a, b) => a.x - b.x));
   
   console.log('[Dental Column Parser] Rows detected:', sortedRows.length);
   
-  // 3. Find column boundaries by analyzing X positions
-  // Look for rows that contain "Unité(s)" to identify product rows
-  const productRows: typeof sortedRows = [];
-  
+  // 3. Process each row, using "Unité(s)" as dynamic column boundary
   for (const row of sortedRows) {
     const rowText = row.map(i => i.str).join(' ');
     
-    // Skip headers, totals, and section labels
+    // Skip headers, totals, section labels
     if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Quantité|Prix|Informatique|Livraison|Formation)/i.test(rowText)) continue;
     if (/Incluse|Inclus/i.test(rowText) && /0[,.]00/i.test(rowText)) continue;
     
-    // Check if this row contains quantity pattern "X,XXX Unité(s)"
-    if (/\d+[,.]?\d*\s*Unit[eé]\(?s?\)?/i.test(rowText)) {
-      productRows.push(row);
-    }
-  }
-  
-  console.log('[Dental Column Parser] Product rows found:', productRows.length);
-  
-  // 4. Process each product row using X coordinates to identify columns
-  // Dental PDF typical column X positions (approximate):
-  // - Description: 35-280
-  // - Quantity: 290-360
-  // - Prix unitaire: 360-420
-  // - Taxes %: 420-460
-  // - Montant HT: 460-520
-  // - Montant TTC: 520-580
-  
-  for (const row of productRows) {
+    // Must contain quantity pattern "X,XXX Unité(s)"
+    if (!/\d+[,.]?\d*\s*Unit[eé]\(?s?\)?/i.test(rowText)) continue;
+    
+    // 4. Find the "Unité(s)" item to use as column boundary
+    const uniteIndex = row.findIndex(item => /unit[eé]\(?s?\)?/i.test(item.str));
+    if (uniteIndex === -1) continue;
+    
+    console.log('[Dental Row]', row.map(i => `[${Math.round(i.x)}] "${i.str}"`).join(' | '));
+    
+    // 5. Extract data based on position relative to "Unité(s)"
     let descriptionParts: string[] = [];
     let reference: string | null = null;
     let quantite = 1;
-    let prixUnitaire: number | null = null;
-    let montantHT = 0;
     
-    // Sort items by X to process left-to-right
-    const sortedItems = [...row].sort((a, b) => a.x - b.x);
-    
-    // Log row for debugging
-    console.log('[Dental Row]', sortedItems.map(i => `[${Math.round(i.x)}] "${i.str}"`).join(' | '));
-    
-    for (const item of sortedItems) {
-      const x = item.x;
+    // Items BEFORE "Unité(s)" index are description
+    for (let i = 0; i < uniteIndex; i++) {
+      const item = row[i];
       const text = item.str.trim();
       
-      // Description column (leftmost, typically X < 280)
-      if (x < 280) {
-        // Check for reference pattern [XXX-YYY] at start
-        const refMatch = text.match(/^\[([A-Z0-9\-]+)\]\s*/i);
-        if (refMatch) {
-          reference = refMatch[1];
-          const remainder = text.substring(refMatch[0].length).trim();
-          if (remainder) descriptionParts.push(remainder);
-        } else {
-          descriptionParts.push(text);
-        }
+      // Exclude standalone quantity numbers (e.g., "1,000" just before Unité(s))
+      if (/^\d+[,.]?\d*$/.test(text)) {
+        const qtyMatch = text.match(/^(\d+)/);
+        if (qtyMatch) quantite = parseInt(qtyMatch[1], 10) || 1;
+        continue;
       }
-      // Quantity column (X around 290-360)
-      else if (x >= 280 && x < 360) {
-        const qtyMatch = text.match(/(\d+)[,.]?(\d*)/);
-        if (qtyMatch) {
-          // Handle "1,000" format (quantity with decimal comma)
-          const intPart = parseInt(qtyMatch[1], 10) || 1;
-          quantite = intPart;
-        }
+      
+      // Check for reference pattern [XXX-YYY]
+      const refMatch = text.match(/^\[([A-Z0-9\-]+)\]\s*/i);
+      if (refMatch) {
+        reference = refMatch[1];
+        const remainder = text.substring(refMatch[0].length).trim();
+        if (remainder) descriptionParts.push(remainder);
+      } else {
+        descriptionParts.push(text);
       }
-      // Prix unitaire column (X around 360-420)
-      else if (x >= 360 && x < 420) {
-        const pu = parseNumber(text);
-        if (pu !== null) prixUnitaire = pu;
-      }
-      // Skip taxes column (X around 420-460)
-      // Montant HT column (X around 460-520)
-      else if (x >= 455 && x < 520) {
-        const ht = parseNumber(text);
-        if (ht !== null && ht > 0) montantHT = ht;
-      }
-      // Montant TTC column (X >= 520) - skip, we use HT
     }
     
-    // Clean up designation
-    const designation = descriptionParts.join(' ').replace(/\s+/g, ' ').trim();
+    // 6. Collect ALL € amounts from the row (after Unité(s))
+    // Dental format: [Prix unitaire, Taxes %, Montant HT, Montant TTC]
+    // We want Montant HT = second-to-last large amount
+    const euroAmounts: number[] = [];
+    
+    for (const item of row) {
+      // Look for € amounts or large numbers
+      if (/€/.test(item.str)) {
+        const parsed = parseNumber(item.str);
+        // Filter out tiny amounts and tax rates
+        if (parsed !== null && parsed > 50) {
+          euroAmounts.push(parsed);
+        }
+      } else {
+        // Also check for amounts without € symbol (some PDFs)
+        const numMatch = item.str.match(/^[\d\s]+[,.][\d]{2,3}$/);
+        if (numMatch) {
+          const parsed = parseNumber(item.str);
+          if (parsed !== null && parsed > 50) {
+            euroAmounts.push(parsed);
+          }
+        }
+      }
+    }
+    
+    // In Dental format: [Prix unitaire, Montant HT, Montant TTC]
+    // We want Montant HT (second-to-last or first if only one)
+    let montantHT = 0;
+    if (euroAmounts.length >= 2) {
+      montantHT = euroAmounts[euroAmounts.length - 2]; // Second to last = HT
+    } else if (euroAmounts.length === 1) {
+      montantHT = euroAmounts[0];
+    }
+    
+    // 7. Clean up designation
+    const designation = descriptionParts
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\d+[,.]?\d*\s*$/, '') // Remove trailing quantity numbers
+      .trim();
     
     // Only add if we have valid data
     if (designation && montantHT > 0) {
@@ -1274,11 +1273,11 @@ function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
         reference,
         designation,
         quantite,
-        prixUnitaire: prixUnitaire || (quantite > 0 ? Math.round((montantHT / quantite) * 100) / 100 : null),
+        prixUnitaire: quantite > 0 ? Math.round((montantHT / quantite) * 100) / 100 : null,
         totalHT: montantHT,
       });
       
-      console.log('[Dental Product]', { reference, designation, quantite, prixUnitaire, montantHT });
+      console.log('[Dental Product]', { reference, designation, quantite, totalHT: montantHT, euroAmounts });
     }
   }
   
