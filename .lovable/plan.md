@@ -1,151 +1,137 @@
 
 
-# Plan : Réparer le chargement de l'historique et ajouter la visualisation
+# Plan : Corriger le chargement du template Grosbill dans l'aperçu de proposition
 
 ## Probleme identifie
 
-L'erreur de chargement est causee par un **timeout de la base de donnees**. Les logs PostgreSQL montrent :
-```
-canceling statement due to statement timeout
+L'aperçu de la proposition n'affiche pas le template Grosbill car le **lazy loading des pages** utilise le mauvais template.
+
+**Cause racine dans `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes 120-159) :
+
+```typescript
+// ACTUEL - INCORRECT
+const template = getActiveTemplate();  // ← Retourne le template actif de l'ÉDITEUR (CybertekPro)
+
+// ATTENDU - CORRECT
+// Devrait utiliser activeTemplate qui est basé sur selectedTemplateId du proposal store
 ```
 
-**Cause racine** : La requete actuelle utilise `SELECT *` qui inclut la colonne `pdf_html_content`. Chaque proposition stocke environ **3.3 Mo** de HTML. Avec 50 lignes, cela represente potentiellement **165 Mo** a charger, ce qui depasse le timeout de 8 secondes.
+## Flux du bug
+
+```text
+1. Utilisateur sélectionne "Grosbill" dans le workflow Proposition
+   ↓
+2. selectedTemplateId = "086b1fd6-..." (ID Grosbill) ✓
+   ↓
+3. activeTemplate (memo local) = template Grosbill ✓
+   ↓
+4. useEffect loadPages() appelle getActiveTemplate()
+   ↓
+5. getActiveTemplate() retourne le template actif de l'ÉDITEUR (CybertekPro) ✗
+   ↓
+6. Lazy loading charge les pages de CybertekPro au lieu de Grosbill ✗
+   ↓
+7. getStaticPageElements() utilise correctement activeTemplate (Grosbill)
+   mais les pages Grosbill n'ont jamais été chargées → tableau vide
+   ↓
+8. Affichage = contenu par défaut sans style du template
+```
 
 ## Solution
 
-### 1. Correction du chargement (timeout)
+Modifier l'effet `loadPages` pour utiliser le `activeTemplate` local (qui respecte `selectedTemplateId`) au lieu de `getActiveTemplate()` (qui renvoie le template actif de l'éditeur).
 
-**Strategie** : Ne pas charger le contenu HTML lors du listing. Le charger uniquement a la demande (telechargement ou visualisation).
-
-| Fichier | Modification |
-|---------|--------------|
-| `src/components/history/HistoryView.tsx` | Modifier `fetchExports()` pour selectionner uniquement les colonnes necessaires (exclure `pdf_html_content`) |
-
-**Avant** :
-```typescript
-const { data, error: fetchError } = await supabase
-  .from('proposal_exports')
-  .select('*')  // Charge ~3.3 Mo par ligne
-```
-
-**Apres** :
-```typescript
-const { data, error: fetchError } = await supabase
-  .from('proposal_exports')
-  .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at')
-```
-
-### 2. Fonctionnalite de visualisation
-
-Ajouter un bouton "Visualiser" (icone oeil) a cote du bouton "Telecharger" pour chaque proposition.
-
-**Comportement** :
-- Clic sur Visualiser : charge le `pdf_html_content` uniquement pour cette proposition, puis ouvre un Dialog plein ecran avec un iframe affichant le HTML
-- Clic sur Telecharger : charge le HTML puis ouvre la fenetre d'impression (comportement actuel)
+## Fichier a modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/history/HistoryView.tsx` | Ajouter bouton Visualiser, Dialog de visualisation, fonction de chargement a la demande |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Corriger l'effet `loadPages` pour utiliser `activeTemplate` et ajouter `selectedTemplateId` aux dépendances |
 
-### 3. Detail des modifications
+## Detail des modifications
 
-#### Interface ProposalExport
+### Lignes 120-159 : Corriger le lazy loading
+
+**AVANT** :
 ```typescript
-// Nouvelle interface pour les donnees de liste (sans HTML)
-interface ProposalExportSummary {
-  id: string;
-  proposal_name: string;
-  file_name: string;
-  client_name: string | null;
-  template_name: string;
-  status: string;
-  row_count: number;
-  options_count: number;
-  created_at: string;
-}
-```
-
-#### Nouvelle fonction de chargement du contenu
-```typescript
-const fetchHtmlContent = async (id: string): Promise<string | null> => {
-  const { data, error } = await supabase
-    .from('proposal_exports')
-    .select('pdf_html_content')
-    .eq('id', id)
-    .single();
+React.useEffect(() => {
+  const loadPages = async () => {
+    if (!hasLoaded) return;
+    if (pagesLoaded) return;
+    
+    const template = getActiveTemplate();  // ← BUG
+    if (!template) {
+      setPagesLoaded(true);
+      return;
+    }
+    
+    const version = getTemplateLatestVersion(template.id);
+    ...
+  };
   
-  if (error || !data) return null;
-  return data.pdf_html_content;
-};
+  loadPages();
+}, [hasLoaded, pagesLoaded, getActiveTemplate, getTemplateLatestVersion, loadVersionPages]);
 ```
 
-#### Etats supplementaires
+**APRES** :
 ```typescript
-const [previewingEntry, setPreviewingEntry] = useState<ProposalExportSummary | null>(null);
-const [previewContent, setPreviewContent] = useState<string | null>(null);
-const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+React.useEffect(() => {
+  const loadPages = async () => {
+    if (!hasLoaded) return;
+    
+    // Utiliser activeTemplate (basé sur selectedTemplateId) et non getActiveTemplate()
+    if (!activeTemplate) {
+      setPagesLoaded(true);
+      return;
+    }
+    
+    const version = getTemplateLatestVersion(activeTemplate.id);
+    if (!version) {
+      setPagesLoaded(true);
+      return;
+    }
+    
+    // Si les pages ne sont pas chargées (lazy loading), les charger depuis le cloud
+    if (version.pages.length === 0) {
+      console.log('[RentalProposalPreview] Lazy loading pages for version:', version.id, 'template:', activeTemplate.name);
+      const loadedPages = await loadVersionPages(version.id);
+      
+      if (loadedPages && loadedPages.length > 0) {
+        console.log('[RentalProposalPreview] Pages loaded successfully:', loadedPages.length, 'pages');
+        setPagesLoaded(true);
+      } else {
+        console.warn('[RentalProposalPreview] No pages loaded, will retry');
+      }
+      return;
+    }
+    
+    console.log('[RentalProposalPreview] Pages already in store:', version.pages.length, 'pages');
+    setPagesLoaded(true);
+  };
+  
+  // Reset pagesLoaded si le template sélectionné change
+  setPagesLoaded(false);
+  loadPages();
+}, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
 ```
 
-#### Bouton Visualiser
-```tsx
-<Button 
-  variant="ghost" 
-  size="icon"
-  className="h-8 w-8"
-  onClick={() => handlePreview(entry)}
-  disabled={loadingPreviewId === entry.id}
->
-  {loadingPreviewId === entry.id ? (
-    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-  ) : (
-    <Eye className="h-3.5 w-3.5" />
-  )}
-</Button>
-```
+### Changements cles
 
-#### Dialog de visualisation
-```tsx
-<Dialog open={!!previewingEntry} onOpenChange={() => setPreviewingEntry(null)}>
-  <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
-    <DialogHeader className="p-4 border-b">
-      <DialogTitle>{previewingEntry?.proposal_name}</DialogTitle>
-    </DialogHeader>
-    <div className="flex-1 overflow-hidden">
-      {previewContent && (
-        <iframe
-          srcDoc={previewContent}
-          className="w-full h-full border-0"
-          title="Apercu de la proposition"
-        />
-      )}
-    </div>
-  </DialogContent>
-</Dialog>
-```
-
-## Resume des changements
-
-| Composant | Type | Description |
-|-----------|------|-------------|
-| `fetchExports()` | Correction | Select explicite sans `pdf_html_content` |
-| `fetchHtmlContent()` | Ajout | Chargement du HTML a la demande |
-| `handlePreview()` | Ajout | Ouvre la visualisation |
-| `handleDownload()` | Modification | Charge le HTML avant d'ouvrir la fenetre d'impression |
-| Dialog de visualisation | Ajout | Iframe plein ecran pour afficher le PDF HTML |
-| Bouton Eye | Ajout | Icone "oeil" pour visualiser |
+1. **Utiliser `activeTemplate`** au lieu de `getActiveTemplate()` pour respecter le template sélectionné dans le workflow de proposition
+2. **Ajouter `activeTemplate` aux dépendances** pour déclencher un rechargement quand l'utilisateur change de template
+3. **Retirer `pagesLoaded` des dépendances** et appeler `setPagesLoaded(false)` au début de l'effet pour forcer le rechargement quand le template change
+4. **Améliorer les logs** pour indiquer quel template est chargé
 
 ## Resultat attendu
 
 | Avant | Apres |
 |-------|-------|
-| Erreur de timeout a chaque chargement | Chargement rapide (~100ms) de la liste |
-| Seulement bouton Telecharger | Boutons Visualiser + Telecharger |
-| Telechargement direct (parfois lent) | Chargement du HTML uniquement a la demande |
+| Template Grosbill non chargé, aperçu vide avec texte par défaut | Template Grosbill correctement affiché avec tous les éléments stylisés |
+| Logs : "No version or empty pages" | Logs : "Pages loaded successfully: 8 pages" pour Grosbill |
 
-## Import a ajouter
+## Tests a effectuer
 
-```typescript
-import { Eye } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-```
+1. Accéder au workflow Proposition avec un devis importé
+2. Sélectionner le template "Proposition Commerciale GrosbillPro"
+3. Vérifier que l'aperçu affiche correctement le style Grosbill (fond coloré, logos, etc.)
+4. Vérifier que le changement de template (Cybertek ↔ Grosbill) recharge correctement les pages
 
