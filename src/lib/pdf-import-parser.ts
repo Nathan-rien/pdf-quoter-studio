@@ -1284,6 +1284,114 @@ function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
   return products;
 }
 
+// ========== DENTAL MULTI-LINE PRODUCT EXTRACTION ==========
+// Dental PDFs have multi-line descriptions that continue AFTER the main product line
+// until we hit a stop marker (Sous-total, new section, new product, footer)
+
+function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductLine[] {
+  const products: PDFProductLine[] = [];
+  const lines = text.split(/\r?\n/).map(l => l.trim());
+  
+  // Stop markers that end a product description
+  const stopMarkers = /^(Sous-total|Informatique|Livraison|Formation|Compte\s+bancaire|Page\s+\d+|Montant\s+hors\s+taxes|Taxes|Total\s+[\d])/i;
+  const productLinePattern = /(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i;
+  const euroAmountPattern = /([\d\s]+[,.][\d]{2,3})\s*€/g;
+  
+  console.log('[Dental Multi-line Parser] Processing', lines.length, 'lines');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Skip headers, totals, empty lines
+    if (/^(Description|Quantité|Prix|Sous-total|Montant|Taxes|Total|3D\s*DENTAL)/i.test(line)) continue;
+    if (!line || line.length < 5) continue;
+    
+    // Check if this is a product line (has quantity pattern "X,XXX Unité(s)")
+    const qtyMatch = line.match(productLinePattern);
+    if (!qtyMatch) continue;
+    
+    // Extract amounts from the line
+    const amounts = [...line.matchAll(euroAmountPattern)].map(m => parseNumber(m[1]));
+    const validAmounts = amounts.filter(a => a !== null && a > 0) as number[];
+    
+    if (validAmounts.length < 1) continue;
+    
+    // Extract quantity
+    const qty = Math.round(parseFloat(qtyMatch[1].replace(',', '.'))) || 1;
+    
+    // Montant HT is typically second-to-last (before TTC)
+    const totalHT = validAmounts.length >= 2 
+      ? validAmounts[validAmounts.length - 2] 
+      : validAmounts[0];
+    
+    // Extract initial description (before quantity marker)
+    const qtyIndex = line.indexOf(qtyMatch[0]);
+    let descriptionLine = line.substring(0, qtyIndex).trim();
+    
+    // Check for reference pattern at start: [REF-XXX] or [xxx yyy zzz]
+    let reference: string | null = null;
+    const refMatch = descriptionLine.match(/^\[([^\]]+)\]\s*/);
+    if (refMatch) {
+      reference = refMatch[1];
+      descriptionLine = descriptionLine.substring(refMatch[0].length).trim();
+    }
+    
+    // Collect multi-line description
+    const descriptionParts = [descriptionLine];
+    
+    console.log('[Dental Multi-line] Product line found at', i, ':', descriptionLine.substring(0, 60), '...');
+    
+    // Scan following lines until stop marker
+    let emptyLineCount = 0;
+    for (let j = i + 1; j < lines.length; j++) {
+      const nextLine = lines[j];
+      
+      // Handle empty lines (skip a few, but stop after multiple consecutive)
+      if (!nextLine || nextLine.length < 3) {
+        emptyLineCount++;
+        if (emptyLineCount >= 3) break; // Too many empty lines = end of description
+        continue;
+      }
+      emptyLineCount = 0;
+      
+      // Stop conditions
+      if (stopMarkers.test(nextLine)) break;
+      if (productLinePattern.test(nextLine)) break; // New product
+      if (/^\[.*?\].*Unit[eé]/i.test(nextLine)) break; // New product with ref
+      
+      // Skip metadata lines (company info, bank details, etc.)
+      if (/^(SASU|IBAN|BIC|TVA\s*:|TEL|Capital|SIRET|RCS)/i.test(nextLine)) break;
+      if (/^3D\s*DENTAL\s*STORE/i.test(nextLine)) break;
+      
+      // Skip lines that look like column headers or footers
+      if (/^(Description|Quantité|Prix\s+unitaire|Montant\s+TTC)/i.test(nextLine)) break;
+      
+      // Add to description
+      descriptionParts.push(nextLine);
+    }
+    
+    // Build final designation with reference prefix
+    const fullDescription = descriptionParts.join('\n').trim();
+    const designation = reference 
+      ? `[${reference}] ${fullDescription}` 
+      : fullDescription;
+    
+    console.log('[Dental Multi-line] Collected description:', designation.substring(0, 150), '...');
+    
+    if (designation && totalHT > 0) {
+      products.push({
+        reference,
+        designation,
+        quantite: qty,
+        prixUnitaire: qty > 0 ? Math.round((totalHT / qty) * 100) / 100 : null,
+        totalHT,
+      });
+    }
+  }
+  
+  return products;
+}
+
 // ========== DENTAL (3D DENTAL STORE) PARSER ==========
 function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PDFParseResult> {
   const result: Partial<PDFParseResult> = {
@@ -1298,9 +1406,13 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
 
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   
-  // === USE COLUMN-BASED EXTRACTION IF ITEMS AVAILABLE ===
-  if (items && items.length > 0) {
-    console.log('[Dental Parser] Using column-based extraction with', items.length, 'text items');
+  // === USE TEXT-BASED MULTI-LINE EXTRACTION (more reliable for descriptions) ===
+  console.log('[Dental Parser] Using multi-line text extraction');
+  result.lignes = parseDentalProductsWithMultilineDescriptions(text);
+  
+  // Fallback to column-based if text extraction didn't find products
+  if (result.lignes!.length === 0 && items && items.length > 0) {
+    console.log('[Dental Parser] Multi-line extraction found no products, trying column-based fallback');
     result.lignes = extractDentalProducts(items);
   }
 
@@ -1358,85 +1470,6 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
         }
       }
       break;
-    }
-  }
-
-  // === LIGNES PRODUITS (FALLBACK REGEX-BASED) ===
-  // Only use regex fallback if column-based extraction didn't find products
-  if (result.lignes!.length === 0) {
-    console.log('[Dental Parser] Column extraction found no products, trying regex fallback');
-    
-    // Dental format has amounts with patterns like:
-    // "11 000,00 €" for HT amounts
-    // "13 200,00 €" for TTC amounts
-    // Quantities are formatted as "1,000 Unité(s)"
-    
-    const money = '([\\d\\s]+(?:[,.]\\d{2,3})?)';
-    
-    // Pattern for product lines with quantities
-    // Format: Description ... 1,000 Unité(s) ... 11 000,00 € ... 13 200,00 €
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
-      // Skip headers and totals
-      if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Informatique|Livraison|Formation|Quantité|Prix)/i.test(line)) continue;
-      if (/Incluse|Inclus/i.test(line) && /0[,.]00/i.test(line)) continue;
-      
-      // Try to match product line with quantity pattern "X,XXX Unité(s)"
-      const qtyMatch = line.match(/(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i);
-      if (!qtyMatch) continue;
-      
-      // Extract amounts from the line (look for € symbols)
-      const amountMatches = [...line.matchAll(/([\d\s]+[,.][\d]{2})\s*€/g)];
-      if (amountMatches.length < 1) continue;
-      
-      // Get quantity
-      const qtyRaw = qtyMatch[1].replace(',', '.');
-      const qty = Math.round(parseFloat(qtyRaw)) || 1;
-      
-      // Get HT amount (typically the second-to-last € amount, or the last one if only 2)
-      // Format: PU HT | TVA% | Montant HT | Montant TTC
-      let totalHT = 0;
-      let prixUnitaire: number | null = null;
-      
-      if (amountMatches.length >= 2) {
-        // Second-to-last is usually Montant HT
-        const htIdx = amountMatches.length >= 3 ? amountMatches.length - 2 : 0;
-        totalHT = parseNumber(amountMatches[htIdx][1]) || 0;
-        
-        // First amount might be unit price
-        if (amountMatches.length >= 3) {
-          prixUnitaire = parseNumber(amountMatches[0][1]);
-        }
-      } else if (amountMatches.length === 1) {
-        totalHT = parseNumber(amountMatches[0][1]) || 0;
-      }
-      
-      // Extract designation (text before quantity)
-      const qtyIndex = line.indexOf(qtyMatch[0]);
-      let designation = line.substring(0, qtyIndex).trim();
-      
-      // Extract reference if present (e.g., "[OF-CAB]" at the start)
-      let reference: string | null = null;
-      const refMatch = designation.match(/^\[([A-Z0-9\-]+)\]\s*/i);
-      if (refMatch) {
-        reference = refMatch[1];
-        designation = designation.substring(refMatch[0].length).trim();
-      }
-      
-      // Skip if no valid data
-      if (!designation || totalHT <= 0) continue;
-      
-      // Skip totals that got matched
-      if (/Sous-total|Montant\s+hors|Total/i.test(designation)) continue;
-      
-      result.lignes!.push({
-        reference,
-        designation,
-        quantite: qty,
-        prixUnitaire: prixUnitaire || (qty > 0 ? Math.round((totalHT / qty) * 100) / 100 : null),
-        totalHT,
-      });
     }
   }
 
