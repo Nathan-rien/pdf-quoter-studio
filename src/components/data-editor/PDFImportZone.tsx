@@ -16,7 +16,7 @@ interface PDFImportZoneProps {
 interface ImportResult {
   success: boolean;
   fileName: string;
-  source?: 'cybertek' | 'grosbill' | 'unknown';
+  source?: 'cybertek' | 'grosbill' | 'dental' | 'unknown';
   lignesCount?: number;
   totals?: {
     totalHT: number | null;
@@ -156,10 +156,11 @@ export function PDFImportZone({
     if (inputRef.current) inputRef.current.value = '';
   };
 
-  const getSourceLabel = (source: 'cybertek' | 'grosbill' | 'unknown') => {
+  const getSourceLabel = (source: 'cybertek' | 'grosbill' | 'dental' | 'unknown') => {
     switch (source) {
       case 'cybertek': return 'Cybertek Pro';
       case 'grosbill': return 'GrosBill Pro';
+      case 'dental': return '3D Dental Store';
       default: return 'Inconnu';
     }
   };
@@ -309,9 +310,10 @@ export function PDFImportZone({
                   Glissez-déposez ou cliquez pour sélectionner
                 </p>
               </div>
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2 flex-wrap">
                 <Badge variant="outline">Cybertek Pro</Badge>
                 <Badge variant="outline">GrosBill Pro</Badge>
+                <Badge variant="outline">3D Dental Store</Badge>
               </div>
             </>
           )}
