@@ -20,7 +20,9 @@ const MOIS_FR = [
  */
 export const getCurrentDateFR = (): string => {
   const now = new Date();
-  return `${MOIS_FR[now.getMonth()]} ${now.getFullYear()}`;
+  const jour = now.getDate().toString().padStart(2, '0');
+  const mois = MOIS_FR[now.getMonth()].toLowerCase();
+  return `${jour} ${mois} ${now.getFullYear()}`;
 };
 
 /**
