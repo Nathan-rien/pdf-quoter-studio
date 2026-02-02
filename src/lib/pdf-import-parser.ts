@@ -1143,8 +1143,150 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   return result;
 }
 
+// ========== TEXT ITEM WITH COORDINATES (for column-based parsing) ==========
+interface TextItemWithCoords {
+  str: string;
+  x: number;
+  y: number;
+}
+
+interface ExtractedTextResult {
+  text: string;
+  items: TextItemWithCoords[];
+}
+
+// ========== DENTAL COLUMN-BASED PRODUCT EXTRACTION ==========
+// Dental PDFs have distinct columns that get fragmented during text extraction.
+// We use X coordinates to assign text items to the correct columns.
+
+function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
+  const products: PDFProductLine[] = [];
+  const Y_TOLERANCE = 8; // Increased tolerance for better row grouping
+  
+  // 1. Group items by Y coordinate (into rows)
+  const rowMap = new Map<number, TextItemWithCoords[]>();
+  
+  for (const item of items) {
+    if (!item.str.trim()) continue;
+    
+    // Normalize Y with tolerance
+    const normalizedY = Math.round(item.y / Y_TOLERANCE) * Y_TOLERANCE;
+    
+    if (!rowMap.has(normalizedY)) {
+      rowMap.set(normalizedY, []);
+    }
+    rowMap.get(normalizedY)!.push(item);
+  }
+  
+  // 2. Sort rows by Y (top to bottom = Y descending in PDF coordinates)
+  const sortedRows = Array.from(rowMap.entries())
+    .sort((a, b) => b[0] - a[0])
+    .map(([_, rowItems]) => rowItems.sort((a, b) => a.x - b.x));
+  
+  console.log('[Dental Column Parser] Rows detected:', sortedRows.length);
+  
+  // 3. Find column boundaries by analyzing X positions
+  // Look for rows that contain "Unité(s)" to identify product rows
+  const productRows: typeof sortedRows = [];
+  
+  for (const row of sortedRows) {
+    const rowText = row.map(i => i.str).join(' ');
+    
+    // Skip headers, totals, and section labels
+    if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Quantité|Prix|Informatique|Livraison|Formation)/i.test(rowText)) continue;
+    if (/Incluse|Inclus/i.test(rowText) && /0[,.]00/i.test(rowText)) continue;
+    
+    // Check if this row contains quantity pattern "X,XXX Unité(s)"
+    if (/\d+[,.]?\d*\s*Unit[eé]\(?s?\)?/i.test(rowText)) {
+      productRows.push(row);
+    }
+  }
+  
+  console.log('[Dental Column Parser] Product rows found:', productRows.length);
+  
+  // 4. Process each product row using X coordinates to identify columns
+  // Dental PDF typical column X positions (approximate):
+  // - Description: 35-280
+  // - Quantity: 290-360
+  // - Prix unitaire: 360-420
+  // - Taxes %: 420-460
+  // - Montant HT: 460-520
+  // - Montant TTC: 520-580
+  
+  for (const row of productRows) {
+    let descriptionParts: string[] = [];
+    let reference: string | null = null;
+    let quantite = 1;
+    let prixUnitaire: number | null = null;
+    let montantHT = 0;
+    
+    // Sort items by X to process left-to-right
+    const sortedItems = [...row].sort((a, b) => a.x - b.x);
+    
+    // Log row for debugging
+    console.log('[Dental Row]', sortedItems.map(i => `[${Math.round(i.x)}] "${i.str}"`).join(' | '));
+    
+    for (const item of sortedItems) {
+      const x = item.x;
+      const text = item.str.trim();
+      
+      // Description column (leftmost, typically X < 280)
+      if (x < 280) {
+        // Check for reference pattern [XXX-YYY] at start
+        const refMatch = text.match(/^\[([A-Z0-9\-]+)\]\s*/i);
+        if (refMatch) {
+          reference = refMatch[1];
+          const remainder = text.substring(refMatch[0].length).trim();
+          if (remainder) descriptionParts.push(remainder);
+        } else {
+          descriptionParts.push(text);
+        }
+      }
+      // Quantity column (X around 290-360)
+      else if (x >= 280 && x < 360) {
+        const qtyMatch = text.match(/(\d+)[,.]?(\d*)/);
+        if (qtyMatch) {
+          // Handle "1,000" format (quantity with decimal comma)
+          const intPart = parseInt(qtyMatch[1], 10) || 1;
+          quantite = intPart;
+        }
+      }
+      // Prix unitaire column (X around 360-420)
+      else if (x >= 360 && x < 420) {
+        const pu = parseNumber(text);
+        if (pu !== null) prixUnitaire = pu;
+      }
+      // Skip taxes column (X around 420-460)
+      // Montant HT column (X around 460-520)
+      else if (x >= 455 && x < 520) {
+        const ht = parseNumber(text);
+        if (ht !== null && ht > 0) montantHT = ht;
+      }
+      // Montant TTC column (X >= 520) - skip, we use HT
+    }
+    
+    // Clean up designation
+    const designation = descriptionParts.join(' ').replace(/\s+/g, ' ').trim();
+    
+    // Only add if we have valid data
+    if (designation && montantHT > 0) {
+      products.push({
+        reference,
+        designation,
+        quantite,
+        prixUnitaire: prixUnitaire || (quantite > 0 ? Math.round((montantHT / quantite) * 100) / 100 : null),
+        totalHT: montantHT,
+      });
+      
+      console.log('[Dental Product]', { reference, designation, quantite, prixUnitaire, montantHT });
+    }
+  }
+  
+  return products;
+}
+
 // ========== DENTAL (3D DENTAL STORE) PARSER ==========
-function parseDentalText(text: string): Partial<PDFParseResult> {
+function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PDFParseResult> {
   const result: Partial<PDFParseResult> = {
     source: 'dental',
     lignes: [],
@@ -1156,6 +1298,12 @@ function parseDentalText(text: string): Partial<PDFParseResult> {
   };
 
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  
+  // === USE COLUMN-BASED EXTRACTION IF ITEMS AVAILABLE ===
+  if (items && items.length > 0) {
+    console.log('[Dental Parser] Using column-based extraction with', items.length, 'text items');
+    result.lignes = extractDentalProducts(items);
+  }
 
   // === MÉTADONNÉES DEVIS ===
   
@@ -1214,79 +1362,83 @@ function parseDentalText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // === LIGNES PRODUITS ===
-  
-  // Dental format has amounts with patterns like:
-  // "11 000,00 €" for HT amounts
-  // "13 200,00 €" for TTC amounts
-  // Quantities are formatted as "1,000 Unité(s)"
-  
-  const money = '([\\d\\s]+(?:[,.]\\d{2,3})?)';
-  
-  // Pattern for product lines with quantities
-  // Format: Description ... 1,000 Unité(s) ... 11 000,00 € ... 13 200,00 €
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  // === LIGNES PRODUITS (FALLBACK REGEX-BASED) ===
+  // Only use regex fallback if column-based extraction didn't find products
+  if (result.lignes!.length === 0) {
+    console.log('[Dental Parser] Column extraction found no products, trying regex fallback');
     
-    // Skip headers and totals
-    if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Informatique|Livraison|Formation|Quantité|Prix)/i.test(line)) continue;
-    if (/Incluse|Inclus/i.test(line) && /0[,.]00/i.test(line)) continue;
+    // Dental format has amounts with patterns like:
+    // "11 000,00 €" for HT amounts
+    // "13 200,00 €" for TTC amounts
+    // Quantities are formatted as "1,000 Unité(s)"
     
-    // Try to match product line with quantity pattern "X,XXX Unité(s)"
-    const qtyMatch = line.match(/(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i);
-    if (!qtyMatch) continue;
+    const money = '([\\d\\s]+(?:[,.]\\d{2,3})?)';
     
-    // Extract amounts from the line (look for € symbols)
-    const amountMatches = [...line.matchAll(/([\d\s]+[,.][\d]{2})\s*€/g)];
-    if (amountMatches.length < 1) continue;
-    
-    // Get quantity
-    const qtyRaw = qtyMatch[1].replace(',', '.');
-    const qty = Math.round(parseFloat(qtyRaw)) || 1;
-    
-    // Get HT amount (typically the second-to-last € amount, or the last one if only 2)
-    // Format: PU HT | TVA% | Montant HT | Montant TTC
-    let totalHT = 0;
-    let prixUnitaire: number | null = null;
-    
-    if (amountMatches.length >= 2) {
-      // Second-to-last is usually Montant HT
-      const htIdx = amountMatches.length >= 3 ? amountMatches.length - 2 : 0;
-      totalHT = parseNumber(amountMatches[htIdx][1]) || 0;
+    // Pattern for product lines with quantities
+    // Format: Description ... 1,000 Unité(s) ... 11 000,00 € ... 13 200,00 €
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       
-      // First amount might be unit price
-      if (amountMatches.length >= 3) {
-        prixUnitaire = parseNumber(amountMatches[0][1]);
+      // Skip headers and totals
+      if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Informatique|Livraison|Formation|Quantité|Prix)/i.test(line)) continue;
+      if (/Incluse|Inclus/i.test(line) && /0[,.]00/i.test(line)) continue;
+      
+      // Try to match product line with quantity pattern "X,XXX Unité(s)"
+      const qtyMatch = line.match(/(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i);
+      if (!qtyMatch) continue;
+      
+      // Extract amounts from the line (look for € symbols)
+      const amountMatches = [...line.matchAll(/([\d\s]+[,.][\d]{2})\s*€/g)];
+      if (amountMatches.length < 1) continue;
+      
+      // Get quantity
+      const qtyRaw = qtyMatch[1].replace(',', '.');
+      const qty = Math.round(parseFloat(qtyRaw)) || 1;
+      
+      // Get HT amount (typically the second-to-last € amount, or the last one if only 2)
+      // Format: PU HT | TVA% | Montant HT | Montant TTC
+      let totalHT = 0;
+      let prixUnitaire: number | null = null;
+      
+      if (amountMatches.length >= 2) {
+        // Second-to-last is usually Montant HT
+        const htIdx = amountMatches.length >= 3 ? amountMatches.length - 2 : 0;
+        totalHT = parseNumber(amountMatches[htIdx][1]) || 0;
+        
+        // First amount might be unit price
+        if (amountMatches.length >= 3) {
+          prixUnitaire = parseNumber(amountMatches[0][1]);
+        }
+      } else if (amountMatches.length === 1) {
+        totalHT = parseNumber(amountMatches[0][1]) || 0;
       }
-    } else if (amountMatches.length === 1) {
-      totalHT = parseNumber(amountMatches[0][1]) || 0;
+      
+      // Extract designation (text before quantity)
+      const qtyIndex = line.indexOf(qtyMatch[0]);
+      let designation = line.substring(0, qtyIndex).trim();
+      
+      // Extract reference if present (e.g., "[OF-CAB]" at the start)
+      let reference: string | null = null;
+      const refMatch = designation.match(/^\[([A-Z0-9\-]+)\]\s*/i);
+      if (refMatch) {
+        reference = refMatch[1];
+        designation = designation.substring(refMatch[0].length).trim();
+      }
+      
+      // Skip if no valid data
+      if (!designation || totalHT <= 0) continue;
+      
+      // Skip totals that got matched
+      if (/Sous-total|Montant\s+hors|Total/i.test(designation)) continue;
+      
+      result.lignes!.push({
+        reference,
+        designation,
+        quantite: qty,
+        prixUnitaire: prixUnitaire || (qty > 0 ? Math.round((totalHT / qty) * 100) / 100 : null),
+        totalHT,
+      });
     }
-    
-    // Extract designation (text before quantity)
-    const qtyIndex = line.indexOf(qtyMatch[0]);
-    let designation = line.substring(0, qtyIndex).trim();
-    
-    // Extract reference if present (e.g., "[OF-CAB]" at the start)
-    let reference: string | null = null;
-    const refMatch = designation.match(/^\[([A-Z0-9\-]+)\]\s*/i);
-    if (refMatch) {
-      reference = refMatch[1];
-      designation = designation.substring(refMatch[0].length).trim();
-    }
-    
-    // Skip if no valid data
-    if (!designation || totalHT <= 0) continue;
-    
-    // Skip totals that got matched
-    if (/Sous-total|Montant\s+hors|Total/i.test(designation)) continue;
-    
-    result.lignes!.push({
-      reference,
-      designation,
-      quantite: qty,
-      prixUnitaire: prixUnitaire || (qty > 0 ? Math.round((totalHT / qty) * 100) / 100 : null),
-      totalHT,
-    });
   }
 
   // === TOTAUX ===
@@ -1334,7 +1486,9 @@ function parseDentalText(text: string): Partial<PDFParseResult> {
 }
 
 // Extract text using pdfjs-dist legacy build (v3.x - no top-level await)
-async function extractTextWithPdfJs(file: File): Promise<string> {
+async function extractTextWithPdfJs(file: File): Promise<ExtractedTextResult> {
+  const emptyResult: ExtractedTextResult = { text: '', items: [] };
+  
   try {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
 
@@ -1349,6 +1503,7 @@ async function extractTextWithPdfJs(file: File): Promise<string> {
     const pdf = await loadingTask.promise;
 
     const lines: string[] = [];
+    const allItems: TextItemWithCoords[] = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -1362,9 +1517,13 @@ async function extractTextWithPdfJs(file: File): Promise<string> {
           const y = item.transform?.[5] ?? 0;
           return { str, x, y };
         })
-        .filter((it) => it.str.trim().length > 0)
-        // pdfjs origin: sort by y (top->bottom) then x (left->right)
-        .sort((a, b) => (b.y - a.y) || (a.x - b.x));
+        .filter((it) => it.str.trim().length > 0);
+      
+      // Store raw items with coordinates for column-based parsing
+      allItems.push(...items);
+      
+      // Sort for line-based extraction
+      const sortedItems = [...items].sort((a, b) => (b.y - a.y) || (a.x - b.x));
 
       // group into lines by y proximity
       let currentY: number | null = null;
@@ -1376,7 +1535,7 @@ async function extractTextWithPdfJs(file: File): Promise<string> {
         currentLine = [];
       };
 
-      for (const it of items) {
+      for (const it of sortedItems) {
         if (currentY === null) {
           currentY = it.y;
           currentLine.push(it.str);
@@ -1394,10 +1553,10 @@ async function extractTextWithPdfJs(file: File): Promise<string> {
       flush();
     }
 
-    return lines.join('\n');
+    return { text: lines.join('\n'), items: allItems };
   } catch (error) {
     console.error('PDF.js extraction failed:', error);
-    return '';
+    return emptyResult;
   }
 }
 
@@ -1405,8 +1564,8 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
   // Detect source from filename first
   let source = detectSourceFromFilename(file.name);
   
-  // Extract text using pdfjs-dist
-  const rawText = await extractTextWithPdfJs(file);
+  // Extract text and raw items using pdfjs-dist
+  const { text: rawText, items } = await extractTextWithPdfJs(file);
   
   // If source unknown from filename, try from text content
   if (source === 'unknown' && rawText.length > 20) {
@@ -1438,7 +1597,8 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
     } else if (source === 'grosbill') {
       parsedData = parseGrosbillText(rawText);
     } else if (source === 'dental') {
-      parsedData = parseDentalText(rawText);
+      // Pass items for column-based extraction
+      parsedData = parseDentalText(rawText, items);
     }
     
     console.log('PDF Parser - Parsed data:', parsedData);
