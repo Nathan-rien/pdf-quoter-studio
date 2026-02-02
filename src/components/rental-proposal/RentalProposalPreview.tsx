@@ -116,19 +116,18 @@ export function RentalProposalPreview() {
   }, [isEditMode, activeTemplate, preparePreviewEditing]);
   
   // Lazy loading des pages du template après le chargement initial des métadonnées
-  // IMPORTANT: Ne marquer comme chargé que si les pages sont vraiment disponibles dans le store
+  // IMPORTANT: Utiliser activeTemplate (basé sur selectedTemplateId) et non getActiveTemplate()
   React.useEffect(() => {
     const loadPages = async () => {
       if (!hasLoaded) return;
-      if (pagesLoaded) return;
       
-      const template = getActiveTemplate();
-      if (!template) {
+      // Utiliser activeTemplate (basé sur selectedTemplateId) et non getActiveTemplate()
+      if (!activeTemplate) {
         setPagesLoaded(true);
         return;
       }
       
-      const version = getTemplateLatestVersion(template.id);
+      const version = getTemplateLatestVersion(activeTemplate.id);
       if (!version) {
         setPagesLoaded(true);
         return;
@@ -136,7 +135,7 @@ export function RentalProposalPreview() {
       
       // Si les pages ne sont pas chargées (lazy loading), les charger depuis le cloud
       if (version.pages.length === 0) {
-        console.log('[RentalProposalPreview] Lazy loading pages for version:', version.id);
+        console.log('[RentalProposalPreview] Lazy loading pages for version:', version.id, 'template:', activeTemplate.name);
         const loadedPages = await loadVersionPages(version.id);
         
         // Ne marquer comme chargé que si on a effectivement reçu des pages
@@ -155,8 +154,10 @@ export function RentalProposalPreview() {
       setPagesLoaded(true);
     };
     
+    // Reset pagesLoaded si le template sélectionné change
+    setPagesLoaded(false);
     loadPages();
-  }, [hasLoaded, pagesLoaded, getActiveTemplate, getTemplateLatestVersion, loadVersionPages]);
+  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
   
   // Afficher un état de chargement si les templates ou les pages ne sont pas encore chargés
   // Ce return conditionnel est maintenant APRÈS tous les hooks
