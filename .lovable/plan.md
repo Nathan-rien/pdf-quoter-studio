@@ -1,20 +1,21 @@
 
 
-# Plan : Corriger le parser Dental - Détection source et extraction par colonnes
+# Plan : Extraire les descriptions multi-lignes du format Dental
 
-## Problèmes identifiés
+## Diagnostic du problème
 
-### 1. Détection de source défaillante
-- **Symptôme** : Badge affiche "GrosBill Pro" au lieu de "3D Dental Store"
-- **Cause** : Le pattern regex `/devis_-_so\d+/i` utilise des underscores mais le fichier réel utilise des espaces et tirets : `Devis - SO74920.pdf`
+Le parser actuel capture uniquement la première ligne de description car il traite chaque ligne indépendamment. Dans le PDF Dental, la structure réelle est :
 
-### 2. Désignations polluées avec quantité
-- **Symptôme** : "Station de travail 3D fixe CAB 1,000" au lieu de "Station de travail 3D fixe CAB"
-- **Cause** : Le seuil X < 280 pour la colonne Description capture aussi le "1,000" qui est dans la même plage X
+```
+| Ligne tableau | → Medit I900C garantie 3 ans tarif fidélité | 1,000 Unité(s) | 11 000,00 € | 13 200,00 € |
+| Lignes suivantes | → Un ordinateur adapté doit être utilisé pour...
+|                  | → le bon fonctionnement de ce matériel...
+|                  | → Mises à jour du logiciel Medit Link gratuites...
+|                  | → ... (jusqu'à 10 lignes supplémentaires)
+| Sous-total       | → Sous-total : 11 000,00 €
+```
 
-### 3. Valeurs VUN/VTN incorrectes
-- **Symptôme** : VUN = 20 (le taux TVA), VTN = 13200 € (le TTC au lieu du HT)
-- **Cause** : Les seuils de colonnes X (360-420, 455-520) ne correspondent pas aux vraies positions
+**Le texte descriptif continue APRÈS la ligne du tableau, jusqu'au prochain marqueur "Sous-total".**
 
 ---
 
@@ -22,159 +23,134 @@
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/lib/pdf-import-parser.ts` | Corriger pattern détection + seuils colonnes X |
+| `src/lib/pdf-import-parser.ts` | Réécrire `parseDentalText` avec extraction multi-lignes |
 
 ---
 
-## Modifications détaillées
+## Solution proposée
 
-### 1. Corriger la détection du format Dental par nom de fichier
+### Nouvelle logique d'extraction
 
-```typescript
-// Ligne 53 - Améliorer le pattern pour supporter les variantes
-function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | 'dental' | 'unknown' {
-  const lowerName = filename.toLowerCase();
-  if (lowerName.includes('cybertek') || lowerName.includes('kedge')) {
-    return 'cybertek';
-  }
-  if (lowerName.includes('grosbill') || /devis_\d+_\d+/i.test(lowerName)) {
-    return 'grosbill';
-  }
-  // FIXED: Support "Devis - SO74920.pdf" and "Devis_-_SO74920.pdf" patterns
-  if (lowerName.includes('dental') || /devis[\s_-]+so\d+/i.test(lowerName)) {
-    return 'dental';
-  }
-  return 'unknown';
-}
+1. **Identifier les lignes produits** : Lignes contenant le pattern `X,XXX Unité(s)` avec montants €
+2. **Collecter les lignes descriptives** : Toutes les lignes APRÈS la ligne produit, JUSQU'AU prochain marqueur de fin (Sous-total, Section, nouveau produit)
+3. **Reconstruire la désignation complète** : Concaténer la première ligne + les lignes descriptives
+4. **Inclure la référence** : Préfixer avec `[REF]` si présente (ex: `[i900c 3YW fidelite]` ou `[OF-CAB]`)
+
+### Algorithme détaillé
+
+```text
+Pour chaque page du PDF :
+  1. Scanner les lignes pour trouver celles avec "X,XXX Unité(s)"
+  2. Pour chaque ligne produit trouvée :
+     a. Extraire : description initiale, quantité, prix HT
+     b. Chercher la référence [XXX] au début de la description
+     c. Scanner les lignes suivantes JUSQU'À un stop marker :
+        - "Sous-total" ou "Sous-total :"
+        - Ligne vide significative (plusieurs d'affilée)
+        - Nouvelle section ("Informatique", "Livraison", "Formation")
+        - Nouvelle ligne produit (contient "Unité(s)")
+        - Footer de page ("Compte bancaire:", "Page X / Y")
+     d. Ajouter toutes ces lignes à la désignation
+  3. Retourner le produit avec désignation complète
 ```
 
-**Pattern corrigé** : `/devis[\s_-]+so\d+/i` capture :
-- `Devis - SO74920.pdf` (avec espaces et tirets)
-- `Devis_-_SO74920.pdf` (avec underscores)
-- `DevisSO74920.pdf` (collé)
+### Marqueurs de fin de description
 
-### 2. Améliorer l'extraction des colonnes
+| Marqueur | Description |
+|----------|-------------|
+| `Sous-total` | Fin de la section produit actuelle |
+| `Informatique`, `Livraison`, `Formation` | En-têtes de nouvelles sections |
+| `X,XXX Unité(s)` | Début d'un nouveau produit |
+| `Compte bancaire:` | Footer de page |
+| `Page X / Y` | Numéro de page |
+| `Montant hors taxes` | Début des totaux finaux |
 
-Le problème principal est que les seuils de colonnes X sont approximatifs. Il faut analyser dynamiquement les positions X pour identifier les vraies colonnes.
+---
 
-**Nouvelle approche** : Identifier la position X du pattern "Unité(s)" et utiliser ça comme délimiteur entre Description et les colonnes numériques.
+## Modifications de code
+
+### Nouvelle fonction `parseDentalProducts`
 
 ```typescript
-function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
+function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductLine[] {
   const products: PDFProductLine[] = [];
-  const Y_TOLERANCE = 8;
+  const lines = text.split(/\r?\n/).map(l => l.trim());
   
-  // 1. Group items by Y coordinate
-  const rowMap = new Map<number, TextItemWithCoords[]>();
-  for (const item of items) {
-    if (!item.str.trim()) continue;
-    const normalizedY = Math.round(item.y / Y_TOLERANCE) * Y_TOLERANCE;
-    if (!rowMap.has(normalizedY)) rowMap.set(normalizedY, []);
-    rowMap.get(normalizedY)!.push(item);
-  }
+  // Stop markers that end a product description
+  const stopMarkers = /^(Sous-total|Informatique|Livraison|Formation|Compte\s+bancaire|Page\s+\d+|Montant\s+hors\s+taxes|Taxes|Total\s+\d)/i;
+  const productLinePattern = /(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i;
+  const euroAmountPattern = /([\d\s]+[,.][\d]{2,3})\s*€/g;
   
-  const sortedRows = Array.from(rowMap.entries())
-    .sort((a, b) => b[0] - a[0])
-    .map(([_, rowItems]) => rowItems.sort((a, b) => a.x - b.x));
-  
-  // 2. Process each row using "Unité(s)" as column boundary marker
-  for (const row of sortedRows) {
-    const rowText = row.map(i => i.str).join(' ');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     
-    // Skip headers and totals
-    if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Quantité|Prix|Informatique|Livraison|Formation)/i.test(rowText)) continue;
-    if (/Incluse|Inclus/i.test(rowText) && /0[,.]00/i.test(rowText)) continue;
+    // Skip headers, totals, empty lines
+    if (/^(Description|Quantité|Prix|Sous-total|Montant|Taxes|Total|3D\s*DENTAL)/i.test(line)) continue;
+    if (!line || line.length < 5) continue;
     
-    // Must contain quantity pattern
-    if (!/\d+[,.]?\d*\s*Unit[eé]\(?s?\)?/i.test(rowText)) continue;
+    // Check if this is a product line (has quantity pattern)
+    const qtyMatch = line.match(productLinePattern);
+    if (!qtyMatch) continue;
     
-    // 3. Find the "Unité(s)" item to use as column boundary
-    const uniteIndex = row.findIndex(item => /unit[eé]\(?s?\)?/i.test(item.str));
-    if (uniteIndex === -1) continue;
+    // Extract amounts from the line
+    const amounts = [...line.matchAll(euroAmountPattern)].map(m => parseNumber(m[1]));
+    const validAmounts = amounts.filter(a => a !== null && a > 0) as number[];
     
-    const uniteItem = row[uniteIndex];
-    const uniteX = uniteItem.x;
+    if (validAmounts.length < 1) continue;
     
-    // 4. Extract based on position relative to "Unité(s)"
-    let descriptionParts: string[] = [];
+    // Extract quantity
+    const qty = Math.round(parseFloat(qtyMatch[1].replace(',', '.'))) || 1;
+    
+    // Montant HT is typically second-to-last (before TTC)
+    const totalHT = validAmounts.length >= 2 
+      ? validAmounts[validAmounts.length - 2] 
+      : validAmounts[0];
+    
+    // Extract initial description (before quantity)
+    const qtyIndex = line.indexOf(qtyMatch[0]);
+    let descriptionLine = line.substring(0, qtyIndex).trim();
+    
+    // Check for reference pattern at start: [REF-XXX] or [xxx yyy zzz]
     let reference: string | null = null;
-    let quantite = 1;
-    let montantHT = 0;
+    const refMatch = descriptionLine.match(/^\[([^\]]+)\]\s*/);
+    if (refMatch) {
+      reference = refMatch[1];
+      descriptionLine = descriptionLine.substring(refMatch[0].length).trim();
+    }
     
-    // All items BEFORE "Unité(s)" X position are description
-    // Items AT "Unité(s)" contain quantity
-    // Items AFTER are numerical columns
+    // Collect multi-line description
+    const descriptionParts = [descriptionLine];
     
-    for (let i = 0; i < row.length; i++) {
-      const item = row[i];
-      const text = item.str.trim();
+    // Scan following lines until stop marker
+    for (let j = i + 1; j < lines.length; j++) {
+      const nextLine = lines[j];
       
-      if (i < uniteIndex) {
-        // Description column - BEFORE Unité(s)
-        // Exclude quantity numbers that may precede "Unité(s)"
-        if (/^\d+[,.]?\d*$/.test(text)) {
-          // This is likely the quantity number (e.g., "1,000")
-          const qtyMatch = text.match(/^(\d+)/);
-          if (qtyMatch) quantite = parseInt(qtyMatch[1], 10) || 1;
-        } else {
-          // Check for reference pattern [XXX-YYY]
-          const refMatch = text.match(/^\[([A-Z0-9\-]+)\]\s*/i);
-          if (refMatch) {
-            reference = refMatch[1];
-            const remainder = text.substring(refMatch[0].length).trim();
-            if (remainder) descriptionParts.push(remainder);
-          } else {
-            descriptionParts.push(text);
-          }
-        }
-      } else if (i === uniteIndex) {
-        // Skip "Unité(s)" text itself
-        continue;
-      } else {
-        // Numeric columns - AFTER Unité(s)
-        // Parse as euro amounts, take the amounts in order:
-        // [Prix unitaire, Taxes %, Montant HT, Montant TTC]
-        const euroAmount = parseNumber(text.replace('€', ''));
-        if (euroAmount !== null && euroAmount > 0) {
-          // First significant amount after Unité(s) that's not a percentage (< 100)
-          // and larger than typical tax rates is likely HT
-          // We want the SECOND-TO-LAST € amount (HT), not the last (TTC)
-          // Better: collect all € amounts and pick intelligently
-        }
-      }
+      // Stop conditions
+      if (!nextLine) continue; // Skip empty but don't stop yet
+      if (stopMarkers.test(nextLine)) break;
+      if (productLinePattern.test(nextLine)) break; // New product
+      if (/^\[.*?\].*Unité/.test(nextLine)) break; // New product with ref
+      
+      // Skip metadata lines
+      if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET)/i.test(nextLine)) break;
+      
+      // Add to description
+      descriptionParts.push(nextLine);
     }
     
-    // ALTERNATIVE APPROACH: Find all euro amounts in the row
-    const euroAmounts: number[] = [];
-    for (const item of row) {
-      if (/€/.test(item.str) || /^\d[\d\s]*[,.]?\d{2}$/.test(item.str.trim())) {
-        const parsed = parseNumber(item.str);
-        if (parsed !== null && parsed > 100) {
-          euroAmounts.push(parsed);
-        }
-      }
-    }
+    // Build final designation with reference prefix
+    const fullDescription = descriptionParts.join('\n').trim();
+    const designation = reference 
+      ? `[${reference}] ${fullDescription}` 
+      : fullDescription;
     
-    // In Dental format: [Prix unitaire, Montant HT, Montant TTC]
-    // We want Montant HT (second-to-last or first if only one)
-    if (euroAmounts.length >= 2) {
-      montantHT = euroAmounts[euroAmounts.length - 2]; // Second to last = HT
-    } else if (euroAmounts.length === 1) {
-      montantHT = euroAmounts[0];
-    }
-    
-    const designation = descriptionParts.join(' ')
-      .replace(/\s+/g, ' ')
-      .replace(/\d+[,.]?\d*\s*$/, '') // Remove trailing quantity numbers
-      .trim();
-    
-    if (designation && montantHT > 0) {
+    if (designation && totalHT > 0) {
       products.push({
         reference,
         designation,
-        quantite,
-        prixUnitaire: quantite > 0 ? Math.round((montantHT / quantite) * 100) / 100 : null,
-        totalHT: montantHT,
+        quantite: qty,
+        prixUnitaire: qty > 0 ? Math.round((totalHT / qty) * 100) / 100 : null,
+        totalHT,
       });
     }
   }
@@ -183,20 +159,56 @@ function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
 }
 ```
 
+### Mettre à jour `parseDentalText`
+
+Remplacer l'extraction par colonnes par l'extraction multi-lignes comme méthode principale, car le texte brut préserve mieux la structure des descriptions :
+
+```typescript
+function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PDFParseResult> {
+  const result: Partial<PDFParseResult> = { /* ... */ };
+  
+  // USE TEXT-BASED MULTI-LINE EXTRACTION (more reliable for Dental format)
+  result.lignes = parseDentalProductsWithMultilineDescriptions(text);
+  
+  // Fallback to column-based if text extraction fails
+  if (result.lignes!.length === 0 && items && items.length > 0) {
+    result.lignes = extractDentalProducts(items);
+  }
+  
+  // ... rest of metadata extraction
+}
+```
+
 ---
-
-## Résumé des corrections
-
-| Problème | Solution |
-|----------|----------|
-| Détection source | Pattern `/devis[\s_-]+so\d+/i` pour supporter espaces et tirets |
-| Désignation polluée | Utiliser position de "Unité(s)" comme délimiteur, exclure les chiffres |
-| VUN/VTN incorrects | Collecter tous les montants €, prendre l'avant-dernier (HT) |
 
 ## Données attendues après correction
 
-| Désignation | Nb | VUN | VTN |
-|-------------|-----|-----|-----|
-| Station de travail 3D fixe CAB | 1 | 1 666 | 1 666,00 € |
-| Medit I900C garantie 3 ans tarif fidélité | 1 | 11 000 | 11 000,00 € |
+### Produit 1
+
+| Champ | Valeur |
+|-------|--------|
+| **Référence** | `i900c 3YW fidelite` |
+| **Désignation** | `[i900c 3YW fidelite] MEDIT i-Series : Scanner IO (i900c garantie 3 ans fidélité)\nUn ordinateur adapté doit être utilisé pour le bon fonctionnement de ce matériel. Merci de vous rapprocher de notre service technique.\nMises à jour du logiciel Medit Link gratuites. Merci de conserver les emballages pour tout retour SAV...` |
+| **Nb** | 1 |
+| **VUN** | 11 000 |
+
+### Produit 2
+
+| Champ | Valeur |
+|-------|--------|
+| **Référence** | `OF-CAB` |
+| **Désignation** | `[OF-CAB] Station de travail 3D fixe CAB\nInclus :\n- Tour : carte graphique Nvidia RTX 5060...\n- Ecran non tactile 24''\n- Clavier + Souris\n- Câbles d'alimentations\nGarantie constructeur 2 ans...` |
+| **Nb** | 1 |
+| **VUN** | 1 666 |
+
+---
+
+## Avantages de cette approche
+
+| Aspect | Bénéfice |
+|--------|----------|
+| **Fidélité** | Conserve l'intégralité du texte descriptif du PDF |
+| **Structure** | Préserve les sauts de ligne dans la désignation |
+| **Robustesse** | Fonctionne sur texte brut, indépendant des coordonnées |
+| **Compatibilité** | Fallback vers extraction par colonnes si nécessaire |
 
