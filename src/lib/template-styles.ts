@@ -5,78 +5,118 @@
 
 import type { AllowedFontSize, TextPresetStyle, ShapeType } from '@/types/template-editor';
 
-// Palette couleurs autorisée pour le texte (étendue)
+// Palette couleurs autorisée pour le texte (étendue à 40 couleurs)
 export const ALLOWED_COLORS = [
-  // Neutres
+  // Neutres (8)
   { name: 'Noir', value: '#000000', category: 'neutral' },
-  { name: 'Gris foncé', value: '#1f2937', category: 'neutral' },
-  { name: 'Gris', value: '#6b7280', category: 'neutral' },
-  { name: 'Gris clair', value: '#9ca3af', category: 'neutral' },
+  { name: 'Gris 800', value: '#1f2937', category: 'neutral' },
+  { name: 'Gris 700', value: '#374151', category: 'neutral' },
+  { name: 'Gris 600', value: '#4b5563', category: 'neutral' },
+  { name: 'Gris 500', value: '#6b7280', category: 'neutral' },
+  { name: 'Gris 400', value: '#9ca3af', category: 'neutral' },
+  { name: 'Gris 300', value: '#d1d5db', category: 'neutral' },
   { name: 'Blanc', value: '#ffffff', category: 'neutral' },
-  // Primaires
-  { name: 'Navy', value: '#1e3a5f', category: 'primary' },
-  { name: 'Bleu foncé', value: '#1e40af', category: 'primary' },
-  { name: 'Bleu', value: '#3b82f6', category: 'primary' },
-  { name: 'Bleu clair', value: '#60a5fa', category: 'primary' },
-  { name: 'Sky', value: '#0ea5e9', category: 'primary' },
-  // Verts
-  { name: 'Vert foncé', value: '#166534', category: 'success' },
-  { name: 'Emeraude', value: '#10b981', category: 'success' },
-  { name: 'Vert', value: '#22c55e', category: 'success' },
-  { name: 'Vert clair', value: '#86efac', category: 'success' },
-  // Rouges / Orange
-  { name: 'Rouge foncé', value: '#991b1b', category: 'danger' },
-  { name: 'Rouge', value: '#ef4444', category: 'danger' },
-  { name: 'Orange', value: '#f97316', category: 'danger' },
-  { name: 'Ambre', value: '#f59e0b', category: 'danger' },
-  // Violets / Roses
-  { name: 'Violet foncé', value: '#7c3aed', category: 'accent' },
-  { name: 'Violet', value: '#a855f7', category: 'accent' },
-  { name: 'Rose', value: '#ec4899', category: 'accent' },
-  { name: 'Fuchsia', value: '#d946ef', category: 'accent' },
+  // Bleus (8)
+  { name: 'Navy', value: '#1e3a5f', category: 'blue' },
+  { name: 'Bleu 900', value: '#1e3b8a', category: 'blue' },
+  { name: 'Bleu 700', value: '#1d4ed8', category: 'blue' },
+  { name: 'Bleu 500', value: '#3b82f6', category: 'blue' },
+  { name: 'Bleu 400', value: '#60a5fa', category: 'blue' },
+  { name: 'Bleu 300', value: '#93c5fd', category: 'blue' },
+  { name: 'Sky', value: '#0ea5e9', category: 'blue' },
+  { name: 'Cyan', value: '#06b6d4', category: 'blue' },
+  // Verts (6)
+  { name: 'Vert 800', value: '#166534', category: 'green' },
+  { name: 'Emeraude', value: '#10b981', category: 'green' },
+  { name: 'Vert 500', value: '#22c55e', category: 'green' },
+  { name: 'Vert 400', value: '#4ade80', category: 'green' },
+  { name: 'Teal', value: '#14b8a6', category: 'green' },
+  { name: 'Lime', value: '#84cc16', category: 'green' },
+  // Rouges / Orange (6)
+  { name: 'Rouge 800', value: '#991b1b', category: 'red' },
+  { name: 'Rouge 500', value: '#ef4444', category: 'red' },
+  { name: 'Rouge 400', value: '#f87171', category: 'red' },
+  { name: 'Orange', value: '#f97316', category: 'red' },
+  { name: 'Ambre', value: '#f59e0b', category: 'red' },
+  { name: 'Jaune', value: '#eab308', category: 'red' },
+  // Violets / Roses (6)
+  { name: 'Violet 700', value: '#7c3aed', category: 'purple' },
+  { name: 'Violet 500', value: '#a855f7', category: 'purple' },
+  { name: 'Violet 400', value: '#c084fc', category: 'purple' },
+  { name: 'Rose 500', value: '#ec4899', category: 'purple' },
+  { name: 'Rose 400', value: '#f472b6', category: 'purple' },
+  { name: 'Fuchsia', value: '#d946ef', category: 'purple' },
+  // Autres (6)
+  { name: 'Indigo', value: '#4f46e5', category: 'other' },
+  { name: 'Slate', value: '#64748b', category: 'other' },
+  { name: 'Zinc', value: '#71717a', category: 'other' },
+  { name: 'Stone', value: '#78716c', category: 'other' },
+  { name: 'Brown', value: '#a16207', category: 'other' },
+  { name: 'Pink', value: '#db2777', category: 'other' },
 ] as const;
 
-// Couleurs de fond pour les formes (étendue)
+// Couleurs de fond pour les formes (étendue à 55 couleurs)
 export const SHAPE_BACKGROUND_COLORS = [
-  // Spéciaux
+  // Spéciaux (1)
   { name: 'Transparent', value: 'transparent', category: 'special' },
-  // Neutres
+  // Neutres (8)
   { name: 'Blanc', value: '#ffffff', category: 'neutral' },
-  { name: 'Gris très clair', value: '#f9fafb', category: 'neutral' },
-  { name: 'Gris clair', value: '#f3f4f6', category: 'neutral' },
-  { name: 'Gris', value: '#e5e7eb', category: 'neutral' },
-  { name: 'Gris moyen', value: '#d1d5db', category: 'neutral' },
+  { name: 'Gris 50', value: '#f9fafb', category: 'neutral' },
+  { name: 'Gris 100', value: '#f3f4f6', category: 'neutral' },
+  { name: 'Gris 200', value: '#e5e7eb', category: 'neutral' },
+  { name: 'Gris 300', value: '#d1d5db', category: 'neutral' },
+  { name: 'Gris 500', value: '#6b7280', category: 'neutral' },
+  { name: 'Gris 800', value: '#1f2937', category: 'neutral' },
   { name: 'Noir', value: '#000000', category: 'neutral' },
-  // Bleus
+  // Bleus (10)
   { name: 'Navy', value: '#1e3a5f', category: 'blue' },
-  { name: 'Bleu foncé', value: '#1e40af', category: 'blue' },
-  { name: 'Bleu', value: '#3b82f6', category: 'blue' },
-  { name: 'Bleu clair', value: '#93c5fd', category: 'blue' },
-  { name: 'Bleu pâle', value: '#dbeafe', category: 'blue' },
+  { name: 'Bleu 900', value: '#1e3b8a', category: 'blue' },
+  { name: 'Bleu 700', value: '#1d4ed8', category: 'blue' },
+  { name: 'Bleu 500', value: '#3b82f6', category: 'blue' },
+  { name: 'Bleu 400', value: '#60a5fa', category: 'blue' },
+  { name: 'Bleu 300', value: '#93c5fd', category: 'blue' },
+  { name: 'Bleu 100', value: '#dbeafe', category: 'blue' },
   { name: 'Sky', value: '#0ea5e9', category: 'blue' },
-  // Verts
-  { name: 'Vert foncé', value: '#166534', category: 'green' },
+  { name: 'Cyan', value: '#06b6d4', category: 'blue' },
+  { name: 'Cyan pâle', value: '#cffafe', category: 'blue' },
+  // Verts (8)
+  { name: 'Vert 800', value: '#166534', category: 'green' },
   { name: 'Emeraude', value: '#10b981', category: 'green' },
-  { name: 'Vert', value: '#22c55e', category: 'green' },
-  { name: 'Vert clair', value: '#86efac', category: 'green' },
-  { name: 'Vert pâle', value: '#dcfce7', category: 'green' },
-  // Jaunes / Orange
-  { name: 'Jaune', value: '#facc15', category: 'yellow' },
-  { name: 'Jaune pâle', value: '#fef9c3', category: 'yellow' },
+  { name: 'Vert 500', value: '#22c55e', category: 'green' },
+  { name: 'Vert 400', value: '#4ade80', category: 'green' },
+  { name: 'Vert 200', value: '#bbf7d0', category: 'green' },
+  { name: 'Vert 100', value: '#dcfce7', category: 'green' },
+  { name: 'Teal', value: '#14b8a6', category: 'green' },
+  { name: 'Lime', value: '#84cc16', category: 'green' },
+  // Jaunes / Orange (8)
+  { name: 'Jaune 500', value: '#eab308', category: 'yellow' },
+  { name: 'Jaune 400', value: '#facc15', category: 'yellow' },
+  { name: 'Jaune 100', value: '#fef9c3', category: 'yellow' },
   { name: 'Orange', value: '#f97316', category: 'yellow' },
   { name: 'Ambre', value: '#f59e0b', category: 'yellow' },
-  { name: 'Orange pâle', value: '#fed7aa', category: 'yellow' },
-  // Rouges
-  { name: 'Rouge foncé', value: '#991b1b', category: 'red' },
-  { name: 'Rouge', value: '#ef4444', category: 'red' },
-  { name: 'Rouge clair', value: '#fca5a5', category: 'red' },
-  { name: 'Rouge pâle', value: '#fee2e2', category: 'red' },
-  // Violets / Roses
-  { name: 'Violet foncé', value: '#7c3aed', category: 'purple' },
-  { name: 'Violet', value: '#a855f7', category: 'purple' },
-  { name: 'Violet pâle', value: '#e9d5ff', category: 'purple' },
-  { name: 'Rose', value: '#ec4899', category: 'purple' },
-  { name: 'Rose pâle', value: '#fbcfe8', category: 'purple' },
+  { name: 'Orange 200', value: '#fed7aa', category: 'yellow' },
+  { name: 'Ambre 100', value: '#fef3c7', category: 'yellow' },
+  { name: 'Orange 100', value: '#ffedd5', category: 'yellow' },
+  // Rouges (8)
+  { name: 'Rouge 800', value: '#991b1b', category: 'red' },
+  { name: 'Rouge 600', value: '#dc2626', category: 'red' },
+  { name: 'Rouge 500', value: '#ef4444', category: 'red' },
+  { name: 'Rouge 400', value: '#f87171', category: 'red' },
+  { name: 'Rouge 300', value: '#fca5a5', category: 'red' },
+  { name: 'Rouge 100', value: '#fee2e2', category: 'red' },
+  { name: 'Rose foncé', value: '#be185d', category: 'red' },
+  { name: 'Corail', value: '#fb7185', category: 'red' },
+  // Violets / Roses (10)
+  { name: 'Violet 700', value: '#7c3aed', category: 'purple' },
+  { name: 'Violet 500', value: '#a855f7', category: 'purple' },
+  { name: 'Violet 400', value: '#c084fc', category: 'purple' },
+  { name: 'Violet 200', value: '#ddd6fe', category: 'purple' },
+  { name: 'Violet 100', value: '#ede9fe', category: 'purple' },
+  { name: 'Rose 500', value: '#ec4899', category: 'purple' },
+  { name: 'Rose 400', value: '#f472b6', category: 'purple' },
+  { name: 'Rose 200', value: '#fbcfe8', category: 'purple' },
+  { name: 'Fuchsia', value: '#d946ef', category: 'purple' },
+  { name: 'Indigo', value: '#4f46e5', category: 'purple' },
 ] as const;
 
 // Polices autorisées

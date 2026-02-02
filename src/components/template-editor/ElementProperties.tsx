@@ -3,7 +3,7 @@
  * Édition des textes, images et formes (éléments NON dynamiques uniquement)
  */
 
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "./RichTextEditor";
+import { ColorPicker } from "./ColorPicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
@@ -103,6 +104,67 @@ export function ElementProperties() {
   const selectedElements = getSelectedElements();
   const isEditable = currentVersion?.status === 'brouillon';
   const isMultiSelect = selectedElementIds.length > 1;
+
+  const textContent = selectedElement?.type === 'text' 
+    ? selectedElement.content as TextContent 
+    : null;
+
+  const imageContent = selectedElement?.type === 'image'
+    ? selectedElement.content as ImageContent
+    : null;
+
+  const shapeContent = selectedElement?.type === 'shape'
+    ? selectedElement.content as ShapeContent
+    : null;
+
+  const iconContent = selectedElement?.type === 'icon'
+    ? selectedElement.content as IconContent
+    : null;
+
+  // Tous les hooks useCallback AVANT les returns conditionnels
+  const handleTextChange = useCallback((updates: Partial<TextContent>) => {
+    if (isEditable && textContent && selectedElement) {
+      updateTextContent(selectedElement.id, updates);
+    }
+  }, [isEditable, textContent, updateTextContent, selectedElement]);
+
+  const handleShapeContentChange = useCallback((updates: Partial<ShapeContent>) => {
+    if (isEditable && shapeContent && selectedElement) {
+      updateShapeContent(selectedElement.id, updates);
+    }
+  }, [isEditable, shapeContent, updateShapeContent, selectedElement]);
+
+  const handleShapeBorderChange = useCallback((updates: Partial<ShapeContent['border']>) => {
+    if (isEditable && shapeContent && selectedElement) {
+      updateShapeContent(selectedElement.id, {
+        border: { ...shapeContent.border, ...updates }
+      });
+    }
+  }, [isEditable, shapeContent, updateShapeContent, selectedElement]);
+
+  const handleIconColorChange = useCallback((color: string) => {
+    if (isEditable && selectedElement) {
+      updateIconContent(selectedElement.id, { color });
+    }
+  }, [isEditable, selectedElement, updateIconContent]);
+
+  const handleTextColorChange = useCallback((color: string) => {
+    if (isEditable && selectedElement) {
+      handleTextChange({ color });
+    }
+  }, [isEditable, selectedElement, handleTextChange]);
+
+  const handleShapeBgColorChange = useCallback((color: string) => {
+    if (isEditable && selectedElement) {
+      handleShapeContentChange({ backgroundColor: color });
+    }
+  }, [isEditable, selectedElement, handleShapeContentChange]);
+
+  const handleBorderColorChange = useCallback((color: string) => {
+    if (isEditable && selectedElement) {
+      handleShapeBorderChange({ color });
+    }
+  }, [isEditable, selectedElement, handleShapeBorderChange]);
 
   // Panel multi-sélection
   if (isMultiSelect) {
@@ -216,28 +278,6 @@ export function ElementProperties() {
       </Card>
     );
   }
-
-  const textContent = selectedElement.type === 'text' 
-    ? selectedElement.content as TextContent 
-    : null;
-
-  const imageContent = selectedElement.type === 'image'
-    ? selectedElement.content as ImageContent
-    : null;
-
-  const shapeContent = selectedElement.type === 'shape'
-    ? selectedElement.content as ShapeContent
-    : null;
-
-  const iconContent = selectedElement.type === 'icon'
-    ? selectedElement.content as IconContent
-    : null;
-
-  const handleTextChange = (updates: Partial<TextContent>) => {
-    if (isEditable && textContent) {
-      updateTextContent(selectedElement.id, updates);
-    }
-  };
 
   const handlePresetStyleChange = (preset: TextPresetStyle) => {
     if (isEditable && textContent) {
@@ -371,21 +411,6 @@ export function ElementProperties() {
     }
   };
 
-  // Shape handlers
-  const handleShapeContentChange = (updates: Partial<ShapeContent>) => {
-    if (isEditable && shapeContent) {
-      updateShapeContent(selectedElement.id, updates);
-    }
-  };
-
-  const handleShapeBorderChange = (updates: Partial<ShapeContent['border']>) => {
-    if (isEditable && shapeContent) {
-      updateShapeContent(selectedElement.id, {
-        border: { ...shapeContent.border, ...updates }
-      });
-    }
-  };
-
   const handleToggleAspectRatio = () => {
     if (isEditable && selectedElement.type === 'shape') {
       toggleAspectRatioLock(selectedElement.id);
@@ -480,22 +505,14 @@ export function ElementProperties() {
 
             <div className="space-y-2">
               <Label>Couleur</Label>
-              <div className="grid grid-cols-9 gap-1 max-h-24 overflow-y-auto p-1 border rounded-md bg-muted/20">
-                {ALLOWED_COLORS.map((color) => (
-                  <button
-                    key={color.value}
-                    className={cn(
-                      "w-5 h-5 rounded border-2 transition-all shrink-0",
-                      iconContent.color === color.value ? "border-primary ring-1 ring-primary/30 scale-110" : "border-transparent hover:border-muted-foreground/50",
-                      !isEditable && "opacity-50 cursor-not-allowed"
-                    )}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => updateIconContent(selectedElement.id, { color: color.value })}
-                    disabled={!isEditable}
-                    title={color.name}
-                  />
-                ))}
-              </div>
+              <ColorPicker
+                colors={ALLOWED_COLORS}
+                selectedColor={iconContent.color}
+                onColorChange={handleIconColorChange}
+                disabled={!isEditable}
+                columns={8}
+                maxHeight={144}
+              />
             </div>
 
             <div className="space-y-2">
@@ -750,24 +767,14 @@ export function ElementProperties() {
             {/* Couleur */}
             <div className="space-y-2">
               <Label>Couleur du texte</Label>
-              <div className="grid grid-cols-9 gap-1 max-h-32 overflow-y-auto p-1 border rounded-md bg-muted/20">
-                {ALLOWED_COLORS.map((color) => (
-                  <button
-                    key={color.value}
-                    className={cn(
-                      "w-5 h-5 rounded border-2 transition-all shrink-0",
-                      textContent.color === color.value 
-                        ? "border-primary ring-2 ring-primary/30 scale-110" 
-                        : "border-transparent hover:border-muted-foreground/50",
-                      !isEditable && "opacity-50 cursor-not-allowed"
-                    )}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => handleTextChange({ color: color.value })}
-                    disabled={!isEditable}
-                    title={color.name}
-                  />
-                ))}
-              </div>
+              <ColorPicker
+                colors={ALLOWED_COLORS}
+                selectedColor={textContent.color}
+                onColorChange={handleTextColorChange}
+                disabled={!isEditable}
+                columns={8}
+                maxHeight={160}
+              />
             </div>
           </>
         )}
@@ -954,25 +961,14 @@ export function ElementProperties() {
                 <Palette className="h-4 w-4" />
                 Couleur de fond
               </Label>
-              <div className="grid grid-cols-8 gap-1 max-h-36 overflow-y-auto p-1.5 border rounded-md bg-muted/20">
-                {SHAPE_BACKGROUND_COLORS.map((color) => (
-                  <button
-                    key={color.value}
-                    className={cn(
-                      "w-5 h-5 rounded border-2 transition-all shrink-0",
-                      color.value === 'transparent' && "bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOCIgaGVpZ2h0PSI4IiB2aWV3Qm94PSIwIDAgOCA4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNjY2MiLz48cmVjdCB4PSI0IiB5PSI0IiB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjY2NjIi8+PC9zdmc+')]",
-                      shapeContent.backgroundColor === color.value 
-                        ? "border-primary ring-2 ring-primary/30 scale-110" 
-                        : "border-transparent hover:border-muted-foreground/50",
-                      (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
-                    )}
-                    style={{ backgroundColor: color.value === 'transparent' ? undefined : color.value }}
-                    onClick={() => handleShapeContentChange({ backgroundColor: color.value })}
-                    disabled={!isEditable || shapeContent.isLocked}
-                    title={color.name}
-                  />
-                ))}
-              </div>
+              <ColorPicker
+                colors={SHAPE_BACKGROUND_COLORS}
+                selectedColor={shapeContent.backgroundColor}
+                onColorChange={handleShapeBgColorChange}
+                disabled={!isEditable || shapeContent.isLocked}
+                columns={8}
+                maxHeight={180}
+              />
             </div>
 
             {/* Opacité du fond */}
@@ -1012,24 +1008,15 @@ export function ElementProperties() {
                   {/* Couleur de bordure */}
                   <div className="space-y-2">
                     <Label className="text-xs">Couleur</Label>
-                    <div className="grid grid-cols-9 gap-1 max-h-24 overflow-y-auto p-1 border rounded-md bg-muted/20">
-                      {ALLOWED_COLORS.map((color) => (
-                        <button
-                          key={color.value}
-                          className={cn(
-                            "w-4 h-4 rounded border-2 transition-all shrink-0",
-                            shapeContent.border.color === color.value 
-                              ? "border-primary ring-1 ring-primary/30 scale-110" 
-                              : "border-transparent hover:border-muted-foreground/50",
-                            (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
-                          )}
-                          style={{ backgroundColor: color.value }}
-                          onClick={() => handleShapeBorderChange({ color: color.value })}
-                          disabled={!isEditable || shapeContent.isLocked}
-                          title={color.name}
-                        />
-                      ))}
-                    </div>
+                    <ColorPicker
+                      colors={ALLOWED_COLORS}
+                      selectedColor={shapeContent.border.color}
+                      onColorChange={handleBorderColorChange}
+                      disabled={!isEditable || shapeContent.isLocked}
+                      columns={8}
+                      size="sm"
+                      maxHeight={120}
+                    />
                   </div>
 
                   {/* Épaisseur de bordure */}
@@ -1083,24 +1070,15 @@ export function ElementProperties() {
                 {/* Couleur du trait */}
                 <div className="space-y-2">
                   <Label className="text-xs">Couleur du trait</Label>
-                  <div className="grid grid-cols-9 gap-1 max-h-24 overflow-y-auto p-1 border rounded-md bg-muted/20">
-                    {ALLOWED_COLORS.map((color) => (
-                      <button
-                        key={color.value}
-                        className={cn(
-                          "w-4 h-4 rounded border-2 transition-all shrink-0",
-                          shapeContent.border.color === color.value 
-                            ? "border-primary ring-1 ring-primary/30 scale-110" 
-                            : "border-transparent hover:border-muted-foreground/50",
-                          (!isEditable || shapeContent.isLocked) && "opacity-50 cursor-not-allowed"
-                        )}
-                        style={{ backgroundColor: color.value }}
-                        onClick={() => handleShapeBorderChange({ color: color.value })}
-                        disabled={!isEditable || shapeContent.isLocked}
-                        title={color.name}
-                      />
-                    ))}
-                  </div>
+                  <ColorPicker
+                    colors={ALLOWED_COLORS}
+                    selectedColor={shapeContent.border.color}
+                    onColorChange={handleBorderColorChange}
+                    disabled={!isEditable || shapeContent.isLocked}
+                    columns={8}
+                    size="sm"
+                    maxHeight={120}
+                  />
                 </div>
 
                 {/* Rotation de la ligne */}

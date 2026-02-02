@@ -8,3 +8,5 @@ export { DynamicZoneOverlay } from './DynamicZoneOverlay';
 export { ElementProperties } from './ElementProperties';
 export { VersionHistory } from './VersionHistory';
 export { PublishValidation } from './PublishValidation';
+export { ColorPicker } from './ColorPicker';
+export type { ColorPickerProps, ColorDefinition } from './ColorPicker';
