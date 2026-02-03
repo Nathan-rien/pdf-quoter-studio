@@ -46,39 +46,7 @@ export function validateTemplateForPublication(
     }
   }
 
-  // 3. Ajouter des warnings informatifs si des types de zones "classiques" manquent
-  const presentZoneTypes = new Set(
-    version.pages.flatMap(p => p.dynamicZones.map(z => z.type))
-  );
-  
-  const zoneTypeLabels: Record<DynamicZoneType, string> = {
-    'invest_table': 'Tableau Invest',
-    'location_block': 'Bloc Location',
-    'options_block': 'Bloc Options'
-  };
-  
-  if (!presentZoneTypes.has('invest_table')) {
-    warnings.push({
-      type: 'missing_zone',
-      message: 'Aucune zone "Tableau Invest" - les données produits ne seront pas injectées'
-    });
-  }
-  
-  if (!presentZoneTypes.has('location_block')) {
-    warnings.push({
-      type: 'missing_zone', 
-      message: 'Aucune zone "Bloc Location" - les conditions de location ne seront pas injectées'
-    });
-  }
-
-  if (!presentZoneTypes.has('options_block')) {
-    warnings.push({
-      type: 'missing_zone',
-      message: 'Aucune zone "Bloc Options" - les services ne seront pas injectés'
-    });
-  }
-
-  // 4. Vérifier les éléments texte vides (warning seulement)
+  // 3. Vérifier les éléments texte vides (warning seulement)
   for (const page of version.pages) {
     for (const element of page.elements) {
       if (element.type === 'text' && !element.isDynamic) {
