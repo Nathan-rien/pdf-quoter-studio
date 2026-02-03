@@ -103,14 +103,13 @@ export function TemplateSelector() {
                       </p>
                     )}
                     
-                    {/* Informations de version */}
+                    {/* Nombre de pages */}
                     {version && (
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          v{version.versionNumber}
-                        </Badge>
                         <span className="text-xs text-muted-foreground">
-                          {version.pages.length || '?'} pages
+                          {version.pages && version.pages.length > 0 
+                            ? `${version.pages.length} pages` 
+                            : 'Chargement...'}
                         </span>
                       </div>
                     )}
