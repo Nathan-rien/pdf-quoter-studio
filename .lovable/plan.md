@@ -1,85 +1,59 @@
 
 
-# Plan : Restaurer l'extraction multi-lignes des désignations Dental
+# Plan : Renforcer la séparation visuelle entre les champs Désignation
 
 ## Contexte
 
-La modification précédente a simplifié l'extraction pour ne garder que la première ligne de description. L'utilisateur souhaite revenir à l'extraction complète multi-lignes pour avoir l'intégralité du texte descriptif.
+Actuellement, les lignes de produits dans le tableau sont séparées par une fine ligne (`divide-y divide-muted/50`), mais les descriptions multi-lignes peuvent se fondre visuellement. L'utilisateur souhaite une séparation plus marquée.
 
 ## Fichier à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/lib/pdf-import-parser.ts` | Restaurer la boucle de collecte multi-lignes |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Renforcer le style visuel des séparateurs entre lignes produit |
 
-## Modification
+## Modification proposée
 
-Restaurer le code de collecte des lignes suivantes dans `parseDentalProductsWithMultilineDescriptions` (lignes 1339-1342) :
+Dans la fonction `renderProductTableWithFlowElements` (lignes 737-746), modifier le style des lignes du tableau :
 
 ```typescript
-// AVANT (version simplifiée actuelle) :
-const designation = reference 
-  ? `[${reference}] ${descriptionLine}` 
-  : descriptionLine;
+// AVANT (ligne 737-745) :
+<div className="divide-y divide-muted/50">
+  {pageLines.map((ligne, idx) => (
+    <div key={idx} className="grid grid-cols-12 gap-1 px-2 py-0.5 text-[9px] items-start">
+      <div className="col-span-6 break-words whitespace-normal leading-snug">{ligne.designation || '-'}</div>
+      ...
+    </div>
+  ))}
+</div>
 
-// APRÈS (restauration multi-lignes) :
-const descriptionParts = [descriptionLine];
-
-// Scan following lines until stop marker
-let emptyLineCount = 0;
-for (let j = i + 1; j < lines.length; j++) {
-  const nextLine = lines[j];
-  
-  // Handle empty lines - allow a few but stop at consecutive empties
-  if (!nextLine || nextLine.length < 2) {
-    emptyLineCount++;
-    if (emptyLineCount >= 2) break;
-    continue;
-  }
-  emptyLineCount = 0;
-  
-  // Stop conditions
-  if (stopMarkers.test(nextLine)) break;
-  if (productLinePattern.test(nextLine)) break; // New product
-  if (/^\[.*?\].*Unit[eé]/i.test(nextLine)) break; // New product with ref
-  
-  // Skip metadata/footer lines
-  if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(nextLine)) break;
-  
-  // Add to description
-  descriptionParts.push(nextLine);
-}
-
-// Build final designation with reference prefix
-const fullDescription = descriptionParts.join('\n').trim();
-const designation = reference 
-  ? `[${reference}] ${fullDescription}` 
-  : fullDescription;
+// APRÈS :
+<div className="divide-y divide-border">
+  {pageLines.map((ligne, idx) => (
+    <div 
+      key={idx} 
+      className="grid grid-cols-12 gap-1 px-2 py-1.5 text-[9px] items-start bg-white even:bg-muted/20"
+    >
+      <div className="col-span-6 break-words whitespace-normal leading-snug py-0.5">{ligne.designation || '-'}</div>
+      ...
+    </div>
+  ))}
+</div>
 ```
+
+## Améliorations visuelles
+
+| Propriété | Avant | Après |
+|-----------|-------|-------|
+| Bordure séparatrice | `divide-muted/50` (très légère) | `divide-border` (bordure standard visible) |
+| Padding vertical | `py-0.5` (2px) | `py-1.5` (6px) |
+| Alternance de couleur | Aucune | `even:bg-muted/20` (lignes paires légèrement grisées) |
+| Padding colonne désignation | Aucun | `py-0.5` (espacement interne du texte) |
 
 ## Résultat attendu
 
-### Produit 1 (désignation complète) :
-
-```
-[i900c 3YW fidelite] MEDIT i-Series : Scanner
-IO (i900c garantie 3 ans fidélité)
-Un ordinateur adapté doit être utilisé pour
-le bon fonctionnement de ce matériel. Merci
-de vous rapprocher de notre service technique.
-Mises à jour du logiciel Medit Link gratuites.
-Merci de conserver les emballages pour tout retour SAV...
-```
-
-### Produit 2 (désignation complète) :
-
-```
-[OF-CAB] Station de travail 3D fixe CAB
-Inclus :
-- Tour : carte graphique Nvidia RTX 5060 (8Go)
-- processeur Intel Core I7 14eme Génération
-- disque dur SSD 1To ; RAM 32 GB ; wifi
-...
-Garantie constructeur 2 ans.
-```
+- Bordures plus visibles entre chaque produit
+- Espacement vertical accru pour une meilleure lisibilité
+- Alternance de couleur (lignes paires légèrement grisées) pour distinguer les blocs
+- Meilleure respiration visuelle pour les longues descriptions multi-lignes
 
