@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils";
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
-  const { isAdmin, signOut } = useAuth();
+  const { isAdmin, userRole, signOut } = useAuth();
+  const canAccessAdmin = userRole === 'admin';
 
   const renderContent = () => {
     switch (currentView) {
@@ -51,6 +52,7 @@ export default function Index() {
         currentView={currentView}
         onNavigate={setCurrentView}
         isAdmin={isAdmin}
+        canAccessAdmin={canAccessAdmin}
         onSignOut={signOut}
       />
       

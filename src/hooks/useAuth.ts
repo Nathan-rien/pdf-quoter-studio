@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+type AppRole = 'admin' | 'commercial' | 'user';
+
 interface UseAuthReturn {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isCommercial: boolean;
+  userRole: AppRole | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -16,6 +20,8 @@ export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCommercial, setIsCommercial] = useState(false);
+  const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -28,10 +34,12 @@ export function useAuth(): UseAuthReturn {
         // Defer role check with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
-            checkAdminRole(session.user.id);
+            checkUserRole(session.user.id);
           }, 0);
         } else {
           setIsAdmin(false);
+          setIsCommercial(false);
+          setUserRole(null);
         }
       }
     );
@@ -42,7 +50,7 @@ export function useAuth(): UseAuthReturn {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        checkAdminRole(session.user.id);
+        checkUserRole(session.user.id);
       } else {
         setIsLoading(false);
       }
@@ -51,24 +59,34 @@ export function useAuth(): UseAuthReturn {
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminRole = async (userId: string) => {
+  const checkUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .eq('role', 'admin')
         .maybeSingle();
 
       if (error) {
-        console.error('Error checking admin role:', error);
+        console.error('Error checking user role:', error);
         setIsAdmin(false);
+        setIsCommercial(false);
+        setUserRole(null);
+      } else if (data) {
+        const role = data.role as AppRole;
+        setUserRole(role);
+        setIsAdmin(role === 'admin');
+        setIsCommercial(role === 'commercial');
       } else {
-        setIsAdmin(!!data);
+        setIsAdmin(false);
+        setIsCommercial(false);
+        setUserRole(null);
       }
     } catch (err) {
-      console.error('Error checking admin role:', err);
+      console.error('Error checking user role:', err);
       setIsAdmin(false);
+      setIsCommercial(false);
+      setUserRole(null);
     } finally {
       setIsLoading(false);
     }
@@ -103,12 +121,16 @@ export function useAuth(): UseAuthReturn {
     setUser(null);
     setSession(null);
     setIsAdmin(false);
+    setIsCommercial(false);
+    setUserRole(null);
   };
 
   return {
     user,
     session,
     isAdmin,
+    isCommercial,
+    userRole,
     isLoading,
     signIn,
     signUp,
