@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Check, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,17 +6,48 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
+import type { TemplateVersion } from '@/types/template-editor';
+
+// UUID regex for cloud IDs
+const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 export function TemplateSelector() {
   const { selectedTemplateId, selectTemplateForProposal } = useRentalProposalStore();
   const { allTemplates, getTemplateLatestVersion } = useTemplateEditorStore();
-  const { isLoading, hasLoaded } = useTemplateSync();
+  const { isLoading, hasLoaded, loadVersionPages } = useTemplateSync();
+  
+  // Track requested version IDs to prevent duplicate requests
+  const requestedRef = useRef(new Set<string>());
 
   // Filtrer uniquement les templates actifs ou publiés
   const availableTemplates = allTemplates.filter(template => {
     const version = getTemplateLatestVersion(template.id);
     return version && version.status === 'publie';
   });
+
+  // Lazy load pages for published versions that don't have pages loaded yet
+  useEffect(() => {
+    if (!hasLoaded) return;
+
+    const versionsToPreload = availableTemplates
+      .map(t => getTemplateLatestVersion(t.id))
+      .filter((v): v is TemplateVersion => !!v && v.status === 'publie')
+      .filter(v => !v.pages || v.pages.length === 0)
+      .filter(v => isUuid(v.id))
+      .filter(v => !requestedRef.current.has(v.id));
+
+    let cancelled = false;
+
+    (async () => {
+      for (const v of versionsToPreload) {
+        if (cancelled) break;
+        requestedRef.current.add(v.id);
+        await loadVersionPages(v.id);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [hasLoaded, availableTemplates, getTemplateLatestVersion, loadVersionPages]);
 
   if (isLoading && !hasLoaded) {
     return (
