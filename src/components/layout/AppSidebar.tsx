@@ -17,6 +17,7 @@ interface AppSidebarProps {
   currentView: ViewType;
   onNavigate: (view: ViewType) => void;
   isAdmin?: boolean;
+  canAccessAdmin?: boolean;
   onSignOut?: () => void;
 }
 
@@ -24,6 +25,7 @@ export function AppSidebar({
   currentView,
   onNavigate,
   isAdmin = false,
+  canAccessAdmin = false,
   onSignOut,
 }: AppSidebarProps) {
   return (
@@ -61,48 +63,50 @@ export function AppSidebar({
           Historique
         </Button>
 
-        {/* Section Administration */}
-        <div className="pt-3 mt-3 border-t border-border">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
-            Administration
-          </p>
-          <Button
-            variant={currentView === 'template-editor' ? 'secondary' : 'ghost'}
-            className="w-full justify-start gap-2 h-8 text-sm"
-            onClick={() => onNavigate('template-editor')}
-          >
-            <Palette className="h-3.5 w-3.5" />
-            Éditeur Template
-          </Button>
-          <Button
-            variant={currentView === 'options-admin' ? 'secondary' : 'ghost'}
-            className="w-full justify-start gap-2 h-8 text-sm"
-            onClick={() => onNavigate('options-admin')}
-          >
-            <Settings className="h-3.5 w-3.5" />
-            Options Services
-          </Button>
-          <Button
-            variant={currentView === 'base-taux-admin' ? 'secondary' : 'ghost'}
-            className="w-full justify-start gap-2 h-8 text-sm"
-            onClick={() => onNavigate('base-taux-admin')}
-          >
-            <Database className="h-3.5 w-3.5" />
-            Base Taux
-          </Button>
-          
-          {/* Admin-only: Access Management */}
-          {isAdmin && (
+        {/* Section Administration - masquée pour les commerciaux */}
+        {canAccessAdmin && (
+          <div className="pt-3 mt-3 border-t border-border">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
+              Administration
+            </p>
             <Button
-              variant={currentView === 'access-management' ? 'secondary' : 'ghost'}
+              variant={currentView === 'template-editor' ? 'secondary' : 'ghost'}
               className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('access-management')}
+              onClick={() => onNavigate('template-editor')}
             >
-              <Users className="h-3.5 w-3.5" />
-              Accès
+              <Palette className="h-3.5 w-3.5" />
+              Éditeur Template
             </Button>
-          )}
-        </div>
+            <Button
+              variant={currentView === 'options-admin' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('options-admin')}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Options Services
+            </Button>
+            <Button
+              variant={currentView === 'base-taux-admin' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('base-taux-admin')}
+            >
+              <Database className="h-3.5 w-3.5" />
+              Base Taux
+            </Button>
+            
+            {/* Admin-only: Access Management */}
+            {isAdmin && (
+              <Button
+                variant={currentView === 'access-management' ? 'secondary' : 'ghost'}
+                className="w-full justify-start gap-2 h-8 text-sm"
+                onClick={() => onNavigate('access-management')}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Accès
+              </Button>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Footer */}

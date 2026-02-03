@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Shield, UserPlus, Trash2, Loader2 } from 'lucide-react';
+import { Users, Shield, UserPlus, Trash2, Loader2, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,7 @@ interface UserWithRole {
   email: string;
   full_name: string | null;
   created_at: string;
-  role: 'admin' | 'user' | null;
+  role: 'admin' | 'commercial' | 'user' | null;
 }
 
 export function AccessManagement() {
@@ -77,7 +77,7 @@ export function AccessManagement() {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'admin' | 'user') => {
+  const handleRoleChange = async (userId: string, newRole: 'admin' | 'commercial' | 'user') => {
     setUpdatingUserId(userId);
     try {
       // First, delete existing role
@@ -217,7 +217,7 @@ export function AccessManagement() {
                           if (value === 'none') {
                             setDeleteUserId(user.id);
                           } else {
-                            handleRoleChange(user.id, value as 'admin' | 'user');
+                            handleRoleChange(user.id, value as 'admin' | 'commercial' | 'user');
                           }
                         }}
                         disabled={updatingUserId === user.id}
@@ -229,6 +229,9 @@ export function AccessManagement() {
                             <SelectValue>
                               {user.role === 'admin' && (
                                 <Badge variant="default" className="bg-primary">Admin</Badge>
+                              )}
+                              {user.role === 'commercial' && (
+                                <Badge variant="outline" className="border-blue-500 text-blue-600">Commercial</Badge>
                               )}
                               {user.role === 'user' && (
                                 <Badge variant="secondary">Utilisateur</Badge>
@@ -244,6 +247,12 @@ export function AccessManagement() {
                             <div className="flex items-center gap-2">
                               <Shield className="h-4 w-4" />
                               Admin
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="commercial">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4" />
+                              Commercial
                             </div>
                           </SelectItem>
                           <SelectItem value="user">
