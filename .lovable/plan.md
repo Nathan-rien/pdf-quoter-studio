@@ -1,161 +1,64 @@
 
-
-# Plan : Ajouter le role Commercial
+# Plan : Correction de l'affichage des templates
 
 ## Resume
 
-Ajout d'un nouveau role "commercial" qui permet d'acceder aux fonctionnalites de proposition locative et historique, mais pas a la section Administration (Editeur Template, Options Services, Base Taux, Acces).
+Modifications du composant `TemplateSelector.tsx` pour :
+1. Supprimer l'affichage du numero de version (v6, v118, etc.)
+2. Corriger l'affichage du nombre de pages qui affiche "?" au lieu du nombre reel
 
-## Hierarchie des roles
+## Probleme identifie
 
-| Role | Proposition | Historique | Administration |
-|------|-------------|------------|----------------|
-| Admin | Oui | Oui | Oui (complet) |
-| Commercial | Oui | Oui | Non |
-| User | Oui | Oui | Non |
-
-## Etape 1 : Migration base de donnees
-
-### 1.1 Ajouter la valeur "commercial" a l'enum app_role
-
-```sql
-ALTER TYPE public.app_role ADD VALUE 'commercial';
-```
-
-### 1.2 Mettre a jour les politiques RLS (optionnel)
-
-Les politiques RLS existantes permettent deja aux utilisateurs de voir leur propre role. Aucune modification necessaire pour l'instant.
-
-## Etape 2 : Modifications du hook useAuth
-
-### Fichier `src/hooks/useAuth.ts`
-
-Ajouter la detection du role "commercial" :
+Dans le code actuel (lignes 107-116 de TemplateSelector.tsx) :
 
 ```typescript
-interface UseAuthReturn {
-  user: User | null;
-  session: Session | null;
-  isAdmin: boolean;
-  isCommercial: boolean;  // Nouveau
-  userRole: 'admin' | 'commercial' | 'user' | null;  // Nouveau
-  isLoading: boolean;
-  // ...
-}
-```
-
-Modifier la fonction `checkAdminRole` pour recuperer le role complet :
-
-```typescript
-const checkUserRole = async (userId: string) => {
-  const { data } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (data) {
-    setUserRole(data.role);
-    setIsAdmin(data.role === 'admin');
-    setIsCommercial(data.role === 'commercial');
-  }
-};
-```
-
-## Etape 3 : Modifications de la sidebar
-
-### Fichier `src/components/layout/AppSidebar.tsx`
-
-Ajouter la prop `canAccessAdmin` pour controler l'affichage de la section Administration :
-
-```typescript
-interface AppSidebarProps {
-  currentView: ViewType;
-  onNavigate: (view: ViewType) => void;
-  isAdmin?: boolean;
-  canAccessAdmin?: boolean;  // Nouveau - true pour admin, false pour commercial/user
-  onSignOut?: () => void;
-}
-```
-
-Conditionner l'affichage de la section Administration :
-
-```tsx
-{/* Section Administration - masquee pour les commerciaux */}
-{canAccessAdmin && (
-  <div className="pt-3 mt-3 border-t border-border">
-    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
-      Administration
-    </p>
-    {/* Boutons Template Editor, Options Services, Base Taux */}
-    {isAdmin && (
-      <Button onClick={() => onNavigate('access-management')}>Acces</Button>
-    )}
+{version && (
+  <div className="flex items-center gap-2 mt-2">
+    <Badge variant="outline" className="text-xs">
+      v{version.versionNumber}
+    </Badge>
+    <span className="text-xs text-muted-foreground">
+      {version.pages.length || '?'} pages
+    </span>
   </div>
 )}
 ```
 
-## Etape 4 : Mise a jour de la page Index
+### Probleme 1 : Numero de version
+Le badge `v{version.versionNumber}` n'est pas souhaite dans cette vue de selection.
 
-### Fichier `src/pages/Index.tsx`
+### Probleme 2 : Nombre de pages "?"
+L'expression `version.pages.length || '?'` utilise l'operateur OR logique. Quand `pages.length === 0`, la valeur `0` est falsy en JavaScript, donc `'?'` est affiche meme si le tableau existe. De plus, si `pages` est undefined ou vide, cela pose probleme.
 
-Passer la prop `canAccessAdmin` basee sur le role :
+## Solution
 
-```tsx
-const { isAdmin, userRole, signOut } = useAuth();
-const canAccessAdmin = userRole === 'admin'; // Seul admin peut acceder
+Modifier les lignes 106-116 pour :
+- Supprimer completement le badge de version
+- Utiliser une verification explicite pour le nombre de pages
+- Afficher le nombre reel de pages ou un fallback si les pages ne sont pas chargees
 
-<AppSidebar
-  currentView={currentView}
-  onNavigate={setCurrentView}
-  isAdmin={isAdmin}
-  canAccessAdmin={canAccessAdmin}
-  onSignOut={signOut}
-/>
-```
+### Code modifie
 
-## Etape 5 : Mise a jour de la gestion des acces
-
-### Fichier `src/components/access/AccessManagement.tsx`
-
-Ajouter le role "Commercial" dans le select :
-
-```tsx
-<SelectContent>
-  <SelectItem value="admin">Admin</SelectItem>
-  <SelectItem value="commercial">Commercial</SelectItem>  {/* Nouveau */}
-  <SelectItem value="user">Utilisateur</SelectItem>
-</SelectContent>
-```
-
-Mettre a jour l'interface et les badges :
-
-```tsx
-interface UserWithRole {
-  // ...
-  role: 'admin' | 'commercial' | 'user' | null;
-}
-
-// Dans le rendu
-{user.role === 'commercial' && (
-  <Badge variant="outline" className="border-blue-500 text-blue-600">Commercial</Badge>
+```typescript
+{/* Informations de version - nombre de pages uniquement */}
+{version && (
+  <div className="flex items-center gap-2 mt-2">
+    <span className="text-xs text-muted-foreground">
+      {version.pages && version.pages.length > 0 
+        ? `${version.pages.length} pages` 
+        : 'Chargement...'}
+    </span>
+  </div>
 )}
 ```
 
-## Fichiers a modifier
+## Fichier a modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| Migration SQL | Ajouter 'commercial' a l'enum app_role |
-| `src/hooks/useAuth.ts` | Ajouter detection du role commercial + userRole |
-| `src/components/layout/AppSidebar.tsx` | Conditionner l'affichage de la section Admin |
-| `src/pages/Index.tsx` | Passer canAccessAdmin a la sidebar |
-| `src/components/access/AccessManagement.tsx` | Ajouter option Commercial dans le select |
+| `src/components/rental-proposal/TemplateSelector.tsx` | Supprimer le badge version, corriger l'affichage du nombre de pages |
 
 ## Resultat attendu
 
-- Les commerciaux voient uniquement "Proposition" et "Historique"
-- La section "Administration" est completement masquee pour les commerciaux
-- Les admins peuvent assigner le role "Commercial" depuis l'onglet Acces
-- Le role s'affiche avec un badge bleu distinctif
-
+- Plus de badge "v6" ou "v118" affiche sur les cartes de selection
+- Affichage correct du nombre de pages (ex: "8 pages") au lieu de "? pages"
