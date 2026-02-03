@@ -1,62 +1,60 @@
 
 
-# Plan : Garder uniquement la première ligne des désignations Dental
+# Plan : Supprimer les avertissements de zones manquantes à la sauvegarde
 
-## Changement demandé
+## Contexte
 
-Actuellement, le parser collecte toutes les lignes de description jusqu'au marqueur de fin, ce qui donne des désignations très longues sur plusieurs lignes.
-
-**Comportement actuel :**
-```
-[i900c 3YW fidelite] MEDIT i-Series : Scanner
-IO (i900c garantie 3 ans fidélité)
-Un ordinateur adapté doit être utilisé pour...
-... (10+ lignes)
-```
-
-**Comportement souhaité :**
-```
-[i900c 3YW fidelite] MEDIT i-Series : Scanner
-```
+Lors de la sauvegarde du template, des avertissements informatifs s'affichent si certains types de zones dynamiques sont absents (Bloc Location, Tableau Invest, Bloc Options). Ces avertissements ne bloquent pas la sauvegarde mais peuvent être perçus comme gênants.
 
 ## Fichier à modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/lib/pdf-import-parser.ts` | Supprimer la boucle de collecte multi-lignes |
+| `src/lib/template-validation.ts` | Supprimer les warnings de zones manquantes |
 
 ## Modification
 
-Dans la fonction `parseDentalProductsWithMultilineDescriptions`, supprimer la boucle qui collecte les lignes suivantes (lignes 1344-1371) et utiliser uniquement la première ligne de description :
+Supprimer le bloc de code qui génère les warnings pour les zones "classiques" manquantes (lignes 49-79) :
 
 ```typescript
-// AVANT (lignes 1339-1377) :
-const descriptionParts = [descriptionLine];
+// À SUPPRIMER (lignes 49-79) :
 
-// Scan following lines until stop marker
-let emptyLineCount = 0;
-for (let j = i + 1; j < lines.length; j++) {
-  const nextLine = lines[j];
-  // ... (30 lignes de code de collecte multi-lignes)
-  descriptionParts.push(nextLine);
+// 3. Ajouter des warnings informatifs si des types de zones "classiques" manquent
+const presentZoneTypes = new Set(
+  version.pages.flatMap(p => p.dynamicZones.map(z => z.type))
+);
+
+const zoneTypeLabels: Record<DynamicZoneType, string> = {
+  'invest_table': 'Tableau Invest',
+  'location_block': 'Bloc Location',
+  'options_block': 'Bloc Options'
+};
+
+if (!presentZoneTypes.has('invest_table')) {
+  warnings.push({
+    type: 'missing_zone',
+    message: 'Aucune zone "Tableau Invest" - les données produits ne seront pas injectées'
+  });
 }
 
-const fullDescription = descriptionParts.join('\n').trim();
-const designation = reference 
-  ? `[${reference}] ${fullDescription}` 
-  : fullDescription;
+if (!presentZoneTypes.has('location_block')) {
+  warnings.push({
+    type: 'missing_zone', 
+    message: 'Aucune zone "Bloc Location" - les conditions de location ne seront pas injectées'
+  });
+}
 
-// APRÈS :
-// Utiliser uniquement la première ligne de description
-const designation = reference 
-  ? `[${reference}] ${descriptionLine}` 
-  : descriptionLine;
+if (!presentZoneTypes.has('options_block')) {
+  warnings.push({
+    type: 'missing_zone',
+    message: 'Aucune zone "Bloc Options" - les services ne seront pas injectés'
+  });
+}
 ```
 
-## Résultat attendu
+## Résultat
 
-| Désignation | Nb | VUN | VTN |
-|-------------|-----|-----|-----|
-| [i900c 3YW fidelite] MEDIT i-Series : Scanner | 1 | 11 000 | 11 000,00 € |
-| [OF-CAB] Station de travail 3D fixe CAB | 1 | 1 666 | 1 666,00 € |
+- La boîte de dialogue de sauvegarde n'affichera plus les avertissements sur les zones manquantes
+- Les autres validations (pages vides, texte vide, etc.) resteront actives
+- La section "Avertissements" ne s'affichera plus si aucun autre warning n'est détecté
 
