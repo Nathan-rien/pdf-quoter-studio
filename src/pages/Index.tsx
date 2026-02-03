@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { useRentalProposalStore } from "@/stores/rentalProposalStore";
+import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar, ViewType } from "@/components/layout/AppSidebar";
 import { RentalProposalDashboard } from "@/components/dashboard/RentalProposalDashboard";
 import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateEditorLayout } from "@/components/template-editor";
 import { RentalWorkflow } from "@/components/rental-proposal/RentalWorkflow";
+import { AccessManagement } from "@/components/access/AccessManagement";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
 import { cn } from "@/lib/utils";
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
+  const { isAdmin, signOut } = useAuth();
 
   const renderContent = () => {
     switch (currentView) {
@@ -35,6 +38,8 @@ export default function Index() {
         return <OptionsServicesAdmin />;
       case 'base-taux-admin':
         return <BaseTauxAdmin />;
+      case 'access-management':
+        return <AccessManagement />;
       default:
         return null;
     }
@@ -45,6 +50,8 @@ export default function Index() {
       <AppSidebar
         currentView={currentView}
         onNavigate={setCurrentView}
+        isAdmin={isAdmin}
+        onSignOut={signOut}
       />
       
       <main className="flex-1 p-3 lg:p-4 overflow-auto">
