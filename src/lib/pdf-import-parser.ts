@@ -1336,47 +1336,12 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       descriptionLine = descriptionLine.substring(refMatch[0].length).trim();
     }
     
-    // Collect multi-line description
-    const descriptionParts = [descriptionLine];
-    
-    console.log('[Dental Multi-line] Product line found at', i, ':', descriptionLine.substring(0, 60), '...');
-    
-    // Scan following lines until stop marker
-    let emptyLineCount = 0;
-    for (let j = i + 1; j < lines.length; j++) {
-      const nextLine = lines[j];
-      
-      // Handle empty lines (skip a few, but stop after multiple consecutive)
-      if (!nextLine || nextLine.length < 3) {
-        emptyLineCount++;
-        if (emptyLineCount >= 3) break; // Too many empty lines = end of description
-        continue;
-      }
-      emptyLineCount = 0;
-      
-      // Stop conditions
-      if (stopMarkers.test(nextLine)) break;
-      if (productLinePattern.test(nextLine)) break; // New product
-      if (/^\[.*?\].*Unit[eé]/i.test(nextLine)) break; // New product with ref
-      
-      // Skip metadata lines (company info, bank details, etc.)
-      if (/^(SASU|IBAN|BIC|TVA\s*:|TEL|Capital|SIRET|RCS)/i.test(nextLine)) break;
-      if (/^3D\s*DENTAL\s*STORE/i.test(nextLine)) break;
-      
-      // Skip lines that look like column headers or footers
-      if (/^(Description|Quantité|Prix\s+unitaire|Montant\s+TTC)/i.test(nextLine)) break;
-      
-      // Add to description
-      descriptionParts.push(nextLine);
-    }
-    
-    // Build final designation with reference prefix
-    const fullDescription = descriptionParts.join('\n').trim();
+    // Use only the first line of description (no multi-line collection)
     const designation = reference 
-      ? `[${reference}] ${fullDescription}` 
-      : fullDescription;
+      ? `[${reference}] ${descriptionLine}` 
+      : descriptionLine;
     
-    console.log('[Dental Multi-line] Collected description:', designation.substring(0, 150), '...');
+    console.log('[Dental Parser] Product:', designation.substring(0, 80), '| Qty:', qty, '| HT:', totalHT);
     
     if (designation && totalHT > 0) {
       products.push({
