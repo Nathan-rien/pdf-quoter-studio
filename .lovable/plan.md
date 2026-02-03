@@ -1,223 +1,161 @@
 
 
-# Plan : Authentification Admin avec gestion des acces
+# Plan : Ajouter le role Commercial
 
 ## Resume
 
-Implementation d'un systeme d'authentification complet avec :
-- Page de connexion/inscription
-- Gestion des roles (admin, user) dans une table separee
-- Onglet "Acces" visible uniquement par les admins pour gerer les utilisateurs
-- Protection des pages d'administration
+Ajout d'un nouveau role "commercial" qui permet d'acceder aux fonctionnalites de proposition locative et historique, mais pas a la section Administration (Editeur Template, Options Services, Base Taux, Acces).
 
-## Architecture
+## Hierarchie des roles
 
-```text
-+------------------+     +------------------+     +------------------+
-|   Page /auth     |---->|  Session check   |---->|   Main App       |
-|  Login/Signup    |     |  (AuthProvider)  |     |  with Sidebar    |
-+------------------+     +------------------+     +------------------+
-                                                         |
-                              +---------------------------+
-                              |
-                    +---------+---------+
-                    |                   |
-             +------v------+    +-------v-------+
-             | User normal |    | Admin         |
-             | (Proposition|    | (+Acces tab)  |
-             | Historique) |    |               |
-             +-------------+    +---------------+
-```
+| Role | Proposition | Historique | Administration |
+|------|-------------|------------|----------------|
+| Admin | Oui | Oui | Oui (complet) |
+| Commercial | Oui | Oui | Non |
+| User | Oui | Oui | Non |
 
 ## Etape 1 : Migration base de donnees
 
-### 1.1 Creation du type enum pour les roles
+### 1.1 Ajouter la valeur "commercial" a l'enum app_role
 
 ```sql
-CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+ALTER TYPE public.app_role ADD VALUE 'commercial';
 ```
 
-### 1.2 Table des roles utilisateurs
+### 1.2 Mettre a jour les politiques RLS (optionnel)
 
-```sql
-CREATE TABLE public.user_roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  role app_role NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (user_id, role)
-);
+Les politiques RLS existantes permettent deja aux utilisateurs de voir leur propre role. Aucune modification necessaire pour l'instant.
 
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-```
+## Etape 2 : Modifications du hook useAuth
 
-### 1.3 Table des profils utilisateurs
+### Fichier `src/hooks/useAuth.ts`
 
-```sql
-CREATE TABLE public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
-  full_name TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-```
-
-### 1.4 Fonction securisee has_role
-
-```sql
-CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.user_roles
-    WHERE user_id = _user_id
-      AND role = _role
-  )
-$$;
-```
-
-### 1.5 Politiques RLS
-
-```sql
--- Profiles: lecture par tous les authentifies, ecriture par le proprietaire
-CREATE POLICY "Users can view all profiles" ON public.profiles
-  FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Users can update own profile" ON public.profiles
-  FOR UPDATE TO authenticated USING (auth.uid() = id);
-
--- User roles: admins peuvent tout gerer
-CREATE POLICY "Admins can view all roles" ON public.user_roles
-  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admins can insert roles" ON public.user_roles
-  FOR INSERT TO authenticated WITH CHECK (public.has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admins can delete roles" ON public.user_roles
-  FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
-```
-
-### 1.6 Trigger pour creer le profil automatiquement
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, full_name)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', '')
-  );
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-```
-
-## Etape 2 : Hooks et contexte d'authentification
-
-### 2.1 Fichier `src/hooks/useAuth.ts`
-
-Hook personnalise pour gerer l'etat d'authentification :
+Ajouter la detection du role "commercial" :
 
 ```typescript
-// Expose:
-// - user: User | null
-// - session: Session | null
-// - isAdmin: boolean
-// - isLoading: boolean
-// - signIn(email, password)
-// - signUp(email, password, fullName)
-// - signOut()
+interface UseAuthReturn {
+  user: User | null;
+  session: Session | null;
+  isAdmin: boolean;
+  isCommercial: boolean;  // Nouveau
+  userRole: 'admin' | 'commercial' | 'user' | null;  // Nouveau
+  isLoading: boolean;
+  // ...
+}
 ```
 
-## Etape 3 : Page d'authentification
+Modifier la fonction `checkAdminRole` pour recuperer le role complet :
 
-### 3.1 Fichier `src/pages/Auth.tsx`
+```typescript
+const checkUserRole = async (userId: string) => {
+  const { data } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-- Formulaire de connexion et inscription
-- Validation avec Zod (email, mot de passe min 6 caracteres)
-- Gestion des erreurs (utilisateur deja existant, mauvais identifiants)
-- Redirection vers `/` apres connexion reussie
-- Design coherent avec l'application existante
-
-## Etape 4 : Composant de gestion des acces
-
-### 4.1 Fichier `src/components/access/AccessManagement.tsx`
-
-Interface pour les admins permettant de :
-- Voir la liste des utilisateurs avec leurs roles
-- Creer un nouvel utilisateur (via invitation ou creation directe)
-- Modifier le role d'un utilisateur (admin/user)
-- Supprimer un utilisateur
-
-## Etape 5 : Mise a jour de l'application
-
-### 5.1 Modification `src/App.tsx`
-
-- Ajouter route `/auth`
-- Ajouter composant `ProtectedRoute` pour proteger les pages
-
-### 5.2 Modification `src/pages/Index.tsx`
-
-- Verifier l'authentification
-- Rediriger vers `/auth` si non connecte
-- Ajouter la vue `access-management` dans le switch
-
-### 5.3 Modification `src/components/layout/AppSidebar.tsx`
-
-- Ajouter le type `'access-management'` a `ViewType`
-- Ajouter bouton "Acces" visible uniquement pour les admins (icone Users)
-- Ajouter bouton de deconnexion dans le footer
-
-## Etape 6 : Premier administrateur
-
-Apres la creation du compte, il faudra ajouter manuellement le role admin au premier utilisateur :
-
-```sql
--- A executer une fois apres la premiere inscription
-INSERT INTO public.user_roles (user_id, role)
-SELECT id, 'admin'::app_role FROM auth.users WHERE email = 'votre-email@example.com';
+  if (data) {
+    setUserRole(data.role);
+    setIsAdmin(data.role === 'admin');
+    setIsCommercial(data.role === 'commercial');
+  }
+};
 ```
 
-## Fichiers a creer
+## Etape 3 : Modifications de la sidebar
 
-| Fichier | Description |
-|---------|-------------|
-| `src/hooks/useAuth.ts` | Hook d'authentification |
-| `src/pages/Auth.tsx` | Page connexion/inscription |
-| `src/components/access/AccessManagement.tsx` | Gestion des utilisateurs |
-| `src/components/auth/ProtectedRoute.tsx` | Protection des routes |
+### Fichier `src/components/layout/AppSidebar.tsx`
+
+Ajouter la prop `canAccessAdmin` pour controler l'affichage de la section Administration :
+
+```typescript
+interface AppSidebarProps {
+  currentView: ViewType;
+  onNavigate: (view: ViewType) => void;
+  isAdmin?: boolean;
+  canAccessAdmin?: boolean;  // Nouveau - true pour admin, false pour commercial/user
+  onSignOut?: () => void;
+}
+```
+
+Conditionner l'affichage de la section Administration :
+
+```tsx
+{/* Section Administration - masquee pour les commerciaux */}
+{canAccessAdmin && (
+  <div className="pt-3 mt-3 border-t border-border">
+    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
+      Administration
+    </p>
+    {/* Boutons Template Editor, Options Services, Base Taux */}
+    {isAdmin && (
+      <Button onClick={() => onNavigate('access-management')}>Acces</Button>
+    )}
+  </div>
+)}
+```
+
+## Etape 4 : Mise a jour de la page Index
+
+### Fichier `src/pages/Index.tsx`
+
+Passer la prop `canAccessAdmin` basee sur le role :
+
+```tsx
+const { isAdmin, userRole, signOut } = useAuth();
+const canAccessAdmin = userRole === 'admin'; // Seul admin peut acceder
+
+<AppSidebar
+  currentView={currentView}
+  onNavigate={setCurrentView}
+  isAdmin={isAdmin}
+  canAccessAdmin={canAccessAdmin}
+  onSignOut={signOut}
+/>
+```
+
+## Etape 5 : Mise a jour de la gestion des acces
+
+### Fichier `src/components/access/AccessManagement.tsx`
+
+Ajouter le role "Commercial" dans le select :
+
+```tsx
+<SelectContent>
+  <SelectItem value="admin">Admin</SelectItem>
+  <SelectItem value="commercial">Commercial</SelectItem>  {/* Nouveau */}
+  <SelectItem value="user">Utilisateur</SelectItem>
+</SelectContent>
+```
+
+Mettre a jour l'interface et les badges :
+
+```tsx
+interface UserWithRole {
+  // ...
+  role: 'admin' | 'commercial' | 'user' | null;
+}
+
+// Dans le rendu
+{user.role === 'commercial' && (
+  <Badge variant="outline" className="border-blue-500 text-blue-600">Commercial</Badge>
+)}
+```
 
 ## Fichiers a modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/App.tsx` | Ajouter route `/auth` et ProtectedRoute |
-| `src/pages/Index.tsx` | Ajouter verification auth et vue access |
-| `src/components/layout/AppSidebar.tsx` | Ajouter onglet Acces et bouton deconnexion |
+| Migration SQL | Ajouter 'commercial' a l'enum app_role |
+| `src/hooks/useAuth.ts` | Ajouter detection du role commercial + userRole |
+| `src/components/layout/AppSidebar.tsx` | Conditionner l'affichage de la section Admin |
+| `src/pages/Index.tsx` | Passer canAccessAdmin a la sidebar |
+| `src/components/access/AccessManagement.tsx` | Ajouter option Commercial dans le select |
 
-## Securite
+## Resultat attendu
 
-- Roles stockes dans une table separee (jamais dans profiles)
-- Fonction `has_role()` en SECURITY DEFINER pour eviter la recursion RLS
-- Validation des inputs avec Zod
-- Token de session gere par Supabase Auth
-- emailRedirectTo configure pour la confirmation email
+- Les commerciaux voient uniquement "Proposition" et "Historique"
+- La section "Administration" est completement masquee pour les commerciaux
+- Les admins peuvent assigner le role "Commercial" depuis l'onglet Acces
+- Le role s'affiche avec un badge bleu distinctif
 
