@@ -5,20 +5,26 @@ import {
   Palette,
   Building2,
   Settings,
-  Database
+  Database,
+  Users,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management';
 
 interface AppSidebarProps {
   currentView: ViewType;
   onNavigate: (view: ViewType) => void;
+  isAdmin?: boolean;
+  onSignOut?: () => void;
 }
 
 export function AppSidebar({
   currentView,
   onNavigate,
+  isAdmin = false,
+  onSignOut,
 }: AppSidebarProps) {
   return (
     <aside className="w-44 bg-card border-r border-border flex flex-col h-screen sticky top-0">
@@ -84,11 +90,33 @@ export function AppSidebar({
             <Database className="h-3.5 w-3.5" />
             Base Taux
           </Button>
+          
+          {/* Admin-only: Access Management */}
+          {isAdmin && (
+            <Button
+              variant={currentView === 'access-management' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('access-management')}
+            >
+              <Users className="h-3.5 w-3.5" />
+              Accès
+            </Button>
+          )}
         </div>
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-border space-y-2">
+        {onSignOut && (
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 h-8 text-sm text-muted-foreground hover:text-foreground"
+            onClick={onSignOut}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Déconnexion
+          </Button>
+        )}
         <p className="text-[10px] text-muted-foreground text-center">
           v1.0.0 • Production
         </p>
