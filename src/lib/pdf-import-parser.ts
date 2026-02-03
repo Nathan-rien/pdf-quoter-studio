@@ -1336,10 +1336,39 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       descriptionLine = descriptionLine.substring(refMatch[0].length).trim();
     }
     
-    // Use only the first line of description (no multi-line collection)
+    // Collect multi-line description
+    const descriptionParts = [descriptionLine];
+    
+    // Scan following lines until stop marker
+    let emptyLineCount = 0;
+    for (let j = i + 1; j < lines.length; j++) {
+      const nextLine = lines[j];
+      
+      // Handle empty lines - allow a few but stop at consecutive empties
+      if (!nextLine || nextLine.length < 2) {
+        emptyLineCount++;
+        if (emptyLineCount >= 2) break;
+        continue;
+      }
+      emptyLineCount = 0;
+      
+      // Stop conditions
+      if (stopMarkers.test(nextLine)) break;
+      if (productLinePattern.test(nextLine)) break; // New product
+      if (/^\[.*?\].*Unit[eé]/i.test(nextLine)) break; // New product with ref
+      
+      // Skip metadata/footer lines
+      if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(nextLine)) break;
+      
+      // Add to description
+      descriptionParts.push(nextLine);
+    }
+    
+    // Build final designation with reference prefix
+    const fullDescription = descriptionParts.join('\n').trim();
     const designation = reference 
-      ? `[${reference}] ${descriptionLine}` 
-      : descriptionLine;
+      ? `[${reference}] ${fullDescription}` 
+      : fullDescription;
     
     console.log('[Dental Parser] Product:', designation.substring(0, 80), '| Qty:', qty, '| HT:', totalHT);
     
