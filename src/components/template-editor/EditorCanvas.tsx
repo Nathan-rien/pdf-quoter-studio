@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
 import { CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH } from "@/lib/canvas-constants";
 import { getSharedElementStyle, resolveImageUrl, sortElementsByZIndex } from '@/lib/template-render-utils';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import { FileText, Lock, Eye, Edit3, Type, Image as ImageIcon, Square, Circle, Minus, Sparkles } from "lucide-react";
 import { icons } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -1007,13 +1008,13 @@ export function EditorCanvas() {
                 const indentLevel = textContent.indentLevel || 0;
                 const indentPx = indentLevel * 12;
                 
-                // Si contenu HTML enrichi, l'utiliser directement avec une key stable
+                // Si contenu HTML enrichi, l'utiliser directement avec une key stable et sanitization
                 if (textContent.htmlContent) {
                   return (
                     <div 
                       key={`html-${element.id}`}
                       style={{ paddingLeft: `${indentPx}px` }}
-                      dangerouslySetInnerHTML={{ __html: textContent.htmlContent || '' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent.htmlContent) }}
                     />
                   );
                 }

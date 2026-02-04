@@ -5,6 +5,7 @@
 
 import { useRef, useEffect, useCallback, useState } from "react";
 import { ALLOWED_FONTS } from "@/lib/template-styles";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { TextContent, TextAlign } from "@/types/template-editor";
 
 interface InlineTextEditorProps {
@@ -29,7 +30,8 @@ export function InlineTextEditor({
     const initTimeout = setTimeout(() => {
       try {
         if (editorRef.current) {
-          const htmlContent = content.htmlContent || content.text;
+          // Sanitize HTML content when initializing
+          const htmlContent = sanitizeHtml(content.htmlContent || content.text);
           editorRef.current.innerHTML = htmlContent;
           initialContentRef.current = htmlContent;
           
@@ -55,10 +57,11 @@ export function InlineTextEditor({
     return () => clearTimeout(initTimeout);
   }, []);
 
-  // Gérer les changements de contenu
+  // Gérer les changements de contenu avec sanitization
   const handleInput = useCallback(() => {
     if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
+      const rawHtml = editorRef.current.innerHTML;
+      const html = sanitizeHtml(rawHtml);
       const plainText = editorRef.current.innerText || editorRef.current.textContent || "";
       onContentChange(html, plainText);
     }

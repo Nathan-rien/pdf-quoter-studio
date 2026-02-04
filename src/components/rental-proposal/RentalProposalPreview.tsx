@@ -38,6 +38,7 @@ import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZoneType } from '@/types/pdf-template';
 import { PreviewEditableCanvas } from './PreviewEditableCanvas';
@@ -248,9 +249,9 @@ export function RentalProposalPreview() {
       // Utilise la constante partagée (sans multiplication par PREVIEW_FONT_SCALE)
       const indentPx = indentLevel * LIST_INDENT_PX;
       
-      // Si contenu HTML enrichi, appliquer la substitution dynamique
+      // Si contenu HTML enrichi, appliquer la substitution dynamique et sanitization
       if (textContent.htmlContent) {
-        const processedHtml = substituteDynamicPlaceholders(textContent.htmlContent);
+        const processedHtml = sanitizeHtml(substituteDynamicPlaceholders(textContent.htmlContent));
         return (
           <div 
             style={{ paddingLeft: `${indentPx}px` }}
@@ -706,7 +707,7 @@ export function RentalProposalPreview() {
           >
             <div className="whitespace-pre-wrap break-words">
               {content.htmlContent ? (
-                <div dangerouslySetInnerHTML={{ __html: content.htmlContent }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.htmlContent) }} />
               ) : (
                 content.text || ''
               )}

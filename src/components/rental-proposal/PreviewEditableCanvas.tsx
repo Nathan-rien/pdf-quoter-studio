@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex } from '@/lib/template-render-utils';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZone } from '@/types/pdf-template';
 
@@ -191,7 +192,7 @@ export function PreviewEditableCanvas({
       return (
         <div 
           style={{ paddingLeft: `${indentPx}px` }}
-          dangerouslySetInnerHTML={{ __html: textContent.htmlContent }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent.htmlContent) }}
         />
       );
     }
