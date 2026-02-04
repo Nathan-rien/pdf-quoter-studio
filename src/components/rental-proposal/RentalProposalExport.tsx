@@ -83,6 +83,14 @@ export function RentalProposalExport() {
 
   const saveToHistory = async (htmlContent: string, status: 'success' | 'error') => {
     try {
+      // Récupérer l'utilisateur connecté pour le created_by
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.warn('No authenticated user - cannot save to history');
+        return;
+      }
+      
       const displayName = proposalName || `Proposition ${clientData.nom}` || 'Proposition Commerciale';
       
       await supabase.from('proposal_exports').insert({
@@ -95,6 +103,7 @@ export function RentalProposalExport() {
         row_count: lignesData.length,
         options_count: selectedOptions.length,
         pdf_html_content: status === 'success' ? htmlContent : null,
+        created_by: user.id,
       });
     } catch (err) {
       console.error('Failed to save to history:', err);

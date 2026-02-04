@@ -69,6 +69,7 @@ export type Database = {
         Row: {
           client_name: string | null
           created_at: string
+          created_by: string | null
           file_name: string
           id: string
           options_count: number | null
@@ -82,6 +83,7 @@ export type Database = {
         Insert: {
           client_name?: string | null
           created_at?: string
+          created_by?: string | null
           file_name: string
           id?: string
           options_count?: number | null
@@ -95,6 +97,7 @@ export type Database = {
         Update: {
           client_name?: string | null
           created_at?: string
+          created_by?: string | null
           file_name?: string
           id?: string
           options_count?: number | null
