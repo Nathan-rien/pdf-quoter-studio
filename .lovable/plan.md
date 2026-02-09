@@ -1,76 +1,47 @@
 
-## Objectif
-Dans l’étape **Sélection du Template**, remplacer l’état permanent **“Chargement…”** par le **nombre réel de pages** (ex: “8 pages”), tout en gardant l’interface simple (pas de numéro de version).
 
-## Constat (cause racine)
-- `useTemplateSync.loadFromDatabase()` charge volontairement les **métadonnées** des versions **sans la colonne `pages`** (lazy loading) pour éviter des timeouts.
-- Du coup, dans le store, les versions publiées ont `pages: []` au moment où `TemplateSelector` s’affiche.
-- `TemplateSelector` affiche alors “Chargement…” tant que `version.pages.length === 0`, mais **ne déclenche jamais** `loadVersionPages()`.
-- Résultat : “Chargement…” reste indéfiniment sur les cartes (comme sur votre capture).
+## Correction du parsing d'adresse GrosBill Pro
 
-## Solution retenue (simple, fiable, alignée avec l’existant)
-Ajouter un **lazy loading automatique des pages** dans `TemplateSelector` (comme c’est déjà fait dans `RentalProposalPreview` et `TemplateEditorLayout`) :
+### Probleme identifie
 
-1. Au rendu de la liste des templates publiés :
-   - identifier la **dernière version publiée** de chaque template
-   - si `version.pages.length === 0` et si l’ID ressemble à un ID “cloud” (UUID), déclencher `loadVersionPages(version.id)`
-2. Charger **séquentiellement** (une par une) pour éviter les effets de bord liés au booléen global `isLoadingVersion` dans `useTemplateSync`.
-3. Empêcher toute boucle infinie :
-   - mémoriser les `version.id` déjà demandés (via `useRef(new Set())`)
-4. Affichage :
-   - si pages chargées : afficher `"{n} pages"`
-   - sinon : afficher “Chargement…” (mais cette fois temporaire)
+Trois bugs dans la fonction `parseGrosbillText` de `src/lib/pdf-import-parser.ts` provoquent l'extraction de donnees incorrectes :
 
-## Changements précis
+| Champ | Valeur affichee (fausse) | Valeur attendue | Cause |
+|-------|------------------------|-----------------|-------|
+| Adresse | 130 rue Achard - Bat U - | *(vide ou adresse client)* | Le fallback capture l'adresse du siege social Cybertek |
+| Code postal | 23014 | 00000 | Le regex capture "23014" depuis le numero de devis "6423014" |
+| Ville | - | ST MEDARD EN JALLES | La ligne "00000 ST MEDARD EN JALLES FR" est mappee en bloc sur "ville" au lieu d'etre decomposee |
 
-### 1) `src/components/rental-proposal/TemplateSelector.tsx`
-- Récupérer `loadVersionPages` depuis `useTemplateSync()` (en plus de `isLoading`/`hasLoaded`).
-- Ajouter une `useEffect` qui précharge les pages des versions publiées visibles :
-  - construire une liste `versionsToPreload` à partir des `availableTemplates`
-  - filtrer celles dont `pages.length === 0`
-  - ignorer les versions locales/démo (ex: IDs qui ne sont pas UUID) pour ne pas faire une requête inutile
-  - exécuter `await loadVersionPages(version.id)` en boucle
+### Corrections prevues
 
-Exemple de logique (pseudo-code) :
-```ts
-const requestedRef = useRef(new Set<string>());
+**Fichier** : `src/lib/pdf-import-parser.ts`, fonction `parseGrosbillText` (lignes ~1015-1055)
 
-useEffect(() => {
-  if (!hasLoaded) return;
+1. **Bloc facturation (lignes 1021-1029)** : analyser `l2` intelligemment
+   - Si `l2` commence par 5 chiffres (pattern CP), extraire code postal + ville depuis cette ligne
+   - Sinon, traiter `l2` comme adresse et chercher CP+ville sur `l3`
+   - Aussi examiner les lignes suivantes pour une eventuelle adresse rue si elle existe entre le nom et le CP
 
-  const versionsToPreload = availableTemplates
-    .map(t => getTemplateLatestVersion(t.id))
-    .filter((v): v is TemplateVersion => !!v && v.status === 'publie')
-    .filter(v => v.pages.length === 0)
-    .filter(v => isUuid(v.id))
-    .filter(v => !requestedRef.current.has(v.id));
+2. **Fallback adresse (lignes 1044-1046)** : exclure les adresses du footer
+   - Ajouter un filtre pour ignorer les lignes contenant "Siege Social", "SAS GROUPE", ou situees apres ces marqueurs
 
-  let cancelled = false;
+3. **Fallback CP (lignes 1048-1054)** : eviter les faux positifs
+   - Ajouter une frontiere de mot (`\b`) au debut du regex pour ne pas capturer "23014" depuis "6423014"
+   - Exclure les lignes qui contiennent "DEVIS", "PAGE", ou "N°"
 
-  (async () => {
-    for (const v of versionsToPreload) {
-      if (cancelled) break;
-      requestedRef.current.add(v.id);
-      await loadVersionPages(v.id);
-    }
-  })();
+### Detail technique
 
-  return () => { cancelled = true; };
-}, [hasLoaded, availableTemplates, getTemplateLatestVersion, loadVersionPages]);
+```text
+Avant (ligne 1022-1029):
+  factIdx+1 → nom = "CENTRE DE JALLES"
+  factIdx+2 → ville = "00000 ST MEDARD EN JALLES FR"  // BUG
+
+Apres:
+  factIdx+1 → nom = "CENTRE DE JALLES"
+  factIdx+2 → detecte "00000 ST MEDARD EN JALLES FR"
+    → codePostal = "00000"
+    → ville = "ST MEDARD EN JALLES"
+    → (pas d'adresse rue dans ce devis)
 ```
 
-### 2) (Optionnel) Micro-amélioration UI
-- Ajouter un petit loader inline (ex: `Loader2` en 12px) à côté de “Chargement…” uniquement pour les cartes concernées.
-- Mais ce n’est pas obligatoire : le préchargement suffira déjà à faire apparaître le nombre de pages.
+Les modifications seront concentrees dans une seule fonction (~30 lignes modifiees) sans impact sur les parsers Cybertek ou Dental.
 
-## Tests de validation (end-to-end)
-1. Ouvrir **Proposition → étape Template** :
-   - vérifier que “Chargement…” disparaît en quelques instants et devient “X pages”.
-2. Tester avec 2 templates minimum :
-   - vérifier que chaque carte affiche son propre nombre de pages.
-3. Vérifier l’étape **Aperçu** :
-   - rien ne doit régresser (elle charge déjà les pages en lazy loading).
-
-## Notes techniques / risques
-- Cette solution peut déclencher 1 requête par template publié visible. En pratique, c’est acceptable si vous avez peu de templates.
-- Si vous prévoyez des dizaines/centaines de templates, on pourra optimiser ensuite via une colonne `pages_count` ou une vue backend “métadonnées + count” pour éviter de récupérer le JSON complet `pages` juste pour compter.
