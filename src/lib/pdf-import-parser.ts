@@ -1020,12 +1020,28 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
 
   const factIdx = lines.findIndex((l) => /ADRESSE\s+DE\s+FACTURATION/i.test(l));
   if (factIdx !== -1) {
-    const l1 = lines[factIdx + 1] ?? null; // ex: MAGEN GO
-    const l2 = lines[factIdx + 2] ?? null; // ex: 41 rue Jean Bonal
+    const l1 = lines[factIdx + 1] ?? null; // nom / raison sociale
+    const l2 = lines[factIdx + 2] ?? null; // adresse OU cp+ville
+    const l3 = lines[factIdx + 3] ?? null; // cp+ville si l2 était adresse
 
     if (l1) result.client!.nom = l1;
-    // Note: per your requirement, the UI "Ville" field should take the 2nd line.
-    if (l2) result.client!.ville = l2;
+
+    // Detect if l2 starts with a 5-digit postal code
+    const cpMatch2 = l2?.match(/^(\d{5})\s+(.+)/);
+    if (cpMatch2) {
+      // l2 = "00000 ST MEDARD EN JALLES FR"
+      result.client!.codePostal = cpMatch2[1];
+      result.client!.ville = cpMatch2[2].replace(/\s+FR\s*$/i, '').trim();
+    } else {
+      // l2 is a street address
+      if (l2) result.client!.adresse = l2;
+      // Look for CP+ville on l3
+      const cpMatch3 = l3?.match(/^(\d{5})\s+(.+)/);
+      if (cpMatch3) {
+        result.client!.codePostal = cpMatch3[1];
+        result.client!.ville = cpMatch3[2].replace(/\s+FR\s*$/i, '').trim();
+      }
+    }
   }
 
   // Fallback: delivery block (name + address + CP + city)
@@ -1043,14 +1059,26 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   // Fallback: extract address + CP/city even if name block isn't reconstructed
   if (!result.client!.adresse) {
     const adresseMatch = text.match(/(\d+\s+RUE\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]+)/i);
-    if (adresseMatch) result.client!.adresse = adresseMatch[1].trim();
+    if (adresseMatch) {
+      const addr = adresseMatch[1].trim();
+      // Exclude corporate HQ / footer addresses
+      const addrLine = lines.find((l) => l.includes(addr)) ?? '';
+      const isFooter = /si[eè]ge\s*social|SAS\s+GROUPE/i.test(addrLine) ||
+        lines.some((l, i) => /si[eè]ge\s*social|SAS\s+GROUPE/i.test(l) && lines.indexOf(addrLine) > i);
+      if (!isFooter) result.client!.adresse = addr;
+    }
   }
   if (!result.client!.codePostal || !result.client!.ville) {
-    const cpVilleMatch = text.match(/(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]{2,})/i);
-    if (cpVilleMatch) {
-      result.client!.codePostal = result.client!.codePostal || cpVilleMatch[1];
-      // don't overwrite "ville" if facturation already used it
-      result.client!.ville = result.client!.ville || cpVilleMatch[2].trim();
+    // Use word boundary to avoid capturing partial numbers (e.g. "23014" from "6423014")
+    for (const line of lines) {
+      if (/DEVIS|PAGE|N°/i.test(line)) continue;
+      if (/si[eè]ge\s*social|SAS\s+GROUPE/i.test(line)) continue;
+      const cpVilleMatch = line.match(/\b(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]{2,})/i);
+      if (cpVilleMatch) {
+        result.client!.codePostal = result.client!.codePostal || cpVilleMatch[1];
+        result.client!.ville = result.client!.ville || cpVilleMatch[2].replace(/\s+FR\s*$/i, '').trim();
+        break;
+      }
     }
   }
 
