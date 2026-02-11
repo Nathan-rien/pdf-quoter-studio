@@ -667,7 +667,7 @@ export function RentalProposalPreview() {
       .sort((a, b) => a.position.y - b.position.y); // Tri par Y croissant pour respecter l'ordre visuel
     
     // Fonction pour rendre un élément en flux relatif (sans position absolue)
-    const renderFlowElement = (element: EditableElement) => {
+    const renderFlowElement = (element: EditableElement, idx: number = 0) => {
       if (element.type !== 'text') {
         // Pour les non-textes, on garde le rendu normal (rare pour les éléments "below")
         return renderTemplateElement(element);
@@ -684,7 +684,7 @@ export function RentalProposalPreview() {
       return (
         <div
           key={element.id}
-          className="mb-0.5"
+          className={cn("mb-0.5", (element.type === 'text' && (element.content as any)?.bold && idx > 0) && "mt-3")}
           style={{
             width: 'fit-content',
             maxWidth: `${maxWidthPercent}%`,
@@ -798,7 +798,7 @@ export function RentalProposalPreview() {
         {/* Éléments statiques "en-dessous" rendus en flux relatif */}
         {elementsBelow.length > 0 && (
           <div className="mt-4">
-            {elementsBelow.map(el => renderFlowElement(el))}
+            {elementsBelow.map((el, idx) => renderFlowElement(el, idx))}
           </div>
         )}
       </div>
