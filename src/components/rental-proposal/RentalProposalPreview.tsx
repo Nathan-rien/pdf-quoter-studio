@@ -707,9 +707,11 @@ export function RentalProposalPreview() {
           >
             <div className="whitespace-pre-wrap break-words">
               {content.htmlContent ? (
-                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.htmlContent) }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(
+                  substituteDynamicPlaceholders(content.htmlContent, { fraisDossier: calculatedValues.fraisDossier })
+                ) }} />
               ) : (
-                content.text || ''
+                substituteDynamicPlaceholders(content.text || '', { fraisDossier: calculatedValues.fraisDossier })
               )}
             </div>
           </div>
