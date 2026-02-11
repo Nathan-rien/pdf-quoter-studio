@@ -71,6 +71,12 @@ export const substituteDynamicPlaceholders = (text: string, context?: Substituti
   const dateRegex = new RegExp(`(${moisPattern})\\s+20\\d{2}`, 'gi');
   result = result.replace(dateRegex, currentDate);
   
+  // Auto-détection : injecter les frais de dossier dans les templates existants
+  // Couvre "Frais de dossier bancaire" seul ou suivi d'un ancien montant en dur
+  const fraisValue = context?.fraisDossier !== undefined ? formatFraisDossier(context.fraisDossier) : formatFraisDossier(null);
+  const fraisRegex = /Frais de dossier bancaire(?:\s+[\d,.\s]+(?:€|EUR)\s*HT\.?)?/gi;
+  result = result.replace(fraisRegex, `Frais de dossier bancaire ${fraisValue} € HT`);
+  
   return result;
 };
 
