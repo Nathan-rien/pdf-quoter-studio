@@ -1,38 +1,39 @@
 
+## Correction : substitution des frais de dossier dans les elements en flux relatif (Page 4)
 
-## Injection automatique des frais de dossier dans les templates existants
+### Probleme identifie
 
-### Probleme
+Sur la page 4, les elements texte situes sous la zone dynamique (tableau produits) sont rendus par la fonction `renderFlowElement` (ligne 708-713 de `RentalProposalPreview.tsx`). Cette fonction affiche le texte brut **sans appeler** `substituteDynamicPlaceholders`, contrairement a `renderTextContent` qui applique bien la substitution.
 
-Le placeholder `{{FRAIS_DOSSIER}}` a ete ajoute aux **elements par defaut** du template, mais les templates deja sauvegardes/publies conservent leur ancien texte (ex: "Frais de dossier bancaire" sans placeholder ni montant). La substitution ne se declenche donc jamais.
+Le texte "Frais de dossier bancaire" se trouve dans un element rendu par `renderFlowElement`, donc le placeholder `{{FRAIS_DOSSIER}}` et l'auto-detection ne se declenchent jamais.
 
-### Solution
+### Correction
 
-Ajouter une auto-detection dans `substituteDynamicPlaceholders` (comme c'est deja fait pour les dates "Mois 20XX") : si le texte contient "Frais de dossier bancaire" sans etre suivi d'un montant ou du placeholder, inserer automatiquement le montant formate.
+**Fichier** : `src/components/rental-proposal/RentalProposalPreview.tsx`
 
-### Modifications
+**Fonction** : `renderFlowElement` (lignes ~708-713)
 
-**Fichier unique** : `src/lib/template-render-utils.ts`
+Ajouter l'appel a `substituteDynamicPlaceholders` sur le contenu HTML et le texte brut, avec le contexte `{ fraisDossier: calculatedValues.fraisDossier }` :
 
-Dans la fonction `substituteDynamicPlaceholders`, apres le remplacement du placeholder `{{FRAIS_DOSSIER}}`, ajouter une detection supplementaire :
-
-- Pattern regex : `Frais de dossier bancaire` non suivi d'un montant (ni chiffres, ni `{{FRAIS_DOSSIER}}`)
-- Remplacement : ajouter ` [montant formate] € HT` apres "Frais de dossier bancaire"
-- Cela couvre aussi le cas ou le texte contient deja un ancien montant en dur (ex: "60,00 EUR HT") : le regex detectera et remplacera
-
-Concretement, le regex ciblera :
 ```text
-/Frais de dossier bancaire(?:\s+[\d,.\s]+(?:€|EUR)\s*HT\.?)?/gi
-```
-Et le remplacera par :
-```text
-Frais de dossier bancaire [montant] € HT
-```
+Avant (ligne 709-713):
+  {content.htmlContent ? (
+    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.htmlContent) }} />
+  ) : (
+    content.text || ''
+  )}
 
-Cela garantit que les templates anciens comme les nouveaux affichent toujours le bon montant, sans avoir besoin de re-publier le template.
+Apres:
+  {content.htmlContent ? (
+    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(
+      substituteDynamicPlaceholders(content.htmlContent, { fraisDossier: calculatedValues.fraisDossier })
+    ) }} />
+  ) : (
+    substituteDynamicPlaceholders(content.text || '', { fraisDossier: calculatedValues.fraisDossier })
+  )}
+```
 
 ### Impact
-- Aucune modification des templates sauvegardes necessaire
-- Compatible avec les templates qui ont deja le placeholder `{{FRAIS_DOSSIER}}`
-- Le meme fichier `pdf-html-generator.ts` beneficiera automatiquement de la correction pour l'export PDF
-
+- Correction ciblee sur 4 lignes dans une seule fonction
+- Les dates (`{{DATE}}`) seront egalement substituees dans ces elements (coherence)
+- Aucune regression sur les autres pages
