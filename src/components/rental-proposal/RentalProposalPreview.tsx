@@ -251,7 +251,7 @@ export function RentalProposalPreview() {
       
       // Si contenu HTML enrichi, appliquer la substitution dynamique et sanitization
       if (textContent.htmlContent) {
-        const processedHtml = sanitizeHtml(substituteDynamicPlaceholders(textContent.htmlContent));
+        const processedHtml = sanitizeHtml(substituteDynamicPlaceholders(textContent.htmlContent, { fraisDossier: calculatedValues.fraisDossier }));
         return (
           <div 
             style={{ paddingLeft: `${indentPx}px` }}
@@ -261,7 +261,7 @@ export function RentalProposalPreview() {
       }
       
       // Fallback sur le texte brut avec support des listes et substitution dynamique
-      const text = substituteDynamicPlaceholders(textContent.text || '');
+      const text = substituteDynamicPlaceholders(textContent.text || '', { fraisDossier: calculatedValues.fraisDossier });
       const lines = text.split('\n');
       return (
         <>

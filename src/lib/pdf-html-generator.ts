@@ -10,7 +10,7 @@
 
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, CANVAS_DISPLAY_MAX_WIDTH } from './canvas-constants';
 import { ALLOWED_FONTS } from './template-styles';
-import { getSharedElementStyle, resolveImageUrl, substituteDynamicPlaceholders } from './template-render-utils';
+import { getSharedElementStyle, resolveImageUrl, substituteDynamicPlaceholders, type SubstitutionContext } from './template-render-utils';
 import { renderIconSVG } from './lucide-svg-paths';
 import type { 
   EditableElement, 
@@ -27,6 +27,9 @@ import type {
  * Ajoute +10 pour éviter que les éléments avec zIndex négatif soient cachés
  */
 const normalizeZIndex = (element: EditableElement): number => (element.zIndex ?? 0) + 10;
+
+// Module-level substitution context for the current PDF generation pass
+let _pdfSubstitutionContext: SubstitutionContext | undefined;
 
 // Cache pour les images base64 (éviter les conversions répétées)
 const imageCache = new Map<string, string>();
@@ -154,13 +157,13 @@ function renderTextElementToHTML(element: EditableElement): string {
   let textContent: string;
   if (content.htmlContent) {
     // Appliquer la substitution dynamique (date, etc.)
-    const processedHtml = substituteDynamicPlaceholders(content.htmlContent);
+    const processedHtml = substituteDynamicPlaceholders(content.htmlContent, _pdfSubstitutionContext);
     // Wrapper pour l'indentation si nécessaire
     const contentStyle = indentPx > 0 ? `padding-left: ${indentPx}px;` : '';
     textContent = contentStyle ? `<div style="${contentStyle}">${processedHtml}</div>` : processedHtml;
   } else {
     // Appliquer la substitution dynamique sur le texte brut
-    const text = substituteDynamicPlaceholders(content.text || '');
+    const text = substituteDynamicPlaceholders(content.text || '', _pdfSubstitutionContext);
     const lines = text.split('\n');
     textContent = lines.map((line, i) => {
       let prefix = '';
@@ -401,8 +404,11 @@ const PDF_BASE_HEIGHT = PDF_BASE_WIDTH * (297 / 210); // ≈ 820.095... - ratio 
  */
 export async function generatePDFDocumentHTML(
   version: TemplateVersion,
-  dynamicContentByPage: Record<number, string>
+  dynamicContentByPage: Record<number, string>,
+  context?: SubstitutionContext
 ): Promise<string> {
+  // Set module-level context for the duration of this generation
+  _pdfSubstitutionContext = context;
   // Générer le HTML de toutes les pages en parallèle
   const pagesHTML = await Promise.all(
     version.pages.map(async (page) => {
