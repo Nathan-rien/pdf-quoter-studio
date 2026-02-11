@@ -728,7 +728,7 @@ export function RentalProposalPreview() {
       >
         {/* Tableau des produits */}
         <div className="border rounded overflow-hidden">
-          <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[10px] font-medium">
+          <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
             <div className="col-span-6">Désignation</div>
             <div className="col-span-2 text-center">Qté</div>
             <div className="col-span-2 text-right">P.U. HT</div>
@@ -739,9 +739,9 @@ export function RentalProposalPreview() {
             {pageLines.map((ligne, idx) => (
               <div 
                 key={idx} 
-                className="grid grid-cols-12 gap-1 px-2 py-1.5 text-[9px] items-start bg-white even:bg-muted/20"
+                className="grid grid-cols-12 gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20"
               >
-                <div className="col-span-6 break-words whitespace-normal leading-snug py-0.5">{ligne.designation || '-'}</div>
+                <div className="col-span-6 break-words whitespace-normal leading-tight py-0.5 line-clamp-2">{ligne.designation || '-'}</div>
                 <div className="col-span-2 text-center">{ligne.quantite}</div>
                 <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
                 <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
