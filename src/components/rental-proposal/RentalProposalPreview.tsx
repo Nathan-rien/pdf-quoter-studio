@@ -684,7 +684,7 @@ export function RentalProposalPreview() {
       return (
         <div
           key={element.id}
-          className="mb-2"
+          className="mb-0.5"
           style={{
             width: 'fit-content',
             maxWidth: `${maxWidthPercent}%`,
@@ -794,7 +794,7 @@ export function RentalProposalPreview() {
         
         {/* Éléments statiques "en-dessous" rendus en flux relatif */}
         {elementsBelow.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-4">
             {elementsBelow.map(el => renderFlowElement(el))}
           </div>
         )}
