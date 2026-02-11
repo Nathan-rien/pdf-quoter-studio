@@ -1,47 +1,44 @@
 
 
-## Correction du parsing d'adresse GrosBill Pro
+## Injection dynamique des frais de dossier bancaire
 
-### Probleme identifie
+### Objectif
+Remplacer le montant en dur "60,00 EUR HT" dans le texte "Frais de dossier bancaire" (pages 4 et 5 du template) par une valeur calculee automatiquement selon le refinanceur selectionne.
 
-Trois bugs dans la fonction `parseGrosbillText` de `src/lib/pdf-import-parser.ts` provoquent l'extraction de donnees incorrectes :
+### Approche
+Utiliser un placeholder `{{FRAIS_DOSSIER}}` dans le texte du template, substitue dynamiquement lors du rendu (apercu et export PDF).
 
-| Champ | Valeur affichee (fausse) | Valeur attendue | Cause |
-|-------|------------------------|-----------------|-------|
-| Adresse | 130 rue Achard - Bat U - | *(vide ou adresse client)* | Le fallback capture l'adresse du siege social Cybertek |
-| Code postal | 23014 | 00000 | Le regex capture "23014" depuis le numero de devis "6423014" |
-| Ville | - | ST MEDARD EN JALLES | La ligne "00000 ST MEDARD EN JALLES FR" est mappee en bloc sur "ville" au lieu d'etre decomposee |
+### Modifications
 
-### Corrections prevues
+**1. Template par defaut** (`src/lib/pdf-template-elements.ts`)
+- Page 4 (`p4_conditions_text`) : remplacer le texte par :
+  `"... Frais de dossier bancaire {{FRAIS_DOSSIER}} EUR HT."`
 
-**Fichier** : `src/lib/pdf-import-parser.ts`, fonction `parseGrosbillText` (lignes ~1015-1055)
+**2. Moteur de substitution** (`src/lib/template-render-utils.ts`)
+- Etendre `substituteDynamicPlaceholders` pour accepter un contexte optionnel :
+  ```text
+  substituteDynamicPlaceholders(text, context?: { fraisDossier?: number | null })
+  ```
+- Ajouter le remplacement de `{{FRAIS_DOSSIER}}` par la valeur formatee (ex: "60,00", "0") ou "–" si non disponible
 
-1. **Bloc facturation (lignes 1021-1029)** : analyser `l2` intelligemment
-   - Si `l2` commence par 5 chiffres (pattern CP), extraire code postal + ville depuis cette ligne
-   - Sinon, traiter `l2` comme adresse et chercher CP+ville sur `l3`
-   - Aussi examiner les lignes suivantes pour une eventuelle adresse rue si elle existe entre le nom et le CP
+**3. Apercu** (`src/components/rental-proposal/RentalProposalPreview.tsx`)
+- Passer `{ fraisDossier: calculatedValues.fraisDossier }` en contexte a `substituteDynamicPlaceholders`
+- Cela concerne les deux appels dans `renderTextContent` (lignes ~254 et ~264)
 
-2. **Fallback adresse (lignes 1044-1046)** : exclure les adresses du footer
-   - Ajouter un filtre pour ignorer les lignes contenant "Siege Social", "SAS GROUPE", ou situees apres ces marqueurs
+**4. Export PDF** (`src/lib/pdf-html-generator.ts`)
+- Propager le contexte fraisDossier dans les appels a `substituteDynamicPlaceholders` (lignes ~157 et ~163)
+- Ajouter un parametre optionnel `context` a la fonction `renderTextContent` du generateur
 
-3. **Fallback CP (lignes 1048-1054)** : eviter les faux positifs
-   - Ajouter une frontiere de mot (`\b`) au debut du regex pour ne pas capturer "23014" depuis "6423014"
-   - Exclure les lignes qui contiennent "DEVIS", "PAGE", ou "N°"
+**5. Canvas editable** (`src/components/rental-proposal/PreviewEditableCanvas.tsx`)
+- Pas de substitution ici (mode edition) : le placeholder `{{FRAIS_DOSSIER}}` reste visible tel quel, ce qui est coherent avec le comportement existant de `{{DATE}}`
 
-### Detail technique
+### Formatage
+- `fraisDossier = 0` affiche "0"
+- `fraisDossier = 60` affiche "60,00"
+- `fraisDossier = 118` affiche "118,00"
+- `fraisDossier = null` affiche "–"
 
-```text
-Avant (ligne 1022-1029):
-  factIdx+1 → nom = "CENTRE DE JALLES"
-  factIdx+2 → ville = "00000 ST MEDARD EN JALLES FR"  // BUG
-
-Apres:
-  factIdx+1 → nom = "CENTRE DE JALLES"
-  factIdx+2 → detecte "00000 ST MEDARD EN JALLES FR"
-    → codePostal = "00000"
-    → ville = "ST MEDARD EN JALLES"
-    → (pas d'adresse rue dans ce devis)
-```
-
-Les modifications seront concentrees dans une seule fonction (~30 lignes modifiees) sans impact sur les parsers Cybertek ou Dental.
-
+### Impact
+- Aucune regression sur les autres placeholders (`{{DATE}}`)
+- Les templates existants deja publies conservent leur texte en dur (seul le template par defaut est modifie)
+- La logique de lookup `getFraisDossier` existante est reutilisee sans modification
