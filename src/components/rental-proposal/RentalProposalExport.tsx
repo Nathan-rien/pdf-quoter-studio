@@ -399,7 +399,7 @@ export function RentalProposalExport() {
         <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
           <div style="background: #f3f4f6; padding: 6px 12px; display: flex; align-items: center; gap: 8px;">
             <div style="width: 8px; height: 16px; background: #374151; border-radius: 2px;"></div>
-            <span style="font-weight: 600; font-size: 11px;">Services location.</span>
+            <span style="font-weight: 600; font-size: 11px;">Services location</span>
           </div>
           <div style="padding: 6px 12px; background: white;">
             <p style="margin: 0; color: #4b5563; font-size: 9px; white-space: pre-wrap;">${servicesInclus.description}</p>

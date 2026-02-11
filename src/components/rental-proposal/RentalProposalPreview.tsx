@@ -834,7 +834,7 @@ export function RentalProposalPreview() {
         <div className="mb-2 border rounded overflow-hidden">
           <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
             <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
-            <span className="font-semibold text-[11px]">Services location.</span>
+            <span className="font-semibold text-[11px]">Services location</span>
           </div>
           <div className="px-3 py-1.5 bg-background">
             <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
