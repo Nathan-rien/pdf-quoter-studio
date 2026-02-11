@@ -1,39 +1,16 @@
 
-## Correction : substitution des frais de dossier dans les elements en flux relatif (Page 4)
+## Ajustement des espacements sur la Page 4 (apercu)
 
-### Probleme identifie
-
-Sur la page 4, les elements texte situes sous la zone dynamique (tableau produits) sont rendus par la fonction `renderFlowElement` (ligne 708-713 de `RentalProposalPreview.tsx`). Cette fonction affiche le texte brut **sans appeler** `substituteDynamicPlaceholders`, contrairement a `renderTextContent` qui applique bien la substitution.
-
-Le texte "Frais de dossier bancaire" se trouve dans un element rendu par `renderFlowElement`, donc le placeholder `{{FRAIS_DOSSIER}}` et l'auto-detection ne se declenchent jamais.
-
-### Correction
+### Modifications
 
 **Fichier** : `src/components/rental-proposal/RentalProposalPreview.tsx`
 
-**Fonction** : `renderFlowElement` (lignes ~708-713)
+1. **Plus d'espace apres le bloc Location** (ligne 797)
+   - Changer `mt-2` en `mt-4` sur le conteneur des elements en flux relatif, pour creer un espace visible entre le tableau "Location X mois" et le titre "Avantages :"
 
-Ajouter l'appel a `substituteDynamicPlaceholders` sur le contenu HTML et le texte brut, avec le contexte `{ fraisDossier: calculatedValues.fraisDossier }` :
+2. **Moins d'espace entre les titres et leurs bullet points** (ligne 687)
+   - Changer `mb-2` en `mb-0.5` sur chaque element en flux (`renderFlowElement`), pour rapprocher "Avantages :" de ses puces et "Condition de l'offre :" de ses puces
 
-```text
-Avant (ligne 709-713):
-  {content.htmlContent ? (
-    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.htmlContent) }} />
-  ) : (
-    content.text || ''
-  )}
-
-Apres:
-  {content.htmlContent ? (
-    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(
-      substituteDynamicPlaceholders(content.htmlContent, { fraisDossier: calculatedValues.fraisDossier })
-    ) }} />
-  ) : (
-    substituteDynamicPlaceholders(content.text || '', { fraisDossier: calculatedValues.fraisDossier })
-  )}
-```
-
-### Impact
-- Correction ciblee sur 4 lignes dans une seule fonction
-- Les dates (`{{DATE}}`) seront egalement substituees dans ces elements (coherence)
-- Aucune regression sur les autres pages
+### Resultat attendu
+- Espace net entre le bloc Location et la section Avantages
+- Titres "Avantages :" et "Condition de l'offre :" colles a leurs bullet points respectifs
