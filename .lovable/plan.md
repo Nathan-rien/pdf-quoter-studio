@@ -1,44 +1,38 @@
 
 
-## Injection dynamique des frais de dossier bancaire
+## Injection automatique des frais de dossier dans les templates existants
 
-### Objectif
-Remplacer le montant en dur "60,00 EUR HT" dans le texte "Frais de dossier bancaire" (pages 4 et 5 du template) par une valeur calculee automatiquement selon le refinanceur selectionne.
+### Probleme
 
-### Approche
-Utiliser un placeholder `{{FRAIS_DOSSIER}}` dans le texte du template, substitue dynamiquement lors du rendu (apercu et export PDF).
+Le placeholder `{{FRAIS_DOSSIER}}` a ete ajoute aux **elements par defaut** du template, mais les templates deja sauvegardes/publies conservent leur ancien texte (ex: "Frais de dossier bancaire" sans placeholder ni montant). La substitution ne se declenche donc jamais.
+
+### Solution
+
+Ajouter une auto-detection dans `substituteDynamicPlaceholders` (comme c'est deja fait pour les dates "Mois 20XX") : si le texte contient "Frais de dossier bancaire" sans etre suivi d'un montant ou du placeholder, inserer automatiquement le montant formate.
 
 ### Modifications
 
-**1. Template par defaut** (`src/lib/pdf-template-elements.ts`)
-- Page 4 (`p4_conditions_text`) : remplacer le texte par :
-  `"... Frais de dossier bancaire {{FRAIS_DOSSIER}} EUR HT."`
+**Fichier unique** : `src/lib/template-render-utils.ts`
 
-**2. Moteur de substitution** (`src/lib/template-render-utils.ts`)
-- Etendre `substituteDynamicPlaceholders` pour accepter un contexte optionnel :
-  ```text
-  substituteDynamicPlaceholders(text, context?: { fraisDossier?: number | null })
-  ```
-- Ajouter le remplacement de `{{FRAIS_DOSSIER}}` par la valeur formatee (ex: "60,00", "0") ou "–" si non disponible
+Dans la fonction `substituteDynamicPlaceholders`, apres le remplacement du placeholder `{{FRAIS_DOSSIER}}`, ajouter une detection supplementaire :
 
-**3. Apercu** (`src/components/rental-proposal/RentalProposalPreview.tsx`)
-- Passer `{ fraisDossier: calculatedValues.fraisDossier }` en contexte a `substituteDynamicPlaceholders`
-- Cela concerne les deux appels dans `renderTextContent` (lignes ~254 et ~264)
+- Pattern regex : `Frais de dossier bancaire` non suivi d'un montant (ni chiffres, ni `{{FRAIS_DOSSIER}}`)
+- Remplacement : ajouter ` [montant formate] € HT` apres "Frais de dossier bancaire"
+- Cela couvre aussi le cas ou le texte contient deja un ancien montant en dur (ex: "60,00 EUR HT") : le regex detectera et remplacera
 
-**4. Export PDF** (`src/lib/pdf-html-generator.ts`)
-- Propager le contexte fraisDossier dans les appels a `substituteDynamicPlaceholders` (lignes ~157 et ~163)
-- Ajouter un parametre optionnel `context` a la fonction `renderTextContent` du generateur
+Concretement, le regex ciblera :
+```text
+/Frais de dossier bancaire(?:\s+[\d,.\s]+(?:€|EUR)\s*HT\.?)?/gi
+```
+Et le remplacera par :
+```text
+Frais de dossier bancaire [montant] € HT
+```
 
-**5. Canvas editable** (`src/components/rental-proposal/PreviewEditableCanvas.tsx`)
-- Pas de substitution ici (mode edition) : le placeholder `{{FRAIS_DOSSIER}}` reste visible tel quel, ce qui est coherent avec le comportement existant de `{{DATE}}`
-
-### Formatage
-- `fraisDossier = 0` affiche "0"
-- `fraisDossier = 60` affiche "60,00"
-- `fraisDossier = 118` affiche "118,00"
-- `fraisDossier = null` affiche "–"
+Cela garantit que les templates anciens comme les nouveaux affichent toujours le bon montant, sans avoir besoin de re-publier le template.
 
 ### Impact
-- Aucune regression sur les autres placeholders (`{{DATE}}`)
-- Les templates existants deja publies conservent leur texte en dur (seul le template par defaut est modifie)
-- La logique de lookup `getFraisDossier` existante est reutilisee sans modification
+- Aucune modification des templates sauvegardes necessaire
+- Compatible avec les templates qui ont deja le placeholder `{{FRAIS_DOSSIER}}`
+- Le meme fichier `pdf-html-generator.ts` beneficiera automatiquement de la correction pour l'export PDF
+
