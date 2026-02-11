@@ -294,10 +294,16 @@ export function RentalProposalExport() {
             <td style="padding: 6px 8px;">Montant investissement</td>
             <td style="padding: 6px 8px; text-align: right;">${formatNumber(matriceData.montantInvestissement)} € HT</td>
           </tr>
-          <tr>
+          <tr${matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null ? '' : ''}>
             <td style="padding: 6px 8px;">Loyer mensuel HT</td>
             <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${formatNumber(calculations.loyerMensuel)} € HT</td>
           </tr>
+          ${matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null ? `
+          <tr>
+            <td style="padding: 6px 8px;">Coût locatif annuel</td>
+            <td style="padding: 6px 8px; text-align: right;">${calculations.coutLocatifAnnuel.toFixed(2).replace('.', ',')} %</td>
+          </tr>
+          ` : ''}
         </tbody>
       </table>
     `).join('');

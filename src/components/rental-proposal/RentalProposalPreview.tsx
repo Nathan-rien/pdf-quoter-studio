@@ -788,6 +788,12 @@ export function RentalProposalPreview() {
                       <span>Loyer mensuel HT</span>
                       <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
                     </div>
+                    {matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null && (
+                      <div className="flex justify-between px-3 py-1 text-[10px]">
+                        <span>Coût locatif annuel</span>
+                        <span className="font-medium">{calculations.coutLocatifAnnuel.toFixed(2).replace('.', ',')} %</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
