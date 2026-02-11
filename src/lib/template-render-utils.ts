@@ -26,17 +26,44 @@ export const getCurrentDateFR = (): string => {
 };
 
 /**
+ * Contexte optionnel pour la substitution dynamique
+ */
+export interface SubstitutionContext {
+  fraisDossier?: number | null;
+}
+
+/**
+ * Formate les frais de dossier selon les règles métier :
+ * - 0 → "0"
+ * - 60 → "60,00"
+ * - null/undefined → "–"
+ */
+const formatFraisDossier = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return '–';
+  if (value === 0) return '0';
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+};
+
+/**
  * Substitue les placeholders dynamiques dans un texte
  * - {{DATE}} : remplacé par le mois et l'année en cours
+ * - {{FRAIS_DOSSIER}} : remplacé par les frais de dossier formatés
  * - Auto-détection des dates "Mois 20XX" : remplacées par le mois en cours
  */
-export const substituteDynamicPlaceholders = (text: string): string => {
+export const substituteDynamicPlaceholders = (text: string, context?: SubstitutionContext): string => {
   if (!text) return text;
   
   const currentDate = getCurrentDateFR();
   
   // Remplacer le placeholder explicite {{DATE}}
   let result = text.replace(/\{\{DATE\}\}/gi, currentDate);
+  
+  // Remplacer le placeholder {{FRAIS_DOSSIER}}
+  if (context && context.fraisDossier !== undefined) {
+    result = result.replace(/\{\{FRAIS_DOSSIER\}\}/gi, formatFraisDossier(context.fraisDossier));
+  } else {
+    result = result.replace(/\{\{FRAIS_DOSSIER\}\}/gi, formatFraisDossier(null));
+  }
   
   // Auto-détection : remplacer "Mois 20XX" par la date actuelle
   // Pattern : un mois français suivi d'un espace et d'une année 20XX

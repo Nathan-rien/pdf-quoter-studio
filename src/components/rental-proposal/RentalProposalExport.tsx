@@ -434,7 +434,7 @@ export function RentalProposalExport() {
     const dynamicContentByPage = generateDynamicContentByPage();
     
     // Générer le document HTML complet
-    return generatePDFDocumentHTML(latestVersion, dynamicContentByPage);
+    return generatePDFDocumentHTML(latestVersion, dynamicContentByPage, { fraisDossier: calculatedValues.fraisDossier });
   }, [latestVersion, activeTemplate, generateDynamicContentByPage]);
   
   /**

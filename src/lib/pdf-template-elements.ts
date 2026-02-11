@@ -146,7 +146,7 @@ const PAGE_4_ELEMENTS: EditableElement[] = [
     bold: true,
     color: '#10b981',
   }),
-  createTextElement('p4_conditions_text', 4, '• Les loyers sont payables trimestriellement terme à échoir par prélèvement\n• Frais de dossier bancaire 60,00 € HT.', { x: 20, y: 425 }, { width: 350, height: 40 }, {
+  createTextElement('p4_conditions_text', 4, '• Les loyers sont payables trimestriellement terme à échoir par prélèvement\n• Frais de dossier bancaire {{FRAIS_DOSSIER}} € HT.', { x: 20, y: 425 }, { width: 350, height: 40 }, {
     fontSize: 10,
   }),
 ];
@@ -164,7 +164,7 @@ const PAGE_5_ELEMENTS: EditableElement[] = [
     bold: true,
     color: '#10b981',
   }),
-  createTextElement('p5_conditions_text', 5, 'Les loyers sont payables trimestriellement terme à échoir par prélèvement\nFrais de dossier bancaire 60,00 € HT.', { x: 20, y: 425 }, { width: 350, height: 40 }, {
+  createTextElement('p5_conditions_text', 5, 'Les loyers sont payables trimestriellement terme à échoir par prélèvement\nFrais de dossier bancaire {{FRAIS_DOSSIER}} € HT.', { x: 20, y: 425 }, { width: 350, height: 40 }, {
     fontSize: 10,
   }),
 ];
