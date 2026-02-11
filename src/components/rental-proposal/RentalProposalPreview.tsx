@@ -724,12 +724,12 @@ export function RentalProposalPreview() {
         className="absolute bg-white"
         style={{
           left: '3%',
-          top: '10%',
+          top: '5%',
           width: '94%',
         }}
       >
         {/* Titre Vos investissements */}
-        <div className="font-semibold text-[11px] mb-1">Vos investissements</div>
+        <div className="font-bold text-[13px] mb-1">Vos investissements</div>
         {/* Tableau des produits */}
         <div className="border rounded overflow-hidden">
           <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
@@ -765,7 +765,7 @@ export function RentalProposalPreview() {
         </div>
         
         {/* Titre Votre offre + Propositions financières */}
-        <div className="font-semibold text-[11px] mb-1 mt-2">Votre offre</div>
+        <div className="font-bold text-[13px] mb-1 mt-2">Votre offre</div>
         {(() => {
           const allProposals = getAllProposalsCalculations();
           if (allProposals.length === 0) return null;
