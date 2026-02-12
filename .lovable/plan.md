@@ -1,53 +1,39 @@
 
 
-## Dissocier le montant d'investissement par proposition
+## Corriger l'affichage des descriptions d'options avec retours a la ligne
 
-### Probleme actuel
-Le champ `montantInvestissement` est stocke globalement dans `matriceData`, partage entre toutes les propositions. Modifier ce champ dans la Proposition 1 modifie automatiquement la Proposition 2.
+### Probleme
+Lors de l'import depuis l'Admin, la description est construite en joignant les services par des virgules (`, `) dans `RentalDataEditor.tsx` ligne 119. Les sous-elements (Niveau 1, Niveau 2...) utilisent deja des `\n` comme separateur interne. Mais dans l'apercu (`RentalProposalPreview.tsx`), le texte est decoupe par `.split(',')`, ce qui casse la structure hierarchique : tout apparait a la suite au lieu d'etre sur des lignes separees.
 
 ### Solution
-Deplacer `montantInvestissement` dans chaque objet `MatriceProposal`, pour que chaque proposition ait son propre montant independant.
+Deux modifications :
 
-### Modifications
+**1. `src/components/rental-proposal/RentalDataEditor.tsx` (ligne 119)**
+Remplacer le separateur virgule par un retour a la ligne lors de la concatenation des services :
+```
+// Avant
+const description = descriptionParts.join(', ');
 
-**1. `src/stores/rentalProposalStore.ts`**
-- Ajouter `montantInvestissement: number | null` dans l'interface `MatriceProposal`
-- Mettre a jour `createDefaultProposal()` pour inclure `montantInvestissement: null`
-- Dans `importFromPDF` : initialiser chaque proposition avec le `montantInvestissement` du PDF
-- Dans `getProposalCalculations` et `getAllProposalsCalculations` : utiliser `proposal.montantInvestissement` au lieu de `state.matriceData.montantInvestissement`
-- Dans `getCalculatedValues` (legacy) : utiliser `firstProposal.montantInvestissement`
-- Dans `duplicateProposal` : le montant est automatiquement copie (spread)
-- Dans `updateLigne`, `addLigne`, `deleteLigne` : synchroniser le nouveau total HT vers **toutes les propositions** (ou seulement la premiere, selon le comportement souhaite -- on synchronisera vers toutes pour garder la coherence initiale apres import, mais l'utilisateur pourra ensuite les modifier individuellement)
-
-**2. `src/components/rental-proposal/ProposalCard.tsx`**
-- Retirer la prop `montantInvestissement` passee depuis le parent
-- Utiliser `proposal.montantInvestissement` directement depuis l'objet proposal
-- Changer `onUpdateMontant` pour appeler `onUpdate({ montantInvestissement: value })` au lieu d'une action globale
-- Retirer la prop `onUpdateMontant` devenue inutile
-
-**3. `src/components/rental-proposal/RentalDataEditor.tsx`**
-- Retirer le passage de `montantInvestissement={matriceData.montantInvestissement}` et `onUpdateMontant`
-- Chaque ProposalCard gerera son propre montant via `onUpdate`
-
-**4. `src/components/rental-proposal/RentalProposalPreview.tsx`**
-- Dans la boucle des propositions, remplacer `matriceData.montantInvestissement` par `proposal.montantInvestissement` pour le champ "Montant investissement" de chaque tableau
-- Le "Total investissement" en haut (apres le tableau produits) reste base sur le total des lignes (il peut rester avec `matriceData.montantInvestissement` ou etre calcule depuis les lignes)
-
-**5. `src/components/rental-proposal/RentalProposalExport.tsx`**
-- Meme changement : dans chaque proposition du HTML genere, utiliser `proposal.montantInvestissement` au lieu de `matriceData.montantInvestissement`
-
-### Detail technique
-
-L'interface `MatriceProposal` deviendra :
-```text
-MatriceProposal {
-  id: string
-  montantInvestissement: number | null  // NOUVEAU
-  duree: number | null
-  refinanceur: Partenaire | null
-  margeAppliquee: number
-}
+// Apres
+const description = descriptionParts.join('\n');
 ```
 
-La synchronisation lignes produits -> montant investissement (dans `updateLigne`, `addLigne`, `deleteLigne`) continuera de mettre a jour `matriceData.montantInvestissement` comme valeur de reference, mais mettra aussi a jour toutes les propositions qui n'ont pas encore ete manuellement modifiees. En pratique, on synchronisera vers toutes les propositions pour garder le comportement initial coherent apres un import PDF, tout en permettant a l'utilisateur de modifier chaque montant individuellement ensuite.
+**2. `src/components/rental-proposal/RentalProposalPreview.tsx` (6 occurrences)**
+Remplacer tous les `.split(',')` sur les descriptions par un split qui gere a la fois les virgules et les retours a la ligne, en privilegiant les retours a la ligne :
+```
+// Avant
+option.description.split(',').map(...)
 
+// Apres
+option.description.split('\n').map(...)
+```
+
+Cela concerne les lignes approximatives : 847, 871, 905, 958, 998, 1022.
+
+Les descriptions contenant des retours a la ligne seront alors affichees correctement avec un element de liste par ligne, preservant la hierarchie (titre du service, puis sous-elements indentes).
+
+### Impact sur l'export PDF
+L'export (`RentalProposalExport.tsx`) utilise deja `white-space: pre-wrap` sur les descriptions (lignes 353, 381, 411), donc les retours a la ligne sont deja correctement rendus. Aucune modification necessaire cote export.
+
+### Note
+Les propositions deja creees avec des virgules comme separateur continueront a fonctionner si l'on utilise un split hybride. Mais puisque les nouvelles importations utiliseront `\n`, on peut utiliser `.split('\n')` et les anciennes descriptions separees par virgules apparaitront simplement sur une seule ligne (comportement acceptable car il n'y a pas de persistance long terme des donnees).
