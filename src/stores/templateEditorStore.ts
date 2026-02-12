@@ -1662,9 +1662,10 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
         ...page,
         elements: (page.elements || []).map(el => ({
           ...el,
+          id: `${el.id}-v${maxVersion + 1}`,
           position: { ...el.position },
           size: { ...el.size },
-          content: el.content ? { ...el.content } : undefined
+          content: el.content ? JSON.parse(JSON.stringify(el.content)) : undefined
         })),
         dynamicZones: (page.dynamicZones || []).map(zone => ({ ...zone }))
       }));

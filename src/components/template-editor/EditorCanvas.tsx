@@ -981,7 +981,8 @@ export function EditorCanvas() {
             );
           })}
 
-          {/* Éléments éditables du template */}
+          {/* Éléments éditables du template - key liée à la version pour forcer le remontage */}
+          <React.Fragment key={`elements-${currentVersion?.id}`}>
           {pageContent?.elements
             .filter(e => !e.isDynamic)
             .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
@@ -1012,7 +1013,7 @@ export function EditorCanvas() {
                 if (textContent.htmlContent) {
                   return (
                     <div 
-                      key={`html-${element.id}`}
+                      key={`html-${element.id}-${textContent.htmlContent?.length || 0}`}
                       style={{ paddingLeft: `${indentPx}px` }}
                       dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent.htmlContent) }}
                     />
@@ -1135,7 +1136,7 @@ export function EditorCanvas() {
               };
               return (
                 <div
-                  key={element.id}
+                  key={`${currentVersion?.id}-${element.id}`}
                   data-element-id={element.id}
                   ref={inlineEditingElementId === element.id ? editingElementRef : undefined}
                   className={cn(
@@ -1257,6 +1258,7 @@ export function EditorCanvas() {
                 </div>
               );
             })}
+          </React.Fragment>
           </div>
 
           {/* Légende et stats */}
