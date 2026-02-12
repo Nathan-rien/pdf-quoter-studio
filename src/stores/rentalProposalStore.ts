@@ -30,6 +30,7 @@ interface ClientData {
 // NEW: Individual proposal type for multi-proposal support
 export interface MatriceProposal {
   id: string;
+  montantInvestissement: number | null;
   duree: number | null;
   refinanceur: Partenaire | null;
   margeAppliquee: number;
@@ -195,6 +196,7 @@ const generateProposalId = () => `prop_${Date.now()}_${Math.random().toString(36
 // Default initial proposal
 const createDefaultProposal = (): MatriceProposal => ({
   id: generateProposalId(),
+  montantInvestissement: null,
   duree: 36,
   refinanceur: 'Lixxbail 1',
   margeAppliquee: 6,
@@ -265,9 +267,10 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             // Legacy fields - also update for backward compatibility
             duree: result.location.duree ?? 36,
           },
-          // Initialize proposals with PDF duration
+          // Initialize proposals with PDF duration and montant
           proposals: [{
             id: generateProposalId(),
+            montantInvestissement,
             duree: result.location.duree ?? 36,
             refinanceur: 'Lixxbail 1',
             margeAppliquee: 6,
@@ -365,7 +368,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           .map(opt => opt.price);
         
         return calculateAllMatriceValues(
-          state.matriceData.montantInvestissement,
+          proposal.montantInvestissement,
           proposal.duree,
           proposal.refinanceur,
           proposal.margeAppliquee,
@@ -382,7 +385,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         return state.proposals.map(proposal => ({
           proposal,
           calculations: calculateAllMatriceValues(
-            state.matriceData.montantInvestissement,
+            proposal.montantInvestissement,
             proposal.duree,
             proposal.refinanceur,
             proposal.margeAppliquee,
@@ -404,13 +407,14 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
               }
             }
           }
-          // Recalculer le montant investissement total
+          // Recalculer le montant investissement total et synchroniser vers toutes les propositions
           const newMontantInvestissement = Math.round(
             newLignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
           ) / 100;
           return { 
             lignesData: newLignes, 
             matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+            proposals: state.proposals.map(p => ({ ...p, montantInvestissement: newMontantInvestissement })),
             hasUnsavedChanges: true 
           };
         });
@@ -428,6 +432,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           return {
             lignesData: newLignes,
             matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+            proposals: state.proposals.map(p => ({ ...p, montantInvestissement: newMontantInvestissement })),
             hasUnsavedChanges: true,
           };
         });
@@ -442,6 +447,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           return {
             lignesData: newLignes,
             matriceData: { ...state.matriceData, montantInvestissement: newMontantInvestissement },
+            proposals: state.proposals.map(p => ({ ...p, montantInvestissement: newMontantInvestissement })),
             hasUnsavedChanges: true,
           };
         });
@@ -565,7 +571,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         const firstProposal = state.proposals[0];
         
         return calculateAllMatriceValues(
-          state.matriceData.montantInvestissement,
+          firstProposal?.montantInvestissement ?? state.matriceData.montantInvestissement,
           firstProposal?.duree ?? state.matriceData.duree,
           firstProposal?.refinanceur ?? state.matriceData.refinanceur,
           firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
@@ -694,10 +700,17 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             if (!Array.isArray(state.proposals) || state.proposals.length === 0) {
               state.proposals = [{
                 id: generateProposalId(),
+                montantInvestissement: state.matriceData?.montantInvestissement ?? null,
                 duree: state.matriceData?.duree ?? 36,
                 refinanceur: state.matriceData?.refinanceur ?? 'Lixxbail 1',
                 margeAppliquee: state.matriceData?.margeAppliquee ?? 6,
               }];
+            } else {
+              // Migrate existing proposals that don't have montantInvestissement
+              state.proposals = state.proposals.map(p => ({
+                ...p,
+                montantInvestissement: p.montantInvestissement ?? state.matriceData?.montantInvestissement ?? null,
+              }));
             }
           }
         } catch (validationError) {

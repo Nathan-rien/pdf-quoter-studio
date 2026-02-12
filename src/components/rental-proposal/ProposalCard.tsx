@@ -9,24 +9,16 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
-
-export interface MatriceProposal {
-  id: string;
-  duree: number | null;
-  refinanceur: Partenaire | null;
-  margeAppliquee: number;
-}
+import type { MatriceProposal } from '@/stores/rentalProposalStore';
 
 interface ProposalCardProps {
   proposal: MatriceProposal;
   index: number;
   totalProposals: number;
-  montantInvestissement: number | null;
   optionsPrices: (number | null)[];
   canDelete: boolean;
   showCoutLocatifAnnuel: boolean;
   onToggleCoutLocatif: (checked: boolean) => void;
-  onUpdateMontant: (value: number | null) => void;
   onUpdate: (updates: Partial<MatriceProposal>) => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -36,16 +28,16 @@ export function ProposalCard({
   proposal,
   index,
   totalProposals,
-  montantInvestissement,
   optionsPrices,
   canDelete,
   showCoutLocatifAnnuel,
   onToggleCoutLocatif,
-  onUpdateMontant,
   onUpdate,
   onDuplicate,
   onDelete,
 }: ProposalCardProps) {
+  const montantInvestissement = proposal.montantInvestissement;
+
   const calculatedValues = calculateAllMatriceValues(
     montantInvestissement,
     proposal.duree,
@@ -109,7 +101,7 @@ export function ProposalCard({
                 min="0"
                 step="0.01"
                 value={montantInvestissement ?? ''}
-                onChange={(e) => onUpdateMontant(e.target.value ? parseFloat(e.target.value) : null)}
+                onChange={(e) => onUpdate({ montantInvestissement: e.target.value ? parseFloat(e.target.value) : null })}
               />
             </div>
             <div className="space-y-2">

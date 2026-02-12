@@ -782,7 +782,7 @@ export function RentalProposalPreview() {
                   <div className="divide-y divide-border">
                     <div className="flex justify-between px-3 py-1 text-[10px]">
                       <span>Montant investissement</span>
-                      <span className="font-medium">{formatNumber(matriceData.montantInvestissement)} € HT</span>
+                      <span className="font-medium">{formatNumber(proposal.montantInvestissement)} € HT</span>
                     </div>
                     <div className="flex justify-between px-3 py-1 text-[10px]">
                       <span>Loyer mensuel HT</span>
