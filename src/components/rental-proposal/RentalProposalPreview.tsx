@@ -843,11 +843,18 @@ export function RentalProposalPreview() {
             <span className="font-semibold text-[11px]">Services location</span>
           </div>
           <div className="px-3 py-1.5 bg-background">
-            <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
-              {servicesInclus.description.split('\n').map((item, i) => (
-                <li key={i} className="leading-tight">{item.trim()}</li>
-              ))}
-            </ul>
+            <div className="text-[9px] text-muted-foreground space-y-0.5">
+              {servicesInclus.description.split('\n').map((item, i) => {
+                const trimmed = item.trim();
+                if (!trimmed) return null;
+                const isSubItem = trimmed.startsWith('- ');
+                return (
+                  <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                    {isSubItem ? trimmed : `• ${trimmed}`}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -867,11 +874,18 @@ export function RentalProposalPreview() {
                 </div>
                 {option.description && (
                   <div className="px-3 py-1.5 bg-background">
-                    <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
-                      {option.description.split('\n').map((item, i) => (
-                        <li key={i} className="leading-tight">{item.trim()}</li>
-                      ))}
-                    </ul>
+                    <div className="text-[9px] text-muted-foreground space-y-0.5">
+                      {option.description.split('\n').map((item, i) => {
+                        const trimmed = item.trim();
+                        if (!trimmed) return null;
+                        const isSubItem = trimmed.startsWith('- ');
+                        return (
+                          <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                            {isSubItem ? trimmed : `• ${trimmed}`}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -901,11 +915,18 @@ export function RentalProposalPreview() {
                   </div>
                   {option.description && (
                     <div className="px-3 py-1.5 bg-background">
-                      <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
-                        {option.description.split('\n').map((item, i) => (
-                          <li key={i} className="leading-tight">{item.trim()}</li>
-                        ))}
-                      </ul>
+                      <div className="text-[9px] text-muted-foreground space-y-0.5">
+                        {option.description.split('\n').map((item, i) => {
+                          const trimmed = item.trim();
+                          if (!trimmed) return null;
+                          const isSubItem = trimmed.startsWith('- ');
+                          return (
+                            <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                              {isSubItem ? trimmed : `• ${trimmed}`}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -954,11 +975,18 @@ export function RentalProposalPreview() {
                 </div>
                 {option.description && (
                   <div className="px-4 py-3 bg-background">
-                    <ul className="text-[10px] text-muted-foreground space-y-1 list-disc list-inside">
-                      {option.description.split('\n').map((item, i) => (
-                        <li key={i} className="leading-tight">{item.trim()}</li>
-                      ))}
-                    </ul>
+                    <div className="text-[10px] text-muted-foreground space-y-1">
+                      {option.description.split('\n').map((item, i) => {
+                        const trimmed = item.trim();
+                        if (!trimmed) return null;
+                        const isSubItem = trimmed.startsWith('- ');
+                        return (
+                          <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                            {isSubItem ? trimmed : `• ${trimmed}`}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -994,11 +1022,18 @@ export function RentalProposalPreview() {
             <span className="font-semibold text-[11px]">Services Inclus</span>
           </div>
           <div className="px-3 py-2 bg-background">
-            <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
-              {servicesInclus.description.split('\n').map((item, i) => (
-                <li key={i} className="leading-tight">{item.trim()}</li>
-              ))}
-            </ul>
+            <div className="text-[8px] text-muted-foreground space-y-0.5">
+              {servicesInclus.description.split('\n').map((item, i) => {
+                const trimmed = item.trim();
+                if (!trimmed) return null;
+                const isSubItem = trimmed.startsWith('- ');
+                return (
+                  <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                    {isSubItem ? trimmed : `• ${trimmed}`}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -1018,11 +1053,18 @@ export function RentalProposalPreview() {
                 </div>
                 {option.description && (
                   <div className="px-3 py-2 bg-background">
-                    <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
-                      {option.description.split('\n').map((item, i) => (
-                        <li key={i} className="leading-tight">{item.trim()}</li>
-                      ))}
-                    </ul>
+                    <div className="text-[8px] text-muted-foreground space-y-0.5">
+                      {option.description.split('\n').map((item, i) => {
+                        const trimmed = item.trim();
+                        if (!trimmed) return null;
+                        const isSubItem = trimmed.startsWith('- ');
+                        return (
+                          <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                            {isSubItem ? trimmed : `• ${trimmed}`}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
