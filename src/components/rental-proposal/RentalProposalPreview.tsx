@@ -844,7 +844,7 @@ export function RentalProposalPreview() {
           </div>
           <div className="px-3 py-1.5 bg-background">
             <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
-              {servicesInclus.description.split(',').map((item, i) => (
+              {servicesInclus.description.split('\n').map((item, i) => (
                 <li key={i} className="leading-tight">{item.trim()}</li>
               ))}
             </ul>
@@ -868,7 +868,7 @@ export function RentalProposalPreview() {
                 {option.description && (
                   <div className="px-3 py-1.5 bg-background">
                     <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
-                      {option.description.split(',').map((item, i) => (
+                      {option.description.split('\n').map((item, i) => (
                         <li key={i} className="leading-tight">{item.trim()}</li>
                       ))}
                     </ul>
@@ -902,7 +902,7 @@ export function RentalProposalPreview() {
                   {option.description && (
                     <div className="px-3 py-1.5 bg-background">
                       <ul className="text-[9px] text-muted-foreground space-y-0.5 list-disc list-inside">
-                        {option.description.split(',').map((item, i) => (
+                        {option.description.split('\n').map((item, i) => (
                           <li key={i} className="leading-tight">{item.trim()}</li>
                         ))}
                       </ul>
@@ -955,7 +955,7 @@ export function RentalProposalPreview() {
                 {option.description && (
                   <div className="px-4 py-3 bg-background">
                     <ul className="text-[10px] text-muted-foreground space-y-1 list-disc list-inside">
-                      {option.description.split(',').map((item, i) => (
+                      {option.description.split('\n').map((item, i) => (
                         <li key={i} className="leading-tight">{item.trim()}</li>
                       ))}
                     </ul>
@@ -995,7 +995,7 @@ export function RentalProposalPreview() {
           </div>
           <div className="px-3 py-2 bg-background">
             <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
-              {servicesInclus.description.split(',').map((item, i) => (
+              {servicesInclus.description.split('\n').map((item, i) => (
                 <li key={i} className="leading-tight">{item.trim()}</li>
               ))}
             </ul>
@@ -1019,7 +1019,7 @@ export function RentalProposalPreview() {
                 {option.description && (
                   <div className="px-3 py-2 bg-background">
                     <ul className="text-[8px] text-muted-foreground space-y-0.5 list-disc list-inside">
-                      {option.description.split(',').map((item, i) => (
+                      {option.description.split('\n').map((item, i) => (
                         <li key={i} className="leading-tight">{item.trim()}</li>
                       ))}
                     </ul>

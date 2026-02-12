@@ -116,7 +116,7 @@ export function RentalDataEditor() {
           }
           return text;
         });
-        const description = descriptionParts.join(', ');
+        const description = descriptionParts.join('\n');
         addNosOption(option.title, description, option.price?.amount ?? null);
       }
     });
