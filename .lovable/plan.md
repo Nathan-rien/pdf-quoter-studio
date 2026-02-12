@@ -1,37 +1,57 @@
 
 
-## Ajouter "Coût locatif annuel" dans le tableau Location
+## Corriger l'erreur `insertBefore` dans l'editeur de template
 
-### Contexte
-Le champ "Coût locatif annuel" est deja calcule dans chaque scenario (`calculations.coutLocatifAnnuel`). Il faut l'afficher en nouvelle ligne sous "Loyer mensuel HT" dans le tableau de l'apercu et de l'export, conditionne par le toggle `matriceData.showCoutLocatifAnnuel`.
+### Diagnostic
 
-### Modifications
+L'erreur `insertBefore` sur `Node` est un bug classique de React ou le DOM reel et le DOM virtuel se desynchronisent. Dans ce projet, le probleme vient de **3 causes combinees** :
 
-**2 fichiers a modifier :**
+1. **`dangerouslySetInnerHTML`** (EditorCanvas ligne 1017) : quand le HTML injecte est interprete differemment par le navigateur, React ne peut plus reconcilier les noeuds enfants
+2. **Reutilisation des memes `element.id`** lors de `createNewVersion` : les elements sont clones avec les memes IDs, mais React tente de "patcher" l'ancien DOM au lieu de le remonter proprement
+3. **Transitions de version** : quand on passe d'une version publiee a un nouveau brouillon, les elements ont les memes cles mais un contenu potentiellement different
 
-1. **`src/components/rental-proposal/RentalProposalPreview.tsx`** (apres ligne 790)
-   - Ajouter une ligne conditionnelle apres "Loyer mensuel HT" :
-   ```tsx
-   {matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null && (
-     <div className="flex justify-between px-3 py-1 text-[10px]">
-       <span>Coût locatif annuel</span>
-       <span className="font-medium">{calculations.coutLocatifAnnuel.toFixed(2).replace('.', ',')} %</span>
-     </div>
-   )}
-   ```
+### Corrections prevues
 
-2. **`src/components/rental-proposal/RentalProposalExport.tsx`** (apres ligne 300)
-   - Ajouter une ligne conditionnelle dans le HTML du tableau :
-   ```tsx
-   ${matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null ? `
-     <tr>
-       <td style="padding: 6px 8px;">Coût locatif annuel</td>
-       <td style="padding: 6px 8px; text-align: right;">${calculations.coutLocatifAnnuel.toFixed(2).replace('.', ',')} %</td>
-     </tr>
-   ` : ''}
-   ```
+**Fichier : `src/components/template-editor/EditorCanvas.tsx`**
 
-### Detail technique
-- La valeur est deja calculee via `calculateCoutLocatifAnnuel` dans `rental-calculations.ts`
-- L'affichage est conditionne par `matriceData.showCoutLocatifAnnuel` (toggle existant dans Donnees)
-- Format : pourcentage avec 2 decimales, separateur virgule (format francais)
+1. **Ajouter une `key` liee a la version sur le conteneur des elements** (ligne ~985) pour forcer un remontage complet quand la version change :
+```tsx
+<React.Fragment key={`elements-${currentVersion?.id}`}>
+  {pageContent?.elements.filter(...).sort(...).map(...)}
+</React.Fragment>
+```
+
+2. **Envelopper le `dangerouslySetInnerHTML` dans un conteneur avec une cle plus specifique** (ligne ~1012-1019) pour eviter la reconciliation problematique :
+```tsx
+<div 
+  key={`html-${element.id}-${textContent.htmlContent?.length || 0}`}
+  style={{ paddingLeft: `${indentPx}px` }}
+  dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent.htmlContent) }}
+/>
+```
+
+3. **Ajouter une `key` composite sur le conteneur principal de chaque element** (ligne ~1138) :
+```tsx
+key={`${currentVersion?.id}-${element.id}`}
+```
+
+**Fichier : `src/stores/templateEditorStore.ts`**
+
+4. **Generer de nouveaux IDs d'elements lors de `createNewVersion`** (ligne ~1663) pour eviter la reutilisation des memes cles React :
+```tsx
+elements: (page.elements || []).map(el => ({
+  ...el,
+  id: `${el.id}-v${maxVersion + 1}`,
+  position: { ...el.position },
+  size: { ...el.size },
+  content: el.content ? JSON.parse(JSON.stringify(el.content)) : undefined
+})),
+```
+Et aussi faire un deep clone du content via `JSON.parse(JSON.stringify(...))` au lieu d'un spread superficiel.
+
+### Resultat attendu
+
+- Les transitions de version forcent un remontage propre du canvas (pas de reconciliation DOM risquee)
+- Le contenu HTML enrichi utilise des cles plus specifiques pour eviter les conflits
+- L'erreur `insertBefore` ne se produira plus lors de la creation de nouvelles versions ou du chargement de pages depuis le cloud
+
