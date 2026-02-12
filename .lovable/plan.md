@@ -1,57 +1,53 @@
 
 
-## Corriger l'erreur `insertBefore` dans l'editeur de template
+## Dissocier le montant d'investissement par proposition
 
-### Diagnostic
+### Probleme actuel
+Le champ `montantInvestissement` est stocke globalement dans `matriceData`, partage entre toutes les propositions. Modifier ce champ dans la Proposition 1 modifie automatiquement la Proposition 2.
 
-L'erreur `insertBefore` sur `Node` est un bug classique de React ou le DOM reel et le DOM virtuel se desynchronisent. Dans ce projet, le probleme vient de **3 causes combinees** :
+### Solution
+Deplacer `montantInvestissement` dans chaque objet `MatriceProposal`, pour que chaque proposition ait son propre montant independant.
 
-1. **`dangerouslySetInnerHTML`** (EditorCanvas ligne 1017) : quand le HTML injecte est interprete differemment par le navigateur, React ne peut plus reconcilier les noeuds enfants
-2. **Reutilisation des memes `element.id`** lors de `createNewVersion` : les elements sont clones avec les memes IDs, mais React tente de "patcher" l'ancien DOM au lieu de le remonter proprement
-3. **Transitions de version** : quand on passe d'une version publiee a un nouveau brouillon, les elements ont les memes cles mais un contenu potentiellement different
+### Modifications
 
-### Corrections prevues
+**1. `src/stores/rentalProposalStore.ts`**
+- Ajouter `montantInvestissement: number | null` dans l'interface `MatriceProposal`
+- Mettre a jour `createDefaultProposal()` pour inclure `montantInvestissement: null`
+- Dans `importFromPDF` : initialiser chaque proposition avec le `montantInvestissement` du PDF
+- Dans `getProposalCalculations` et `getAllProposalsCalculations` : utiliser `proposal.montantInvestissement` au lieu de `state.matriceData.montantInvestissement`
+- Dans `getCalculatedValues` (legacy) : utiliser `firstProposal.montantInvestissement`
+- Dans `duplicateProposal` : le montant est automatiquement copie (spread)
+- Dans `updateLigne`, `addLigne`, `deleteLigne` : synchroniser le nouveau total HT vers **toutes les propositions** (ou seulement la premiere, selon le comportement souhaite -- on synchronisera vers toutes pour garder la coherence initiale apres import, mais l'utilisateur pourra ensuite les modifier individuellement)
 
-**Fichier : `src/components/template-editor/EditorCanvas.tsx`**
+**2. `src/components/rental-proposal/ProposalCard.tsx`**
+- Retirer la prop `montantInvestissement` passee depuis le parent
+- Utiliser `proposal.montantInvestissement` directement depuis l'objet proposal
+- Changer `onUpdateMontant` pour appeler `onUpdate({ montantInvestissement: value })` au lieu d'une action globale
+- Retirer la prop `onUpdateMontant` devenue inutile
 
-1. **Ajouter une `key` liee a la version sur le conteneur des elements** (ligne ~985) pour forcer un remontage complet quand la version change :
-```tsx
-<React.Fragment key={`elements-${currentVersion?.id}`}>
-  {pageContent?.elements.filter(...).sort(...).map(...)}
-</React.Fragment>
+**3. `src/components/rental-proposal/RentalDataEditor.tsx`**
+- Retirer le passage de `montantInvestissement={matriceData.montantInvestissement}` et `onUpdateMontant`
+- Chaque ProposalCard gerera son propre montant via `onUpdate`
+
+**4. `src/components/rental-proposal/RentalProposalPreview.tsx`**
+- Dans la boucle des propositions, remplacer `matriceData.montantInvestissement` par `proposal.montantInvestissement` pour le champ "Montant investissement" de chaque tableau
+- Le "Total investissement" en haut (apres le tableau produits) reste base sur le total des lignes (il peut rester avec `matriceData.montantInvestissement` ou etre calcule depuis les lignes)
+
+**5. `src/components/rental-proposal/RentalProposalExport.tsx`**
+- Meme changement : dans chaque proposition du HTML genere, utiliser `proposal.montantInvestissement` au lieu de `matriceData.montantInvestissement`
+
+### Detail technique
+
+L'interface `MatriceProposal` deviendra :
+```text
+MatriceProposal {
+  id: string
+  montantInvestissement: number | null  // NOUVEAU
+  duree: number | null
+  refinanceur: Partenaire | null
+  margeAppliquee: number
+}
 ```
 
-2. **Envelopper le `dangerouslySetInnerHTML` dans un conteneur avec une cle plus specifique** (ligne ~1012-1019) pour eviter la reconciliation problematique :
-```tsx
-<div 
-  key={`html-${element.id}-${textContent.htmlContent?.length || 0}`}
-  style={{ paddingLeft: `${indentPx}px` }}
-  dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent.htmlContent) }}
-/>
-```
-
-3. **Ajouter une `key` composite sur le conteneur principal de chaque element** (ligne ~1138) :
-```tsx
-key={`${currentVersion?.id}-${element.id}`}
-```
-
-**Fichier : `src/stores/templateEditorStore.ts`**
-
-4. **Generer de nouveaux IDs d'elements lors de `createNewVersion`** (ligne ~1663) pour eviter la reutilisation des memes cles React :
-```tsx
-elements: (page.elements || []).map(el => ({
-  ...el,
-  id: `${el.id}-v${maxVersion + 1}`,
-  position: { ...el.position },
-  size: { ...el.size },
-  content: el.content ? JSON.parse(JSON.stringify(el.content)) : undefined
-})),
-```
-Et aussi faire un deep clone du content via `JSON.parse(JSON.stringify(...))` au lieu d'un spread superficiel.
-
-### Resultat attendu
-
-- Les transitions de version forcent un remontage propre du canvas (pas de reconciliation DOM risquee)
-- Le contenu HTML enrichi utilise des cles plus specifiques pour eviter les conflits
-- L'erreur `insertBefore` ne se produira plus lors de la creation de nouvelles versions ou du chargement de pages depuis le cloud
+La synchronisation lignes produits -> montant investissement (dans `updateLigne`, `addLigne`, `deleteLigne`) continuera de mettre a jour `matriceData.montantInvestissement` comme valeur de reference, mais mettra aussi a jour toutes les propositions qui n'ont pas encore ete manuellement modifiees. En pratique, on synchronisera vers toutes les propositions pour garder le comportement initial coherent apres un import PDF, tout en permettant a l'utilisateur de modifier chaque montant individuellement ensuite.
 
