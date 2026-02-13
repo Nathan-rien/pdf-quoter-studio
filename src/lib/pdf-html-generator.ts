@@ -359,6 +359,53 @@ export async function renderElementToHTML(element: EditableElement): Promise<str
 }
 
 /**
+ * Rend un élément texte en HTML en flux relatif (sans position absolue)
+ * Reproduit la logique de renderFlowElement dans RentalProposalPreview
+ */
+export function renderFlowTextElementToHTML(element: EditableElement, idx: number = 0): string {
+  if (element.type !== 'text') return '';
+  
+  const content = element.content as TextContent;
+  const fontDef = ALLOWED_FONTS.find(f => f.name === content.fontFamily);
+  const fontValue = fontDef?.value || 'Outfit, sans-serif';
+  const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
+  const maxWidthPercent = Math.max(Math.min((element.size.width / CANVAS_SCALE.width) * 100, 100), 5);
+  
+  // Espacement: mt-3 (12px) avant les titres bold (sauf le premier), mb-0.5 (2px) systématique
+  const isBoldTitle = content.bold && idx > 0;
+  const marginTop = isBoldTitle ? 'margin-top: 12px;' : '';
+  
+  const wrapperStyle = `width: fit-content; max-width: ${maxWidthPercent}%; margin-bottom: 2px; ${marginTop}`;
+  
+  const innerStyle = [
+    `font-family: ${fontValue}`,
+    `font-size: ${scaledFontSize}px`,
+    `color: ${content.color || '#1f2937'}`,
+    `font-weight: ${content.bold ? 'bold' : 'normal'}`,
+    `font-style: ${content.italic ? 'italic' : 'normal'}`,
+    `text-decoration: ${content.underline ? 'underline' : 'none'}`,
+    'line-height: 1.2',
+    `text-align: ${content.textAlign || 'left'}`,
+    'width: 100%',
+    'padding: 1px 2px',
+  ].join('; ');
+  
+  let textContent: string;
+  const colorValue = content.color || '#1f2937';
+  const contentWrapperStyle = `white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; color: ${colorValue} !important;`;
+  
+  if (content.htmlContent) {
+    const processedHtml = substituteDynamicPlaceholders(content.htmlContent, _pdfSubstitutionContext);
+    textContent = processedHtml;
+  } else {
+    const text = substituteDynamicPlaceholders(content.text || '', _pdfSubstitutionContext);
+    textContent = escapeHTML(text);
+  }
+  
+  return `<div style="${wrapperStyle}"><div style="${innerStyle}"><div class="rich-text" style="${contentWrapperStyle}">${textContent}</div></div></div>`;
+}
+
+/**
  * Trie les éléments par z-index
  */
 function sortByZIndex(elements: EditableElement[]): EditableElement[] {
@@ -371,9 +418,12 @@ function sortByZIndex(elements: EditableElement[]): EditableElement[] {
  */
 export async function renderPageToHTML(
   page: TemplatePageContent,
-  dynamicContentHTML?: string
+  dynamicContentHTML?: string,
+  excludeElementIds?: string[]
 ): Promise<string> {
-  const sortedElements = sortByZIndex(page.elements.filter(el => !el.isDynamic));
+  const sortedElements = sortByZIndex(
+    page.elements.filter(el => !el.isDynamic && !(excludeElementIds?.includes(el.id)))
+  );
   
   // Convertir tous les éléments en parallèle
   const elementsHTML = await Promise.all(
@@ -405,7 +455,8 @@ const PDF_BASE_HEIGHT = PDF_BASE_WIDTH * (297 / 210); // ≈ 820.095... - ratio 
 export async function generatePDFDocumentHTML(
   version: TemplateVersion,
   dynamicContentByPage: Record<number, string>,
-  context?: SubstitutionContext
+  context?: SubstitutionContext,
+  excludeElementIdsByPage?: Record<number, string[]>
 ): Promise<string> {
   // Set module-level context for the duration of this generation
   _pdfSubstitutionContext = context;
@@ -413,7 +464,8 @@ export async function generatePDFDocumentHTML(
   const pagesHTML = await Promise.all(
     version.pages.map(async (page) => {
       const dynamicContent = dynamicContentByPage[page.pageNumber] || '';
-      return renderPageToHTML(page, dynamicContent);
+      const excludeIds = excludeElementIdsByPage?.[page.pageNumber];
+      return renderPageToHTML(page, dynamicContent, excludeIds);
     })
   );
   

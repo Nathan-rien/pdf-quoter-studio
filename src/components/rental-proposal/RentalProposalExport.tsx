@@ -28,8 +28,9 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE } from '@/lib/canvas-constants';
-import { generatePDFDocumentHTML, clearImageCache } from '@/lib/pdf-html-generator';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE } from '@/lib/canvas-constants';
+import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML } from '@/lib/pdf-html-generator';
+import type { TextContent } from '@/types/template-editor';
 
 export function RentalProposalExport() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -238,8 +239,9 @@ export function RentalProposalExport() {
   /**
    * Génère le contenu dynamique (client, produits, options, signature) pour chaque page
    */
-  const generateDynamicContentByPage = useCallback((): Record<number, string> => {
+  const generateDynamicContentByPage = useCallback((): { content: Record<number, string>; excludeIds: Record<number, string[]> } => {
     const dynamicContent: Record<number, string> = {};
+    const excludeElementIds: Record<number, string[]> = {};
     const date = new Date().toLocaleDateString('fr-FR');
     
     // Page 1 : Données client et commercial
@@ -308,8 +310,35 @@ export function RentalProposalExport() {
       </table>
     `).join('');
     
+    // Page 4 : Tableau des produits + éléments en flux relatif
+    // Partitionner les éléments statiques comme dans l'aperçu (renderProductPage)
+    let page4FlowElementIds: string[] = [];
+    let flowElementsHTML = '';
+    
+    if (latestVersion) {
+      const page4 = latestVersion.pages.find(p => p.pageNumber === 4);
+      if (page4) {
+        const investZone = page4.dynamicZones.find(z => z.type === 'invest_table');
+        const zoneTopPercent = investZone?.position?.top ?? 28;
+        const zoneHeightPercent = investZone?.position?.height ?? 48;
+        const dynamicZoneBottomY = ((zoneTopPercent + zoneHeightPercent) / 100) * CANVAS_SCALE.height;
+        
+        // Éléments texte situés sous la zone dynamique → flux relatif
+        const elementsBelow = page4.elements
+          .filter(el => !el.isDynamic && el.position.y >= dynamicZoneBottomY && el.type === 'text')
+          .sort((a, b) => a.position.y - b.position.y);
+        
+        page4FlowElementIds = elementsBelow.map(el => el.id);
+        
+        if (elementsBelow.length > 0) {
+          flowElementsHTML = `<div style="margin-top: 16px;">${elementsBelow.map((el, idx) => renderFlowTextElementToHTML(el, idx)).join('')}</div>`;
+        }
+      }
+    }
+    
     dynamicContent[4] = `
-      <div class="dynamic-content" style="position: absolute; left: 3%; top: 15%; width: 94%; z-index: 40;">
+      <div class="dynamic-content" style="position: absolute; left: 3%; top: 5%; width: 94%; z-index: 40;">
+        <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Vos investissements</div>
         <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
           <thead>
             <tr style="background: #f3f4f6;">
@@ -333,11 +362,13 @@ export function RentalProposalExport() {
           </div>
         </div>
         
+        <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; margin-top: 8px;">Votre offre</div>
         ${allProposals.length > 0 ? `
-          <div class="location-proposals" style="margin-top: 16px;">
+          <div class="location-proposals" style="margin-top: 8px;">
             ${proposalsHTML}
           </div>
         ` : ''}
+        ${flowElementsHTML}
       </div>
     `;
     
@@ -422,8 +453,12 @@ export function RentalProposalExport() {
     // Elle utilise uniquement les éléments définis dans le template (zones signature, mentions légales)
     // Aucune injection dynamique n'est nécessaire
     
-    return dynamicContent;
-  }, [clientData, matriceData, lignesData, servicesInclus, optionsServices, nosOptions, selectedCommercial, calculatedValues, totalPages, activeTemplate, selectedOptions, selectedNosOptions]);
+    if (page4FlowElementIds.length > 0) {
+      excludeElementIds[4] = page4FlowElementIds;
+    }
+    
+    return { content: dynamicContent, excludeIds: excludeElementIds };
+  }, [clientData, matriceData, lignesData, servicesInclus, optionsServices, nosOptions, selectedCommercial, calculatedValues, totalPages, activeTemplate, selectedOptions, selectedNosOptions, latestVersion]);
   
   /**
    * Génère le contenu HTML complet du PDF à partir du template sélectionné
@@ -437,10 +472,10 @@ export function RentalProposalExport() {
     console.log(`[Export] Generating PDF from template: ${activeTemplate?.name}, version ${latestVersion.versionNumber}`);
     
     // Générer le contenu dynamique pour chaque page
-    const dynamicContentByPage = generateDynamicContentByPage();
+    const { content: dynamicContentByPage, excludeIds } = generateDynamicContentByPage();
     
     // Générer le document HTML complet
-    return generatePDFDocumentHTML(latestVersion, dynamicContentByPage, { fraisDossier: calculatedValues.fraisDossier });
+    return generatePDFDocumentHTML(latestVersion, dynamicContentByPage, { fraisDossier: calculatedValues.fraisDossier }, excludeIds);
   }, [latestVersion, activeTemplate, generateDynamicContentByPage]);
   
   /**
