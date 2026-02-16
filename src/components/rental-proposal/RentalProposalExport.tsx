@@ -362,8 +362,8 @@ export function RentalProposalExport() {
       }
     }
     
-    // HTML du total + propositions + flow elements (affiché sur le dernier chunk)
-    const totalAndProposalsHTML = `
+    // HTML du total investissement (affiché sur le dernier chunk avec données)
+    const totalHTML = `
       <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
         <div class="summary-box" style="min-width: 180px;">
           <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
@@ -372,6 +372,10 @@ export function RentalProposalExport() {
           </div>
         </div>
       </div>
+    `;
+    
+    // HTML de Votre offre + propositions + flow elements (affiché sur le dernier chunk absolu)
+    const offreAndProposalsHTML = `
       <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; margin-top: 8px;">Votre offre</div>
       ${allProposals.length > 0 ? `
         <div class="location-proposals" style="margin-top: 8px;">
@@ -380,7 +384,7 @@ export function RentalProposalExport() {
       ` : ''}
       ${flowElementsHTML}
     `;
-    
+
     // Chunk 0 : page 4 du template
     const chunk0RowsHTML = chunk0Lines.map(makeRowHTML).join('');
     dynamicContent[4] = `
@@ -390,7 +394,7 @@ export function RentalProposalExport() {
           ${tableHeaderHTML}
           <tbody>${chunk0RowsHTML}</tbody>
         </table>
-        ${!isMultiPage ? totalAndProposalsHTML : ''}
+        ${!isMultiPage ? totalHTML + offreAndProposalsHTML : ''}
       </div>
     `;
     
@@ -404,6 +408,8 @@ export function RentalProposalExport() {
         const chunkLines = lignesData.slice(offset, offset + chunkLineCount);
         offset += chunkLineCount;
         const isLastChunk = ci === investChunksLocal.length - 1;
+        const isLastDataChunk = chunkLineCount > 0 && 
+          (ci === investChunksLocal.length - 1 || investChunksLocal[ci + 1] === 0);
         const chunkRowsHTML = chunkLines.map(makeRowHTML).join('');
         
         extraPages.push(`
@@ -414,7 +420,8 @@ export function RentalProposalExport() {
               <tbody>${chunkRowsHTML}</tbody>
             </table>
             ` : ''}
-            ${isLastChunk ? totalAndProposalsHTML : ''}
+            ${isLastDataChunk ? totalHTML : ''}
+            ${isLastChunk ? offreAndProposalsHTML : ''}
           </div>
         `);
       }
