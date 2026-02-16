@@ -482,11 +482,22 @@ export async function generatePDFDocumentHTML(
         const sourcePage = version.pages[i];
         const extraPagesRendered = await Promise.all(
           extras.map(async (extraDynamicContent) => {
-            // Rendre une page avec les mêmes éléments image/logo que la page source mais avec le contenu dynamique extra
-            // On ne garde que les images (logos) pour les pages de continuation
+            // Détecter si cette page contient le total investissement
+            const hasTotal = extraDynamicContent.includes('summary-box');
+            
+            // Filtrer les images : exclure celles en bas de page si le total est présent
+            const filteredImages = sourcePage.elements.filter(el => {
+              if (el.type !== 'image') return false;
+              if (hasTotal) {
+                const bottomThreshold = CANVAS_SCALE.height * 0.7;
+                return el.position.y < bottomThreshold;
+              }
+              return true;
+            });
+            
             const imageOnlyPage: TemplatePageContent = {
               ...sourcePage,
-              elements: sourcePage.elements.filter(el => el.type === 'image'),
+              elements: filteredImages,
               dynamicZones: [],
             };
             return renderPageToHTML(imageOnlyPage, extraDynamicContent);
