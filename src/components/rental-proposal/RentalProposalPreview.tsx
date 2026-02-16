@@ -185,12 +185,8 @@ export function RentalProposalPreview() {
       chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
       remaining -= INVEST_LINES_CONTINUATION;
     }
-    // Multi-page : ajouter un chunk vide dédié au footer SEULEMENT si le dernier chunk est trop plein
-    const lastChunk = chunks[chunks.length - 1];
-    const limit = chunks.length === 1 ? INVEST_LINES_PAGE1 : INVEST_LINES_CONTINUATION;
-    if (lastChunk > limit - INVEST_FOOTER_RESERVED_LINES) {
-      chunks.push(0);
-    }
+    // Multi-page : toujours ajouter une page dédiée au footer (Total + Votre offre + Avantages + Conditions)
+    chunks.push(0);
     return chunks;
   })();
   const investChunkCount = investChunks.length;
