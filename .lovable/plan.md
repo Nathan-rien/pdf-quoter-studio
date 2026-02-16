@@ -1,41 +1,50 @@
 
 
-## Ajuster le seuil de reservation footer pour eviter la page vide
+## Séparer "Votre offre" du tableau Investissements en multi-page
 
-### Diagnostic
+### Problème
 
-Avec les donnees actuelles (~45 lignes), le decoupage produit `[22, 23]`. La condition `23 >= 32 - 14 = 18` est vraie, ce qui force une page footer dediee (Page 6) alors qu'il reste 9 emplacements libres en bas de la Page 5 -- suffisamment pour le footer (1 bloc "Votre offre" + Avantages + Conditions).
+Actuellement, le bloc "Total investissement", "Votre offre", les propositions financières et les éléments texte (Avantages, Conditions) sont rendus dans le **même conteneur** que le dernier chunk de données du tableau. Quand le tableau remplit la majorité de la page, ces éléments débordent en bas et sont tronqués.
 
-Le probleme : `INVEST_FOOTER_RESERVED_LINES = 14` est trop conservateur. Le footer reel avec 1 proposition financiere occupe environ 8 lignes-equivalentes de tableau.
+Le mécanisme `INVEST_FOOTER_RESERVED_LINES` tente de prédire si le footer tiendra, mais cette estimation en "lignes équivalentes" est imprécise car le footer contient des éléments de hauteur variable (propositions financières multiples, textes longs).
 
 ### Solution
 
-Deux modifications dans les memes 3 fichiers :
+Changer l'approche : **en mode multi-page, le footer (Total + Votre offre + propositions + Avantages + Conditions) va toujours sur une page dédiée.**
+
+En mode single-page (tout tient sur la page 4), le comportement reste inchangé : tout s'affiche sur la même page.
+
+Concrètement :
+- Quand `investChunks.length > 1` (multi-page), on ajoute systématiquement `chunks.push(0)` pour créer une page dédiée au footer
+- Le footer n'est rendu que sur cette page dédiée (chunk avec 0 lignes de données)
+- Les pages de données intermédiaires n'affichent que le tableau, sans footer
+
+### Detail technique
+
+**Logique de chunking simplifiée** (dans les deux fichiers Preview + Export) :
+
+```
+Si totalLines > INVEST_LINES_PAGE1 :
+  -> mode multi-page
+  -> découper en chunks [22, 32, 32, ...]
+  -> TOUJOURS ajouter chunks.push(0) pour la page footer
+```
+
+Cela supprime la logique conditionnelle fragile basée sur `INVEST_FOOTER_RESERVED_LINES`.
+
+**Rendu** : la condition `isLastChunk` reste identique et fonctionne correctement puisque le dernier chunk (0 lignes) affichera uniquement le footer.
+
+### Fichiers modifiés
 
 | Fichier | Modification |
 |---|---|
-| `src/lib/canvas-constants.ts` | `INVEST_FOOTER_RESERVED_LINES` passe de `14` a `9` |
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Condition `>=` redevient `>` (strict) |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme changement `>=` en `>` |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Remplacer la condition `if (lastChunk > limit - FOOTER_RESERVED)` par un simple `chunks.push(0)` inconditionnel en multi-page |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Même modification |
+| `src/lib/canvas-constants.ts` | La constante `INVEST_FOOTER_RESERVED_LINES` reste en place comme référence mais n'est plus utilisée pour le calcul de chunking |
 
 ### Comportement attendu
 
-Avec `INVEST_FOOTER_RESERVED_LINES = 9` et `>` (strict) :
-
-```text
-Seuil = 32 - 9 = 23
-
-Cas actuel (23 lignes sur la derniere page) :
-  23 > 23 = false --> footer reste sur la Page 5 (9 emplacements libres, suffisant)
-
-Cas avec 24+ lignes sur la derniere page :
-  24 > 23 = true --> page footer dediee (seulement 8 emplacements, trop juste)
-
-Cas avec 1 seul chunk (<= 22 lignes) :
-  Seuil = 22 - 9 = 13
-  <= 13 lignes --> footer sur la meme page
-  > 13 lignes --> page footer dediee
-```
-
-Cela garantit que le footer est place sur la meme page quand il y a assez d'espace, et deporte sur une page dediee quand l'espace est insuffisant.
+- Avec ~45 lignes : chunks = [22, 23, 0] -> Page 4 (22 lignes), Page 5 (23 lignes), Page 6 (footer seul : Total + Votre offre + Avantages + Conditions)
+- Avec 20 lignes : chunks = [20] -> tout sur une seule page (pas de multi-page)
+- Avec 55 lignes : chunks = [22, 32, 1, 0] -> Page 4, Page 5, Page 6 (1 ligne), Page 7 (footer)
 
