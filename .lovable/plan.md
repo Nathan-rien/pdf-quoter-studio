@@ -1,35 +1,58 @@
 
 
-## Corriger la difference d'affichage du "Total investissement" entre Preview et PDF
+## Corriger le chevauchement "Total investissement" / logo sur les pages de continuation PDF
 
 ### Probleme
 
-Le bloc "Total investissement" utilise deux styles differents :
+Dans l'export PDF, chaque page de continuation du tableau "Vos investissements" copie automatiquement TOUS les elements image (logos) de la page source (page 4) via `pdf-html-generator.ts` ligne 489 :
 
-- **Preview** : `bg-primary/5` (fond tres leger), `p-2` (8px padding), pas de bordure
-- **Export PDF** : classe `.summary-box` definie dans `pdf-html-generator.ts` avec `background: #eff6ff` (bleu visible), `padding: 12px`, `border: 1px solid #bfdbfe` (bordure bleue)
+```typescript
+elements: sourcePage.elements.filter(el => el.type === 'image'),
+```
 
-Le style CSS du PDF est trop prononce et ne correspond pas au rendu de l'apercu.
+Le logo en bas a droite est donc present sur toutes les pages de continuation, y compris celle ou le "Total investissement" s'affiche en bas. Les deux elements se chevauchent car le logo est en position absolue et le total est en flux relatif.
 
 ### Solution
 
-Aligner le style `.summary-box` dans `pdf-html-generator.ts` sur le style du Preview : fond quasi transparent, padding reduit, pas de bordure bleue.
+Modifier la logique dans `pdf-html-generator.ts` pour exclure les images positionnees dans le bas de la page lorsque le contenu dynamique de la page de continuation contient le bloc "Total investissement" (identifiable par la classe `summary-box`).
+
+Concretement : si le HTML de la page extra contient `summary-box`, filtrer les images dont la position Y depasse 70% de la hauteur du canvas (les logos de bas de page).
 
 ### Fichier modifie
 
 | Fichier | Modification |
 |---|---|
-| `src/lib/pdf-html-generator.ts` (lignes 667-672) | Remplacer le style `.summary-box` pour correspondre au Preview : fond tres leger (`rgba(59,130,246,0.05)` = equivalent de `bg-primary/5`), padding `8px`, pas de bordure |
+| `src/lib/pdf-html-generator.ts` (lignes 483-493) | Filtrer les images de bas de page quand le contenu dynamique contient le total |
 
 ### Code cible
 
-```css
-.summary-box {
-  background: rgba(59, 130, 246, 0.05);
-  padding: 8px;
-  border-radius: 8px;
-}
+```typescript
+extras.map(async (extraDynamicContent) => {
+  // Detecter si cette page contient le total investissement
+  const hasTotal = extraDynamicContent.includes('summary-box');
+  
+  // Filtrer les images : exclure celles en bas de page si le total est present
+  const filteredImages = sourcePage.elements.filter(el => {
+    if (el.type !== 'image') return false;
+    if (hasTotal) {
+      // Exclure les images dans le bas de la page (>70% de la hauteur)
+      const bottomThreshold = CANVAS_SCALE.height * 0.7;
+      return el.position.y < bottomThreshold;
+    }
+    return true;
+  });
+  
+  const imageOnlyPage: TemplatePageContent = {
+    ...sourcePage,
+    elements: filteredImages,
+    dynamicZones: [],
+  };
+  return renderPageToHTML(imageOnlyPage, extraDynamicContent);
+})
 ```
 
-Suppression de `border: 1px solid #bfdbfe` et reduction du padding de 12px a 8px pour correspondre au `p-2` du Preview.
+### Comportement attendu
 
+- Pages de continuation sans total : logos copies normalement (inchange)
+- Page de continuation avec "Total investissement" : logo en bas de page exclu, pas de chevauchement
+- Page unique (pas de multi-page) : pas de changement, le logo de la page 4 originale reste intact
