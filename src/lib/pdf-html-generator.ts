@@ -665,10 +665,9 @@ export async function generatePDFDocumentHTML(
         }
         
         .summary-box {
-          background: #eff6ff;
-          padding: 12px;
+          background: rgba(59, 130, 246, 0.05);
+          padding: 8px;
           border-radius: 8px;
-          border: 1px solid #bfdbfe;
         }
         
         .total-box {
