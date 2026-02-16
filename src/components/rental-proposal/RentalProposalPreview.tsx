@@ -35,7 +35,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_LINES_LAST_WITH_FOOTER } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -175,11 +175,24 @@ export function RentalProposalPreview() {
   const templatePages = currentVersion?.pages.length || DEFAULT_CONTRACT_PAGES;
   
   // Calcul des pages supplémentaires pour le tableau investissements
-  const investChunkCount = (() => {
+  // Découper les lignes en chunks, puis vérifier si le dernier chunk nécessite une page footer dédiée
+  const investChunks = (() => {
     const totalLines = lignesData.length;
-    if (totalLines <= INVEST_LINES_PAGE1) return 1;
-    return 1 + Math.ceil((totalLines - INVEST_LINES_PAGE1) / INVEST_LINES_CONTINUATION);
+    if (totalLines <= INVEST_LINES_PAGE1) return [totalLines]; // un seul chunk
+    const chunks = [INVEST_LINES_PAGE1];
+    let remaining = totalLines - INVEST_LINES_PAGE1;
+    while (remaining > 0) {
+      chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
+      remaining -= INVEST_LINES_CONTINUATION;
+    }
+    // Si le dernier chunk dépasse INVEST_LINES_LAST_WITH_FOOTER, ajouter un chunk vide pour le footer
+    const lastChunkLines = chunks[chunks.length - 1];
+    if (chunks.length > 1 && lastChunkLines > INVEST_LINES_LAST_WITH_FOOTER) {
+      chunks.push(0); // chunk footer dédié (0 lignes de tableau)
+    }
+    return chunks;
   })();
+  const investChunkCount = investChunks.length;
   const extraInvestPages = Math.max(0, investChunkCount - 1);
   const totalPages = templatePages + extraInvestPages;
 
@@ -650,16 +663,16 @@ export function RentalProposalPreview() {
   // Les éléments situés sous la zone dynamique suivent le tableau en flux relatif
   // chunkIndex: 0 = première page (titre + en-têtes), 1+ = pages de continuation
   const renderProductPage = (chunkIndex: number = 0) => {
-    // Découper les lignes en chunks
-    const chunk0Lines = lignesData.slice(0, INVEST_LINES_PAGE1);
-    const remainingLines = lignesData.slice(INVEST_LINES_PAGE1);
-    const continuationChunks: typeof lignesData[] = [];
-    for (let i = 0; i < remainingLines.length; i += INVEST_LINES_CONTINUATION) {
-      continuationChunks.push(remainingLines.slice(i, i + INVEST_LINES_CONTINUATION));
+    // Utiliser le découpage pré-calculé (investChunks)
+    // Calculer les offsets pour extraire les bonnes lignes
+    let offset = 0;
+    for (let i = 0; i < chunkIndex; i++) {
+      offset += investChunks[i];
     }
+    const chunkLineCount = investChunks[chunkIndex] || 0;
+    const pageLines = lignesData.slice(offset, offset + chunkLineCount);
     
     const isLastChunk = chunkIndex >= investChunkCount - 1;
-    const pageLines = chunkIndex === 0 ? chunk0Lines : (continuationChunks[chunkIndex - 1] || []);
     
     const staticElements = getStaticPageElements(4 as PDFPageNumber);
     
