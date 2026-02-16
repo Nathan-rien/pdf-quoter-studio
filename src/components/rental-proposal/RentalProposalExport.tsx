@@ -28,7 +28,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_LINES_LAST_WITH_FOOTER } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION } from '@/lib/canvas-constants';
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 
@@ -301,11 +301,8 @@ export function RentalProposalExport() {
         chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
         remaining -= INVEST_LINES_CONTINUATION;
       }
-      // Si le dernier chunk dépasse le seuil, ajouter un chunk vide pour le footer
-      const lastChunkLines = chunks[chunks.length - 1];
-      if (chunks.length > 1 && lastChunkLines > INVEST_LINES_LAST_WITH_FOOTER) {
-        chunks.push(0);
-      }
+      // Multi-page : toujours ajouter un chunk vide dédié au footer
+      chunks.push(0);
       return chunks;
     })();
     
