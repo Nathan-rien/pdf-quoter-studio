@@ -1,13 +1,12 @@
 
 
-## Augmenter la capacite du tableau investissements par page
+## Optimiser le remplissage des pages du tableau investissements
 
 ### Probleme
-Les constantes actuelles sont trop conservatrices :
-- `INVEST_LINES_PAGE1 = 12` : la page 4 affiche seulement 12 lignes alors qu'il y a de la place pour environ 18 lignes avant le logo en bas a droite
-- `INVEST_LINES_CONTINUATION = 22` : les pages de continuation n'exploitent pas toute la hauteur disponible, il y a de la place pour environ 28 lignes
-
-Cela provoque une extension prematuree sur des pages supplementaires alors que l'espace existant n'est pas pleinement utilise.
+Les constantes actuelles (`INVEST_LINES_PAGE1 = 18`, `INVEST_LINES_CONTINUATION = 28`) sont encore trop conservatrices :
+- **Page 4** : il reste de l'espace visible entre la derniere ligne du tableau et le logo en bas a droite. On peut afficher environ 22 lignes.
+- **Page 5** : la page de continuation peut contenir environ 32 lignes avant d'atteindre le bas de page.
+- **Page 6** : une page quasi-vide avec seulement 1-2 lignes + le total, ce qui est un gaspillage d'espace.
 
 ### Solution
 
@@ -15,14 +14,14 @@ Modifier uniquement les constantes dans `src/lib/canvas-constants.ts` :
 
 | Constante | Avant | Apres | Justification |
 |---|---|---|---|
-| `INVEST_LINES_PAGE1` | 12 | 18 | Exploiter l'espace disponible sur la page 4 avant le logo |
-| `INVEST_LINES_CONTINUATION` | 22 | 28 | Utiliser la pleine hauteur A4 sur les pages de continuation |
-| `INVEST_LINES_LAST_WITH_FOOTER` | 14 | 20 | Ajuster proportionnellement le seuil de debordement footer |
+| `INVEST_LINES_PAGE1` | 18 | 22 | Remplir l'espace avant le logo en bas de page 4 |
+| `INVEST_LINES_CONTINUATION` | 28 | 32 | Exploiter la pleine hauteur A4 sur les pages de continuation |
+| `INVEST_LINES_LAST_WITH_FOOTER` | 20 | 24 | Ajuster proportionnellement le seuil pour le bloc total/propositions |
 
-### Impact
-- Moins de pages generees pour le meme nombre de lignes
-- Le tableau remplit mieux l'espace disponible sur chaque page
-- La logique de chunking et de footer overflow reste identique, seuls les seuils changent
+### Impact concret
+Avec le devis actuel (environ 50 lignes visibles sur les screenshots) :
+- **Avant** : page 4 (18 lignes) + page 5 (28 lignes) + page 6 (quelques lignes + total) = 3 pages
+- **Apres** : page 4 (22 lignes) + page 5 (32 lignes) = les ~50 lignes + total tiennent potentiellement en 2 pages
 
 ### Fichier modifie
 - `src/lib/canvas-constants.ts` (3 lignes)
