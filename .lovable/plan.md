@@ -1,63 +1,53 @@
 
-## Pagination du tableau "Vos investissements" sur plusieurs pages
 
-### Contexte
-Quand le tableau d'investissements contient trop de lignes (ex: 30+ lignes), il deborde de la page 4 A4. Il faut decouper le tableau en morceaux et generer automatiquement des pages supplementaires, en decalant les pages suivantes (services, signature, etc.) d'autant.
+## Corriger la pagination du tableau investissements et le debordement
 
-### Approche
-Definir un seuil de lignes par page (`INVEST_LINES_PAGE1 = 18`, `INVEST_LINES_CONTINUATION = 28`) pour determiner combien de "chunks" le tableau necessite. Si le tableau tient en une page, aucun changement. Sinon, des pages intermediaires sont inserees entre la page 4 et la page 5 actuelle.
+### Probleme constate
+1. **Page 4** : Le tableau "Vos investissements" est coupe en bas -- les lignes depassent la zone visible avant le logo en bas a droite. Le seuil `INVEST_LINES_PAGE1 = 18` est trop eleve.
+2. **Page de continuation (page 5)** : Le tableau continue correctement, mais les elements qui suivent (bloc "Total investissement", "Votre offre" avec les propositions financieres, et les textes "Avantages" / "Conditions de l'offre") sont tronques car le contenu total depasse la hauteur A4 disponible.
 
-### Detail technique
+### Solution
 
-#### 1. Constante de pagination - `src/lib/canvas-constants.ts`
-- Ajouter `INVEST_LINES_PAGE1 = 18` (premiere page : moins de place car titre + en-tetes)
-- Ajouter `INVEST_LINES_CONTINUATION = 28` (pages suivantes : plus de place, juste le tableau)
+Reduire le nombre de lignes par page et ajouter une logique de "debordement" pour les elements qui suivent le tableau : si le dernier chunk de lignes + les totaux + propositions + flow elements depassent la capacite de la page, une page supplementaire est automatiquement generee pour les elements restants.
 
-#### 2. Apercu (Preview) - `src/components/rental-proposal/RentalProposalPreview.tsx`
+### Modifications
 
-**Calcul des pages supplementaires :**
-- Calculer le nombre de "chunks" du tableau invest selon les seuils ci-dessus
-- `extraInvestPages = max(0, nombre_de_chunks - 1)` : nombre de pages intermediaires ajoutees
-- `effectiveTotalPages = totalPages + extraInvestPages`
+#### 1. `src/lib/canvas-constants.ts`
+- Reduire `INVEST_LINES_PAGE1` de 18 a **12** (la page 4 a des elements statiques au-dessus et le logo en bas a droite)
+- Reduire `INVEST_LINES_CONTINUATION` de 28 a **22** (laisser de la marge pour le bloc total + propositions + flow elements sur le dernier chunk)
+- Ajouter `INVEST_LINES_LAST_WITH_FOOTER = 14` : nombre max de lignes sur le dernier chunk quand il doit aussi afficher le total, propositions et flow elements. Si le dernier chunk depasse ce seuil, les elements "footer" (total + propositions + flow) sont repousses sur une page supplementaire.
 
-**Ajuster `totalPages` et la navigation :**
-- Utiliser `effectiveTotalPages` pour la pagination, les miniatures, et le footer "Page X/Y"
-- Toute page affichee apres la page 4 est decalee de `extraInvestPages`
+#### 2. `src/components/rental-proposal/RentalProposalPreview.tsx`
 
-**Modifier `renderProductPage()` :**
-- Recevoir un parametre `chunkIndex` (0 pour la premiere page, 1, 2... pour les continuations)
-- Chunk 0 : affiche le titre "Vos investissements", l'en-tete du tableau, les N premieres lignes, et si c'est le dernier chunk, affiche aussi le total + propositions + elements en flux
-- Chunks suivants : affiche uniquement l'en-tete du tableau + les lignes du chunk, et sur le dernier chunk, le total + propositions + elements en flux
+**Ajuster le calcul des chunks :**
+- Utiliser les nouvelles constantes (12 / 22)
+- Ajouter une logique : si le dernier chunk a plus de `INVEST_LINES_LAST_WITH_FOOTER` lignes, creer un chunk supplementaire vide (0 lignes de tableau) qui ne contient que le total + propositions + flow elements
+- Cela garantit que ces elements ne sont jamais tronques
 
-**Modifier `renderCurrentPage()` :**
-- Si `currentPreviewPage` est entre `investPage` et `investPage + extraInvestPages`, appeler `renderProductPage(chunkIndex)` avec le bon index
-- Si `currentPreviewPage > investPage + extraInvestPages`, decaler le numero de page reel : `realPageNum = currentPreviewPage - extraInvestPages`
+**Concretement :**
+- Apres le decoupage en chunks, verifier si le dernier chunk a plus de `INVEST_LINES_LAST_WITH_FOOTER` lignes
+- Si oui, ajouter un chunk supplementaire vide (pas de lignes de tableau, juste le "footer")
+- `extraInvestPages` est recalcule en consequence
+- Le `isLastChunk` dans `renderProductPage` determine si on affiche ou non le bloc total/propositions/flow
 
-#### 3. Export PDF - `src/components/rental-proposal/RentalProposalExport.tsx`
+#### 3. `src/components/rental-proposal/RentalProposalExport.tsx`
 
-**Modifier `generateDynamicContentByPage()` :**
-- Retourner un `extraPages` (tableau de HTML de pages supplementaires) en plus de `content` et `excludeIds`
-- Chunk 0 -> `dynamicContent[4]` : titre + en-tete tableau + premieres lignes (sans total/propositions si pas le dernier chunk)
-- Chunks 1+ -> pages HTML completes dans `extraPages` : en-tete tableau + lignes suivantes
-- Dernier chunk (quel qu'il soit) : ajoute le total, les propositions financieres, et les flow elements
+**Meme logique de debordement pour l'export PDF :**
+- Appliquer la meme verification : si le dernier chunk depasse `INVEST_LINES_LAST_WITH_FOOTER`, generer une page supplementaire contenant uniquement `totalAndProposalsHTML` + `flowElementsHTML`
+- Cette page est ajoutee au tableau `extraPages` dans `extraPagesAfter[4]`
 
-**Modifier `generatePDFContentFromTemplate()` :**
-- Apres la generation standard des pages, inserer les `extraPages` entre la page 4 et la page 5 dans le tableau `pagesHTML`
+### Resume des changements de constantes
 
-#### 4. Generateur HTML - `src/lib/pdf-html-generator.ts`
+| Constante | Avant | Apres | Role |
+|---|---|---|---|
+| `INVEST_LINES_PAGE1` | 18 | 12 | Lignes max sur la premiere page (page 4) |
+| `INVEST_LINES_CONTINUATION` | 28 | 22 | Lignes max sur une page de continuation |
+| `INVEST_LINES_LAST_WITH_FOOTER` | - | 14 | Seuil du dernier chunk au-dela duquel le footer passe sur une nouvelle page |
 
-**Modifier `generatePDFDocumentHTML()` :**
-- Accepter un nouveau parametre optionnel `extraPagesAfter?: Record<number, string[]>` qui indique des pages HTML supplementaires a inserer apres un numero de page donne
-- Apres le rendu de chaque page, inserer les pages extras correspondantes
-- Mettre a jour la pagination des footers (Page X/Y) pour refleter le nombre total reel
+### Cas concrets
 
-### Impact sur les pages existantes
-- Pages 1-3 : inchangees
-- Page 4 : contient le debut du tableau (ou tout le tableau si assez court)
-- Pages 4bis, 4ter... : continuation du tableau (generees automatiquement)
-- Pages 5+ : decalees dans la numerotation affichee mais utilisent toujours les elements de template de leur page originale
+- **10 lignes** : 1 page (page 4), tout tient, aucun changement
+- **15 lignes** : 2 pages (12 + 3). Page 5 : 3 lignes + total + propositions + flow. Tout tient.
+- **30 lignes** : 3 pages (12 + 18). Page 6 (dernier chunk) : 18 lignes > 14 donc le footer passe sur une 4eme page.
+- **35 lignes** : 3 pages de tableau (12 + 22 + 1) + 1 page footer si necessaire.
 
-### Cas limite
-- Si le tableau tient en 18 lignes ou moins : zero page supplementaire, comportement identique a aujourd'hui
-- Si le tableau fait 19-46 lignes : 1 page supplementaire
-- Si le tableau fait 47+ lignes : 2+ pages supplementaires
