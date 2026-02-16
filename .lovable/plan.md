@@ -1,36 +1,41 @@
 
-## Corriger le seuil de declenchement de la page footer
 
-### Cause racine
+## Ajuster le seuil de reservation footer pour eviter la page vide
 
-La condition actuelle pour creer une page footer dediee est :
+### Diagnostic
 
-```
-lastChunk > limit - INVEST_FOOTER_RESERVED_LINES
-// soit: lastChunk > 32 - 8 = 24
-```
+Avec les donnees actuelles (~45 lignes), le decoupage produit `[22, 23]`. La condition `23 >= 32 - 14 = 18` est vraie, ce qui force une page footer dediee (Page 6) alors qu'il reste 9 emplacements libres en bas de la Page 5 -- suffisamment pour le footer (1 bloc "Votre offre" + Avantages + Conditions).
 
-Cela signifie que si le dernier chunk contient exactement 24 lignes ou moins, le footer (totaux + "Votre offre" + propositions financieres + elements texte en flux) est force sur la meme page. Or, le footer reel occupe bien plus que 8 lignes d'espace visuel (il contient : bloc totaux, titre "Votre offre", N blocs de propositions financieres avec sous-lignes, plus les elements texte "Avantages" et "Conditions").
+Le probleme : `INVEST_FOOTER_RESERVED_LINES = 14` est trop conservateur. Le footer reel avec 1 proposition financiere occupe environ 8 lignes-equivalentes de tableau.
 
-Deux corrections necessaires :
+### Solution
 
-1. **Augmenter `INVEST_FOOTER_RESERVED_LINES`** de 8 a 14 pour refleter la taille reelle du footer (totaux + 2-3 blocs propositions + textes "Avantages"/"Conditions").
-
-2. **Changer `>` en `>=`** dans la condition pour eviter le cas limite ou `lastChunk === limit - RESERVED` ne declenche pas la page dediee.
-
-### Fichiers modifies
+Deux modifications dans les memes 3 fichiers :
 
 | Fichier | Modification |
 |---|---|
-| `src/lib/canvas-constants.ts` | `INVEST_FOOTER_RESERVED_LINES = 8` devient `14` |
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | `lastChunk > limit` devient `lastChunk >= limit` |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme changement `>` en `>=` |
+| `src/lib/canvas-constants.ts` | `INVEST_FOOTER_RESERVED_LINES` passe de `14` a `9` |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Condition `>=` redevient `>` (strict) |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme changement `>=` en `>` |
 
-### Detail
+### Comportement attendu
 
-Avec `INVEST_FOOTER_RESERVED_LINES = 14` :
-- Seuil de declenchement : `32 - 14 = 18`
-- Si le dernier chunk a 18 lignes ou plus, une page footer dediee est creee
-- Si le dernier chunk a moins de 18 lignes, le footer tient sur la meme page (il reste 14+ lignes d'espace)
+Avec `INVEST_FOOTER_RESERVED_LINES = 9` et `>` (strict) :
 
-Cela garantit que le footer n'est jamais tronque en bas de page.
+```text
+Seuil = 32 - 9 = 23
+
+Cas actuel (23 lignes sur la derniere page) :
+  23 > 23 = false --> footer reste sur la Page 5 (9 emplacements libres, suffisant)
+
+Cas avec 24+ lignes sur la derniere page :
+  24 > 23 = true --> page footer dediee (seulement 8 emplacements, trop juste)
+
+Cas avec 1 seul chunk (<= 22 lignes) :
+  Seuil = 22 - 9 = 13
+  <= 13 lignes --> footer sur la meme page
+  > 13 lignes --> page footer dediee
+```
+
+Cela garantit que le footer est place sur la meme page quand il y a assez d'espace, et deporte sur une page dediee quand l'espace est insuffisant.
+
