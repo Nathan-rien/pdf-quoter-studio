@@ -28,7 +28,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_LINES_LAST_WITH_FOOTER } from '@/lib/canvas-constants';
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 
@@ -291,14 +291,26 @@ export function RentalProposalExport() {
         <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
       </tr>`;
     
-    // Découper les lignes en chunks
-    const chunk0Lines = lignesData.slice(0, INVEST_LINES_PAGE1);
-    const remainingLines = lignesData.slice(INVEST_LINES_PAGE1);
-    const continuationChunks: typeof lignesData[] = [];
-    for (let i = 0; i < remainingLines.length; i += INVEST_LINES_CONTINUATION) {
-      continuationChunks.push(remainingLines.slice(i, i + INVEST_LINES_CONTINUATION));
-    }
-    const investChunkCount = 1 + continuationChunks.length;
+    // Découper les lignes en chunks avec logique de footer overflow
+    const investChunksLocal: number[] = (() => {
+      const totalLines = lignesData.length;
+      if (totalLines <= INVEST_LINES_PAGE1) return [totalLines];
+      const chunks = [INVEST_LINES_PAGE1];
+      let remaining = totalLines - INVEST_LINES_PAGE1;
+      while (remaining > 0) {
+        chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
+        remaining -= INVEST_LINES_CONTINUATION;
+      }
+      // Si le dernier chunk dépasse le seuil, ajouter un chunk vide pour le footer
+      const lastChunkLines = chunks[chunks.length - 1];
+      if (chunks.length > 1 && lastChunkLines > INVEST_LINES_LAST_WITH_FOOTER) {
+        chunks.push(0);
+      }
+      return chunks;
+    })();
+    
+    const chunk0Lines = lignesData.slice(0, investChunksLocal[0]);
+    const investChunkCount = investChunksLocal.length;
     const isMultiPage = investChunkCount > 1;
     
     // Générer le HTML des propositions financières
@@ -389,17 +401,22 @@ export function RentalProposalExport() {
     const extraPagesAfter: Record<number, string[]> = {};
     if (isMultiPage) {
       const extraPages: string[] = [];
-      for (let ci = 0; ci < continuationChunks.length; ci++) {
-        const chunk = continuationChunks[ci];
-        const isLastChunk = ci === continuationChunks.length - 1;
-        const chunkRowsHTML = chunk.map(makeRowHTML).join('');
+      let offset = investChunksLocal[0]; // skip chunk 0 already rendered
+      for (let ci = 1; ci < investChunksLocal.length; ci++) {
+        const chunkLineCount = investChunksLocal[ci];
+        const chunkLines = lignesData.slice(offset, offset + chunkLineCount);
+        offset += chunkLineCount;
+        const isLastChunk = ci === investChunksLocal.length - 1;
+        const chunkRowsHTML = chunkLines.map(makeRowHTML).join('');
         
         extraPages.push(`
           <div class="dynamic-content" style="position: absolute; left: 3%; top: 3%; width: 94%; z-index: 40;">
+            ${chunkLineCount > 0 ? `
             <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
               ${tableHeaderHTML}
               <tbody>${chunkRowsHTML}</tbody>
             </table>
+            ` : ''}
             ${isLastChunk ? totalAndProposalsHTML : ''}
           </div>
         `);
