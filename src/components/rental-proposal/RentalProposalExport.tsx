@@ -28,7 +28,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { EmailSendForm } from './EmailSendForm';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION } from '@/lib/canvas-constants';
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 
@@ -239,7 +239,7 @@ export function RentalProposalExport() {
   /**
    * Génère le contenu dynamique (client, produits, options, signature) pour chaque page
    */
-  const generateDynamicContentByPage = useCallback((): { content: Record<number, string>; excludeIds: Record<number, string[]> } => {
+  const generateDynamicContentByPage = useCallback((): { content: Record<number, string>; excludeIds: Record<number, string[]>; extraPagesAfter: Record<number, string[]> } => {
     const dynamicContent: Record<number, string> = {};
     const excludeElementIds: Record<number, string[]> = {};
     const date = new Date().toLocaleDateString('fr-FR');
@@ -272,15 +272,34 @@ export function RentalProposalExport() {
       </div>
     `;
     
-    // Page 4 : Tableau des produits
-    const productLinesHTML = lignesData.map((ligne) => `
+    // Page 4 : Tableau des produits (avec pagination multi-pages si nécessaire)
+    const tableHeaderHTML = `
+      <thead>
+        <tr style="background: #f3f4f6;">
+          <th style="padding: 8px; text-align: left; font-weight: 600;">Désignation</th>
+          <th style="padding: 8px; text-align: center; width: 60px;">Qté</th>
+          <th style="padding: 8px; text-align: right; width: 80px;">P.U. HT</th>
+          <th style="padding: 8px; text-align: right; width: 80px;">Total HT</th>
+        </tr>
+      </thead>`;
+    
+    const makeRowHTML = (ligne: typeof lignesData[0]) => `
       <tr>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
-      </tr>
-    `).join('');
+      </tr>`;
+    
+    // Découper les lignes en chunks
+    const chunk0Lines = lignesData.slice(0, INVEST_LINES_PAGE1);
+    const remainingLines = lignesData.slice(INVEST_LINES_PAGE1);
+    const continuationChunks: typeof lignesData[] = [];
+    for (let i = 0; i < remainingLines.length; i += INVEST_LINES_CONTINUATION) {
+      continuationChunks.push(remainingLines.slice(i, i + INVEST_LINES_CONTINUATION));
+    }
+    const investChunkCount = 1 + continuationChunks.length;
+    const isMultiPage = investChunkCount > 1;
     
     // Générer le HTML des propositions financières
     const allProposals = getAllProposalsCalculations();
@@ -296,7 +315,7 @@ export function RentalProposalExport() {
             <td style="padding: 6px 8px;">Montant investissement</td>
             <td style="padding: 6px 8px; text-align: right;">${formatNumber(proposal.montantInvestissement)} € HT</td>
           </tr>
-          <tr${matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null ? '' : ''}>
+          <tr>
             <td style="padding: 6px 8px;">Loyer mensuel HT</td>
             <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${formatNumber(calculations.loyerMensuel)} € HT</td>
           </tr>
@@ -310,8 +329,7 @@ export function RentalProposalExport() {
       </table>
     `).join('');
     
-    // Page 4 : Tableau des produits + éléments en flux relatif
-    // Partitionner les éléments statiques comme dans l'aperçu (renderProductPage)
+    // Éléments en flux relatif (sous la zone dynamique)
     let page4FlowElementIds: string[] = [];
     let flowElementsHTML = '';
     
@@ -323,7 +341,6 @@ export function RentalProposalExport() {
         const zoneHeightPercent = investZone?.position?.height ?? 48;
         const dynamicZoneBottomY = ((zoneTopPercent + zoneHeightPercent) / 100) * CANVAS_SCALE.height;
         
-        // Éléments texte situés sous la zone dynamique → flux relatif
         const elementsBelow = page4.elements
           .filter(el => !el.isDynamic && el.position.y >= dynamicZoneBottomY && el.type === 'text')
           .sort((a, b) => a.position.y - b.position.y);
@@ -336,41 +353,59 @@ export function RentalProposalExport() {
       }
     }
     
+    // HTML du total + propositions + flow elements (affiché sur le dernier chunk)
+    const totalAndProposalsHTML = `
+      <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+        <div class="summary-box" style="min-width: 180px;">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
+            <span>Total investissement :&nbsp;</span>
+            <span>${formatNumber(matriceData.montantInvestissement)} € HT</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; margin-top: 8px;">Votre offre</div>
+      ${allProposals.length > 0 ? `
+        <div class="location-proposals" style="margin-top: 8px;">
+          ${proposalsHTML}
+        </div>
+      ` : ''}
+      ${flowElementsHTML}
+    `;
+    
+    // Chunk 0 : page 4 du template
+    const chunk0RowsHTML = chunk0Lines.map(makeRowHTML).join('');
     dynamicContent[4] = `
       <div class="dynamic-content" style="position: absolute; left: 3%; top: 5%; width: 94%; z-index: 40;">
         <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Vos investissements</div>
         <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
-          <thead>
-            <tr style="background: #f3f4f6;">
-              <th style="padding: 8px; text-align: left; font-weight: 600;">Désignation</th>
-              <th style="padding: 8px; text-align: center; width: 60px;">Qté</th>
-              <th style="padding: 8px; text-align: right; width: 80px;">P.U. HT</th>
-              <th style="padding: 8px; text-align: right; width: 80px;">Total HT</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${productLinesHTML}
-          </tbody>
+          ${tableHeaderHTML}
+          <tbody>${chunk0RowsHTML}</tbody>
         </table>
-        
-        <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
-          <div class="summary-box" style="min-width: 180px;">
-            <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
-              <span>Total investissement :&nbsp;</span>
-              <span>${formatNumber(matriceData.montantInvestissement)} € HT</span>
-            </div>
-          </div>
-        </div>
-        
-        <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; margin-top: 8px;">Votre offre</div>
-        ${allProposals.length > 0 ? `
-          <div class="location-proposals" style="margin-top: 8px;">
-            ${proposalsHTML}
-          </div>
-        ` : ''}
-        ${flowElementsHTML}
+        ${!isMultiPage ? totalAndProposalsHTML : ''}
       </div>
     `;
+    
+    // Pages de continuation (extra pages insérées après la page 4)
+    const extraPagesAfter: Record<number, string[]> = {};
+    if (isMultiPage) {
+      const extraPages: string[] = [];
+      for (let ci = 0; ci < continuationChunks.length; ci++) {
+        const chunk = continuationChunks[ci];
+        const isLastChunk = ci === continuationChunks.length - 1;
+        const chunkRowsHTML = chunk.map(makeRowHTML).join('');
+        
+        extraPages.push(`
+          <div class="dynamic-content" style="position: absolute; left: 3%; top: 3%; width: 94%; z-index: 40;">
+            <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
+              ${tableHeaderHTML}
+              <tbody>${chunkRowsHTML}</tbody>
+            </table>
+            ${isLastChunk ? totalAndProposalsHTML : ''}
+          </div>
+        `);
+      }
+      extraPagesAfter[4] = extraPages;
+    }
     
     // Page 5 : Services inclus + Options additionnelles + Nos Options (fusionnées)
     const optionsHTML = selectedOptions.slice(0, OPTIONS_PER_PAGE).map(opt => `
@@ -447,17 +482,11 @@ export function RentalProposalExport() {
       </div>
     `;
     
-    // Page 6 : Plus de contenu dynamique (Nos Options fusionnées sur Page 5)
-    
-    // Note: La dernière page (signature) est 100% statique
-    // Elle utilise uniquement les éléments définis dans le template (zones signature, mentions légales)
-    // Aucune injection dynamique n'est nécessaire
-    
     if (page4FlowElementIds.length > 0) {
       excludeElementIds[4] = page4FlowElementIds;
     }
     
-    return { content: dynamicContent, excludeIds: excludeElementIds };
+    return { content: dynamicContent, excludeIds: excludeElementIds, extraPagesAfter };
   }, [clientData, matriceData, lignesData, servicesInclus, optionsServices, nosOptions, selectedCommercial, calculatedValues, totalPages, activeTemplate, selectedOptions, selectedNosOptions, latestVersion]);
   
   /**
@@ -472,10 +501,10 @@ export function RentalProposalExport() {
     console.log(`[Export] Generating PDF from template: ${activeTemplate?.name}, version ${latestVersion.versionNumber}`);
     
     // Générer le contenu dynamique pour chaque page
-    const { content: dynamicContentByPage, excludeIds } = generateDynamicContentByPage();
+    const { content: dynamicContentByPage, excludeIds, extraPagesAfter } = generateDynamicContentByPage();
     
     // Générer le document HTML complet
-    return generatePDFDocumentHTML(latestVersion, dynamicContentByPage, { fraisDossier: calculatedValues.fraisDossier }, excludeIds);
+    return generatePDFDocumentHTML(latestVersion, dynamicContentByPage, { fraisDossier: calculatedValues.fraisDossier }, excludeIds, extraPagesAfter);
   }, [latestVersion, activeTemplate, generateDynamicContentByPage]);
   
   /**
