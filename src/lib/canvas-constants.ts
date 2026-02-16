@@ -32,5 +32,11 @@ export const DEFAULT_CONTRACT_PAGES = 8;
 export const OPTIONS_PER_PAGE = 6;
 export const LINES_PER_PAGE = 12;
 
+// Pagination du tableau investissements (multi-page)
+// Page 4 (première page) : moins de place car titre + en-têtes + propositions potentielles
+export const INVEST_LINES_PAGE1 = 18;
+// Pages suivantes (continuation) : plus de place, juste le tableau
+export const INVEST_LINES_CONTINUATION = 28;
+
 // Largeur maximale d'affichage du canvas (identique Éditeur/Aperçu)
 export const CANVAS_DISPLAY_MAX_WIDTH = 580;

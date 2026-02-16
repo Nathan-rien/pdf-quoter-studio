@@ -456,7 +456,8 @@ export async function generatePDFDocumentHTML(
   version: TemplateVersion,
   dynamicContentByPage: Record<number, string>,
   context?: SubstitutionContext,
-  excludeElementIdsByPage?: Record<number, string[]>
+  excludeElementIdsByPage?: Record<number, string[]>,
+  extraPagesAfter?: Record<number, string[]>
 ): Promise<string> {
   // Set module-level context for the duration of this generation
   _pdfSubstitutionContext = context;
@@ -468,6 +469,34 @@ export async function generatePDFDocumentHTML(
       return renderPageToHTML(page, dynamicContent, excludeIds);
     })
   );
+  
+  // Insérer les pages supplémentaires (ex: continuation du tableau invest)
+  if (extraPagesAfter) {
+    // Parcourir en sens inverse pour ne pas décaler les indices
+    const pageNumbers = version.pages.map(p => p.pageNumber);
+    for (let i = pageNumbers.length - 1; i >= 0; i--) {
+      const pageNum = pageNumbers[i];
+      const extras = extraPagesAfter[pageNum];
+      if (extras && extras.length > 0) {
+        // Récupérer le template de la page source pour le background (logos, etc.)
+        const sourcePage = version.pages[i];
+        const extraPagesRendered = await Promise.all(
+          extras.map(async (extraDynamicContent) => {
+            // Rendre une page avec les mêmes éléments image/logo que la page source mais avec le contenu dynamique extra
+            // On ne garde que les images (logos) pour les pages de continuation
+            const imageOnlyPage: TemplatePageContent = {
+              ...sourcePage,
+              elements: sourcePage.elements.filter(el => el.type === 'image'),
+              dynamicZones: [],
+            };
+            return renderPageToHTML(imageOnlyPage, extraDynamicContent);
+          })
+        );
+        // Insérer après la page courante
+        pagesHTML.splice(i + 1, 0, ...extraPagesRendered);
+      }
+    }
+  }
   
   // Calcul du facteur de scale pour A4 (210mm à 96dpi = ~793.7px)
   // Basé sur la largeur du canvas PDF (580px) pour correspondre à l'Aperçu

@@ -35,7 +35,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -172,7 +172,16 @@ export function RentalProposalPreview() {
   
   // Total pages: dynamique selon la version publiée du template
   const currentVersion = getCurrentVersion();
-  const totalPages = currentVersion?.pages.length || DEFAULT_CONTRACT_PAGES;
+  const templatePages = currentVersion?.pages.length || DEFAULT_CONTRACT_PAGES;
+  
+  // Calcul des pages supplémentaires pour le tableau investissements
+  const investChunkCount = (() => {
+    const totalLines = lignesData.length;
+    if (totalLines <= INVEST_LINES_PAGE1) return 1;
+    return 1 + Math.ceil((totalLines - INVEST_LINES_PAGE1) / INVEST_LINES_CONTINUATION);
+  })();
+  const extraInvestPages = Math.max(0, investChunkCount - 1);
+  const totalPages = templatePages + extraInvestPages;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
@@ -639,8 +648,19 @@ export function RentalProposalPreview() {
 
   // Pages produits (dynamiques) - Page 4 fixe avec éléments statiques du template
   // Les éléments situés sous la zone dynamique suivent le tableau en flux relatif
-  const renderProductPage = () => {
-    const pageLines = lignesData;
+  // chunkIndex: 0 = première page (titre + en-têtes), 1+ = pages de continuation
+  const renderProductPage = (chunkIndex: number = 0) => {
+    // Découper les lignes en chunks
+    const chunk0Lines = lignesData.slice(0, INVEST_LINES_PAGE1);
+    const remainingLines = lignesData.slice(INVEST_LINES_PAGE1);
+    const continuationChunks: typeof lignesData[] = [];
+    for (let i = 0; i < remainingLines.length; i += INVEST_LINES_CONTINUATION) {
+      continuationChunks.push(remainingLines.slice(i, i + INVEST_LINES_CONTINUATION));
+    }
+    
+    const isLastChunk = chunkIndex >= investChunkCount - 1;
+    const pageLines = chunkIndex === 0 ? chunk0Lines : (continuationChunks[chunkIndex - 1] || []);
+    
     const staticElements = getStaticPageElements(4 as PDFPageNumber);
     
     // Calculer le seuil Y pour séparer éléments au-dessus / en-dessous de la zone dynamique
@@ -655,10 +675,13 @@ export function RentalProposalPreview() {
     
     // Partitionner les éléments statiques
     // Les images (logos) restent toujours en position absolue, pas de flux relatif
-    const elementsAbove = staticElements.filter(el => 
-      el.position.y < dynamicZoneBottomY || 
-      el.type === 'image' // Les logos restent toujours en position absolue
-    );
+    const elementsAbove = chunkIndex === 0 
+      ? staticElements.filter(el => 
+          el.position.y < dynamicZoneBottomY || 
+          el.type === 'image' // Les logos restent toujours en position absolue
+        )
+      : staticElements.filter(el => el.type === 'image'); // Pages continuation : seulement les logos
+    
     const elementsBelow = staticElements
       .filter(el => 
         el.position.y >= dynamicZoneBottomY && 
@@ -724,12 +747,14 @@ export function RentalProposalPreview() {
         className="absolute bg-white"
         style={{
           left: '3%',
-          top: '5%',
+          top: chunkIndex === 0 ? '5%' : '3%',
           width: '94%',
         }}
       >
-        {/* Titre Vos investissements */}
-        <div className="font-bold text-[13px] mb-1">Vos investissements</div>
+        {/* Titre Vos investissements - seulement sur la première page */}
+        {chunkIndex === 0 && (
+          <div className="font-bold text-[13px] mb-1">Vos investissements</div>
+        )}
         {/* Tableau des produits */}
         <div className="border rounded overflow-hidden">
           <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
@@ -754,64 +779,73 @@ export function RentalProposalPreview() {
           </div>
         </div>
         
-        {/* Totaux immédiatement après le tableau */}
-        <div className="mt-1 flex justify-end">
-          <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
-            <div className="flex justify-between font-semibold text-[10px] gap-3">
-              <span>Total investissement&nbsp;:&nbsp;</span>
-              <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Titre Votre offre + Propositions financières */}
-        <div className="font-bold text-[13px] mb-1 mt-2">Votre offre</div>
-        {(() => {
-          const allProposals = getAllProposalsCalculations();
-          if (allProposals.length === 0) return null;
-          
-          return (
-            <div className="mt-2 space-y-2">
-              {allProposals.map(({ proposal, calculations }) => (
-                <div key={proposal.id} className="border rounded overflow-hidden">
-                  <div className="bg-muted px-3 py-1.5">
-                    <span className="font-semibold text-[11px]">
-                      Location {proposal.duree} mois
-                    </span>
-                  </div>
-                  <div className="divide-y divide-border">
-                    <div className="flex justify-between px-3 py-1 text-[10px]">
-                      <span>Montant investissement</span>
-                      <span className="font-medium">{formatNumber(proposal.montantInvestissement)} € HT</span>
-                    </div>
-                    <div className="flex justify-between px-3 py-1 text-[10px]">
-                      <span>Loyer mensuel HT</span>
-                      <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
-                    </div>
-                    {matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null && (
-                      <div className="flex justify-between px-3 py-1 text-[10px]">
-                        <span>Coût locatif annuel</span>
-                        <span className="font-medium">{calculations.coutLocatifAnnuel.toFixed(2).replace('.', ',')} %</span>
-                      </div>
-                    )}
-                  </div>
+        {/* Totaux + propositions + flow elements : seulement sur le dernier chunk */}
+        {isLastChunk && (
+          <>
+            {/* Totaux immédiatement après le tableau */}
+            <div className="mt-1 flex justify-end">
+              <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
+                <div className="flex justify-between font-semibold text-[10px] gap-3">
+                  <span>Total investissement&nbsp;:&nbsp;</span>
+                  <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
                 </div>
-              ))}
+              </div>
             </div>
-          );
-        })()}
-        
-        {/* Éléments statiques "en-dessous" rendus en flux relatif */}
-        {elementsBelow.length > 0 && (
-          <div className="mt-4">
-            {elementsBelow.map((el, idx) => renderFlowElement(el, idx))}
-          </div>
+            
+            {/* Titre Votre offre + Propositions financières */}
+            <div className="font-bold text-[13px] mb-1 mt-2">Votre offre</div>
+            {(() => {
+              const allProposals = getAllProposalsCalculations();
+              if (allProposals.length === 0) return null;
+              
+              return (
+                <div className="mt-2 space-y-2">
+                  {allProposals.map(({ proposal, calculations }) => (
+                    <div key={proposal.id} className="border rounded overflow-hidden">
+                      <div className="bg-muted px-3 py-1.5">
+                        <span className="font-semibold text-[11px]">
+                          Location {proposal.duree} mois
+                        </span>
+                      </div>
+                      <div className="divide-y divide-border">
+                        <div className="flex justify-between px-3 py-1 text-[10px]">
+                          <span>Montant investissement</span>
+                          <span className="font-medium">{formatNumber(proposal.montantInvestissement)} € HT</span>
+                        </div>
+                        <div className="flex justify-between px-3 py-1 text-[10px]">
+                          <span>Loyer mensuel HT</span>
+                          <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
+                        </div>
+                        {matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null && (
+                          <div className="flex justify-between px-3 py-1 text-[10px]">
+                            <span>Coût locatif annuel</span>
+                            <span className="font-medium">{calculations.coutLocatifAnnuel.toFixed(2).replace('.', ',')} %</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+            
+            {/* Éléments statiques "en-dessous" rendus en flux relatif */}
+            {elementsBelow.length > 0 && (
+              <div className="mt-4">
+                {elementsBelow.map((el, idx) => renderFlowElement(el, idx))}
+              </div>
+            )}
+          </>
         )}
       </div>
     );
     
     // Utiliser uniquement les éléments "au-dessus" pour le rendu absolu standard
-    return renderPageWithEditMode(4 as PDFPageNumber, elementsAbove, renderProductTableWithFlowElements);
+    // Pour les pages de continuation, on utilise le même pageNumber (4) pour le template
+    const displayPageNum = chunkIndex === 0 
+      ? getInjectionPageForZoneType('invest_table') || 4
+      : getInjectionPageForZoneType('invest_table') || 4;
+    return renderPageWithEditMode(displayPageNum as PDFPageNumber, elementsAbove, renderProductTableWithFlowElements);
   };
 
   // Page 5 - Services inclus (bloc permanent + options additionnelles + Nos Options fusionnées)
@@ -1084,17 +1118,37 @@ export function RentalProposalPreview() {
   };
 
   // Rendu de la page courante - Structure dynamique avec réaffectation automatique
+  // Gère les pages supplémentaires insérées pour le tableau investissements
   const renderCurrentPage = () => {
     // Trouver les pages d'injection pour chaque type de zone
-    const investPage = getInjectionPageForZoneType('invest_table');
+    const investPage = getInjectionPageForZoneType('invest_table') || 4;
     const optionsPage = getInjectionPageForZoneType('options_block');
     
-    // Vérifier si la page demandée existe dans la version
-    const version = getCurrentVersion();
-    const pageExists = version?.pages.some(p => p.pageNumber === currentPreviewPage);
+    // Plage des pages invest : investPage, investPage+1, ..., investPage+extraInvestPages
+    const investPageEnd = investPage + extraInvestPages; // dernière page invest (incluse)
     
-    // Si la page n'existe pas, afficher un message
-    if (!pageExists && currentPreviewPage > 1) {
+    // Si la page courante est dans la plage invest
+    if (currentPreviewPage >= investPage && currentPreviewPage <= investPageEnd) {
+      const chunkIndex = currentPreviewPage - investPage;
+      return renderProductPage(chunkIndex);
+    }
+    
+    // Pages avant la zone invest : affichage normal avec le numéro de page réel
+    if (currentPreviewPage < investPage) {
+      if (currentPreviewPage === 1) return renderPage1();
+      if (currentPreviewPage === 2) return renderStaticPage(2, 'Nos engagements');
+      if (currentPreviewPage === 3) return renderStaticPage(3, 'Conditions de location');
+      return renderGenericStaticPage(currentPreviewPage);
+    }
+    
+    // Pages après la zone invest : décaler pour retrouver le numéro de page du template
+    const realPageNum = currentPreviewPage - extraInvestPages;
+    
+    // Vérifier si la page réelle existe dans la version
+    const version = getCurrentVersion();
+    const pageExists = version?.pages.some(p => p.pageNumber === realPageNum);
+    
+    if (!pageExists) {
       return (
         <div 
           className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden flex items-center justify-center"
@@ -1105,30 +1159,18 @@ export function RentalProposalPreview() {
       );
     }
     
-    // Mapping dynamique : afficher le contenu approprié selon le type de zone présent
-    if (currentPreviewPage === 1) return renderPage1();
-    
-    // Si la page courante contient la zone invest_table, afficher les produits
-    if (investPage && currentPreviewPage === investPage) {
-      return renderProductPage();
-    }
-    
-    // Page 5 : Services inclus (toujours)
-    if (currentPreviewPage === 5) {
+    // Page 5 du template : Services inclus
+    if (realPageNum === 5) {
       return renderServicesInclusPage();
     }
     
-    // Page 6 : Désormais statique (Nos Options fusionnées sur Page 5)
-    if (currentPreviewPage === 6) {
+    // Page 6 du template : statique (Nos Options fusionnées sur Page 5)
+    if (realPageNum === 6) {
       return renderGenericStaticPage(6);
     }
     
-    // Pages statiques connues (si elles existent dans la version)
-    if (currentPreviewPage === 2) return renderStaticPage(2, 'Nos engagements');
-    if (currentPreviewPage === 3) return renderStaticPage(3, 'Conditions de location');
-    
     // Pages génériques (7, 8 ou autres) - rendu statique basé sur les éléments du template
-    return renderGenericStaticPage(currentPreviewPage);
+    return renderGenericStaticPage(realPageNum);
   };
 
   const handleStartEditName = () => {
