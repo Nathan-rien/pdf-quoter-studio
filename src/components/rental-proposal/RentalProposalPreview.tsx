@@ -185,8 +185,12 @@ export function RentalProposalPreview() {
       chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
       remaining -= INVEST_LINES_CONTINUATION;
     }
-    // Multi-page : toujours ajouter une page dédiée au footer (Total + Votre offre + Avantages + Conditions)
-    chunks.push(0);
+    // Multi-page : ajouter une page footer dédiée uniquement si le dernier chunk ne laisse pas assez de place
+    const lastChunk = chunks[chunks.length - 1];
+    const limit = chunks.length === 1 ? INVEST_LINES_PAGE1 : INVEST_LINES_CONTINUATION;
+    if (lastChunk > limit - INVEST_FOOTER_RESERVED_LINES) {
+      chunks.push(0);
+    }
     return chunks;
   })();
   const investChunkCount = investChunks.length;
@@ -765,29 +769,31 @@ export function RentalProposalPreview() {
         {chunkIndex === 0 && (
           <div className="font-bold text-[13px] mb-1">Vos investissements</div>
         )}
-        {/* Tableau des produits */}
-        <div className="border rounded overflow-hidden">
-          <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
-            <div className="col-span-6">Désignation</div>
-            <div className="col-span-2 text-center">Qté</div>
-            <div className="col-span-2 text-right">P.U. HT</div>
-            <div className="col-span-2 text-right">Total HT</div>
+        {/* Tableau des produits (guard: pas de header vide si page footer-only) */}
+        {pageLines.length > 0 && (
+          <div className="border rounded overflow-hidden">
+            <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
+              <div className="col-span-6">Désignation</div>
+              <div className="col-span-2 text-center">Qté</div>
+              <div className="col-span-2 text-right">P.U. HT</div>
+              <div className="col-span-2 text-right">Total HT</div>
+            </div>
+            
+            <div className="divide-y divide-border">
+              {pageLines.map((ligne, idx) => (
+                <div 
+                  key={idx} 
+                  className="grid grid-cols-12 gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20"
+                >
+                  <div className="col-span-6 break-words whitespace-normal leading-tight py-0.5 line-clamp-2">{ligne.designation || '-'}</div>
+                  <div className="col-span-2 text-center">{ligne.quantite}</div>
+                  <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
+                  <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          
-          <div className="divide-y divide-border">
-            {pageLines.map((ligne, idx) => (
-              <div 
-                key={idx} 
-                className="grid grid-cols-12 gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20"
-              >
-                <div className="col-span-6 break-words whitespace-normal leading-tight py-0.5 line-clamp-2">{ligne.designation || '-'}</div>
-                <div className="col-span-2 text-center">{ligne.quantite}</div>
-                <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
-                <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
         
         {/* Totaux + propositions + flow elements : seulement sur le dernier chunk */}
         {isLastChunk && (
