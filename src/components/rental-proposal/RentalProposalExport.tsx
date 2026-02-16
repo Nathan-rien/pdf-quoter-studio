@@ -301,12 +301,8 @@ export function RentalProposalExport() {
         chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
         remaining -= INVEST_LINES_CONTINUATION;
       }
-      // Multi-page : ajouter une page footer dédiée uniquement si le dernier chunk ne laisse pas assez de place
-      const lastChunk = chunks[chunks.length - 1];
-      const limit = chunks.length === 1 ? INVEST_LINES_PAGE1 : INVEST_LINES_CONTINUATION;
-      if (lastChunk > limit - INVEST_FOOTER_RESERVED_LINES) {
-        chunks.push(0);
-      }
+      // Multi-page : toujours reporter le footer sur une page dédiée
+      chunks.push(0);
       return chunks;
     })();
     
