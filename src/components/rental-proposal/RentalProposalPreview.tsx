@@ -670,7 +670,9 @@ export function RentalProposalPreview() {
     const pageLines = lignesData.slice(offset, offset + chunkLineCount);
     
     const isLastChunk = chunkIndex >= investChunkCount - 1;
-    
+    const isLastDataChunk = pageLines.length > 0 && 
+      (chunkIndex === investChunkCount - 1 || investChunks[chunkIndex + 1] === 0);
+
     const staticElements = getStaticPageElements(4 as PDFPageNumber);
     
     // Calculer le seuil Y pour séparer éléments au-dessus / en-dessous de la zone dynamique
@@ -791,20 +793,21 @@ export function RentalProposalPreview() {
           </div>
         )}
         
-        {/* Totaux + propositions + flow elements : seulement sur le dernier chunk */}
-        {isLastChunk && (
-          <>
-            {/* Totaux immédiatement après le tableau */}
-            <div className="mt-1 flex justify-end">
-              <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
-                <div className="flex justify-between font-semibold text-[10px] gap-3">
-                  <span>Total investissement&nbsp;:&nbsp;</span>
-                  <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
-                </div>
+        {/* Total investissement : sur le dernier chunk contenant des données */}
+        {isLastDataChunk && (
+          <div className="mt-1 flex justify-end">
+            <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
+              <div className="flex justify-between font-semibold text-[10px] gap-3">
+                <span>Total investissement&nbsp;:&nbsp;</span>
+                <span>{formatNumber(matriceData.montantInvestissement)} € HT</span>
               </div>
             </div>
-            
-            {/* Titre Votre offre + Propositions financières */}
+          </div>
+        )}
+        
+        {/* Votre offre + propositions + flow elements : sur le dernier chunk absolu */}
+        {isLastChunk && (
+          <>
             <div className="font-bold text-[13px] mb-1 mt-2">Votre offre</div>
             {(() => {
               const allProposals = getAllProposalsCalculations();
@@ -841,7 +844,6 @@ export function RentalProposalPreview() {
               );
             })()}
             
-            {/* Éléments statiques "en-dessous" rendus en flux relatif */}
             {elementsBelow.length > 0 && (
               <div className="mt-4">
                 {elementsBelow.map((el, idx) => renderFlowElement(el, idx))}
