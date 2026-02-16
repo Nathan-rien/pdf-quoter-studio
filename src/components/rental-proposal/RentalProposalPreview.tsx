@@ -35,7 +35,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -185,8 +185,12 @@ export function RentalProposalPreview() {
       chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
       remaining -= INVEST_LINES_CONTINUATION;
     }
-    // Multi-page : toujours ajouter un chunk vide dédié au footer
-    chunks.push(0);
+    // Multi-page : ajouter un chunk vide dédié au footer SEULEMENT si le dernier chunk est trop plein
+    const lastChunk = chunks[chunks.length - 1];
+    const limit = chunks.length === 1 ? INVEST_LINES_PAGE1 : INVEST_LINES_CONTINUATION;
+    if (lastChunk > limit - INVEST_FOOTER_RESERVED_LINES) {
+      chunks.push(0);
+    }
     return chunks;
   })();
   const investChunkCount = investChunks.length;
