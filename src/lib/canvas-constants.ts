@@ -34,9 +34,11 @@ export const LINES_PER_PAGE = 12;
 
 // Pagination du tableau investissements (multi-page)
 // Page 4 (première page) : moins de place car titre + en-têtes + logo en bas
-export const INVEST_LINES_PAGE1 = 28;
+export const INVEST_LINES_PAGE1 = 22;
 // Pages suivantes (continuation) : plus de place, juste le tableau
-export const INVEST_LINES_CONTINUATION = 38;
+export const INVEST_LINES_CONTINUATION = 32;
+// Nombre de lignes réservées pour le footer (totaux + proposition financière + avantages + conditions)
+export const INVEST_FOOTER_RESERVED_LINES = 8;
 
 // Largeur maximale d'affichage du canvas (identique Éditeur/Aperçu)
 export const CANVAS_DISPLAY_MAX_WIDTH = 580;
