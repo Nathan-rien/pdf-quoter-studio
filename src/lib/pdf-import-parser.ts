@@ -42,6 +42,28 @@ export interface PDFParseResult {
   rawText?: string;
 }
 
+/**
+ * Nettoie le nom de ville extrait d'un PDF en supprimant les informations parasites
+ * (horaires d'ouverture, suffixe FR, etc.)
+ */
+function cleanCityName(raw: string): string {
+  if (!raw) return '';
+  let city = raw.trim();
+  // Supprimer suffixe FR
+  city = city.replace(/\s+FR\s*$/i, '').trim();
+  // Couper au premier tiret suivi de texte non pertinent (horaires, infos d'ouverture)
+  city = city.replace(/\s*[–\-]\s*(?:Ouvert|du\s+lundi|Lundi|Horaires|Fermé|Accès|Tél|Tel|Fax|Site).*/i, '').trim();
+  // Couper aussi si tiret simple suivi de texte long (probablement pas un nom de ville composé)
+  city = city.replace(/\s*[–\-]\s+[A-Za-zÀ-ÿ]{4,}\s+[A-Za-zÀ-ÿ].*$/i, (match) => {
+    // Garder les noms de ville composés courts comme "ST-MEDARD" mais pas "Ouvert du lundi..."
+    if (/ouvert|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|horaire|fermé/i.test(match)) {
+      return '';
+    }
+    return match;
+  });
+  return city.trim();
+}
+
 function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | 'dental' | 'unknown' {
   const lowerName = filename.toLowerCase();
   if (lowerName.includes('cybertek') || lowerName.includes('kedge')) {
@@ -172,7 +194,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       const cpVille = line.match(/^(\d{5})\s+(.+?)(?:\s+FR)?$/i);
       if (cpVille) {
         result.client!.codePostal = cpVille[1];
-        result.client!.ville = cpVille[2].replace(/\s+FR$/i, '').trim();
+        result.client!.ville = cleanCityName(cpVille[2]);
         break;
       }
     }
@@ -200,7 +222,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     const cpVilleMatch = text.match(/(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s-]+?)(?=\s+(?:N°|Devis|Tél|Email|Contact|France|FR))/i);
     if (cpVilleMatch) {
       result.client!.codePostal = cpVilleMatch[1];
-      result.client!.ville = cpVilleMatch[2].replace(/\s+FR$/i, '').trim();
+      result.client!.ville = cleanCityName(cpVilleMatch[2]);
     }
   }
 
@@ -1031,7 +1053,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     if (cpMatch2) {
       // l2 = "00000 ST MEDARD EN JALLES FR"
       result.client!.codePostal = cpMatch2[1];
-      result.client!.ville = cpMatch2[2].replace(/\s+FR\s*$/i, '').trim();
+      result.client!.ville = cleanCityName(cpMatch2[2]);
     } else {
       // l2 is a street address
       if (l2) result.client!.adresse = l2;
@@ -1039,7 +1061,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
       const cpMatch3 = l3?.match(/^(\d{5})\s+(.+)/);
       if (cpMatch3) {
         result.client!.codePostal = cpMatch3[1];
-        result.client!.ville = cpMatch3[2].replace(/\s+FR\s*$/i, '').trim();
+        result.client!.ville = cleanCityName(cpMatch3[2]);
       }
     }
   }
@@ -1053,7 +1075,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
     result.client!.adresse = result.client!.adresse || deliveryMatch[2].trim();
     result.client!.codePostal = result.client!.codePostal || deliveryMatch[3];
     // Only set city if we didn't already map the "Ville" field from facturation.
-    if (!result.client!.ville) result.client!.ville = deliveryMatch[4].trim();
+    if (!result.client!.ville) result.client!.ville = cleanCityName(deliveryMatch[4]);
   }
 
   // Fallback: extract address + CP/city even if name block isn't reconstructed
@@ -1076,7 +1098,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
       const cpVilleMatch = line.match(/\b(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜ\s'\-]{2,})/i);
       if (cpVilleMatch) {
         result.client!.codePostal = result.client!.codePostal || cpVilleMatch[1];
-        result.client!.ville = result.client!.ville || cpVilleMatch[2].replace(/\s+FR\s*$/i, '').trim();
+        result.client!.ville = result.client!.ville || cleanCityName(cpVilleMatch[2]);
         break;
       }
     }
@@ -1487,7 +1509,7 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
         const cpMatch = nextLine.match(/^(\d{5})\s+(.+?)(?:\s+France)?$/i);
         if (cpMatch) {
           result.client!.codePostal = cpMatch[1];
-          result.client!.ville = cpMatch[2].trim();
+          result.client!.ville = cleanCityName(cpMatch[2]);
           break;
         }
       }

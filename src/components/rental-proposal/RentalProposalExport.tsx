@@ -273,7 +273,7 @@ export function RentalProposalExport() {
     `;
     
     // Page 4 : Tableau des produits
-    const productLinesHTML = lignesData.slice(0, LINES_PER_PAGE).map((ligne) => `
+    const productLinesHTML = lignesData.map((ligne) => `
       <tr>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>

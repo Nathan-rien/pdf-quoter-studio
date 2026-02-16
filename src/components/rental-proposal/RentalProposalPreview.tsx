@@ -640,7 +640,7 @@ export function RentalProposalPreview() {
   // Pages produits (dynamiques) - Page 4 fixe avec éléments statiques du template
   // Les éléments situés sous la zone dynamique suivent le tableau en flux relatif
   const renderProductPage = () => {
-    const pageLines = lignesData.slice(0, LINES_PER_PAGE);
+    const pageLines = lignesData;
     const staticElements = getStaticPageElements(4 as PDFPageNumber);
     
     // Calculer le seuil Y pour séparer éléments au-dessus / en-dessous de la zone dynamique
