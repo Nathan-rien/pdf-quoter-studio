@@ -1,9 +1,9 @@
 
 
-## Augmenter legerement les limites de lignes par page
+## Augmenter les limites de lignes par page (+2)
 
 ### Probleme
-Le tableau "Vos investissements" deborde encore d'une ligne sur la page 6, alors qu'il reste de la place en bas des pages 4 et 5. Les constantes actuelles (`INVEST_LINES_PAGE1 = 22`, `INVEST_LINES_CONTINUATION = 32`) sont encore un peu trop basses.
+Malgre les ajustements precedents, une seule ligne du tableau deborde encore sur la page 6. Les pages 4 et 5 montrent clairement de l'espace inutilise en bas avant le logo/footer.
 
 ### Solution
 
@@ -11,10 +11,8 @@ Modifier `src/lib/canvas-constants.ts` :
 
 | Constante | Avant | Apres |
 |---|---|---|
-| `INVEST_LINES_PAGE1` | 22 | 24 |
-| `INVEST_LINES_CONTINUATION` | 32 | 34 |
-
-Ces +2 lignes sur chaque page devraient suffire a absorber le debordement visible sur le screenshot sans risquer de troncature grace a la page footer dediee mise en place precedemment.
+| `INVEST_LINES_PAGE1` | 24 | 26 |
+| `INVEST_LINES_CONTINUATION` | 34 | 36 |
 
 ### Fichier modifie
 - `src/lib/canvas-constants.ts` (2 lignes)
