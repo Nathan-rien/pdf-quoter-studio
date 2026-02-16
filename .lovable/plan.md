@@ -1,28 +1,53 @@
 
-
-## Optimiser le remplissage des pages du tableau investissements
+## Toujours separer le footer du tableau sur une page dediee en multi-page
 
 ### Probleme
-Les constantes actuelles (`INVEST_LINES_PAGE1 = 18`, `INVEST_LINES_CONTINUATION = 28`) sont encore trop conservatrices :
-- **Page 4** : il reste de l'espace visible entre la derniere ligne du tableau et le logo en bas a droite. On peut afficher environ 22 lignes.
-- **Page 5** : la page de continuation peut contenir environ 32 lignes avant d'atteindre le bas de page.
-- **Page 6** : une page quasi-vide avec seulement 1-2 lignes + le total, ce qui est un gaspillage d'espace.
+Quand le tableau "Vos investissements" s'etend sur plusieurs pages, les elements qui suivent (Total, "Votre offre", propositions financieres, textes "Avantages/Conditions") sont colles en bas de la derniere page du tableau et se retrouvent tronques. Le seuil `INVEST_LINES_LAST_WITH_FOOTER` ne suffit pas a prevenir ce debordement.
 
 ### Solution
+Simplifier la logique : des que le tableau depasse la page 4 (multi-page), **toujours** ajouter une page dediee pour le footer (Total + Votre offre + flow elements). On supprime le seuil conditionnel `INVEST_LINES_LAST_WITH_FOOTER`.
 
-Modifier uniquement les constantes dans `src/lib/canvas-constants.ts` :
+### Modifications
 
-| Constante | Avant | Apres | Justification |
-|---|---|---|---|
-| `INVEST_LINES_PAGE1` | 18 | 22 | Remplir l'espace avant le logo en bas de page 4 |
-| `INVEST_LINES_CONTINUATION` | 28 | 32 | Exploiter la pleine hauteur A4 sur les pages de continuation |
-| `INVEST_LINES_LAST_WITH_FOOTER` | 20 | 24 | Ajuster proportionnellement le seuil pour le bloc total/propositions |
+#### 1. `src/lib/canvas-constants.ts`
+- Supprimer `INVEST_LINES_LAST_WITH_FOOTER` (plus utilise)
 
-### Impact concret
-Avec le devis actuel (environ 50 lignes visibles sur les screenshots) :
-- **Avant** : page 4 (18 lignes) + page 5 (28 lignes) + page 6 (quelques lignes + total) = 3 pages
-- **Apres** : page 4 (22 lignes) + page 5 (32 lignes) = les ~50 lignes + total tiennent potentiellement en 2 pages
+#### 2. `src/components/rental-proposal/RentalProposalPreview.tsx` (lignes 179-194)
+Remplacer la logique conditionnelle par :
+```typescript
+const investChunks = (() => {
+  const totalLines = lignesData.length;
+  if (totalLines <= INVEST_LINES_PAGE1) return [totalLines];
+  const chunks = [INVEST_LINES_PAGE1];
+  let remaining = totalLines - INVEST_LINES_PAGE1;
+  while (remaining > 0) {
+    chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
+    remaining -= INVEST_LINES_CONTINUATION;
+  }
+  // Multi-page : toujours ajouter un chunk vide dedie au footer
+  chunks.push(0);
+  return chunks;
+})();
+```
 
-### Fichier modifie
-- `src/lib/canvas-constants.ts` (3 lignes)
+#### 3. `src/components/rental-proposal/RentalProposalExport.tsx` (lignes 295-310)
+Meme changement :
+```typescript
+const investChunksLocal: number[] = (() => {
+  const totalLines = lignesData.length;
+  if (totalLines <= INVEST_LINES_PAGE1) return [totalLines];
+  const chunks = [INVEST_LINES_PAGE1];
+  let remaining = totalLines - INVEST_LINES_PAGE1;
+  while (remaining > 0) {
+    chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
+    remaining -= INVEST_LINES_CONTINUATION;
+  }
+  // Multi-page : toujours ajouter un chunk vide dedie au footer
+  chunks.push(0);
+  return chunks;
+})();
+```
 
+### Resultat
+- **Cas mono-page** (lignes <= 22) : inchange, tout sur la page 4
+- **Cas multi-page** : le tableau utilise pleinement chaque page, puis une page supplementaire affiche proprement le Total, "Votre offre", propositions et textes de conditions sans troncature
