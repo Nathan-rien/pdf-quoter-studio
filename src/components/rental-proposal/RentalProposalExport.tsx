@@ -486,7 +486,7 @@ export function RentalProposalExport() {
       <div class="dynamic-content" style="position: absolute; left: 5%; top: 8%; width: 90%; max-height: 82%; overflow: hidden; z-index: 40;">
         <!-- Titre de page avec icône FileCheck -->
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
           <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Les services inclus dans votre offre</h2>
         </div>
         
