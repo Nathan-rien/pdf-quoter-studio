@@ -1,43 +1,49 @@
 
 
-## Reduire l'affichage du tableau produits quand il y a beaucoup de lignes
+## Rendre les blocs dynamiques deplacables dans l'Apercu
 
-### Probleme
+### Contexte
 
-Quand le tableau d'investissements contient beaucoup de lignes, les lignes prennent trop de place verticalement. Le "Total investissement" se retrouve tronque entre deux pages malgre la reserve de lignes, car le contenu physique deborde du conteneur fixe.
+Dans l'apercu de la proposition, le mode "Edition" permet deja de deplacer les elements statiques du template (textes, images, formes). Cependant, les contenus dynamiques (tableau d'investissements, "Votre offre", services inclus, options) sont proteges par `pointer-events-none` et ne peuvent pas etre deplaces.
 
 ### Solution
 
-Reduire dynamiquement la taille de police et le padding des lignes du tableau quand on est en mode multi-page (plus de 22 lignes). Cela permet de faire tenir plus de contenu par page et d'eviter la troncature.
+Ajouter un systeme de drag pour les blocs de contenu dynamique dans le `PreviewEditableCanvas`. Chaque bloc dynamique pourra etre deplace en glissant son conteneur. Les offsets de position seront stockes dans le store de proposition pour persister pendant la session.
+
+### Architecture
+
+Le contenu dynamique est rendu via `renderDynamicContent()` dans `PreviewEditableCanvas`. Actuellement, ce contenu est enveloppe dans un `div` avec `pointer-events-none`. La modification consiste a :
+
+1. Retirer `pointer-events-none` en mode edition
+2. Ajouter des evenements de drag sur le conteneur dynamique
+3. Stocker les offsets de position par page dans `rentalProposalStore`
+4. Appliquer ces offsets via `transform: translate()` sur le bloc dynamique
 
 ### Modifications
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Adapter `makeRowHTML`, `tableHeaderHTML` et le total pour utiliser des tailles reduites en multi-page |
+| `src/components/rental-proposal/PreviewEditableCanvas.tsx` | Rendre le wrapper du contenu dynamique draggable en mode edition avec curseur move et gestion du drag |
+| `src/stores/rentalProposalStore.ts` | Ajouter un state `dynamicContentOffsets` (Record par page) et une action `updateDynamicContentOffset` |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Passer les offsets au `PreviewEditableCanvas` et les appliquer sur les blocs dynamiques |
 
 ### Details techniques
 
-**Tailles actuelles (conservees pour les petits tableaux) :**
-- Police tableau : 9px
-- Padding cellules : 6px 8px
-- Police en-tete : implicite (herite 9px)
+**Store (rentalProposalStore)** : Ajouter un champ `dynamicContentOffsets: Record<number, { x: number; y: number }>` qui stocke le decalage en pixels canvas pour le bloc dynamique de chaque page. Action `updateDynamicContentOffset(pageNumber, offset)`.
 
-**Tailles reduites pour multi-page :**
-- Police tableau : 7.5px
-- Padding cellules : 3px 6px
-- Police en-tete : 7.5px, padding reduit a 5px 6px
+**PreviewEditableCanvas** : 
+- Nouvelle prop `dynamicContentOffset?: { x: number; y: number }` et callback `onDynamicContentDrag?: (offset: { x: number; y: number }) => void`
+- Le wrapper du contenu dynamique recoit des evenements `onMouseDown/Move/Up` pour le drag
+- En mode edition, le wrapper affiche un curseur `move` et un indicateur visuel (bordure en pointilles + badge "Deplacer")
+- Le `transform: translate(deltaX%, deltaY%)` est applique sur le wrapper
 
-La detection est simple : si `lignesData.length > INVEST_LINES_PAGE1` (22 lignes), on applique les tailles compactes. Sinon, on garde les tailles normales.
+**RentalProposalPreview** :
+- Lire les offsets depuis le store et les passer au canvas
+- Mettre a jour le store via le callback de drag
 
-Les variables de style seront definies avant la generation du HTML :
+### Limites
 
-```text
-const isCompact = lignesData.length > INVEST_LINES_PAGE1;
-const tableFontSize = isCompact ? '7.5px' : '9px';
-const cellPadding = isCompact ? '3px 6px' : '6px 8px';
-const headerPadding = isCompact ? '5px 6px' : '8px';
-```
-
-Ces variables seront injectees dans `tableHeaderHTML`, `makeRowHTML` et le bloc `totalHTML` pour garantir un affichage homogene et compact quand le nombre de lignes est eleve.
+- Les offsets sont en session uniquement (non persistes dans le template cloud)
+- Le deplacement s'applique au bloc dynamique entier, pas a ses sous-elements individuels
+- Les offsets sont reinitialises si on change de template
 
