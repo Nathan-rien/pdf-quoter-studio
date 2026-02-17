@@ -1,53 +1,32 @@
 
 
-## Aligner le rendu des descriptions "Nos Options" entre Preview et PDF
+## Augmenter les marges laterales du template PDF
 
 ### Probleme
 
-Dans l'export PDF (`RentalProposalExport.tsx`, ligne 468), la description des options est affichee dans une seule balise `<p>` brute :
-
-```html
-<p style="...">${opt.description}</p>
-```
-
-Resultat : tout le texte s'affiche en un seul bloc sans retours a la ligne, sans puces, sans indentation des sous-items.
-
-Dans la preview (`RentalProposalPreview.tsx`, lignes 967-976), la description est decoupee par `\n` et chaque ligne recoit :
-- Un bullet `*` si c'est une ligne principale
-- Une indentation `pl-3` si la ligne commence par `- ` (sous-item)
+Les contenus dynamiques (tableaux, options, services) utilisent actuellement `left: 3%; width: 94%`, ce qui donne environ 17px de marge de chaque cote sur un canvas de 580px. Le rendu parait trop "bord a bord".
 
 ### Solution
 
-Remplacer la balise `<p>` unique dans le HTML d'export par la meme logique de decoupe et de formatage que la preview.
+Ajouter un `padding` horizontal au conteneur `.page` dans le generateur PDF, et ajuster les positionnements `left`/`width` des contenus dynamiques pour harmoniser les marges.
+
+Passer de `left: 3%; width: 94%` a `left: 5%; width: 90%` sur tous les blocs dynamiques, ce qui donnera environ 29px de marge de chaque cote (contre 17px actuellement).
 
 ### Fichier modifie
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalExport.tsx` (ligne 468) | Remplacer le rendu brut par un rendu ligne par ligne avec bullets et indentation |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Remplacer toutes les occurrences de `left: 3%; ... width: 94%` par `left: 5%; ... width: 90%` dans les styles inline des `dynamic-content` |
 
-### Code cible (ligne 468)
+### Occurrences a modifier
 
-Remplacer :
-```html
-<p style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description}</p>
-```
-
-Par :
-```html
-<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">
-  ${opt.description.split('\n').filter(l => l.trim()).map(line => {
-    const trimmed = line.trim();
-    const isSubItem = trimmed.startsWith('- ');
-    return `<div style="line-height: 1.4; ${isSubItem ? 'padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`;
-  }).join('')}
-</div>
-```
-
-Cela reproduit exactement la logique de la preview : decoupe par `\n`, filtrage des lignes vides, bullet pour les lignes principales, indentation pour les sous-items commencant par `- `.
+1. **Page 1** (ligne 249) : `left: 12px; right: 12px` -> `left: 5%; right: 5%`
+2. **Page 4** (ligne 391) : `left: 3%; ... width: 94%` -> `left: 5%; ... width: 90%`
+3. **Pages continuation** (ligne 416) : `left: 3%; ... width: 94%` -> `left: 5%; ... width: 90%`
+4. **Page 5** (ligne 484) : `left: 3%; ... width: 94%` -> `left: 5%; ... width: 90%`
 
 ### Comportement attendu
 
-- **Preview** : lignes avec `*` et sous-items indentes (inchange)
-- **PDF export** : meme rendu avec bullets et indentation, au lieu d'un bloc de texte continu
-
+- Marges laterales plus genereuses sur toutes les pages dynamiques du PDF
+- Le contenu (tableaux, options, services) est mieux centre avec plus d'espace respirable sur les cotes
+- Pas d'impact sur la preview (qui utilise ses propres classes Tailwind)
