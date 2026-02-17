@@ -1,59 +1,43 @@
 
 
-## Corriger la ligne "Total investissement" tronquee sur les pages de continuation
+## Reduire l'affichage du tableau produits quand il y a beaucoup de lignes
 
 ### Probleme
 
-Le conteneur `.page` dans le PDF a une hauteur fixe (`PDF_BASE_HEIGHT`) avec `overflow: hidden`. La logique de decoupe alloue jusqu'a `INVEST_LINES_CONTINUATION` (32) lignes par page de continuation. Quand le dernier chunk de donnees contient beaucoup de lignes, le total qui est ajoute apres le tableau depasse la hauteur de la page et est tronque par `overflow: hidden`.
-
-La preview (Apercu) n'a pas ce probleme car elle utilise un layout qui s'adapte au contenu.
-
-### Cause racine
-
-Dans `RentalProposalExport.tsx` (lignes 295-307), le decoupage en chunks ne reserve pas d'espace pour le "Total investissement" sur le dernier chunk contenant des donnees :
-
-```text
-chunks = [22, 32, 0]  -- 32 lignes + total = debordement
-```
+Quand le tableau d'investissements contient beaucoup de lignes, les lignes prennent trop de place verticalement. Le "Total investissement" se retrouve tronque entre deux pages malgre la reserve de lignes, car le contenu physique deborde du conteneur fixe.
 
 ### Solution
 
-Reduire la capacite du dernier chunk de donnees pour laisser de la place au bloc "Total investissement". La constante `INVEST_FOOTER_RESERVED_LINES` (9) existe deja mais n'est pas utilisee pour ce cas.
+Reduire dynamiquement la taille de police et le padding des lignes du tableau quand on est en mode multi-page (plus de 22 lignes). Cela permet de faire tenir plus de contenu par page et d'eviter la troncature.
 
-Apres la boucle de decoupe, verifier si le dernier chunk de donnees (avant le `0` du footer) atteint la capacite maximale. Si oui, deplacer quelques lignes vers un nouveau chunk pour laisser de l'espace au total.
+### Modifications
 
-### Fichier modifie
+| Fichier | Modification |
+|---|---|
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Adapter `makeRowHTML`, `tableHeaderHTML` et le total pour utiliser des tailles reduites en multi-page |
 
-| Fichier | Lignes | Modification |
-|---|---|---|
-| `src/components/rental-proposal/RentalProposalExport.tsx` | 295-307 | Ajuster la logique de decoupe pour reduire le dernier chunk de donnees et garantir que le total est visible |
+### Details techniques
 
-### Logique corrigee
+**Tailles actuelles (conservees pour les petits tableaux) :**
+- Police tableau : 9px
+- Padding cellules : 6px 8px
+- Police en-tete : implicite (herite 9px)
+
+**Tailles reduites pour multi-page :**
+- Police tableau : 7.5px
+- Padding cellules : 3px 6px
+- Police en-tete : 7.5px, padding reduit a 5px 6px
+
+La detection est simple : si `lignesData.length > INVEST_LINES_PAGE1` (22 lignes), on applique les tailles compactes. Sinon, on garde les tailles normales.
+
+Les variables de style seront definies avant la generation du HTML :
 
 ```text
-// Nombre de lignes a reserver sur le dernier chunk pour le total
-const TOTAL_RESERVED = 2;
-const LAST_CHUNK_MAX = INVEST_LINES_CONTINUATION - TOTAL_RESERVED;
-
-// Construction des chunks
-chunks = [INVEST_LINES_PAGE1];
-remaining = totalLines - INVEST_LINES_PAGE1;
-
-while (remaining > LAST_CHUNK_MAX) {
-  chunks.push(INVEST_LINES_CONTINUATION);
-  remaining -= INVEST_LINES_CONTINUATION;
-}
-// Le dernier chunk avec donnees : toujours <= LAST_CHUNK_MAX
-chunks.push(remaining);
-// Page footer dediee (Votre offre, propositions)
-chunks.push(0);
+const isCompact = lignesData.length > INVEST_LINES_PAGE1;
+const tableFontSize = isCompact ? '7.5px' : '9px';
+const cellPadding = isCompact ? '3px 6px' : '6px 8px';
+const headerPadding = isCompact ? '5px 6px' : '8px';
 ```
 
-Avec cette logique, le dernier chunk de donnees n'excede jamais `INVEST_LINES_CONTINUATION - 2`, ce qui laisse suffisamment de place pour le bloc "Total investissement" sans debordement.
-
-### Comportement attendu
-
-- Le "Total investissement" est toujours visible sur la derniere page contenant des lignes de produits
-- Aucun changement sur les pages de continuation intermediaires (elles gardent 32 lignes max)
-- Si le dernier chunk deborderait, les lignes excedentaires sont reportees sur une page supplementaire
+Ces variables seront injectees dans `tableHeaderHTML`, `makeRowHTML` et le bloc `totalHTML` pour garantir un affichage homogene et compact quand le nombre de lignes est eleve.
 
