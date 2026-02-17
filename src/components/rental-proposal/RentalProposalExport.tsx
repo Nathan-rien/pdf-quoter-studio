@@ -273,22 +273,28 @@ export function RentalProposalExport() {
     `;
     
     // Page 4 : Tableau des produits (avec pagination multi-pages si nécessaire)
+    // Tailles compactes pour les tableaux multi-pages
+    const isCompact = lignesData.length > INVEST_LINES_PAGE1;
+    const tableFontSize = isCompact ? '7.5px' : '9px';
+    const cellPadding = isCompact ? '3px 6px' : '6px 8px';
+    const headerPadding = isCompact ? '5px 6px' : '8px';
+
     const tableHeaderHTML = `
       <thead>
         <tr style="background: #f3f4f6;">
-          <th style="padding: 8px; text-align: left; font-weight: 600;">Désignation</th>
-          <th style="padding: 8px; text-align: center; width: 60px;">Qté</th>
-          <th style="padding: 8px; text-align: right; width: 80px;">P.U. HT</th>
-          <th style="padding: 8px; text-align: right; width: 80px;">Total HT</th>
+          <th style="padding: ${headerPadding}; text-align: left; font-weight: 600; font-size: ${tableFontSize};">Désignation</th>
+          <th style="padding: ${headerPadding}; text-align: center; width: 60px; font-size: ${tableFontSize};">Qté</th>
+          <th style="padding: ${headerPadding}; text-align: right; width: 80px; font-size: ${tableFontSize};">P.U. HT</th>
+          <th style="padding: ${headerPadding}; text-align: right; width: 80px; font-size: ${tableFontSize};">Total HT</th>
         </tr>
       </thead>`;
     
     const makeRowHTML = (ligne: typeof lignesData[0]) => `
       <tr>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
+        <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
+        <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
+        <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
+        <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
       </tr>`;
     
     // Découper les lignes en chunks avec logique de footer overflow
@@ -393,7 +399,7 @@ export function RentalProposalExport() {
     dynamicContent[4] = `
       <div class="dynamic-content" style="position: absolute; left: 5%; top: 5%; width: 90%; z-index: 40;">
         <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Vos investissements</div>
-        <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
+        <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: ${tableFontSize}; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
           ${tableHeaderHTML}
           <tbody>${chunk0RowsHTML}</tbody>
         </table>
@@ -418,7 +424,7 @@ export function RentalProposalExport() {
         extraPages.push(`
           <div class="dynamic-content" style="position: absolute; left: 5%; top: 3%; width: 90%; z-index: 40;">
             ${chunkLineCount > 0 ? `
-            <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
+            <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: ${tableFontSize}; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
               ${tableHeaderHTML}
               <tbody>${chunkRowsHTML}</tbody>
             </table>
