@@ -437,7 +437,7 @@ export function RentalProposalExport() {
               <span style="color: #22c55e; font-size: 10px;">✓</span>
               <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
             </div>
-            ${opt.description ? `<p style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px; white-space: pre-wrap;">${opt.description}</p>` : ''}
+            ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
           </div>
           ${opt.price !== null ? `
             <div style="text-align: right;">
@@ -465,7 +465,7 @@ export function RentalProposalExport() {
                     <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
                     <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
                   </div>
-                  ${opt.description ? `<p style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description}</p>` : ''}
+                  ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
                 </div>
                 ${opt.price !== null ? `
                   <div style="text-align: right;">
