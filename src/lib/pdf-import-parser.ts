@@ -268,9 +268,9 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
 
   const tableStartIdx = lines.findIndex(
     (l) =>
-      /\bREF\b/i.test(l) &&
-      /DESIGNATION/i.test(l) &&
-      /QTE/i.test(l)
+      (/\bREF\b/i.test(l) || /\bCODE\b/i.test(l)) &&
+      /D[EÉ]SIGNATION/i.test(l) &&
+      /QT[EÉ]/i.test(l)
   );
 
   // Less aggressive stopRe: do NOT stop on "TOTAL HT" / "Total HT" / "TVA 20" / "Total TTC"
@@ -611,7 +611,83 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     if (!amountExtracted) continue;
 
     const syIdx = findSyRefIndexBackwards(i);
-    if (syIdx === -1) continue;
+    
+    // === COMMANDE FORMAT: Single-line rows starting with numeric CODE ===
+    // Format: "00602456  Carte graphique MSI...  408,32 €  3  1 224,96 €"
+    // Or multi-line: CODE on one line, then designation + amounts on subsequent lines
+    if (syIdx === -1) {
+      // Try to detect Commande-style rows: look backwards for a numeric code line
+      const numericCodePattern = /^(\d{6,10})\b/;
+      let codeIdx = -1;
+      for (let j = i; j >= 0 && j >= i - 10; j--) {
+        if (numericCodePattern.test(rowsSource[j])) {
+          codeIdx = j;
+          break;
+        }
+        if (stopRe.test(rowsSource[j]) || softStopRe.test(rowsSource[j])) break;
+        // Stop if we hit another product's amount line
+        if (j < i && /\b\d{1,3}\s+[\d\s,.]+\s*€/.test(rowsSource[j])) break;
+      }
+      
+      if (codeIdx !== -1) {
+        const codeLine = rowsSource[codeIdx];
+        const codeMatch = codeLine.match(numericCodePattern);
+        const reference = codeMatch ? codeMatch[1] : null;
+        const quantite = amountExtracted.qty;
+        const totalHT = amountExtracted.total;
+        
+        // Build designation from lines between code and amount line
+        const designationParts: string[] = [];
+        for (let j = codeIdx; j <= i; j++) {
+          const v = rowsSource[j];
+          if (isBannedLine(v) || isGarantieLine(v)) continue;
+          if (/Dont\s+eco-?taxe/i.test(v)) continue;
+          
+          if (j === codeIdx) {
+            // Remove the code prefix from the first line
+            const afterCode = v.replace(numericCodePattern, '').trim();
+            if (afterCode) designationParts.push(afterCode);
+          } else if (j === i) {
+            // Use matchIndex to get text before the amount
+            const leftPart = v.slice(0, amountExtracted.matchIndex).trim();
+            if (leftPart) designationParts.push(leftPart);
+          } else {
+            designationParts.push(v);
+          }
+        }
+        
+        // Remove price unit from designation (e.g. "408,32 €" appearing before QTE)
+        let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
+        // Strip trailing unit price pattern "NNN,NN €" that may be left in designation
+        designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
+        
+        // Skip "Produit inclus dans l'extension de garantie" and eco-taxe lines
+        if (/Produit\s+inclus/i.test(designation) || /eco-?taxe/i.test(designation)) {
+          continue;
+        }
+        
+        // Skip transport/livraison lines (excluded from Invest like in Devis format)
+        if (/Transport\s+CYBERTEK|Forfait\s+Transport/i.test(designation)) {
+          console.log('[Cybertek Parser] Skipping transport line:', designation);
+          continue;
+        }
+        
+        if (designation) {
+          console.log('[Cybertek Parser] Commande line extracted:', {
+            reference, designation: designation.substring(0, 100), quantite, totalHT,
+          });
+          
+          result.lignes!.push({
+            reference,
+            designation,
+            quantite,
+            totalHT,
+            prixUnitaire: quantite > 0 ? Math.round((totalHT / quantite) * 100) / 100 : null,
+          });
+        }
+      }
+      continue;
+    }
 
     const quantite = amountExtracted.qty;
     const totalHT = amountExtracted.total;
