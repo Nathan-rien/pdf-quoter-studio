@@ -299,12 +299,10 @@ export function RentalProposalExport() {
       const LAST_CHUNK_MAX = INVEST_LINES_CONTINUATION - TOTAL_RESERVED;
       const chunks = [INVEST_LINES_PAGE1];
       let remaining = totalLines - INVEST_LINES_PAGE1;
-      while (remaining > LAST_CHUNK_MAX) {
-        chunks.push(INVEST_LINES_CONTINUATION);
-        remaining -= INVEST_LINES_CONTINUATION;
+      while (remaining > 0) {
+        chunks.push(Math.min(remaining, LAST_CHUNK_MAX));
+        remaining -= LAST_CHUNK_MAX;
       }
-      // Le dernier chunk avec données : toujours <= LAST_CHUNK_MAX pour laisser place au total
-      chunks.push(remaining);
       // Multi-page : toujours reporter le footer sur une page dédiée
       chunks.push(0);
       return chunks;
