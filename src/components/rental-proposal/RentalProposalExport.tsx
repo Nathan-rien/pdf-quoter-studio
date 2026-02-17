@@ -246,7 +246,7 @@ export function RentalProposalExport() {
     
     // Page 1 : Données client et commercial
     dynamicContent[1] = `
-      <div class="dynamic-content" style="position: absolute; bottom: 40px; left: 12px; right: 12px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
+      <div class="dynamic-content" style="position: absolute; bottom: 40px; left: 5%; right: 5%; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div>
             <div style="font-size: 9px;">
@@ -388,7 +388,7 @@ export function RentalProposalExport() {
     // Chunk 0 : page 4 du template
     const chunk0RowsHTML = chunk0Lines.map(makeRowHTML).join('');
     dynamicContent[4] = `
-      <div class="dynamic-content" style="position: absolute; left: 3%; top: 5%; width: 94%; z-index: 40;">
+      <div class="dynamic-content" style="position: absolute; left: 5%; top: 5%; width: 90%; z-index: 40;">
         <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Vos investissements</div>
         <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
           ${tableHeaderHTML}
@@ -413,7 +413,7 @@ export function RentalProposalExport() {
         const chunkRowsHTML = chunkLines.map(makeRowHTML).join('');
         
         extraPages.push(`
-          <div class="dynamic-content" style="position: absolute; left: 3%; top: 3%; width: 94%; z-index: 40;">
+          <div class="dynamic-content" style="position: absolute; left: 5%; top: 3%; width: 90%; z-index: 40;">
             ${chunkLineCount > 0 ? `
             <table class="product-table" style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
               ${tableHeaderHTML}
@@ -481,7 +481,7 @@ export function RentalProposalExport() {
     ` : '';
     
     dynamicContent[5] = `
-      <div class="dynamic-content" style="position: absolute; left: 3%; top: 8%; width: 94%; max-height: 82%; overflow: hidden; z-index: 40;">
+      <div class="dynamic-content" style="position: absolute; left: 5%; top: 8%; width: 90%; max-height: 82%; overflow: hidden; z-index: 40;">
         <!-- Titre de page avec icône FileCheck -->
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
