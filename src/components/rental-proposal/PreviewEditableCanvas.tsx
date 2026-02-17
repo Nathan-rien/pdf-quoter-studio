@@ -29,6 +29,8 @@ interface PreviewEditableCanvasProps {
   renderDynamicContent?: () => React.ReactNode;
   pageFooter: React.ReactNode;
   isEditMode: boolean;
+  dynamicContentOffset?: { x: number; y: number };
+  onDynamicContentDrag?: (offset: { x: number; y: number }) => void;
 }
 
 export function PreviewEditableCanvas({
@@ -38,6 +40,8 @@ export function PreviewEditableCanvas({
   renderDynamicContent,
   pageFooter,
   isEditMode,
+  dynamicContentOffset,
+  onDynamicContentDrag,
 }: PreviewEditableCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -59,6 +63,13 @@ export function PreviewEditableCanvas({
     elementStartHeight: number;
     elementStartX: number;
     elementStartY: number;
+  } | null>(null);
+  const [dynamicDragState, setDynamicDragState] = useState<{
+    isDragging: boolean;
+    startX: number;
+    startY: number;
+    offsetStartX: number;
+    offsetStartY: number;
   } | null>(null);
 
   const { updateElementFromPreview } = useTemplateEditorStore();
@@ -123,8 +134,35 @@ export function PreviewEditableCanvas({
     });
   }, [isEditMode, getCanvasCoordinates]);
 
+  // Gestion du drag pour le contenu dynamique
+  const handleDynamicMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isEditMode || !onDynamicContentDrag) return;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const coords = getCanvasCoordinates(e.clientX, e.clientY);
+    setDynamicDragState({
+      isDragging: true,
+      startX: coords.x,
+      startY: coords.y,
+      offsetStartX: dynamicContentOffset?.x || 0,
+      offsetStartY: dynamicContentOffset?.y || 0,
+    });
+  }, [isEditMode, onDynamicContentDrag, getCanvasCoordinates, dynamicContentOffset]);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const coords = getCanvasCoordinates(e.clientX, e.clientY);
+
+    // Dynamic content drag
+    if (dynamicDragState?.isDragging && onDynamicContentDrag) {
+      const deltaX = coords.x - dynamicDragState.startX;
+      const deltaY = coords.y - dynamicDragState.startY;
+      onDynamicContentDrag({
+        x: dynamicDragState.offsetStartX + deltaX,
+        y: dynamicDragState.offsetStartY + deltaY,
+      });
+      return;
+    }
 
     if (dragState?.isDragging && dragState.elementId) {
       const deltaX = coords.x - dragState.startX;
@@ -169,11 +207,12 @@ export function PreviewEditableCanvas({
         });
       }
     }
-  }, [dragState, resizeState, elements, getCanvasCoordinates, updateElementFromPreview, pageNumber]);
+  }, [dragState, resizeState, dynamicDragState, elements, getCanvasCoordinates, updateElementFromPreview, pageNumber, onDynamicContentDrag]);
 
   const handleMouseUp = useCallback(() => {
     setDragState(null);
     setResizeState(null);
+    setDynamicDragState(null);
   }, []);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
@@ -481,9 +520,30 @@ export function PreviewEditableCanvas({
       {/* Zones dynamiques */}
       {dynamicZones.map(zone => renderDynamicZone(zone))}
 
-      {/* Contenu dynamique (non éditable) */}
+      {/* Contenu dynamique (déplaçable en mode édition) */}
       {renderDynamicContent && (
-        <div className="pointer-events-none">
+        <div 
+          className={cn(
+            isEditMode && onDynamicContentDrag
+              ? "cursor-move border-2 border-dashed border-primary/40 rounded"
+              : "pointer-events-none"
+          )}
+          style={{
+            transform: dynamicContentOffset 
+              ? `translate(${(dynamicContentOffset.x / CANVAS_SCALE.width) * 100}%, ${(dynamicContentOffset.y / CANVAS_SCALE.height) * 100}%)`
+              : undefined,
+          }}
+          onMouseDown={handleDynamicMouseDown}
+        >
+          {isEditMode && onDynamicContentDrag && (
+            <Badge 
+              variant="secondary" 
+              className="absolute -top-5 left-1 z-50 gap-1 text-[8px] py-0 px-1.5"
+            >
+              <Move className="h-2.5 w-2.5" />
+              Déplacer
+            </Badge>
+          )}
           {renderDynamicContent()}
         </div>
       )}
