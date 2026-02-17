@@ -1,36 +1,59 @@
 
 
-## Supprimer le fond bleu des cartes "Nos Options" dans l'export PDF
+## Corriger la ligne "Total investissement" tronquee sur les pages de continuation
 
 ### Probleme
 
-Dans `RentalProposalExport.tsx` (lignes 460-478), les cartes "Nos options" utilisent des couleurs de fond bleues opaques :
-- Carte : `background-color: #eff6ff; border: 1px solid #bfdbfe`
-- Header : `background-color: #dbeafe`
-- Prix : `color: #2563eb`
+Le conteneur `.page` dans le PDF a une hauteur fixe (`PDF_BASE_HEIGHT`) avec `overflow: hidden`. La logique de decoupe alloue jusqu'a `INVEST_LINES_CONTINUATION` (32) lignes par page de continuation. Quand le dernier chunk de donnees contient beaucoup de lignes, le total qui est ajoute apres le tableau depasse la hauteur de la page et est tronque par `overflow: hidden`.
 
-L'Apercu utilise des teintes tres subtiles (`bg-primary/5`, `bg-primary/15`) qui apparaissent quasi-blanches. Le PDF est donc visuellement plus bleu que l'Apercu.
+La preview (Apercu) n'a pas ce probleme car elle utilise un layout qui s'adapte au contenu.
+
+### Cause racine
+
+Dans `RentalProposalExport.tsx` (lignes 295-307), le decoupage en chunks ne reserve pas d'espace pour le "Total investissement" sur le dernier chunk contenant des donnees :
+
+```text
+chunks = [22, 32, 0]  -- 32 lignes + total = debordement
+```
 
 ### Solution
 
-Aligner les couleurs de l'export sur celles de l'Apercu en utilisant des equivalents rgba tres subtils :
+Reduire la capacite du dernier chunk de donnees pour laisser de la place au bloc "Total investissement". La constante `INVEST_FOOTER_RESERVED_LINES` (9) existe deja mais n'est pas utilisee pour ce cas.
 
-| Element | Avant (Export) | Apres (aligne Apercu) |
-|---|---|---|
-| Fond carte | `#eff6ff` | `rgba(59,130,246,0.05)` |
-| Bordure carte | `#bfdbfe` | `rgba(59,130,246,0.2)` |
-| Fond header | `#dbeafe` | `rgba(59,130,246,0.15)` |
-| Fond description | (inclus dans header) | `#ffffff` |
-| Couleur prix | `#2563eb` | `#374151` (gris neutre) |
+Apres la boucle de decoupe, verifier si le dernier chunk de donnees (avant le `0` du footer) atteint la capacite maximale. Si oui, deplacer quelques lignes vers un nouveau chunk pour laisser de l'espace au total.
 
 ### Fichier modifie
 
 | Fichier | Lignes | Modification |
 |---|---|---|
-| `src/components/rental-proposal/RentalProposalExport.tsx` | 460-478 | Remplacer les couleurs bleues par des teintes subtiles alignees sur l'Apercu |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | 295-307 | Ajuster la logique de decoupe pour reduire le dernier chunk de donnees et garantir que le total est visible |
+
+### Logique corrigee
+
+```text
+// Nombre de lignes a reserver sur le dernier chunk pour le total
+const TOTAL_RESERVED = 2;
+const LAST_CHUNK_MAX = INVEST_LINES_CONTINUATION - TOTAL_RESERVED;
+
+// Construction des chunks
+chunks = [INVEST_LINES_PAGE1];
+remaining = totalLines - INVEST_LINES_PAGE1;
+
+while (remaining > LAST_CHUNK_MAX) {
+  chunks.push(INVEST_LINES_CONTINUATION);
+  remaining -= INVEST_LINES_CONTINUATION;
+}
+// Le dernier chunk avec donnees : toujours <= LAST_CHUNK_MAX
+chunks.push(remaining);
+// Page footer dediee (Votre offre, propositions)
+chunks.push(0);
+```
+
+Avec cette logique, le dernier chunk de donnees n'excede jamais `INVEST_LINES_CONTINUATION - 2`, ce qui laisse suffisamment de place pour le bloc "Total investissement" sans debordement.
 
 ### Comportement attendu
 
-- Les cartes "Nos options" dans le PDF auront le meme rendu visuel neutre que dans l'Apercu
-- Fond quasi-blanc, bordure tres legere, pas de bandeau bleu visible
+- Le "Total investissement" est toujours visible sur la derniere page contenant des lignes de produits
+- Aucun changement sur les pages de continuation intermediaires (elles gardent 32 lignes max)
+- Si le dernier chunk deborderait, les lignes excedentaires sont reportees sur une page supplementaire
 
