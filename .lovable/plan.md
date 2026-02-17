@@ -1,58 +1,53 @@
 
 
-## Corriger le chevauchement "Total investissement" / logo sur les pages de continuation PDF
+## Aligner le rendu des descriptions "Nos Options" entre Preview et PDF
 
 ### Probleme
 
-Dans l'export PDF, chaque page de continuation du tableau "Vos investissements" copie automatiquement TOUS les elements image (logos) de la page source (page 4) via `pdf-html-generator.ts` ligne 489 :
+Dans l'export PDF (`RentalProposalExport.tsx`, ligne 468), la description des options est affichee dans une seule balise `<p>` brute :
 
-```typescript
-elements: sourcePage.elements.filter(el => el.type === 'image'),
+```html
+<p style="...">${opt.description}</p>
 ```
 
-Le logo en bas a droite est donc present sur toutes les pages de continuation, y compris celle ou le "Total investissement" s'affiche en bas. Les deux elements se chevauchent car le logo est en position absolue et le total est en flux relatif.
+Resultat : tout le texte s'affiche en un seul bloc sans retours a la ligne, sans puces, sans indentation des sous-items.
+
+Dans la preview (`RentalProposalPreview.tsx`, lignes 967-976), la description est decoupee par `\n` et chaque ligne recoit :
+- Un bullet `*` si c'est une ligne principale
+- Une indentation `pl-3` si la ligne commence par `- ` (sous-item)
 
 ### Solution
 
-Modifier la logique dans `pdf-html-generator.ts` pour exclure les images positionnees dans le bas de la page lorsque le contenu dynamique de la page de continuation contient le bloc "Total investissement" (identifiable par la classe `summary-box`).
-
-Concretement : si le HTML de la page extra contient `summary-box`, filtrer les images dont la position Y depasse 70% de la hauteur du canvas (les logos de bas de page).
+Remplacer la balise `<p>` unique dans le HTML d'export par la meme logique de decoupe et de formatage que la preview.
 
 ### Fichier modifie
 
 | Fichier | Modification |
 |---|---|
-| `src/lib/pdf-html-generator.ts` (lignes 483-493) | Filtrer les images de bas de page quand le contenu dynamique contient le total |
+| `src/components/rental-proposal/RentalProposalExport.tsx` (ligne 468) | Remplacer le rendu brut par un rendu ligne par ligne avec bullets et indentation |
 
-### Code cible
+### Code cible (ligne 468)
 
-```typescript
-extras.map(async (extraDynamicContent) => {
-  // Detecter si cette page contient le total investissement
-  const hasTotal = extraDynamicContent.includes('summary-box');
-  
-  // Filtrer les images : exclure celles en bas de page si le total est present
-  const filteredImages = sourcePage.elements.filter(el => {
-    if (el.type !== 'image') return false;
-    if (hasTotal) {
-      // Exclure les images dans le bas de la page (>70% de la hauteur)
-      const bottomThreshold = CANVAS_SCALE.height * 0.7;
-      return el.position.y < bottomThreshold;
-    }
-    return true;
-  });
-  
-  const imageOnlyPage: TemplatePageContent = {
-    ...sourcePage,
-    elements: filteredImages,
-    dynamicZones: [],
-  };
-  return renderPageToHTML(imageOnlyPage, extraDynamicContent);
-})
+Remplacer :
+```html
+<p style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description}</p>
 ```
+
+Par :
+```html
+<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">
+  ${opt.description.split('\n').filter(l => l.trim()).map(line => {
+    const trimmed = line.trim();
+    const isSubItem = trimmed.startsWith('- ');
+    return `<div style="line-height: 1.4; ${isSubItem ? 'padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`;
+  }).join('')}
+</div>
+```
+
+Cela reproduit exactement la logique de la preview : decoupe par `\n`, filtrage des lignes vides, bullet pour les lignes principales, indentation pour les sous-items commencant par `- `.
 
 ### Comportement attendu
 
-- Pages de continuation sans total : logos copies normalement (inchange)
-- Page de continuation avec "Total investissement" : logo en bas de page exclu, pas de chevauchement
-- Page unique (pas de multi-page) : pas de changement, le logo de la page 4 originale reste intact
+- **Preview** : lignes avec `*` et sous-items indentes (inchange)
+- **PDF export** : meme rendu avec bullets et indentation, au lieu d'un bloc de texte continu
+
