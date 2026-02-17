@@ -457,8 +457,8 @@ export function RentalProposalExport() {
           <span style="font-weight: 600; font-size: 10px;">Nos options</span>
         </div>
         ${selectedNosOptions.map(opt => `
-          <div style="margin-bottom: 6px; background-color: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.2); border-radius: 4px; overflow: hidden;">
-            <div style="background-color: rgba(59,130,246,0.15); padding: 6px;">
+          <div style="margin-bottom: 6px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+            <div style="padding: 6px;">
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
