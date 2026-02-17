@@ -136,8 +136,16 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     result.devis!.numeroClient = clientMatch[1];
   }
 
-  // Extract date
-  const dateMatch = text.match(/Devis\s+du\s+(\d{2}\/\d{2}\/\d{4})/i);
+  // Extract devis/commande reference number (e.g. "DEVIS N°6380967" or "COMMANDE N°6397708")
+  const refDocMatch = text.match(/(?:DEVIS|COMMANDE)\s*N[°o]\s*[:#]?\s*(\d{6,})/i);
+  if (refDocMatch) {
+    result.devis!.reference = refDocMatch[1];
+  }
+
+  // Extract date - support both "Devis du DD/MM/YYYY" and "DD/MM/YYYY HH:MM" (Commande format)
+  const dateMatch = text.match(/Devis\s+du\s+(\d{2}\/\d{2}\/\d{4})/i)
+    || text.match(/N°\s*client\s*[:\s]*\d+\s+(\d{2}\/\d{2}\/\d{4})/i)
+    || text.match(/(\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}/);
   if (dateMatch) {
     result.devis!.date = dateMatch[1];
   }
