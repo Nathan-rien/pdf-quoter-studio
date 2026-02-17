@@ -66,6 +66,8 @@ export function RentalProposalPreview() {
     getCalculatedValues,
     getSelectedCommercial,
     getAllProposalsCalculations,
+    dynamicContentOffsets,
+    updateDynamicContentOffset,
   } = useRentalProposalStore();
 
   const { 
@@ -510,6 +512,8 @@ export function RentalProposalPreview() {
           renderDynamicContent={renderDynamicContent}
           pageFooter={<PageFooter pageNum={pageNum} />}
           isEditMode={isEditMode}
+          dynamicContentOffset={dynamicContentOffsets[pageNum]}
+          onDynamicContentDrag={(offset) => updateDynamicContentOffset(pageNum, offset)}
         />
       );
     }

@@ -103,6 +103,9 @@ interface RentalProposalState {
   // Template sélectionné pour la proposition
   selectedTemplateId: string | null;
   
+  // Offsets de position des blocs dynamiques par page (session uniquement)
+  dynamicContentOffsets: Record<number, { x: number; y: number }>;
+  
   // Workflow
   currentStep: RentalWorkflowStep;
   hasUnsavedChanges: boolean;
@@ -167,6 +170,10 @@ interface RentalProposalActions {
   canNavigateToStep: (step: RentalWorkflowStep) => boolean;
   markAsSaved: () => void;
   
+  // Dynamic content offsets
+  updateDynamicContentOffset: (pageNumber: number, offset: { x: number; y: number }) => void;
+  resetDynamicContentOffsets: () => void;
+  
   // Reset
   resetAll: () => void;
   startNewProposal: () => void;
@@ -226,6 +233,7 @@ const initialState: RentalProposalState = {
   nosOptions: [],
   proposalName: '',
   selectedTemplateId: null,
+  dynamicContentOffsets: {},
   currentStep: 'import',
   hasUnsavedChanges: false,
   isActive: false,
@@ -611,6 +619,19 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           default:
             return true;
         }
+      },
+
+      updateDynamicContentOffset: (pageNumber, offset) => {
+        set(state => ({
+          dynamicContentOffsets: {
+            ...state.dynamicContentOffsets,
+            [pageNumber]: offset,
+          },
+        }));
+      },
+
+      resetDynamicContentOffsets: () => {
+        set({ dynamicContentOffsets: {} });
       },
 
       markAsSaved: () => {
