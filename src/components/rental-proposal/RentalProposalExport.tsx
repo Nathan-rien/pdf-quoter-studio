@@ -275,8 +275,8 @@ export function RentalProposalExport() {
     // Page 4 : Tableau des produits (avec pagination multi-pages si nécessaire)
     // Tailles compactes pour les tableaux multi-pages
     const isCompact = lignesData.length > INVEST_LINES_PAGE1;
-    const tableFontSize = isCompact ? '7.5px' : '9px';
-    const cellPadding = isCompact ? '3px 6px' : '6px 8px';
+    const tableFontSize = isCompact ? '8px' : '9px';
+    const cellPadding = isCompact ? '4px 6px' : '6px 8px';
     const headerPadding = isCompact ? '5px 6px' : '8px';
 
     const tableHeaderHTML = `
@@ -382,9 +382,8 @@ export function RentalProposalExport() {
       </div>
     `;
     
-    // HTML de Votre offre + propositions + flow elements (affiché sur le dernier chunk absolu)
+    // HTML de Votre offre + propositions + flow elements (affiché sur la page dédiée finale)
     const offreAndProposalsHTML = `
-      ${totalHTML}
       <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; margin-top: 8px;">Votre offre</div>
       ${allProposals.length > 0 ? `
         <div class="location-proposals" style="margin-top: 8px;">
@@ -428,6 +427,7 @@ export function RentalProposalExport() {
               ${tableHeaderHTML}
               <tbody>${chunkRowsHTML}</tbody>
             </table>
+            ${isLastDataChunk ? totalHTML : ''}
             ` : ''}
             
             ${isLastChunk ? offreAndProposalsHTML : ''}
