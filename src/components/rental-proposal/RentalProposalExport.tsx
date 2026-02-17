@@ -457,8 +457,8 @@ export function RentalProposalExport() {
           <span style="font-weight: 600; font-size: 10px;">Nos options</span>
         </div>
         ${selectedNosOptions.map(opt => `
-          <div style="margin-bottom: 6px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; overflow: hidden;">
-            <div style="background-color: #dbeafe; padding: 6px;">
+          <div style="margin-bottom: 6px; background-color: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.2); border-radius: 4px; overflow: hidden;">
+            <div style="background-color: rgba(59,130,246,0.15); padding: 6px;">
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
@@ -469,7 +469,7 @@ export function RentalProposalExport() {
                 </div>
                 ${opt.price !== null ? `
                   <div style="text-align: right;">
-                    <span style="font-weight: 600; color: #2563eb; font-size: 9px;">${formatNumber(opt.price)} €</span>
+                    <span style="font-weight: 600; color: #374151; font-size: 9px;">${formatNumber(opt.price)} €</span>
                     <span style="display: block; font-size: 7px; color: #9ca3af;">/mois</span>
                   </div>
                 ` : ''}
