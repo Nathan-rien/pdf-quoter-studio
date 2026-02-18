@@ -1,56 +1,72 @@
 
-## Adapter la taille des champs de description aux Options Services
+## Correction : Persistance du champ "Services Inclus"
 
-### Diagnostic
+### Diagnostic précis
 
-Le champ "Description" dans les blocs "Options disponibles" (Page 5, ligne 497) et "Nos Options" (Page 6, ligne 606) de `RentalDataEditor.tsx` utilise le composant `<Textarea>` standard. Ce composant a une hauteur fixe minimale de 80px (définie dans `src/components/ui/textarea.tsx`), ce qui tronque les descriptions multi-lignes importées depuis l'Administration — comme visible dans la capture d'écran où la 3ème ligne de "Pro-Actif" est coupée.
+Dans `src/stores/rentalProposalStore.ts`, le store utilise Zustand `persist` avec une fonction `partialize` qui définit **explicitement quels champs sont sauvegardés en localStorage**.
 
-Le composant `<AutoResizeTextarea>` existe déjà dans le projet (`src/components/ui/auto-resize-textarea.tsx`) et est déjà utilisé dans la même page pour la colonne "Désignation" du tableau Invest. Il ajuste dynamiquement sa hauteur en fonction du contenu via `scrollHeight`.
+Le champ `servicesInclus` est **absent de cette liste** (lignes 660-673) :
+
+```typescript
+partialize: (state) => ({
+  pdfImportStatus: state.pdfImportStatus,
+  clientData: state.clientData,
+  commercialData: state.commercialData,
+  matriceData: state.matriceData,
+  proposals: state.proposals,
+  lignesData: state.lignesData,
+  optionsServices: state.optionsServices,
+  nosOptions: state.nosOptions,
+  proposalName: state.proposalName,
+  selectedTemplateId: state.selectedTemplateId,
+  currentStep: state.currentStep,
+  isActive: state.isActive,
+  // ← servicesInclus MANQUANT !
+}),
+```
+
+Résultat : chaque rechargement de page (ou navigation) réinitialise `servicesInclus.description` à la valeur par défaut codée en dur :
+```typescript
+const initialServicesInclus: ServicesInclus = {
+  description: 'Contrat de location et gestion administrative, Optimisation des coûts et gestion budgétaire, Gestion des évolutions du parc',
+};
+```
+
+Pourtant, `updateServicesInclus` fonctionne correctement (ligne 470-475) — les modifications sont bien appliquées dans le state Zustand en mémoire, mais elles ne sont pas écrites dans le localStorage. Donc le bouton "Sauvegarder" déclenche uniquement `markAsSaved()` (qui met `hasUnsavedChanges: false`) sans jamais persister `servicesInclus`.
 
 ---
 
-### Solution — Remplacement de `<Textarea>` par `<AutoResizeTextarea>`
+### Solution — 1 ligne ajoutée
 
-2 occurrences à remplacer dans `src/components/rental-proposal/RentalDataEditor.tsx` :
+**`src/stores/rentalProposalStore.ts`, dans la fonction `partialize` (ligne ~673)**
 
-**Occurrence 1 — Page 5 "Options disponibles" (lignes ~497-503)**
+Ajouter `servicesInclus: state.servicesInclus` :
 
-```tsx
-// AVANT
-<Textarea
-  placeholder="Description"
-  value={opt.description}
-  onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
-  className="flex-1 text-sm"
-/>
-
-// APRÈS
-<AutoResizeTextarea
-  placeholder="Description"
-  value={opt.description}
-  onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
-  className="flex-1 text-sm"
-/>
+```typescript
+partialize: (state) => ({
+  pdfImportStatus: state.pdfImportStatus,
+  clientData: state.clientData,
+  commercialData: state.commercialData,
+  matriceData: state.matriceData,
+  proposals: state.proposals,
+  lignesData: state.lignesData,
+  servicesInclus: state.servicesInclus,   // ← AJOUT
+  optionsServices: state.optionsServices,
+  nosOptions: state.nosOptions,
+  proposalName: state.proposalName,
+  selectedTemplateId: state.selectedTemplateId,
+  currentStep: state.currentStep,
+  isActive: state.isActive,
+}),
 ```
 
-**Occurrence 2 — Page 6 "Nos Options" (lignes ~606-612)**
+Il faudra également ajouter la validation de `servicesInclus` dans le bloc `onRehydrateStorage` pour protéger contre les données corrompues :
 
-```tsx
-// AVANT
-<Textarea
-  placeholder="Description"
-  value={opt.description}
-  onChange={(e) => updateNosOption(opt.id, { description: e.target.value })}
-  className="flex-1 text-sm"
-/>
-
-// APRÈS
-<AutoResizeTextarea
-  placeholder="Description"
-  value={opt.description}
-  onChange={(e) => updateNosOption(opt.id, { description: e.target.value })}
-  className="flex-1 text-sm"
-/>
+```typescript
+// Validate servicesInclus
+if (!state.servicesInclus || typeof state.servicesInclus.description !== 'string') {
+  state.servicesInclus = initialServicesInclus;
+}
 ```
 
 ---
@@ -59,12 +75,10 @@ Le composant `<AutoResizeTextarea>` existe déjà dans le projet (`src/component
 
 | Fichier | Changement |
 |---|---|
-| `src/components/rental-proposal/RentalDataEditor.tsx` | Remplacement de 2 `<Textarea>` par `<AutoResizeTextarea>` (imports déjà présents) |
+| `src/stores/rentalProposalStore.ts` | Ajout de `servicesInclus` dans `partialize` + validation dans `onRehydrateStorage` |
 
-L'import `AutoResizeTextarea` est déjà présent ligne 6 du fichier — aucun ajout d'import nécessaire.
+### Impact
 
-### Impact attendu
-
-- Les champs de description s'élargissent automatiquement pour afficher toutes les lignes importées depuis l'Admin, sans scrollbar ni troncature
-- Le comportement est cohérent avec le champ "Désignation" du tableau Invest
-- Aucun effet sur l'aperçu ou l'export PDF
+- Les modifications du champ "Services inclus" seront désormais persistées en localStorage à chaque changement
+- Elles survivront aux rechargements de page, à la navigation entre les onglets du workflow, et aux sessions
+- Aucun effet sur les autres champs ni sur l'aperçu ou le PDF
