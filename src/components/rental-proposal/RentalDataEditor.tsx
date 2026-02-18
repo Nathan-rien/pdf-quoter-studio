@@ -634,10 +634,20 @@ export function RentalDataEditor() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Lignes produits (Invest)</CardTitle>
-              <Button variant="outline" size="sm" onClick={addLigne}>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter
-              </Button>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="invest-show-prices" className="text-sm text-muted-foreground">Afficher les prix</Label>
+                  <Switch
+                    id="invest-show-prices"
+                    checked={matriceData.investShowPrices}
+                    onCheckedChange={(checked) => updateMatriceField('investShowPrices', checked)}
+                  />
+                </div>
+                <Button variant="outline" size="sm" onClick={addLigne}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -645,16 +655,20 @@ export function RentalDataEditor() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[420px]">Désignation</TableHead>
-                      <TableHead className="w-24 text-right">Nb</TableHead>
-                      <TableHead className="w-28 text-right">VUN</TableHead>
-                      <TableHead className="w-28 text-right">VTN</TableHead>
+                      {matriceData.investShowPrices && (
+                        <>
+                          <TableHead className="w-24 text-right">Nb</TableHead>
+                          <TableHead className="w-28 text-right">VUN</TableHead>
+                          <TableHead className="w-28 text-right">VTN</TableHead>
+                        </>
+                      )}
                       <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {lignesData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={matriceData.investShowPrices ? 5 : 2} className="text-center text-muted-foreground py-8">
                           Aucune ligne de produit
                         </TableCell>
                       </TableRow>
@@ -669,27 +683,31 @@ export function RentalDataEditor() {
                               rows={3}
                             />
                           </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={ligne.quantite}
-                              onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
-                              className="h-8 text-right"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={ligne.prixUnitaire ?? ''}
-                              onChange={(e) => updateLigne(index, { prixUnitaire: e.target.value ? parseFloat(e.target.value) : null })}
-                              className="h-8 text-right"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatNumber(ligne.totalHT)} €
-                          </TableCell>
+                          {matriceData.investShowPrices && (
+                            <>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={ligne.quantite}
+                                  onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
+                                  className="h-8 text-right"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={ligne.prixUnitaire ?? ''}
+                                  onChange={(e) => updateLigne(index, { prixUnitaire: e.target.value ? parseFloat(e.target.value) : null })}
+                                  className="h-8 text-right"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatNumber(ligne.totalHT)} €
+                              </TableCell>
+                            </>
+                          )}
                           <TableCell>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteLigne(index)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -701,6 +719,13 @@ export function RentalDataEditor() {
                   </TableBody>
                 </Table>
               </div>
+              {matriceData.investShowPrices && lignesData.length > 0 && (
+                <div className="flex justify-end mt-3">
+                  <div className="text-sm font-semibold">
+                    Total : {formatNumber(lignesData.reduce((sum, l) => sum + (l.totalHT || 0), 0))} € HT
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

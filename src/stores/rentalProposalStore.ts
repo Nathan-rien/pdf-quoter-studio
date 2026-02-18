@@ -41,6 +41,8 @@ interface MatriceData {
   montantInvestissement: number | null;
   // Toggle affichage
   showCoutLocatifAnnuel: boolean;
+  // Toggle affichage des prix dans le tableau Invest
+  investShowPrices: boolean;
   
   // Legacy fields (kept for backward compatibility, will be migrated to proposals[0])
   duree: number | null;
@@ -191,6 +193,7 @@ const initialClientData: ClientData = {
 const initialMatriceData: MatriceData = {
   montantInvestissement: null,
   showCoutLocatifAnnuel: true,
+  investShowPrices: true,
   // Legacy fields
   duree: 36,
   refinanceur: 'Lixxbail 1',

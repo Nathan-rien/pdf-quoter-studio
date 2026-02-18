@@ -51,6 +51,8 @@ export function RentalProposalExport() {
     getAllProposalsCalculations,
   } = useRentalProposalStore();
 
+  const investShowPrices = matriceData.investShowPrices;
+
   const { getActiveTemplate, getTemplateLatestVersion, allTemplates } = useTemplateEditorStore();
   
   // Utiliser le template sélectionné dans le workflow, ou fallback sur le template actif
@@ -283,18 +285,22 @@ export function RentalProposalExport() {
       <thead>
         <tr style="background: #f3f4f6;">
           <th style="padding: ${headerPadding}; text-align: left; font-weight: 600; font-size: ${tableFontSize};">Désignation</th>
+          ${investShowPrices ? `
           <th style="padding: ${headerPadding}; text-align: center; width: 60px; font-size: ${tableFontSize};">Qté</th>
           <th style="padding: ${headerPadding}; text-align: right; width: 80px; font-size: ${tableFontSize};">P.U. HT</th>
           <th style="padding: ${headerPadding}; text-align: right; width: 80px; font-size: ${tableFontSize};">Total HT</th>
+          ` : ''}
         </tr>
       </thead>`;
     
     const makeRowHTML = (ligne: typeof lignesData[0]) => `
       <tr>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
+        ${investShowPrices ? `
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
+        ` : ''}
       </tr>`;
     
     // Découper les lignes en chunks avec logique de footer overflow
@@ -371,7 +377,7 @@ export function RentalProposalExport() {
     }
     
     // HTML du total investissement (affiché sur le dernier chunk avec données)
-    const totalHTML = `
+    const totalHTML = investShowPrices ? `
       <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
         <div class="summary-box" style="min-width: 180px;">
           <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;">
@@ -380,7 +386,7 @@ export function RentalProposalExport() {
           </div>
         </div>
       </div>
-    `;
+    ` : '';
     
     // HTML de Votre offre + propositions + flow elements (affiché sur la page dédiée finale)
     const offreAndProposalsHTML = `
