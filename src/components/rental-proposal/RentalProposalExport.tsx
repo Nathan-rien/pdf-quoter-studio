@@ -285,8 +285,8 @@ export function RentalProposalExport() {
       <thead>
         <tr style="background: #f3f4f6;">
           <th style="padding: ${headerPadding}; text-align: left; font-weight: 600; font-size: ${tableFontSize};">Désignation</th>
-          ${investShowPrices ? `
           <th style="padding: ${headerPadding}; text-align: center; width: 60px; font-size: ${tableFontSize};">Qté</th>
+          ${investShowPrices ? `
           <th style="padding: ${headerPadding}; text-align: right; width: 80px; font-size: ${tableFontSize};">P.U. HT</th>
           <th style="padding: ${headerPadding}; text-align: right; width: 80px; font-size: ${tableFontSize};">Total HT</th>
           ` : ''}
@@ -296,8 +296,8 @@ export function RentalProposalExport() {
     const makeRowHTML = (ligne: typeof lignesData[0]) => `
       <tr>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
-        ${investShowPrices ? `
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
+        ${investShowPrices ? `
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
         ` : ''}
