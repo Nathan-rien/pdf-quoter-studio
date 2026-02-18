@@ -1,30 +1,47 @@
 
-## Correction : Qté toujours visible même quand les prix sont masqués
+## Nouveau toggle : Afficher / masquer "Votre offre"
+
+### Objectif
+
+Ajouter un second interrupteur dans l'onglet Invest permettant de masquer le bloc "Votre offre" (propositions financières : Location X mois, Montant investissement, Loyer mensuel HT, Coût locatif annuel) dans l'aperçu et le PDF exporté.
+
+Le tableau "Vos investissements" reste toujours affiché — seul le bloc financier en dessous est conditionnel.
 
 ### Comportement cible
 
-| Colonne | `investShowPrices = true` | `investShowPrices = false` |
+| Élément | `investShowOffer = true` | `investShowOffer = false` |
 |---|---|---|
-| Désignation | ✅ Visible | ✅ Visible |
-| Qté | ✅ Visible | ✅ Visible (correction) |
-| P.U. HT | ✅ Visible | ❌ Masqué |
-| Total HT | ✅ Visible | ❌ Masqué |
-| Total investissement | ✅ Visible | ❌ Masqué |
+| Tableau "Vos investissements" | ✅ Visible | ✅ Visible |
+| Titre "Votre offre" | ✅ Visible | ❌ Masqué |
+| Propositions financières (Location X mois...) | ✅ Visible | ❌ Masqué |
+| Éléments de flux (Avantages, Conditions...) | ✅ Visible | ❌ Masqué |
 
-### 3 fichiers à corriger
+### Modifications — 3 fichiers
 
-**1. `RentalProposalPreview.tsx`** (aperçu visuel)
+**1. `src/stores/rentalProposalStore.ts`**
 
-Ligne 779 — la grille passe de `grid-cols-12` à `grid-cols-8` (au lieu de `grid-cols-1`) quand les prix sont masqués, pour accueillir Désignation + Qté.
+Ajouter le champ `investShowOffer: boolean` (défaut `true`) dans l'interface `MatriceData` et dans `initialMatriceData`. Aucune action dédiée n'est nécessaire — `updateMatriceField` générique gère déjà ce cas.
 
-- En-tête : `Désignation (col-span-6)` + `Qté (col-span-2)` toujours présents ; `P.U. HT` et `Total HT` conditionnels
-- Lignes : idem — la cellule Qté (`ligne.quantite`) sort du bloc conditionnel pour être toujours rendue
-- Total investissement : reste conditionnel à `investShowPrices`
+**2. `src/components/rental-proposal/RentalDataEditor.tsx`** (onglet Invest)
 
-**2. `RentalProposalExport.tsx`** (génération PDF)
+Ajouter un second Switch à côté du premier dans le header de la Card :
 
-Ligne 288-302 — même logique : `Qté` sort du bloc `${investShowPrices ? ...}` pour être toujours incluse dans le `<th>` et dans le `<td>` de chaque ligne.
+```
+[Afficher les prix] [Switch]     [Afficher "Votre offre"] [Switch]     [Ajouter]
+```
 
-**3. `RentalDataEditor.tsx`** (éditeur de saisie)
+Lié à `matriceData.investShowOffer` via `updateMatriceField('investShowOffer', checked)`.
 
-Ligne 658 — la colonne `Nb` sort du bloc conditionnel `{matriceData.investShowPrices && ...}` pour toujours s'afficher. Ajustement du `colSpan` de la ligne vide.
+**3. `src/components/rental-proposal/RentalProposalPreview.tsx`** (aperçu visuel)
+
+Ligne ~822 — encapsuler le bloc `{isLastChunk && (...)}` (qui contient "Votre offre" + propositions + éléments de flux) dans une condition supplémentaire `investShowOffer !== false`.
+
+**4. `src/components/rental-proposal/RentalProposalExport.tsx`** (génération PDF)
+
+Ligne ~391 — la variable `offreAndProposalsHTML` est conditionnée : si `investShowOffer` est `false`, elle est remplacée par une chaîne vide `''`. Les insertions aux lignes ~411 et ~439 restent inchangées (elles utilisent déjà la variable).
+
+### Détail technique
+
+- La valeur par défaut `investShowOffer: true` assure la rétrocompatibilité avec les propositions existantes sauvegardées.
+- Le toggle est persisté via le middleware `persist` du store (comme `investShowPrices`).
+- Les "éléments de flux" (Avantages, Conditions) sont inclus dans le même bloc conditionnel car ils font partie du contenu qui suit "Votre offre" dans la structure de la page.
