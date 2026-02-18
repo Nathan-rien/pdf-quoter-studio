@@ -412,12 +412,11 @@ export function RentalDataEditor() {
               <CardDescription>Ce bloc apparaît systématiquement en haut de la page 5</CardDescription>
             </CardHeader>
             <CardContent>
-              <Textarea
+              <AutoResizeTextarea
                 placeholder="Description des services inclus..."
                 value={servicesInclus.description}
                 onChange={(e) => updateServicesInclus(e.target.value)}
-                className="min-h-[80px] resize-y"
-                rows={3}
+                className="min-h-[80px]"
               />
             </CardContent>
           </Card>
