@@ -1,179 +1,94 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ServiceOptionDefinition, OptionsAdminState, ServiceItem } from '@/types/options-admin';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const generateId = () => crypto.randomUUID();
 
 // Helper pour convertir une string en ServiceItem
 const toServiceItem = (text: string): ServiceItem => ({ text });
 
-// Options pré-remplies basées sur les captures d'écran
-// NOTE: "Services Inclus" a été retiré car c'est maintenant un bloc permanent dans le store rental-proposal
-const defaultOptions: ServiceOptionDefinition[] = [
-  {
-    id: generateId(),
-    title: 'Pro-Tection',
-    services: [
-      { text: 'Assurance casse et vol du matériel' },
-      { text: 'Remplacement sous 48h en cas de sinistre' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-Actif',
-    subtitle: 'reprise de parc',
-    services: [
-      { text: 'Audit et valorisation du parc existant' },
-      { text: 'Enlèvement et reprise de parc' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-Flex',
-    services: [
-      { text: 'Flexibilité des échéances de paiement' },
-      { text: 'Ajustement du contrat en cours de période' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-Spare',
-    services: [
-      { text: 'Stock de matériel de remplacement' },
-      { text: 'Échange standard en cas de panne' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-Optimisée',
-    services: [
-      { text: 'Optimisation fiscale de la location' },
-      { text: 'Étude personnalisée de financement' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-maintenance',
-    services: [
-      { text: 'Maintenance préventive du matériel' },
-      { text: 'Support technique dédié' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Lease back',
-    services: [
-      { text: 'Rachat de votre parc existant' },
-      { text: 'Conversion en contrat de location' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-duction',
-    services: [
-      { text: 'Installation et déploiement sur site' },
-      { text: 'Masterisation des équipements' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-support informatique',
-    services: [
-      { text: 'Technical account manager (TAM) dédié au compte' },
-      { 
-        text: 'Prise en main à distance SAV (Diagnostic et intervention)',
-        subItems: [
-          'Niveau 1 : premier diagnostic du besoin pour résolution rapide',
-          'Niveau 2 : interventions poussées sur un incident gênant voir bloquant',
-        ]
-      },
-      { text: 'Ouverture des tickets SAV' },
-    ],
-    price: {
-      amount: 9.00,
-      unit: '€ HT / mois / Machine',
-    },
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: generateId(),
-    title: 'Pro-license',
-    services: [
-      { text: 'Gestion des licences logicielles' },
-      { text: 'Suivi des renouvellements' },
-    ],
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
 // Migration helper: convertir les anciens services (string[]) vers le nouveau format (ServiceItem[])
 const migrateServices = (services: (string | ServiceItem)[]): ServiceItem[] => {
-  return services.map(service => 
+  return services.map(service =>
     typeof service === 'string' ? { text: service } : service
   );
 };
 
-export const useOptionsAdminStore = create<OptionsAdminState>()(
+// Convertit une row DB vers ServiceOptionDefinition
+const dbRowToOption = (row: Record<string, unknown>): ServiceOptionDefinition => ({
+  id: row.id as string,
+  title: row.title as string,
+  subtitle: (row.subtitle as string | null) ?? undefined,
+  services: migrateServices((row.services as ServiceItem[]) || []),
+  price: (row.price as { amount: number; unit: string } | null) ?? undefined,
+  isActive: row.is_active as boolean,
+  createdAt: new Date(row.created_at as string),
+  updatedAt: new Date(row.updated_at as string),
+});
+
+// Convertit un ServiceOptionDefinition vers un objet DB
+const optionToDbRow = (option: ServiceOptionDefinition, sortOrder: number) => ({
+  id: option.id,
+  title: option.title,
+  subtitle: option.subtitle ?? null,
+  services: option.services as unknown as Record<string, unknown>[],
+  price: option.price ?? null,
+  is_active: option.isActive,
+  sort_order: sortOrder,
+});
+
+// ─── Types pour le sync status ──────────────────────────────────────────────
+
+export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+interface OptionsAdminStateExtended extends OptionsAdminState {
+  syncStatus: SyncStatus;
+  setSyncStatus: (status: SyncStatus) => void;
+  setOptions: (options: ServiceOptionDefinition[]) => void;
+}
+
+// ─── Store ───────────────────────────────────────────────────────────────────
+
+export const useOptionsAdminStore = create<OptionsAdminStateExtended>()(
   persist(
-    (set) => ({
-      options: defaultOptions,
+    (set, get) => ({
+      options: [],
+      syncStatus: 'idle' as SyncStatus,
 
-      addOption: (option) =>
-        set((state) => ({
-          options: [
-            ...state.options,
-            {
-              ...option,
-              id: generateId(),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            },
-          ],
-        })),
+      setSyncStatus: (status) => set({ syncStatus: status }),
 
-      updateOption: (id, updates) =>
+      setOptions: (options) => set({ options }),
+
+      addOption: (option) => {
+        const newOption: ServiceOptionDefinition = {
+          ...option,
+          id: generateId(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        set((state) => ({ options: [...state.options, newOption] }));
+        saveOptionToDB(newOption, get().options.length - 1 + 1, get().setSyncStatus);
+      },
+
+      updateOption: (id, updates) => {
         set((state) => ({
           options: state.options.map((opt) =>
-            opt.id === id
-              ? { ...opt, ...updates, updatedAt: new Date() }
-              : opt
+            opt.id === id ? { ...opt, ...updates, updatedAt: new Date() } : opt
           ),
-        })),
+        }));
+        const updated = get().options.find((o) => o.id === id);
+        const idx = get().options.findIndex((o) => o.id === id);
+        if (updated) saveOptionToDB(updated, idx, get().setSyncStatus);
+      },
 
-      deleteOption: (id) =>
-        set((state) => ({
-          options: state.options.filter((opt) => opt.id !== id),
-        })),
+      deleteOption: (id) => {
+        set((state) => ({ options: state.options.filter((opt) => opt.id !== id) }));
+        deleteOptionFromDB(id, get().setSyncStatus);
+      },
 
-      addServiceToOption: (optionId, service) =>
+      addServiceToOption: (optionId, service) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
@@ -184,9 +99,11 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
                 }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      updateService: (optionId, serviceIndex, newValue) =>
+      updateService: (optionId, serviceIndex, newValue) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
@@ -199,9 +116,11 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
                 }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      removeService: (optionId, serviceIndex) =>
+      removeService: (optionId, serviceIndex) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
@@ -212,9 +131,11 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
                 }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      addSubItemToService: (optionId, serviceIndex, subItem) =>
+      addSubItemToService: (optionId, serviceIndex, subItem) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
@@ -229,9 +150,11 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
                 }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      updateSubItem: (optionId, serviceIndex, subItemIndex, newValue) =>
+      updateSubItem: (optionId, serviceIndex, subItemIndex, newValue) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
@@ -251,9 +174,11 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
                 }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      removeSubItem: (optionId, serviceIndex, subItemIndex) =>
+      removeSubItem: (optionId, serviceIndex, subItemIndex) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
@@ -271,45 +196,128 @@ export const useOptionsAdminStore = create<OptionsAdminState>()(
                 }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      setOptionPrice: (optionId, amount, unit) =>
+      setOptionPrice: (optionId, amount, unit) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
-              ? {
-                  ...opt,
-                  price: { amount, unit },
-                  updatedAt: new Date(),
-                }
+              ? { ...opt, price: { amount, unit }, updatedAt: new Date() }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      removeOptionPrice: (optionId) =>
+      removeOptionPrice: (optionId) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
-              ? {
-                  ...opt,
-                  price: undefined,
-                  updatedAt: new Date(),
-                }
+              ? { ...opt, price: undefined, updatedAt: new Date() }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
 
-      toggleOptionActive: (optionId) =>
+      toggleOptionActive: (optionId) => {
         set((state) => ({
           options: state.options.map((opt) =>
             opt.id === optionId
               ? { ...opt, isActive: !opt.isActive, updatedAt: new Date() }
               : opt
           ),
-        })),
+        }));
+        syncAfterMutation(optionId, get);
+      },
     }),
     {
       name: 'options-admin-storage',
     }
   )
 );
+
+// ─── Helpers de synchronisation DB ──────────────────────────────────────────
+
+function syncAfterMutation(
+  optionId: string,
+  get: () => OptionsAdminStateExtended
+) {
+  const state = get();
+  const option = state.options.find((o) => o.id === optionId);
+  const idx = state.options.findIndex((o) => o.id === optionId);
+  if (option) saveOptionToDB(option, idx, state.setSyncStatus);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
+async function saveOptionToDB(
+  option: ServiceOptionDefinition,
+  sortOrder: number,
+  setSyncStatus: (s: SyncStatus) => void
+) {
+  setSyncStatus('saving');
+  try {
+    const { error } = await db
+      .from('options_services')
+      .upsert(optionToDbRow(option, sortOrder), { onConflict: 'id' });
+
+    if (error) throw error;
+    setSyncStatus('saved');
+    // Remet à "idle" après 2 secondes
+    setTimeout(() => setSyncStatus('idle'), 2000);
+  } catch (err) {
+    console.error('[OptionsAdminStore] Erreur de sauvegarde:', err);
+    setSyncStatus('error');
+    toast.error('Erreur de sauvegarde des options. Vos modifications sont conservées localement.');
+    setTimeout(() => setSyncStatus('idle'), 4000);
+  }
+}
+
+async function deleteOptionFromDB(
+  id: string,
+  setSyncStatus: (s: SyncStatus) => void
+) {
+  setSyncStatus('saving');
+  try {
+    const { error } = await db
+      .from('options_services')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    setSyncStatus('saved');
+    setTimeout(() => setSyncStatus('idle'), 2000);
+  } catch (err) {
+    console.error('[OptionsAdminStore] Erreur de suppression:', err);
+    setSyncStatus('error');
+    toast.error('Erreur de suppression. Modification conservée localement.');
+    setTimeout(() => setSyncStatus('idle'), 4000);
+  }
+}
+
+// ─── Chargement depuis la DB ─────────────────────────────────────────────────
+
+export async function loadOptionsFromDB(): Promise<ServiceOptionDefinition[] | null> {
+  try {
+    const { data, error } = await db
+      .from('options_services')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('[OptionsAdminStore] Erreur de chargement:', error);
+      return null;
+    }
+
+    if (!data || data.length === 0) return null;
+
+    return (data as Record<string, unknown>[]).map(dbRowToOption);
+  } catch (err) {
+    console.error('[OptionsAdminStore] Exception lors du chargement:', err);
+    return null;
+  }
+}

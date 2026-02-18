@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      options_services: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          price: Json | null
+          services: Json
+          sort_order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price?: Json | null
+          services?: Json
+          sort_order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price?: Json | null
+          services?: Json
+          sort_order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pdf_templates: {
         Row: {
           created_at: string

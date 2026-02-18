@@ -34,7 +34,8 @@ class ErrorBoundary extends Component<Props, State> {
       try {
         localStorage.removeItem('rental-proposal-storage');
         localStorage.removeItem('template-editor-storage');
-        localStorage.removeItem('options-admin-storage');
+        // NOTE: options-admin-storage is intentionally NOT cleared here
+        // Options Services data is persisted in the database and must survive ErrorBoundary resets
       } catch (e) {
         console.error('Failed to clear storage after DOM error:', e);
       }
