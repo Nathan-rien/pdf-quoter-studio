@@ -655,9 +655,9 @@ export function RentalDataEditor() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[420px]">Désignation</TableHead>
+                      <TableHead className="w-24 text-right">Nb</TableHead>
                       {matriceData.investShowPrices && (
                         <>
-                          <TableHead className="w-24 text-right">Nb</TableHead>
                           <TableHead className="w-28 text-right">VUN</TableHead>
                           <TableHead className="w-28 text-right">VTN</TableHead>
                         </>
@@ -668,7 +668,7 @@ export function RentalDataEditor() {
                   <TableBody>
                     {lignesData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={matriceData.investShowPrices ? 5 : 2} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={matriceData.investShowPrices ? 5 : 3} className="text-center text-muted-foreground py-8">
                           Aucune ligne de produit
                         </TableCell>
                       </TableRow>
@@ -683,17 +683,17 @@ export function RentalDataEditor() {
                               rows={3}
                             />
                           </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={ligne.quantite}
+                              onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
+                              className="h-8 text-right"
+                            />
+                          </TableCell>
                           {matriceData.investShowPrices && (
                             <>
-                              <TableCell>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  value={ligne.quantite}
-                                  onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
-                                  className="h-8 text-right"
-                                />
-                              </TableCell>
                               <TableCell>
                                 <Input
                                   type="number"
