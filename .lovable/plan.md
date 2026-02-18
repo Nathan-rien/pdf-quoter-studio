@@ -1,84 +1,57 @@
 
-## Correction : Persistance du champ "Services Inclus"
+## Correction de la valeur par défaut de "Services Inclus"
 
-### Diagnostic précis
+### Cause racine
 
-Dans `src/stores/rentalProposalStore.ts`, le store utilise Zustand `persist` avec une fonction `partialize` qui définit **explicitement quels champs sont sauvegardés en localStorage**.
+Il y a deux mécanismes en jeu :
 
-Le champ `servicesInclus` est **absent de cette liste** (lignes 660-673) :
+**1. L'isolation du localStorage par domaine**
+- Environnement de test : `id-preview--[...].lovable.app`
+- Site publié : `pdf-quoter-studio.lovable.app`
+
+Ces deux domaines ont chacun leur propre localStorage **complètement séparé**. Aucune donnée saisie en test n'est jamais transférée vers le site publié. Quand un utilisateur ouvre le site publié, `servicesInclus` n'existe pas encore dans son localStorage → le store Zustand charge `initialServicesInclus`.
+
+**2. La valeur par défaut hardcodée est incorrecte**
+
+Dans `src/stores/rentalProposalStore.ts`, ligne 227 :
 
 ```typescript
-partialize: (state) => ({
-  pdfImportStatus: state.pdfImportStatus,
-  clientData: state.clientData,
-  commercialData: state.commercialData,
-  matriceData: state.matriceData,
-  proposals: state.proposals,
-  lignesData: state.lignesData,
-  optionsServices: state.optionsServices,
-  nosOptions: state.nosOptions,
-  proposalName: state.proposalName,
-  selectedTemplateId: state.selectedTemplateId,
-  currentStep: state.currentStep,
-  isActive: state.isActive,
-  // ← servicesInclus MANQUANT !
-}),
-```
-
-Résultat : chaque rechargement de page (ou navigation) réinitialise `servicesInclus.description` à la valeur par défaut codée en dur :
-```typescript
+// ÉTAT ACTUEL — virgules = tout sur une ligne
 const initialServicesInclus: ServicesInclus = {
   description: 'Contrat de location et gestion administrative, Optimisation des coûts et gestion budgétaire, Gestion des évolutions du parc',
 };
 ```
 
-Pourtant, `updateServicesInclus` fonctionne correctement (ligne 470-475) — les modifications sont bien appliquées dans le state Zustand en mémoire, mais elles ne sont pas écrites dans le localStorage. Donc le bouton "Sauvegarder" déclenche uniquement `markAsSaved()` (qui met `hasUnsavedChanges: false`) sans jamais persister `servicesInclus`.
+Ce texte est séparé par des virgules (`, `) au lieu de sauts de ligne (`\n`). Or le composant de rendu fait un `description.split('\n')` pour afficher chaque ligne comme une puce — avec des virgules, tout s'affiche sur une seule puce.
 
 ---
 
-### Solution — 1 ligne ajoutée
-
-**`src/stores/rentalProposalStore.ts`, dans la fonction `partialize` (ligne ~673)**
-
-Ajouter `servicesInclus: state.servicesInclus` :
+### Solution — Corriger `initialServicesInclus` (ligne 227)
 
 ```typescript
-partialize: (state) => ({
-  pdfImportStatus: state.pdfImportStatus,
-  clientData: state.clientData,
-  commercialData: state.commercialData,
-  matriceData: state.matriceData,
-  proposals: state.proposals,
-  lignesData: state.lignesData,
-  servicesInclus: state.servicesInclus,   // ← AJOUT
-  optionsServices: state.optionsServices,
-  nosOptions: state.nosOptions,
-  proposalName: state.proposalName,
-  selectedTemplateId: state.selectedTemplateId,
-  currentStep: state.currentStep,
-  isActive: state.isActive,
-}),
+// APRÈS — sauts de ligne = 3 puces distinctes
+const initialServicesInclus: ServicesInclus = {
+  description: 'Contrat de location et gestion administrative\nOptimisation des coûts et gestion budgétaire\nGestion des évolutions du parc',
+};
 ```
 
-Il faudra également ajouter la validation de `servicesInclus` dans le bloc `onRehydrateStorage` pour protéger contre les données corrompues :
-
-```typescript
-// Validate servicesInclus
-if (!state.servicesInclus || typeof state.servicesInclus.description !== 'string') {
-  state.servicesInclus = initialServicesInclus;
-}
-```
+Avec cette correction :
+- Le site publié affichera immédiatement les 3 services en puces séparées, même sans localStorage
+- Les utilisateurs existants dont le localStorage contient encore l'ancienne valeur avec virgules verront l'ancienne version jusqu'à ce qu'ils modifient et sauvegardent le champ (comportement attendu)
+- Tout nouvel accès au site publié (ou cache vidé) chargera la bonne valeur par défaut
 
 ---
 
 ### Résumé
 
-| Fichier | Changement |
-|---|---|
-| `src/stores/rentalProposalStore.ts` | Ajout de `servicesInclus` dans `partialize` + validation dans `onRehydrateStorage` |
+| Fichier | Ligne | Changement |
+|---|---|---|
+| `src/stores/rentalProposalStore.ts` | 227 | Remplacer `, ` par `\n` dans la description par défaut |
 
-### Impact
+### Pourquoi la persistance seule ne suffisait pas
 
-- Les modifications du champ "Services inclus" seront désormais persistées en localStorage à chaque changement
-- Elles survivront aux rechargements de page, à la navigation entre les onglets du workflow, et aux sessions
-- Aucun effet sur les autres champs ni sur l'aperçu ou le PDF
+La correction précédente (ajouter `servicesInclus` dans `partialize`) était nécessaire et correcte — elle garantit que les futures modifications seront conservées. Mais elle ne résout pas le premier chargement sur un nouveau domaine ou un cache vide, où `initialServicesInclus` est toujours utilisée.
+
+Ces deux correctifs sont complémentaires :
+- `partialize` → persiste les modifications futures
+- `initialServicesInclus` → garantit une valeur par défaut correcte dès le premier chargement
