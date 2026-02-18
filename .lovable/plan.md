@@ -1,34 +1,33 @@
 
+## Correction : Toggle "Afficher les prix" dans l'aperçu visuel
 
-## Toggle d'affichage simplifie sur l'onglet Invest
+### Diagnostic
 
-### Objectif
+Il existe deux systèmes de rendu distincts dans l'application :
 
-Ajouter un interrupteur (switch) dans l'onglet Invest qui permet de basculer entre deux modes d'affichage :
-- **Mode complet** (par defaut) : Designation + Nb + VUN + VTN + Total investissement
-- **Mode simplifie** : Designation uniquement (pas de colonnes prix, pas de total)
+1. **RentalProposalExport.tsx** → génère le HTML du PDF téléchargeable. ✅ Déjà corrigé lors de la précédente implémentation.
+2. **RentalProposalPreview.tsx** → rend l'aperçu visuel dans l'interface. ❌ Non modifié — affiche toujours toutes les colonnes.
 
-Ce toggle affecte a la fois le tableau dans l'editeur de saisie ET le rendu PDF exporte.
+La fonction `renderProductTableWithFlowElements()` (ligne ~761) dans le fichier Preview construit le tableau de la page 4 avec des colonnes en dur (`Désignation`, `Qté`, `P.U. HT`, `Total HT`), sans lire `matriceData.investShowPrices`.
 
-### Modifications
+### Modification unique
 
-| Fichier | Description |
-|---|---|
-| `src/stores/rentalProposalStore.ts` | Ajouter un champ `investShowPrices: boolean` (defaut `true`) et une action `toggleInvestShowPrices` |
-| `src/components/rental-proposal/RentalDataEditor.tsx` | Ajouter un Switch au-dessus du tableau Invest pour masquer/afficher les colonnes Nb, VUN, VTN et le total |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Conditionner le rendu des colonnes Qte, P.U. HT, Total HT et du bloc "Total investissement" selon `investShowPrices` |
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`**
 
-### Details techniques
+Dans la fonction `renderProductTableWithFlowElements()` (autour de la ligne 761) :
 
-**Store** : Nouveau champ booleen `investShowPrices` dans le state, initialise a `true`. Action `toggleInvestShowPrices()` qui inverse la valeur. Persiste via le middleware `persist` existant.
+1. **En-tête du tableau** : conditionner les colonnes Qté, P.U. HT, Total HT avec `matriceData.investShowPrices`
+2. **Lignes de données** : conditionner les cellules Qté, P.U. HT, Total HT de chaque ligne
+3. **Mise en page de la grille** : ajuster `grid-cols-12` → `grid-cols-1` quand les prix sont masqués (pour que la désignation prenne toute la largeur)
+4. **Bloc Total investissement** : conditionner l'affichage du total avec `investShowPrices` (lignes ~800-810)
 
-**Editeur (RentalDataEditor.tsx, onglet "invest")** :
-- Ajouter un `Switch` avec label "Afficher les prix" entre le titre "Lignes produits (Invest)" et le bouton "Ajouter"
-- Quand desactive : masquer les colonnes Nb, VUN, VTN dans le `<Table>` et le bloc total en bas
-- Quand active : affichage actuel inchange
+### Détail technique
 
-**Export PDF (RentalProposalExport.tsx)** :
-- Lire `investShowPrices` depuis le store
-- Si `false` : le `tableHeaderHTML` ne contient que la colonne "Designation", le `makeRowHTML` ne rend que la designation, le `totalHTML` est vide
-- Le bloc "Votre offre" et les propositions financieres restent toujours affiches (non affectes)
+Actuellement (lignes 777-795) :
+```
+grid-cols-12 : Désignation (col-span-6) | Qté (col-span-2) | P.U. HT (col-span-2) | Total HT (col-span-2)
+```
 
+Après modification :
+- Si `investShowPrices = true` → comportement identique à aujourd'hui
+- Si `investShowPrices = false` → grille `grid-cols-1`, seule la désignation affichée, pas de total
