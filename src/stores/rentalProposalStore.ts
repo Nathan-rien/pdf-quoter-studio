@@ -645,12 +645,18 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       },
 
       resetAll: () => {
-        set(initialState);
+        const currentServicesInclus = get().servicesInclus;
+        set({
+          ...initialState,
+          servicesInclus: currentServicesInclus,
+        });
       },
 
       startNewProposal: () => {
+        const currentServicesInclus = get().servicesInclus;
         set({
           ...initialState,
+          servicesInclus: currentServicesInclus,
           isActive: true,
         });
       },
