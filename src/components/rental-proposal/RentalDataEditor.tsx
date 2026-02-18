@@ -644,7 +644,7 @@ export function RentalDataEditor() {
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="invest-show-offer" className="text-sm text-muted-foreground">Afficher "Votre offre"</Label>
+                  <Label htmlFor="invest-show-offer" className="text-sm text-muted-foreground">Afficher le montant</Label>
                   <Switch
                     id="invest-show-offer"
                     checked={matriceData.investShowOffer !== false}

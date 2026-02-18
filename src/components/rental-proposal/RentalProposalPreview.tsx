@@ -820,7 +820,7 @@ export function RentalProposalPreview() {
         )}
         
         {/* Votre offre + propositions + flow elements : sur le dernier chunk absolu */}
-        {isLastChunk && matriceData.investShowOffer !== false && (
+        {isLastChunk && (
           <>
             <div className="font-bold text-[13px] mb-1 mt-2">Votre offre</div>
             {(() => {
@@ -837,10 +837,12 @@ export function RentalProposalPreview() {
                         </span>
                       </div>
                       <div className="divide-y divide-border">
-                        <div className="flex justify-between px-3 py-1 text-[10px]">
-                          <span>Montant investissement</span>
-                          <span className="font-medium">{formatNumber(proposal.montantInvestissement)} € HT</span>
-                        </div>
+                        {matriceData.investShowOffer !== false && (
+                          <div className="flex justify-between px-3 py-1 text-[10px]">
+                            <span>Montant investissement</span>
+                            <span className="font-medium">{formatNumber(proposal.montantInvestissement)} € HT</span>
+                          </div>
+                        )}
                         <div className="flex justify-between px-3 py-1 text-[10px]">
                           <span>Loyer mensuel HT</span>
                           <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
