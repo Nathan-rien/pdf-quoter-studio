@@ -230,6 +230,7 @@ export function PreviewEditableCanvas({
     if (textContent.htmlContent) {
       return (
         <div 
+          key={`html-${elementId}-${textContent.htmlContent.length}`}
           style={{ paddingLeft: `${indentPx}px` }}
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent.htmlContent) }}
         />
@@ -514,8 +515,10 @@ export function PreviewEditableCanvas({
         </Badge>
       )}
 
-      {/* Éléments du template */}
-      {sortedElements.map(el => renderElement(el))}
+      {/* Éléments du template - wrapper stable pour éviter les erreurs removeChild */}
+      <React.Fragment key={`canvas-elements-${pageNumber}`}>
+        {sortedElements.map(el => renderElement(el))}
+      </React.Fragment>
 
       {/* Zones dynamiques */}
       {dynamicZones.map(zone => renderDynamicZone(zone))}
