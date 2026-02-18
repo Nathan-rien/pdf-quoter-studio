@@ -389,7 +389,7 @@ export function RentalProposalExport() {
     ` : '';
     
     // HTML de Votre offre + propositions + flow elements (affiché sur la page dédiée finale)
-    const offreAndProposalsHTML = `
+    const offreAndProposalsHTML = matriceData.investShowOffer !== false ? `
       <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; margin-top: 8px;">Votre offre</div>
       ${allProposals.length > 0 ? `
         <div class="location-proposals" style="margin-top: 8px;">
@@ -397,7 +397,7 @@ export function RentalProposalExport() {
         </div>
       ` : ''}
       ${flowElementsHTML}
-    `;
+    ` : '';
 
     // Chunk 0 : page 4 du template
     const chunk0RowsHTML = chunk0Lines.map(makeRowHTML).join('');

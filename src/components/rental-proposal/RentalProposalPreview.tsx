@@ -820,7 +820,7 @@ export function RentalProposalPreview() {
         )}
         
         {/* Votre offre + propositions + flow elements : sur le dernier chunk absolu */}
-        {isLastChunk && (
+        {isLastChunk && matriceData.investShowOffer !== false && (
           <>
             <div className="font-bold text-[13px] mb-1 mt-2">Votre offre</div>
             {(() => {
