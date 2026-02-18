@@ -636,7 +636,7 @@ export function RentalDataEditor() {
               <CardTitle className="text-lg">Lignes produits (Invest)</CardTitle>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="invest-show-prices" className="text-sm text-muted-foreground">Afficher les prix</Label>
+                  <Label htmlFor="invest-show-prices" className="text-sm text-muted-foreground">Afficher prix Investissement</Label>
                   <Switch
                     id="invest-show-prices"
                     checked={matriceData.investShowPrices}
@@ -644,7 +644,7 @@ export function RentalDataEditor() {
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="invest-show-offer" className="text-sm text-muted-foreground">Afficher le montant</Label>
+                  <Label htmlFor="invest-show-offer" className="text-sm text-muted-foreground">Afficher montant Offre</Label>
                   <Switch
                     id="invest-show-offer"
                     checked={matriceData.investShowOffer !== false}
