@@ -334,10 +334,10 @@ export function RentalProposalExport() {
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom: 1px solid #e5e7eb;">
+          ${matriceData.investShowOffer !== false ? `<tr style="border-bottom: 1px solid #e5e7eb;">
             <td style="padding: 6px 8px;">Montant investissement</td>
             <td style="padding: 6px 8px; text-align: right;">${formatNumber(proposal.montantInvestissement)} € HT</td>
-          </tr>
+          </tr>` : ''}
           <tr>
             <td style="padding: 6px 8px;">Loyer mensuel HT</td>
             <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${formatNumber(calculations.loyerMensuel)} € HT</td>
@@ -389,7 +389,7 @@ export function RentalProposalExport() {
     ` : '';
     
     // HTML de Votre offre + propositions + flow elements (affiché sur la page dédiée finale)
-    const offreAndProposalsHTML = matriceData.investShowOffer !== false ? `
+    const offreAndProposalsHTML = `
       <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; margin-top: 8px;">Votre offre</div>
       ${allProposals.length > 0 ? `
         <div class="location-proposals" style="margin-top: 8px;">
@@ -397,7 +397,7 @@ export function RentalProposalExport() {
         </div>
       ` : ''}
       ${flowElementsHTML}
-    ` : '';
+    `;
 
     // Chunk 0 : page 4 du template
     const chunk0RowsHTML = chunk0Lines.map(makeRowHTML).join('');
