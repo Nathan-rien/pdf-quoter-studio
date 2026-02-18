@@ -643,6 +643,14 @@ export function RentalDataEditor() {
                     onCheckedChange={(checked) => updateMatriceField('investShowPrices', checked)}
                   />
                 </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="invest-show-offer" className="text-sm text-muted-foreground">Afficher "Votre offre"</Label>
+                  <Switch
+                    id="invest-show-offer"
+                    checked={matriceData.investShowOffer !== false}
+                    onCheckedChange={(checked) => updateMatriceField('investShowOffer', checked)}
+                  />
+                </div>
                 <Button variant="outline" size="sm" onClick={addLigne}>
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter
