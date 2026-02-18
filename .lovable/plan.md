@@ -1,87 +1,27 @@
 
-## Correction : Le toggle "Votre offre" ne masque que la ligne "Montant investissement"
+## Agrandir les colonnes numériques dans l'onglet Invest
 
 ### Diagnostic
 
-Le toggle `investShowOffer` a été implémenté pour masquer l'intégralité du bloc "Votre offre" (titre + toutes les lignes des propositions + éléments de flux). 
+Dans `RentalDataEditor.tsx`, les colonnes numériques ont des largeurs fixes trop étroites pour les grands nombres :
 
-L'utilisateur veut en réalité un comportement plus ciblé : seule la ligne **"Montant investissement"** doit être masquable. Le titre "Votre offre", "Loyer mensuel HT", "Coût locatif annuel" et les éléments de flux restent toujours visibles.
-
-### Comportement cible
-
-| Élément | Toggle ON | Toggle OFF |
+| Colonne | Largeur actuelle | Problème |
 |---|---|---|
-| Titre "Votre offre" | ✅ Visible | ✅ Visible |
-| En-tête "Location X mois" | ✅ Visible | ✅ Visible |
-| Ligne "Montant investissement" | ✅ Visible | ❌ Masquée |
-| Ligne "Loyer mensuel HT" | ✅ Visible | ✅ Visible |
-| Ligne "Coût locatif annuel" | ✅ Visible | ✅ Visible |
-| Éléments de flux (Avantages, Conditions) | ✅ Visible | ✅ Visible |
+| Nb | `w-24` (96px) | Acceptable |
+| VUN | `w-28` (112px) | Trop étroit pour ex. "1 611" ou "10 000" |
+| VTN | `w-28` (112px) | Idem |
 
-### Modifications — 3 fichiers
+Les champs `Input` dans ces cellules héritent de la largeur de la colonne mais n'ont pas de largeur explicite — ils remplissent le `TableCell`. Le problème vient donc des `TableHead` qui contraignent la largeur de la colonne.
 
-**1. `src/stores/rentalProposalStore.ts`**
+### Modification — 1 fichier
 
-Renommer le champ `investShowOffer` en `investShowMontant` (ou conserver le nom mais en changer la sémantique). Pour limiter les risques de régression, on garde `investShowOffer` mais on change uniquement ce qu'il contrôle — pas de changement dans le store nécessaire.
+**`src/components/rental-proposal/RentalDataEditor.tsx`** — lignes 666–711
 
-**2. `src/components/rental-proposal/RentalDataEditor.tsx`**
+1. **En-tête Nb** : `w-24` → `w-28` (légère augmentation pour cohérence)
+2. **En-tête VUN** : `w-28` → `w-36` (144px, confortable pour "10 000,00 €")
+3. **En-tête VTN** : `w-28` → `w-36` (idem)
+4. **Inputs dans les cellules** : ajouter `w-full` pour s'assurer que chaque champ remplit bien sa cellule
 
-Renommer le libellé du toggle :
-- **Avant** : `Afficher "Votre offre"`
-- **Après** : `Afficher le montant`
+### Résultat attendu
 
-**3. `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes 823-867)
-
-Retirer la condition globale sur `investShowOffer` qui enveloppait tout le bloc. À la place, ajouter la condition uniquement sur la ligne "Montant investissement" (lignes 840-843) :
-
-```tsx
-// AVANT — tout le bloc conditionnel
-{isLastChunk && matriceData.investShowOffer !== false && (
-  <>
-    <div>Votre offre</div>
-    ...
-  </>
-)}
-
-// APRÈS — seule la ligne est conditionnelle
-{isLastChunk && (
-  <>
-    <div>Votre offre</div>
-    ...
-    {/* Montant investissement - conditionnel */}
-    {matriceData.investShowOffer !== false && (
-      <div className="flex justify-between px-3 py-1 text-[10px]">
-        <span>Montant investissement</span>
-        <span>{formatNumber(proposal.montantInvestissement)} € HT</span>
-      </div>
-    )}
-    {/* Loyer mensuel HT - toujours visible */}
-    <div className="flex justify-between px-3 py-1 text-[10px]">
-      <span>Loyer mensuel HT</span>
-      ...
-    </div>
-  </>
-)}
-```
-
-**4. `src/components/rental-proposal/RentalProposalExport.tsx`** (ligne 337-340)
-
-La variable `offreAndProposalsHTML` ne doit plus être conditionnée globalement. À la place, dans `proposalsHTML` (ligne 337-340), la ligne `<tr>` "Montant investissement" est conditionnée par `matriceData.investShowOffer !== false` :
-
-```html
-${matriceData.investShowOffer !== false ? `
-  <tr style="border-bottom: 1px solid #e5e7eb;">
-    <td>Montant investissement</td>
-    <td>${formatNumber(proposal.montantInvestissement)} € HT</td>
-  </tr>
-` : ''}
-```
-
-Et `offreAndProposalsHTML` redevient inconditionnelle (toujours générée).
-
-### Résumé des changements
-
-- **Store** : aucun changement (on réutilise `investShowOffer`)
-- **RentalDataEditor.tsx** : label du toggle mis à jour
-- **RentalProposalPreview.tsx** : condition déplacée de l'encapsulant vers la ligne seule
-- **RentalProposalExport.tsx** : condition déplacée du bloc global vers la ligne `<tr>` seule + `offreAndProposalsHTML` rendu inconditionnellement
+Les valeurs comme `1 611`, `10 166,50`, `5 189,76` seront entièrement visibles sans troncature dans les colonnes VUN et VTN.
