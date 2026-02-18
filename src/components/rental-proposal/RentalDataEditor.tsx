@@ -494,12 +494,11 @@ export function RentalDataEditor() {
                         onChange={(e) => updateOptionService(opt.id, { name: e.target.value })}
                         className="w-40"
                       />
-                      <Textarea
+                      <AutoResizeTextarea
                         placeholder="Description"
                         value={opt.description}
                         onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
-                        className="flex-1 min-h-[40px] resize-y"
-                        rows={2}
+                        className="flex-1 text-sm"
                       />
                       <Input
                         type="number"
@@ -603,12 +602,11 @@ export function RentalDataEditor() {
                         onChange={(e) => updateNosOption(opt.id, { name: e.target.value })}
                         className="w-40"
                       />
-                      <Textarea
+                      <AutoResizeTextarea
                         placeholder="Description"
                         value={opt.description}
                         onChange={(e) => updateNosOption(opt.id, { description: e.target.value })}
-                        className="flex-1 min-h-[40px] resize-y"
-                        rows={2}
+                        className="flex-1 text-sm"
                       />
                       <Input
                         type="number"
