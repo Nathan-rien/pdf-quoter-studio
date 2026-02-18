@@ -275,6 +275,7 @@ export function RentalProposalPreview() {
         const processedHtml = sanitizeHtml(substituteDynamicPlaceholders(textContent.htmlContent, { fraisDossier: calculatedValues.fraisDossier }));
         return (
           <div 
+            key={`html-${element.id}-${processedHtml.length}`}
             style={{ paddingLeft: `${indentPx}px` }}
             dangerouslySetInnerHTML={{ __html: processedHtml }}
           />
@@ -524,8 +525,10 @@ export function RentalProposalPreview() {
         className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden"
         style={{ maxWidth: CANVAS_DISPLAY_MAX_WIDTH }}
       >
-        {/* Toujours afficher les éléments statiques s'ils existent */}
-        {staticElements.map(el => renderTemplateElement(el))}
+        {/* Toujours afficher les éléments statiques s'ils existent - wrapper stable pour éviter les erreurs removeChild */}
+        <React.Fragment key={`page-${pageNum}-static`}>
+          {staticElements.map(el => renderTemplateElement(el))}
+        </React.Fragment>
 
         {/* Toujours appeler le contenu dynamique s'il existe */}
         {renderDynamicContent?.()}

@@ -1160,19 +1160,17 @@ export function EditorCanvas() {
                   onDoubleClick={(e) => handleElementDoubleClick(element.id, e)}
                   title={isEditable ? (isTextElement ? "Double-clic pour éditer" : "Glisser pour déplacer") : "Mode lecture seule"}
                 >
-                  {/* Édition inline du texte - structure stable avec keys uniques */}
+                  {/* Édition inline du texte - React.Fragment avec key dynamique pour forcer un remontage propre */}
                   {isTextElement && textContent && (
-                    <div key={`text-container-${element.id}`}>
+                    <React.Fragment key={inlineEditingElementId === element.id ? `editing-${element.id}` : `display-${element.id}`}>
                       {inlineEditingElementId === element.id ? (
                         <InlineTextEditor
-                          key={`inline-editor-${element.id}`}
                           content={textContent}
                           onContentChange={handleInlineContentChange}
                           onExit={handleExitInlineEditing}
                         />
                       ) : (
                         <div 
-                          key={`text-display-${element.id}`}
                           className="px-0.5 py-px"
                           style={{
                             fontFamily: ALLOWED_FONTS.find(f => f.name === textContent.fontFamily)?.value || textContent.fontFamily,
@@ -1189,7 +1187,7 @@ export function EditorCanvas() {
                           <div className="whitespace-pre-wrap break-words">{renderTextContent()}</div>
                         </div>
                       )}
-                    </div>
+                    </React.Fragment>
                   )}
                   
                   {element.type === 'image' && (() => {
