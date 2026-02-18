@@ -664,6 +664,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         matriceData: state.matriceData,
         proposals: state.proposals,
         lignesData: state.lignesData,
+        servicesInclus: state.servicesInclus,
         optionsServices: state.optionsServices,
         nosOptions: state.nosOptions,
         proposalName: state.proposalName,
@@ -712,6 +713,11 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
               state.pdfImportStatus = initialPDFImportStatus;
             }
             
+            // Validate servicesInclus
+            if (!state.servicesInclus || typeof state.servicesInclus.description !== 'string') {
+              state.servicesInclus = initialServicesInclus;
+            }
+
             // Validate arrays
             if (!Array.isArray(state.lignesData)) {
               state.lignesData = [];
