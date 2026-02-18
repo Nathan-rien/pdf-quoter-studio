@@ -663,11 +663,11 @@ export function RentalDataEditor() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[420px]">Désignation</TableHead>
-                      <TableHead className="w-24 text-right">Nb</TableHead>
+                      <TableHead className="w-28 text-right">Nb</TableHead>
                       {matriceData.investShowPrices && (
                         <>
-                          <TableHead className="w-28 text-right">VUN</TableHead>
-                          <TableHead className="w-28 text-right">VTN</TableHead>
+                          <TableHead className="w-36 text-right">VUN</TableHead>
+                          <TableHead className="w-36 text-right">VTN</TableHead>
                         </>
                       )}
                       <TableHead className="w-12"></TableHead>
@@ -697,7 +697,7 @@ export function RentalDataEditor() {
                               min="1"
                               value={ligne.quantite}
                               onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
-                              className="h-8 text-right"
+                              className="h-8 text-right w-full"
                             />
                           </TableCell>
                           {matriceData.investShowPrices && (
@@ -708,7 +708,7 @@ export function RentalDataEditor() {
                                   step="0.01"
                                   value={ligne.prixUnitaire ?? ''}
                                   onChange={(e) => updateLigne(index, { prixUnitaire: e.target.value ? parseFloat(e.target.value) : null })}
-                                  className="h-8 text-right"
+                                  className="h-8 text-right w-full"
                                 />
                               </TableCell>
                               <TableCell className="text-right font-medium">
