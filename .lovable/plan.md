@@ -1,57 +1,85 @@
 
-## Correction de la valeur par défaut de "Services Inclus"
+## Correction définitive : `servicesInclus` comme configuration globale persistante
 
-### Cause racine
+### Cause racine précise
 
-Il y a deux mécanismes en jeu :
-
-**1. L'isolation du localStorage par domaine**
-- Environnement de test : `id-preview--[...].lovable.app`
-- Site publié : `pdf-quoter-studio.lovable.app`
-
-Ces deux domaines ont chacun leur propre localStorage **complètement séparé**. Aucune donnée saisie en test n'est jamais transférée vers le site publié. Quand un utilisateur ouvre le site publié, `servicesInclus` n'existe pas encore dans son localStorage → le store Zustand charge `initialServicesInclus`.
-
-**2. La valeur par défaut hardcodée est incorrecte**
-
-Dans `src/stores/rentalProposalStore.ts`, ligne 227 :
+`servicesInclus` est actuellement traité comme une **donnée de proposition** (au même niveau que les lignes produits, le client, la matrice). Résultat : à chaque appel de `startNewProposal()` (ligne 651), le state est réinitialisé avec `...initialState`, qui contient `initialServicesInclus` — effaçant toute modification de l'utilisateur.
 
 ```typescript
-// ÉTAT ACTUEL — virgules = tout sur une ligne
-const initialServicesInclus: ServicesInclus = {
-  description: 'Contrat de location et gestion administrative, Optimisation des coûts et gestion budgétaire, Gestion des évolutions du parc',
-};
+// ligne 651-656 — écrase servicesInclus à chaque nouvelle proposition
+startNewProposal: () => {
+  set({
+    ...initialState,   // ← servicesInclus revient à la valeur par défaut
+    isActive: true,
+  });
+},
 ```
 
-Ce texte est séparé par des virgules (`, `) au lieu de sauts de ligne (`\n`). Or le composant de rendu fait un `description.split('\n')` pour afficher chaque ligne comme une puce — avec des virgules, tout s'affiche sur une seule puce.
+La même chose se produit lors de `importFromPDF` si le champ n'est pas explicitement préservé.
+
+`servicesInclus` est conceptuellement un **paramètre de configuration global** (texte standard de l'entreprise), pas une donnée spécifique à chaque proposition client. Il ne devrait jamais être réinitialisé lors du démarrage d'une nouvelle proposition.
 
 ---
 
-### Solution — Corriger `initialServicesInclus` (ligne 227)
+### Solution — 3 modifications dans `rentalProposalStore.ts`
+
+**1. `startNewProposal` — Préserver `servicesInclus` lors de la réinitialisation**
 
 ```typescript
-// APRÈS — sauts de ligne = 3 puces distinctes
-const initialServicesInclus: ServicesInclus = {
-  description: 'Contrat de location et gestion administrative\nOptimisation des coûts et gestion budgétaire\nGestion des évolutions du parc',
-};
+// AVANT
+startNewProposal: () => {
+  set({
+    ...initialState,
+    isActive: true,
+  });
+},
+
+// APRÈS
+startNewProposal: () => {
+  const currentServicesInclus = get().servicesInclus;
+  set({
+    ...initialState,
+    servicesInclus: currentServicesInclus,  // ← préservé
+    isActive: true,
+  });
+},
 ```
 
-Avec cette correction :
-- Le site publié affichera immédiatement les 3 services en puces séparées, même sans localStorage
-- Les utilisateurs existants dont le localStorage contient encore l'ancienne valeur avec virgules verront l'ancienne version jusqu'à ce qu'ils modifient et sauvegardent le champ (comportement attendu)
-- Tout nouvel accès au site publié (ou cache vidé) chargera la bonne valeur par défaut
+**2. `importFromPDF` — Préserver `servicesInclus` lors de l'import d'un nouveau PDF**
+
+Dans la fonction `importFromPDF` (ligne 253), le `set({...})` n'inclut pas `servicesInclus`, ce qui laisse la valeur du state précédent en place. Cependant, si `importFromPDF` est appelé après `startNewProposal`, `servicesInclus` a déjà été réinitialisé. En fixant `startNewProposal`, ce cas est couvert.
+
+**3. `resetAll` — Préserver `servicesInclus` lors d'un reset complet**
+
+```typescript
+// AVANT
+resetAll: () => {
+  set(initialState);
+},
+
+// APRÈS  
+resetAll: () => {
+  const currentServicesInclus = get().servicesInclus;
+  set({
+    ...initialState,
+    servicesInclus: currentServicesInclus,  // ← préservé
+  });
+},
+```
 
 ---
 
 ### Résumé
 
-| Fichier | Ligne | Changement |
+| Fichier | Fonction | Modification |
 |---|---|---|
-| `src/stores/rentalProposalStore.ts` | 227 | Remplacer `, ` par `\n` dans la description par défaut |
+| `src/stores/rentalProposalStore.ts` | `startNewProposal` | Lire `servicesInclus` avant reset, le réinjecter après |
+| `src/stores/rentalProposalStore.ts` | `resetAll` | Même logique |
 
-### Pourquoi la persistance seule ne suffisait pas
+### Comportement après correction
 
-La correction précédente (ajouter `servicesInclus` dans `partialize`) était nécessaire et correcte — elle garantit que les futures modifications seront conservées. Mais elle ne résout pas le premier chargement sur un nouveau domaine ou un cache vide, où `initialServicesInclus` est toujours utilisée.
-
-Ces deux correctifs sont complémentaires :
-- `partialize` → persiste les modifications futures
-- `initialServicesInclus` → garantit une valeur par défaut correcte dès le premier chargement
+- L'utilisateur modifie et sauvegarde la description "Services Inclus"
+- Il démarre une nouvelle proposition (import d'un nouveau PDF)
+- La description "Services Inclus" **reste inchangée**
+- Toutes les autres données (client, lignes, matrice) sont bien réinitialisées
+- Le texte par défaut (`initialServicesInclus`) n'est utilisé que lors du **tout premier chargement** de l'application (localStorage vide)
