@@ -1,133 +1,125 @@
 
-## Correction de l'erreur `removeChild` sur l'outil publié
+## Persistance des Options Services en base de données
 
 ### Diagnostic
 
-L'erreur `"Échec de l'exécution de 'removeChild' sur 'Node' : le nœud à supprimer n'est pas un enfant de ce nœud"` est une erreur classique de **conflit de réconciliation React** — React essaie de supprimer un nœud du DOM qui a déjà été déplacé ou supprimé par une autre opération.
+Le store `options-admin-storage` utilise uniquement `localStorage` via Zustand `persist`. Le problème est double :
 
-Trois causes racines identifiées dans le code :
+1. **L'ErrorBoundary supprime `options-admin-storage`** à chaque erreur DOM (`removeChild`) — visible dans les logs console. Les modifications sont donc effacées régulièrement.
+2. **Les `defaultOptions` du store** sont re-générées avec `crypto.randomUUID()` à chaque rechargement du module, ce qui écrase les données sauvegardées si le cache est vidé.
 
----
-
-#### Cause 1 — `RentalProposalPreview.tsx` ligne 226 : appel de hook hors règles
-
-```ts
-// LIGNE 226 — À L'INTÉRIEUR d'une fonction normale (non-hook)
-const freshState = useTemplateEditorStore.getState(); // ✅ OK - c'est getState(), pas un hook
-```
-
-Ce point est en réalité correct. La vraie cause ici est que `getStaticPageElements` est une **fonction ordinaire appelée pendant le render** qui retourne des tableaux de longueur variable selon la version — provoquant des ré-renders avec des listes d'éléments de tailles différentes sans stabilisation par `key`.
+La solution robuste est de persister les Options Services dans la base de données (comme les templates PDF), avec le localStorage uniquement comme cache temporaire.
 
 ---
 
-#### Cause 2 — `EditorCanvas.tsx` lignes 1164-1193 : switcher entre `InlineTextEditor` et `div` sans key stable sur le parent
+### Architecture cible
 
-```tsx
-{isTextElement && textContent && (
-  <div key={`text-container-${element.id}`}>  // ← key sur le div parent
-    {inlineEditingElementId === element.id ? (
-      <InlineTextEditor key={`inline-editor-${element.id}`} ... />
-    ) : (
-      <div key={`text-display-${element.id}`} ...>   // ← key sur le child
+```text
+[Utilisateur modifie une option]
+        |
+        v
+[Store Zustand (état local immédiat)]
+        |
+        v
+[Upsert vers la base de données (auto-save)]
+        |
+        v
+[Au démarrage : chargement depuis la base]
 ```
-
-Le problème : React voit un `div` → enfant soit `InlineTextEditor` soit `div`, mais le **wrapper externe** (`div key=text-container-*`) reste le même pendant que ses enfants changent de type. Quand `InlineTextEditor` utilise `contentEditable` et modifie le DOM manuellement (`innerHTML`), puis que React essaie de réconcilier en supprimant ce nœud, la désynchronisation DOM/React déclenche `removeChild`.
 
 ---
 
-#### Cause 3 — `PreviewEditableCanvas.tsx` ligne 518 : éléments rendus sans wrapper stable
+### Migration base de données
 
-```tsx
-{sortedElements.map(el => renderElement(el))}
+Création d'une nouvelle table `options_services` :
+
+```sql
+CREATE TABLE public.options_services (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  subtitle text,
+  services jsonb NOT NULL DEFAULT '[]'::jsonb,
+  price jsonb,
+  is_active boolean NOT NULL DEFAULT true,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- RLS : tous les utilisateurs authentifiés peuvent lire
+-- Seuls les admins peuvent modifier
+ALTER TABLE public.options_services ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can view options"
+  ON public.options_services FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Admins can insert options"
+  ON public.options_services FOR INSERT
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+
+CREATE POLICY "Admins can update options"
+  ON public.options_services FOR UPDATE
+  USING (has_role(auth.uid(), 'admin'::app_role));
+
+CREATE POLICY "Admins can delete options"
+  ON public.options_services FOR DELETE
+  USING (has_role(auth.uid(), 'admin'::app_role));
 ```
 
-La fonction `renderElement` retourne des éléments avec `key={element.id}` selon le type. Mais si le type d'un élément change (ex. chargement asynchrone), React peut se retrouver avec des nœuds orphelins.
+Les données par défaut actuelles seront insérées via une migration SQL `INSERT ... ON CONFLICT DO NOTHING`.
 
 ---
 
-### Solution : 3 corrections ciblées
+### Modifications — 4 fichiers
 
-**1. `EditorCanvas.tsx`** — Stabiliser la transition `InlineTextEditor` ↔ affichage statique
+**1. Migration SQL** (nouvelle migration)
 
-Le problème : le `div` wrapper `text-container-{id}` entoure la condition ternaire. Quand `InlineTextEditor` (qui utilise `contentEditable` et modifie `innerHTML`) est démonté, React essaie de supprimer ses nœuds enfants qui ont déjà été modifiés par `contentEditable`. 
+Table `options_services` avec les 10 options par défaut pré-insérées (IDs fixes pour éviter les doublons).
 
-**Fix** : remplacer le `div` wrapper + ternaire par une clé différente sur chaque branche pour forcer un remontage propre au lieu d'un patch :
+**2. `src/stores/optionsAdminStore.ts`**
 
-```tsx
-// AVANT
-<div key={`text-container-${element.id}`}>
-  {inlineEditingElementId === element.id ? (
-    <InlineTextEditor key={`inline-editor-${element.id}`} ... />
-  ) : (
-    <div key={`text-display-${element.id}`} ...>
-```
+Réécriture du store pour :
+- Garder Zustand pour l'état local (UX réactive)
+- Ajouter un hook `useOptionsAdminSync` qui :
+  - Charge les options depuis la base au montage (priorité sur le localStorage)
+  - Sauvegarde automatiquement chaque modification en base (via Supabase upsert/delete)
+- Conserver `persist` en localStorage uniquement comme cache offline/fallback
 
-```tsx
-// APRÈS — key unique par état pour forcer un remontage complet
-<React.Fragment key={inlineEditingElementId === element.id ? `editing-${element.id}` : `display-${element.id}`}>
-  {inlineEditingElementId === element.id ? (
-    <InlineTextEditor ... />
-  ) : (
-    <div className="px-0.5 py-px" ...>
-```
+**3. `src/pages/OptionsServicesAdmin.tsx`**
 
-**2. `RentalProposalPreview.tsx`** — Ajouter un wrapper stable avec key sur le rendu des éléments statiques (ligne 528)
+Ajouter un indicateur de synchronisation (icône de chargement ou badge "Sauvegardé") pour que l'utilisateur voie que ses modifications sont bien persistées.
 
-```tsx
-// AVANT
-{staticElements.map(el => renderTemplateElement(el))}
+**4. `src/components/ErrorBoundary.tsx`**
 
-// APRÈS — wrapper React.Fragment avec key stable basée sur la version + page
-<React.Fragment key={`page-${pageNum}-v${currentVersion?.id}`}>
-  {staticElements.map(el => renderTemplateElement(el))}
-</React.Fragment>
-```
+Retirer `options-admin-storage` de la liste des clés effacées lors des erreurs DOM — ce store ne cause pas d'erreurs DOM et ne doit pas être vidé lors d'erreurs liées aux templates.
 
-Et dans `renderTemplateElement`, stabiliser les éléments avec `dangerouslySetInnerHTML` qui sont vulnérables :
+---
 
-```tsx
-// Ligne 277 : ajouter une key stable sur le div dangerouslySetInnerHTML
-<div 
-  key={`html-${element.id}-${processedHtml.length}`}
-  style={{ paddingLeft: `${indentPx}px` }}
-  dangerouslySetInnerHTML={{ __html: processedHtml }}
-/>
-```
+### Flux de données détaillé
 
-**3. `PreviewEditableCanvas.tsx`** — Wrapper stable sur la liste des éléments
+**Chargement initial :**
+1. Au montage du composant `OptionsServicesAdmin`, appel `supabase.from('options_services').select('*').order('sort_order')`
+2. Si des données existent en base → remplacent le state Zustand et le cache localStorage
+3. Si la base est vide → insertion des `defaultOptions` en base + mise à jour du store
 
-```tsx
-// AVANT
-{sortedElements.map(el => renderElement(el))}
+**Sauvegarde automatique :**
+- Chaque `updateOption`, `addOption`, `deleteOption`, etc. met à jour le state Zustand immédiatement (UX réactive)
+- En parallèle, appel Supabase `upsert` ou `delete` en arrière-plan
+- En cas d'erreur réseau : le state local reste intact, toast d'avertissement
 
-// APRÈS
-<React.Fragment key={`canvas-elements-${pageNumber}`}>
-  {sortedElements.map(el => renderElement(el))}
-</React.Fragment>
-```
-
-Et stabiliser le `dangerouslySetInnerHTML` (ligne 234) avec une key basée sur le contenu :
-
-```tsx
-<div 
-  key={`html-${elementId}-${textContent.htmlContent?.length || 0}`}
-  style={{ paddingLeft: `${indentPx}px` }}
-  dangerouslySetInnerHTML={{ __html: sanitizeHtml(textContent.htmlContent) }}
-/>
-```
+**Résultat :**
+- Les modifications survivent aux rechargements de page
+- Les modifications survivent aux nettoyages de cache localStorage
+- Pas de perte de données lors des erreurs DOM des autres composants
 
 ---
 
 ### Résumé des fichiers modifiés
 
-| Fichier | Modification |
+| Fichier | Type de changement |
 |---|---|
-| `src/components/template-editor/EditorCanvas.tsx` | Forcer remontage complet lors du switch `InlineTextEditor` ↔ affichage via `React.Fragment` avec key dynamique |
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Wrapper stable sur `staticElements.map()` + key stable sur le `div` avec `dangerouslySetInnerHTML` |
-| `src/components/rental-proposal/PreviewEditableCanvas.tsx` | Wrapper stable sur `sortedElements.map()` + key stable sur le `div` avec `dangerouslySetInnerHTML` |
-
-### Impact attendu
-
-- Suppression des erreurs `removeChild` lors des transitions de page ou des éditions inline
-- Aucun changement visuel ou fonctionnel — uniquement la stabilité du DOM
-- Rétrocompatibilité complète avec les données existantes
+| `supabase/migrations/[timestamp]_create_options_services.sql` | Nouveau — table + RLS + données par défaut |
+| `src/stores/optionsAdminStore.ts` | Ajout sync Supabase (chargement + auto-save) |
+| `src/pages/OptionsServicesAdmin.tsx` | Ajout indicateur de sauvegarde |
+| `src/components/ErrorBoundary.tsx` | Retrait de `options-admin-storage` de la liste effacée |
