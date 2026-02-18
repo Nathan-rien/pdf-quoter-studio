@@ -87,7 +87,7 @@ export function RentalDataEditor() {
           }
           return text;
         });
-        const description = descriptionParts.join(', ');
+        const description = descriptionParts.join('\n');
         addOptionService(option.title, description, option.price?.amount ?? null);
       }
     });
