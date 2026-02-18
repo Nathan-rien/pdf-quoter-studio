@@ -224,7 +224,7 @@ const initialPDFImportStatus: PDFImportStatus = {
 
 // Services inclus par défaut (bloc permanent)
 const initialServicesInclus: ServicesInclus = {
-  description: 'Contrat de location et gestion administrative, Optimisation des coûts et gestion budgétaire, Gestion des évolutions du parc',
+  description: 'Contrat de location et gestion administrative\nOptimisation des coûts et gestion budgétaire\nGestion des évolutions du parc',
 };
 
 const initialState: RentalProposalState = {
