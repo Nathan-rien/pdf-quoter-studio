@@ -1,33 +1,30 @@
 
-## Correction : Toggle "Afficher les prix" dans l'aperçu visuel
+## Correction : Qté toujours visible même quand les prix sont masqués
 
-### Diagnostic
+### Comportement cible
 
-Il existe deux systèmes de rendu distincts dans l'application :
+| Colonne | `investShowPrices = true` | `investShowPrices = false` |
+|---|---|---|
+| Désignation | ✅ Visible | ✅ Visible |
+| Qté | ✅ Visible | ✅ Visible (correction) |
+| P.U. HT | ✅ Visible | ❌ Masqué |
+| Total HT | ✅ Visible | ❌ Masqué |
+| Total investissement | ✅ Visible | ❌ Masqué |
 
-1. **RentalProposalExport.tsx** → génère le HTML du PDF téléchargeable. ✅ Déjà corrigé lors de la précédente implémentation.
-2. **RentalProposalPreview.tsx** → rend l'aperçu visuel dans l'interface. ❌ Non modifié — affiche toujours toutes les colonnes.
+### 3 fichiers à corriger
 
-La fonction `renderProductTableWithFlowElements()` (ligne ~761) dans le fichier Preview construit le tableau de la page 4 avec des colonnes en dur (`Désignation`, `Qté`, `P.U. HT`, `Total HT`), sans lire `matriceData.investShowPrices`.
+**1. `RentalProposalPreview.tsx`** (aperçu visuel)
 
-### Modification unique
+Ligne 779 — la grille passe de `grid-cols-12` à `grid-cols-8` (au lieu de `grid-cols-1`) quand les prix sont masqués, pour accueillir Désignation + Qté.
 
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`**
+- En-tête : `Désignation (col-span-6)` + `Qté (col-span-2)` toujours présents ; `P.U. HT` et `Total HT` conditionnels
+- Lignes : idem — la cellule Qté (`ligne.quantite`) sort du bloc conditionnel pour être toujours rendue
+- Total investissement : reste conditionnel à `investShowPrices`
 
-Dans la fonction `renderProductTableWithFlowElements()` (autour de la ligne 761) :
+**2. `RentalProposalExport.tsx`** (génération PDF)
 
-1. **En-tête du tableau** : conditionner les colonnes Qté, P.U. HT, Total HT avec `matriceData.investShowPrices`
-2. **Lignes de données** : conditionner les cellules Qté, P.U. HT, Total HT de chaque ligne
-3. **Mise en page de la grille** : ajuster `grid-cols-12` → `grid-cols-1` quand les prix sont masqués (pour que la désignation prenne toute la largeur)
-4. **Bloc Total investissement** : conditionner l'affichage du total avec `investShowPrices` (lignes ~800-810)
+Ligne 288-302 — même logique : `Qté` sort du bloc `${investShowPrices ? ...}` pour être toujours incluse dans le `<th>` et dans le `<td>` de chaque ligne.
 
-### Détail technique
+**3. `RentalDataEditor.tsx`** (éditeur de saisie)
 
-Actuellement (lignes 777-795) :
-```
-grid-cols-12 : Désignation (col-span-6) | Qté (col-span-2) | P.U. HT (col-span-2) | Total HT (col-span-2)
-```
-
-Après modification :
-- Si `investShowPrices = true` → comportement identique à aujourd'hui
-- Si `investShowPrices = false` → grille `grid-cols-1`, seule la désignation affichée, pas de total
+Ligne 658 — la colonne `Nb` sort du bloc conditionnel `{matriceData.investShowPrices && ...}` pour toujours s'afficher. Ajustement du `colSpan` de la ligne vide.
