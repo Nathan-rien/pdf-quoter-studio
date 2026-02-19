@@ -1,85 +1,98 @@
 
-## Correction définitive : `servicesInclus` comme configuration globale persistante
+## Rendre le champ "Coefficient" modifiable
 
-### Cause racine précise
+### Contexte technique
 
-`servicesInclus` est actuellement traité comme une **donnée de proposition** (au même niveau que les lignes produits, le client, la matrice). Résultat : à chaque appel de `startNewProposal()` (ligne 651), le state est réinitialisé avec `...initialState`, qui contient `initialServicesInclus` — effaçant toute modification de l'utilisateur.
-
-```typescript
-// ligne 651-656 — écrase servicesInclus à chaque nouvelle proposition
-startNewProposal: () => {
-  set({
-    ...initialState,   // ← servicesInclus revient à la valeur par défaut
-    isActive: true,
-  });
-},
+Actuellement, dans `ProposalCard.tsx` (lignes 192-197), le champ Coefficient est purement en lecture seule :
+```tsx
+<div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
+  <span>{calculatedValues.coefficient ?? '-'}</span>
+</div>
 ```
 
-La même chose se produit lors de `importFromPDF` si le champ n'est pas explicitement préservé.
+La valeur de `coefficient` est calculée automatiquement par `lookupCoefficient()` dans `calculateAllMatriceValues()` — elle cherche dans la table Base Taux le taux correspondant au partenaire, au montant et à la durée.
 
-`servicesInclus` est conceptuellement un **paramètre de configuration global** (texte standard de l'entreprise), pas une donnée spécifique à chaque proposition client. Il ne devrait jamais être réinitialisé lors du démarrage d'une nouvelle proposition.
+La demande est de permettre à l'utilisateur de **saisir manuellement** une valeur de coefficient, qui prime sur la valeur calculée automatiquement. Si l'utilisateur laisse le champ vide, la valeur auto s'applique.
 
 ---
 
-### Solution — 3 modifications dans `rentalProposalStore.ts`
+### Modifications nécessaires
 
-**1. `startNewProposal` — Préserver `servicesInclus` lors de la réinitialisation**
+**1. `src/stores/rentalProposalStore.ts` — Ajouter `coefficientOverride` dans `MatriceProposal`**
 
 ```typescript
-// AVANT
-startNewProposal: () => {
-  set({
-    ...initialState,
-    isActive: true,
-  });
-},
-
-// APRÈS
-startNewProposal: () => {
-  const currentServicesInclus = get().servicesInclus;
-  set({
-    ...initialState,
-    servicesInclus: currentServicesInclus,  // ← préservé
-    isActive: true,
-  });
-},
+export interface MatriceProposal {
+  id: string;
+  montantInvestissement: number | null;
+  duree: number | null;
+  refinanceur: Partenaire | null;
+  margeAppliquee: number;
+  coefficientOverride: number | null;  // ← AJOUT : null = utiliser la valeur auto
+}
 ```
 
-**2. `importFromPDF` — Préserver `servicesInclus` lors de l'import d'un nouveau PDF**
+Et dans `createDefaultProposal()` :
+```typescript
+const createDefaultProposal = (): MatriceProposal => ({
+  ...
+  coefficientOverride: null,  // ← AJOUT
+});
+```
 
-Dans la fonction `importFromPDF` (ligne 253), le `set({...})` n'inclut pas `servicesInclus`, ce qui laisse la valeur du state précédent en place. Cependant, si `importFromPDF` est appelé après `startNewProposal`, `servicesInclus` a déjà été réinitialisé. En fixant `startNewProposal`, ce cas est couvert.
-
-**3. `resetAll` — Préserver `servicesInclus` lors d'un reset complet**
+**2. `src/lib/rental-calculations.ts` — Accepter un coefficient forcé dans `calculateAllMatriceValues`**
 
 ```typescript
-// AVANT
-resetAll: () => {
-  set(initialState);
-},
+export function calculateAllMatriceValues(
+  montantInvestissement: number | null,
+  duree: number | null,
+  refinanceur: string | null,
+  margeAppliquee: number,
+  optionsPrices: (number | null)[],
+  coefficientOverride?: number | null   // ← AJOUT
+): CalculatedMatriceValues {
+  // Lookup coefficient (auto), sauf si override fourni
+  const coefficientAuto = lookupCoefficient(refinanceur, montantInvestissement, duree);
+  const coefficient = (coefficientOverride != null) ? coefficientOverride : coefficientAuto;
+  ...
+}
+```
 
-// APRÈS  
-resetAll: () => {
-  const currentServicesInclus = get().servicesInclus;
-  set({
-    ...initialState,
-    servicesInclus: currentServicesInclus,  // ← préservé
-  });
-},
+**3. `src/components/rental-proposal/ProposalCard.tsx` — Remplacer le div par un Input**
+
+- Passer `coefficientOverride` au composant
+- Appeler `calculateAllMatriceValues` avec le `coefficientOverride`
+- Afficher un `Input` de type `number` à la place du div en lecture seule
+- Afficher en placeholder la valeur calculée automatiquement (pour indiquer ce qu'on utilise si laissé vide)
+- Si la valeur saisie est effacée, repasser à `null` → retour au calcul auto
+
+```tsx
+<div className="space-y-1">
+  <Label className="text-xs text-muted-foreground">Coefficient</Label>
+  <Input
+    type="number"
+    step="0.0001"
+    placeholder={coefficientAuto !== null ? String(coefficientAuto) : 'Auto'}
+    value={proposal.coefficientOverride ?? ''}
+    onChange={(e) => onUpdate({ 
+      coefficientOverride: e.target.value ? parseFloat(e.target.value) : null 
+    })}
+  />
+</div>
 ```
 
 ---
 
-### Résumé
+### Résumé des fichiers modifiés
 
-| Fichier | Fonction | Modification |
-|---|---|---|
-| `src/stores/rentalProposalStore.ts` | `startNewProposal` | Lire `servicesInclus` avant reset, le réinjecter après |
-| `src/stores/rentalProposalStore.ts` | `resetAll` | Même logique |
+| Fichier | Modification |
+|---|---|
+| `src/stores/rentalProposalStore.ts` | Ajouter `coefficientOverride: number | null` dans `MatriceProposal` et `createDefaultProposal` |
+| `src/lib/rental-calculations.ts` | Accepter `coefficientOverride` en paramètre optionnel dans `calculateAllMatriceValues` |
+| `src/components/rental-proposal/ProposalCard.tsx` | Remplacer le div lecture seule par un `Input` éditable, avec placeholder = valeur auto |
 
-### Comportement après correction
+### Comportement final
 
-- L'utilisateur modifie et sauvegarde la description "Services Inclus"
-- Il démarre une nouvelle proposition (import d'un nouveau PDF)
-- La description "Services Inclus" **reste inchangée**
-- Toutes les autres données (client, lignes, matrice) sont bien réinitialisées
-- Le texte par défaut (`initialServicesInclus`) n'est utilisé que lors du **tout premier chargement** de l'application (localStorage vide)
+- Par défaut, le coefficient est calculé automatiquement depuis la Base Taux (comportement inchangé)
+- L'utilisateur peut saisir une valeur manuelle dans le champ Coefficient
+- Si le champ est vidé, la valeur auto reprend
+- Tous les calculs dépendants (Loyer mensuel, Loyer investissement, Coût contrat, Marge Loc…) se mettent à jour instantanément avec le coefficient forcé
