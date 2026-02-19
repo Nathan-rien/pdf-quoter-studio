@@ -9,16 +9,18 @@ import {
   Users,
   LogOut,
   BarChart3,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos';
 
 interface AppSidebarProps {
   currentView: ViewType;
   onNavigate: (view: ViewType) => void;
   isAdmin?: boolean;
   canAccessAdmin?: boolean;
+  isCommercial?: boolean;
   onSignOut?: () => void;
 }
 
@@ -27,6 +29,7 @@ export function AppSidebar({
   onNavigate,
   isAdmin = false,
   canAccessAdmin = false,
+  isCommercial = false,
   onSignOut,
 }: AppSidebarProps) {
   return (
@@ -63,6 +66,18 @@ export function AppSidebar({
           <History className="h-3.5 w-3.5" />
           Historique
         </Button>
+
+        {/* Onglet Mes infos - visible uniquement pour les commerciaux */}
+        {isCommercial && !isAdmin && (
+          <Button
+            variant={currentView === 'mes-infos' ? 'secondary' : 'ghost'}
+            className="w-full justify-start gap-2 h-8 text-sm"
+            onClick={() => onNavigate('mes-infos')}
+          >
+            <UserCircle className="h-3.5 w-3.5" />
+            Mes infos
+          </Button>
+        )}
 
         {/* Section Administration - masquée pour les commerciaux */}
         {canAccessAdmin && (

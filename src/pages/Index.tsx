@@ -10,6 +10,7 @@ import { AccessManagement } from "@/components/access/AccessManagement";
 import { StatisticsDashboard } from "@/components/admin/StatisticsDashboard";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { MesInfosView } from "@/components/commercial/MesInfosView";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ import { cn } from "@/lib/utils";
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
   const [highlightedIds, setHighlightedIds] = useState<string[]>([]);
-  const { isAdmin, userRole, signOut } = useAuth();
+  const { isAdmin, isCommercial, userRole, signOut } = useAuth();
   const canAccessAdmin = userRole === 'admin';
 
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useAdminNotifications(isAdmin);
@@ -59,6 +60,8 @@ export default function Index() {
         return <AccessManagement />;
       case 'statistics':
         return <StatisticsDashboard />;
+      case 'mes-infos':
+        return <MesInfosView />;
       default:
         return null;
     }
@@ -73,6 +76,7 @@ export default function Index() {
           setCurrentView(view);
         }}
         isAdmin={isAdmin}
+        isCommercial={isCommercial}
         canAccessAdmin={canAccessAdmin}
         onSignOut={signOut}
       />
