@@ -77,6 +77,27 @@ export type Database = {
         }
         Relationships: []
       }
+      pre_registered_commercials: {
+        Row: {
+          commercial_id: string
+          created_at: string
+          email: string
+          full_name: string
+        }
+        Insert: {
+          commercial_id: string
+          created_at?: string
+          email: string
+          full_name: string
+        }
+        Update: {
+          commercial_id?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -104,10 +125,13 @@ export type Database = {
       proposal_exports: {
         Row: {
           client_name: string | null
+          commercial_id: string | null
+          commercial_name: string | null
           created_at: string
           created_by: string | null
           file_name: string
           id: string
+          montant_investissement: number | null
           options_count: number | null
           pdf_html_content: string | null
           proposal_name: string
@@ -118,10 +142,13 @@ export type Database = {
         }
         Insert: {
           client_name?: string | null
+          commercial_id?: string | null
+          commercial_name?: string | null
           created_at?: string
           created_by?: string | null
           file_name: string
           id?: string
+          montant_investissement?: number | null
           options_count?: number | null
           pdf_html_content?: string | null
           proposal_name: string
@@ -132,10 +159,13 @@ export type Database = {
         }
         Update: {
           client_name?: string | null
+          commercial_id?: string | null
+          commercial_name?: string | null
           created_at?: string
           created_by?: string | null
           file_name?: string
           id?: string
+          montant_investissement?: number | null
           options_count?: number | null
           pdf_html_content?: string | null
           proposal_name?: string
