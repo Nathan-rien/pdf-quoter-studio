@@ -582,43 +582,51 @@ export function RentalProposalPreview() {
     const selectedCommercial = getSelectedCommercial();
     
     const renderClientData = () => (
-      <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
-        <div className="grid grid-cols-2 gap-4">
-          {/* Colonne gauche : Client */}
-          <div>
-            <div className="text-[9px] space-y-0.5">
-              <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
-              <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
-              <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
-              {clientData.email && (
-                <p className="text-muted-foreground">{clientData.email}</p>
+      <>
+        <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Colonne gauche : Client */}
+            <div>
+              <div className="text-[9px] space-y-0.5">
+                <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+                <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+                <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+                {clientData.email && (
+                  <p className="text-muted-foreground">{clientData.email}</p>
+                )}
+              </div>
+            </div>
+            
+            {/* Colonne droite : Commercial */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Briefcase className="h-3 w-3 text-primary" />
+                <span className="font-medium text-[10px]">Votre interlocuteur</span>
+              </div>
+              {selectedCommercial ? (
+                <div className="text-[9px] space-y-0.5">
+                  <p className="font-semibold">{selectedCommercial.nom}</p>
+                  {selectedCommercial.telephone && (
+                    <p className="text-muted-foreground">{selectedCommercial.telephone}</p>
+                  )}
+                  <p className="text-muted-foreground">{selectedCommercial.email}</p>
+                </div>
+              ) : (
+                <p className="text-[9px] text-muted-foreground italic">
+                  Non sélectionné
+                </p>
               )}
             </div>
           </div>
-          
-          {/* Colonne droite : Commercial */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Briefcase className="h-3 w-3 text-primary" />
-              <span className="font-medium text-[10px]">Votre interlocuteur</span>
-            </div>
-            {selectedCommercial ? (
-              <div className="text-[9px] space-y-0.5">
-                <p className="font-semibold">{selectedCommercial.nom}</p>
-                {selectedCommercial.telephone && (
-                  <p className="text-muted-foreground">{selectedCommercial.telephone}</p>
-                )}
-                <p className="text-muted-foreground">{selectedCommercial.email}</p>
-                <p className="text-muted-foreground text-[8px] mt-1">{selectedCommercial.adresse}</p>
-              </div>
-            ) : (
-              <p className="text-[9px] text-muted-foreground italic">
-                Non sélectionné
-              </p>
-            )}
-          </div>
         </div>
-      </div>
+        {selectedCommercial?.adresse && (
+          <div className="absolute bottom-0 left-0 right-0 pb-1 flex justify-center z-40">
+            <span className="text-[9px] text-muted-foreground">
+              {selectedCommercial.adresse}
+            </span>
+          </div>
+        )}
+      </>
     );
     
     const fallbackContent = (
