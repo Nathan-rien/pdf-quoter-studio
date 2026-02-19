@@ -1,48 +1,22 @@
 
-## Correctif : Montant investissement HT synchronisé depuis l'onglet Invest dès l'import
+## Ajout d'un fond bleu clair sur la section Saisie
 
-### Problème
+### Modification unique
 
-Dans `rentalProposalStore.ts`, la fonction `importFromPDF` utilise `result.totaux.totalHT` pour initialiser le champ "Montant investissement HT" de chaque proposition. Pour les PDFs de type "Commande" Cybertek, cette valeur est extraite du texte global du PDF et peut être mal parsée (valeur absurde comme `408772960`).
+**Fichier :** `src/components/rental-proposal/ProposalCard.tsx` — ligne 63
 
-Pendant ce temps, l'onglet **Invest** affiche la somme réelle des lignes produits (1 469,95 €) car ces lignes sont correctement extraites dans `result.lignes`. Les deux sont incohérents dès l'ouverture.
+La carte **Saisie** (lignes 63–149) est un composant `<Card>` sans classe de couleur de fond. Il suffit d'y ajouter `bg-blue-50 border-blue-100` pour obtenir un fond bleu clair discret, cohérent avec le design épuré de l'application.
 
-### Solution : Calculer le montantInvestissement depuis la somme des lignes Invest
+La carte **Données** (ligne 152) reste inchangée avec son fond blanc par défaut.
 
-Remplacer la lecture de `result.totaux.totalHT` par le calcul de la somme des `totalHT` des lignes produits, avec un repli sur `result.totaux.totalHT` si aucune ligne n'est disponible.
+### Détail technique
 
-```typescript
-// AVANT (ligne 259)
-const montantInvestissement = result.totaux.totalHT;
-
-// APRÈS
-const lignesTotal = result.lignes.length > 0
-  ? Math.round(result.lignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100) / 100
-  : null;
-
-const montantInvestissement = lignesTotal ?? result.totaux.totalHT;
+```
+Avant :  <Card>
+Après :  <Card className="bg-blue-50 border-blue-100">
 ```
 
-**Logique de priorité :**
-| Cas | Source utilisée |
-|-----|----------------|
-| Des lignes produits existent dans Invest | Somme des VTN (source fiable) |
-| Aucune ligne produit extraite | `totalHT` du PDF (fallback) |
+- `bg-blue-50` → fond bleu très clair (identique à la référence visuelle transmise)
+- `border-blue-100` → bordure légèrement teintée pour l'harmonie
 
-Cette logique est cohérente avec ce qui se passe déjà quand l'utilisateur modifie manuellement une ligne Invest (les actions `updateLigne`, `addLigne`, `deleteLigne` dans le store recalculent déjà le `montantInvestissement` depuis la somme des lignes).
-
-### Fichier modifié
-
-**`src/stores/rentalProposalStore.ts`** — uniquement la ligne 259 dans `importFromPDF()`
-
-Aucune modification d'interface, aucune migration base de données. Les propositions déjà en cours ne sont pas affectées (le localStorage existant reste intact, seul le prochain import recevra la valeur corrigée).
-
-### Résultat attendu
-
-Pour le PDF `Commande_6397708_20260217_10h21.pdf` :
-
-| Champ | Avant | Après |
-|-------|-------|-------|
-| Montant investissement HT (Saisie) | 408 772 960,00 € | 1 469,95 € |
-| Total Invest | 1 469,95 € | 1 469,95 € (inchangé) |
-| Calculs Matrice (Investir Margé, Loyer...) | Valeurs aberrantes | Valeurs correctes |
+Un seul fichier modifié, aucune migration base de données.
