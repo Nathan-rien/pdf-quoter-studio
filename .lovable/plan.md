@@ -1,146 +1,47 @@
 
-## Plan d'implémentation complet — Comptes commerciaux, Historique avancé, Notifications & Statistiques
+## Correction : Déplacer l'adresse de l'entité en bas de page 1, centrée
 
----
+### Problème identifié
 
-### Vue d'ensemble des 4 fonctionnalités
+Dans `RentalProposalPreview.tsx`, la fonction `renderClientData` (lignes 584-622) affiche actuellement l'adresse de l'entité du commercial (`selectedCommercial.adresse`) **à l'intérieur du bloc "Votre interlocuteur"** (ligne 612), comme un sous-texte sous l'email.
 
-```text
-1. Auto-attribution du rôle "commercial" à l'inscription (via trigger DB)
-2. Historique enrichi : filtres + vue admin par commercial
-3. Notifications en temps réel pour les admins lors d'un export PDF
-4. Onglet Statistiques (admin) avec graphiques et métriques
+L'utilisateur souhaite que cette adresse apparaisse **en bas de page, centrée horizontalement**, au même niveau que l'indicateur "Page 1/7" (composant `PageFooter`, positionné en `bottom-0 right-0`).
+
+### Solution
+
+Deux modifications dans `src/components/rental-proposal/RentalProposalPreview.tsx` :
+
+**1. Supprimer l'adresse du bloc "Votre interlocuteur"**
+
+Ligne 612 à retirer :
+```tsx
+<p className="text-muted-foreground text-[8px] mt-1">{selectedCommercial.adresse}</p>
 ```
 
----
+**2. Ajouter l'adresse en pied de page 1, centrée**
 
-### Analyse des commerciaux à créer
+La page 1 (`renderPage1`) appelle `renderPageWithEditMode` qui insère `<PageFooter pageNum={pageNum} />` (composant en `absolute bottom-0 right-0`).
 
-Depuis `src/data/commerciaux.ts`, les comptes à créer (Nathan = n.orso@cybertek.fr déjà existant, Gregory Moinet exclus des deux entrées) :
+La solution la plus propre est d'ajouter l'adresse directement dans `renderClientData` sous forme d'un **second bloc absolu** positionné en bas de page, centré, au même niveau vertical que le `PageFooter`. Ce sera un `absolute bottom-0 left-0 right-0` avec `text-center`.
 
-| Nom | Email |
-|---|---|
-| Victor Bordaraud | v.bordaraud@cybertek-pro.fr |
-| Johanna Weill | j.weill@cybertek-pro.fr |
-| Mathis Houdbert | m.houdbert@cybertek-pro.fr |
-| Adil Aboutaib | a.aboutaib@cybertek-pro.fr |
-| Christophe Besse | c.besse@picata.fr |
-| Mehdi Kharsou | m.kharsou@grosbill-pro.com |
-| Malek KADERI | m.kaderi@grosbill-pro.com |
-| Jonathan Breton | j.breton@grosbill-pro.com |
-
----
-
-### Fonctionnalité 1 — Auto-attribution du rôle "commercial" à l'inscription
-
-**Mécanisme** : Un trigger PostgreSQL sur la table `auth.users` (via `handle_new_user`) sera enrichi pour vérifier si l'email qui s'inscrit correspond à l'un des commerciaux pré-enregistrés. Si oui, le rôle `commercial` est automatiquement inséré dans `user_roles`.
-
-**Implémentation** :
-- Créer une table `pre_registered_commercials(email text PRIMARY KEY, full_name text, commercial_id text)` contenant les 8 emails des commerciaux
-- Modifier le trigger `handle_new_user` pour :
-  1. Créer le profil (comportement actuel)
-  2. Vérifier si l'email est dans `pre_registered_commercials`
-  3. Si oui → insérer automatiquement `role = 'commercial'` dans `user_roles`
-- Les admins voient ces comptes dans l'onglet Accès et peuvent changer leur rôle si besoin
-
-**Avantage** : Aucune modification du formulaire d'inscription nécessaire. C'est 100% automatique côté base de données.
-
----
-
-### Fonctionnalité 2 — Historique enrichi avec filtres et vue admin par commercial
-
-#### Modifications base de données
-Ajouter 3 colonnes à `proposal_exports` :
-- `commercial_id text` (ex: `vb-cybertek`) — l'identifiant du commercial sélectionné dans le workflow
-- `commercial_name text` — nom du commercial pour affichage rapide sans jointure
-- `montant_investissement numeric` — pour les stats et filtres
-
-#### Modifications du code d'export
-Dans `saveToHistory()` de `RentalProposalExport.tsx`, enrichir l'insert avec le commercial sélectionné et le montant.
-
-#### Refonte de `HistoryView.tsx`
-**Vue commerciale (rôle commercial)** : identique à aujourd'hui, filtres mois/année/recherche sur ses propres propositions.
-
-**Vue admin** : 
-- Groupement par commercial (accordéon ou onglets)
-- Filtres globaux : mois, année, nom client, commercial
-- Champ de recherche par mot-clé (proposal_name, client_name)
-- Compteur total visible
-
-L'`useAuth` est passé en prop depuis `Index.tsx` pour conditionner l'affichage.
-
----
-
-### Fonctionnalité 3 — Notifications temps réel pour les admins
-
-**Mécanisme** :
-1. Activer Supabase Realtime sur `proposal_exports`
-2. Créer un hook `useAdminNotifications` (utilisé uniquement si `isAdmin`)
-3. S'abonner aux événements `INSERT` sur `proposal_exports`
-4. Stocker les nouvelles notifications dans un state React (liste avec `id`, `commercial_name`, `proposal_name`, `created_at`)
-5. Afficher un badge clochette dans le header / sidebar avec le nombre de nouvelles propositions
-6. Cliquer sur la notification → navigate vers `history` + passer les IDs à surligner
-
-**Composant `AdminNotificationBell`** : placé dans la sidebar (en haut à droite), affiche un badge rouge avec le compteur. Un popover liste les dernières notifications. Chaque notification est cliquable.
-
-**Dans `Index.tsx`** : si `isAdmin`, rendre `<AdminNotificationBell>` et passer un callback `onNavigateToHistory(highlightedIds)`.
-
-**Dans `HistoryView.tsx`** : accepter une prop `highlightedIds?: string[]` pour surligner les entrées récentes en jaune.
-
----
-
-### Fonctionnalité 4 — Onglet Statistiques (admin)
-
-**Nouveau composant** `src/components/admin/StatisticsDashboard.tsx`
-
-**Métriques affichées** (toutes calculées depuis `proposal_exports`) :
-
-```text
-KPI Cards (en haut)
-- Nombre total de propositions
-- Montant moyen d'investissement
-- Montant le plus haut / le plus bas
-- Nombre de propositions ce mois-ci
-
-Graphiques (recharts, déjà installé)
-- Bar chart : propositions par mois (12 derniers mois)
-- Pie chart : répartition par commercial
-- Bar chart : options/services les plus vendus (via options_count + commercial_id)
-- Line chart : évolution du montant moyen dans le temps
+```tsx
+// Adresse de l'entité en pied de page - centrée, même niveau que Page X/Y
+<div className="absolute bottom-0 left-0 right-0 pb-1 flex justify-center z-40">
+  <span className="text-[9px] text-muted-foreground">
+    {selectedCommercial?.adresse}
+  </span>
+</div>
 ```
 
-**Ajout dans la sidebar** : Nouveau bouton "Statistiques" (icône `BarChart3`) dans la section Administration, visible uniquement par les admins.
+Ce bloc sera rendu via `renderDynamicContent` (déjà passé à `renderPageWithEditMode`), donc il s'affichera correctement par-dessus les éléments du template, aligné avec le `PageFooter`.
 
-**Types ajoutés dans `AppSidebar.tsx`** : `'statistics'` dans `ViewType`.
+### Fichier modifié
 
----
+- `src/components/rental-proposal/RentalProposalPreview.tsx`
+  - Ligne 612 : supprimer la ligne affichant `selectedCommercial.adresse` dans le bloc interlocuteur
+  - Après la fermeture du `<div>` de `renderClientData` (avant le `)`) : ajouter le fragment avec l'adresse centrée en `absolute bottom-0`
 
-### Récapitulatif technique — Fichiers modifiés
+### Résultat attendu
 
-| Couche | Fichier | Modification |
-|---|---|---|
-| DB Migration | nouvelle migration | Table `pre_registered_commercials` + trigger enrichi + colonnes `proposal_exports` + realtime |
-| Store | `rentalProposalStore.ts` | Aucune modification nécessaire (commercial déjà dans le store) |
-| Export | `RentalProposalExport.tsx` | Enrichir `saveToHistory` avec `commercial_id`, `commercial_name`, `montant_investissement` |
-| Historique | `HistoryView.tsx` | Refonte complète : filtres, groupement admin, prop `highlightedIds` |
-| Nouveau hook | `src/hooks/useAdminNotifications.ts` | Realtime subscription sur `proposal_exports` |
-| Nouveau composant | `src/components/admin/AdminNotificationBell.tsx` | Badge clochette + popover |
-| Nouveau composant | `src/components/admin/StatisticsDashboard.tsx` | Tableau de bord stats |
-| Navigation | `AppSidebar.tsx` | Ajout de `'statistics'` dans `ViewType` + bouton Statistiques |
-| Page principale | `Index.tsx` | Intégrer la clochette + le nouveau case `statistics` |
-
----
-
-### Séquence d'implémentation
-
-1. Migration DB (table pre-enregistrée + trigger + colonnes + realtime)
-2. Enrichissement de `saveToHistory` dans `RentalProposalExport.tsx`
-3. Hook `useAdminNotifications` + composant `AdminNotificationBell`
-4. Refonte `HistoryView.tsx` avec filtres et vue admin
-5. `StatisticsDashboard.tsx` + mise à jour sidebar/Index
-
----
-
-### Précisions sur les données des commerciaux pré-enregistrés
-
-La table `pre_registered_commercials` permet de gérer facilement la liste : un admin peut y ajouter de nouveaux emails sans toucher au code. La vérification à l'inscription se fait entièrement côté PostgreSQL via le trigger existant `handle_new_user`.
+- **Bloc "Votre interlocuteur"** : affiche uniquement nom, téléphone, email
+- **Bas de page 1, centré** : affiche l'adresse de l'entité (`130, rue Achard...` ou `60 Boulevard de l'hôpital...`) au même niveau que "Page 1/7" (qui reste en bas à droite)
