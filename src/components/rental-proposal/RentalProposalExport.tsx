@@ -259,7 +259,7 @@ export function RentalProposalExport() {
     
     // Page 1 : Données client et commercial
     dynamicContent[1] = `
-      <div class="dynamic-content" style="position: absolute; bottom: 40px; left: 5%; right: 5%; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
+      <div class="dynamic-content" style="position: absolute; bottom: 55px; left: 5%; right: 5%; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div>
             <div style="font-size: 9px;">
@@ -284,7 +284,7 @@ export function RentalProposalExport() {
         </div>
       </div>
       ${selectedCommercial?.adresse ? `
-        <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 40;">
+        <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 40;">
           ${selectedCommercial.adresse}
         </div>
       ` : ''}
