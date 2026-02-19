@@ -13,12 +13,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
-  Legend,
 } from "recharts";
 import {
-  TrendingUp,
   FileText,
   Euro,
   ArrowUpRight,
@@ -27,6 +23,9 @@ import {
   Calendar,
   RefreshCw,
   Loader2,
+  Building2,
+  Package,
+  LayoutTemplate,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -39,6 +38,7 @@ interface ExportRecord {
   options_count: number;
   created_at: string;
   status: string;
+  template_name: string;
 }
 
 const CHART_COLORS = [
@@ -64,7 +64,7 @@ export function StatisticsDashboard() {
     try {
       const { data, error } = await supabase
         .from('proposal_exports')
-        .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status')
+        .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status, template_name')
         .eq('status', 'success')
         .order('created_at', { ascending: true });
 
@@ -111,18 +111,46 @@ export function StatisticsDashboard() {
   });
   const monthlyData = MONTHS_FR.map((name, i) => ({ name, propositions: byMonth[i] || 0 }));
 
-  // Montant moyen par mois
-  const avgByMonth: Record<number, { sum: number; count: number }> = {};
+  // Montant total par mois
+  const totalByMonthMap: Record<number, number> = {};
   withAmount.forEach(r => {
     const m = new Date(r.created_at).getMonth();
-    if (!avgByMonth[m]) avgByMonth[m] = { sum: 0, count: 0 };
-    avgByMonth[m].sum += r.montant_investissement as number;
-    avgByMonth[m].count += 1;
+    totalByMonthMap[m] = (totalByMonthMap[m] || 0) + (r.montant_investissement as number);
   });
-  const avgMonthlyData = MONTHS_FR.map((name, i) => ({
+  const totalByMonthData = MONTHS_FR.map((name, i) => ({
     name,
-    montant: avgByMonth[i] ? Math.round(avgByMonth[i].sum / avgByMonth[i].count) : null,
+    montant: totalByMonthMap[i] ? Math.round(totalByMonthMap[i]) : 0,
   }));
+
+  // Top clients
+  const byClient: Record<string, number> = {};
+  filteredRecords.forEach(r => {
+    const key = r.client_name || 'Non renseigné';
+    byClient[key] = (byClient[key] || 0) + 1;
+  });
+  const topClients = Object.entries(byClient)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // Propositions avec/sans options
+  const withOptions = filteredRecords.filter(r => (r.options_count ?? 0) > 0).length;
+  const withoutOptions = filteredRecords.length - withOptions;
+  const withOptionsPie = [
+    { name: 'Avec options', count: withOptions },
+    { name: 'Sans option', count: withoutOptions },
+  ];
+
+  // Template usage
+  const byTemplate: Record<string, number> = {};
+  filteredRecords.forEach(r => {
+    const key = r.template_name || 'Inconnu';
+    byTemplate[key] = (byTemplate[key] || 0) + 1;
+  });
+  const templateUsage = Object.entries(byTemplate)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   // Répartition par commercial
   const byCommercial: Record<string, number> = {};
@@ -310,39 +338,125 @@ export function StatisticsDashboard() {
         </Card>
       </div>
 
-      {/* Line chart montant moyen */}
+      {/* Montant total investi par mois */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            Évolution du montant moyen d'investissement
+            <Euro className="h-4 w-4 text-primary" />
+            Montant total investi par mois
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={avgMonthlyData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis
-                tick={{ fontSize: 10 }}
-                tickFormatter={(v) => v ? `${(v / 1000).toFixed(0)}k€` : ''}
-              />
-              <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 6 }}
-                formatter={(v: number) => [formatAmount(v), 'Montant moyen']}
-              />
-              <Line
-                type="monotone"
-                dataKey="montant"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={{ r: 4, fill: 'hsl(var(--primary))' }}
-                connectNulls={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {!hasAmountData ? (
+            <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+              Aucune donnée de montant disponible
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={totalByMonthData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v) => v ? `${(v / 1000).toFixed(0)}k€` : '0'}
+                />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                  formatter={(v: number) => [formatAmount(v), 'Total investi']}
+                />
+                <Bar dataKey="montant" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
+
+      {/* Top clients + Options pie */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top clients */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" />
+              Top clients
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topClients.length === 0 ? (
+              <div className="flex items-center justify-center h-[160px] text-sm text-muted-foreground">
+                Aucune donnée disponible
+              </div>
+            ) : (
+              <div className="space-y-2 pt-1">
+                {topClients.map((item, i) => {
+                  const pct = Math.round((item.count / (topClients[0]?.count || 1)) * 100);
+                  return (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      <span className="text-sm w-36 truncate">{item.name}</span>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-16 text-right">{item.count} prop.</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Propositions avec/sans options */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary" />
+              Propositions avec options
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredRecords.length === 0 ? (
+              <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+                Aucune donnée disponible
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <ResponsiveContainer width="60%" height={160}>
+                  <PieChart>
+                    <Pie
+                      data={withOptionsPie}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={65}
+                      dataKey="count"
+                      nameKey="name"
+                      labelLine={false}
+                    >
+                      {withOptionsPie.map((_, index) => (
+                        <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                      formatter={(v: number, name: string) => [v + ' proposition(s)', name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2 text-sm">
+                  {withOptionsPie.map((item, i) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      <span className="text-muted-foreground">{item.name}</span>
+                      <span className="font-medium ml-1">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Tableau des commerciaux */}
       {commercialData.length > 0 && (
@@ -366,6 +480,35 @@ export function StatisticsDashboard() {
                     </div>
                     <span className="text-xs text-muted-foreground w-20 text-right">{item.count} prop.</span>
                     <span className="text-xs font-medium w-28 text-right">{formatAmount(avg)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Template le plus utilisé */}
+      {templateUsage.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <LayoutTemplate className="h-4 w-4 text-primary" />
+              Template le plus utilisé
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {templateUsage.map((item, i) => {
+                const pct = Math.round((item.count / (templateUsage[0]?.count || 1)) * 100);
+                return (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                    <span className="text-sm w-48 truncate">{item.name}</span>
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-16 text-right">{item.count} prop.</span>
                   </div>
                 );
               })}
