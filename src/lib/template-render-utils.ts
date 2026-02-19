@@ -30,6 +30,7 @@ export const getCurrentDateFR = (): string => {
  */
 export interface SubstitutionContext {
   fraisDossier?: number | null;
+  adresseEntite?: string | null;
 }
 
 /**
@@ -63,6 +64,13 @@ export const substituteDynamicPlaceholders = (text: string, context?: Substituti
     result = result.replace(/\{\{FRAIS_DOSSIER\}\}/gi, formatFraisDossier(context.fraisDossier));
   } else {
     result = result.replace(/\{\{FRAIS_DOSSIER\}\}/gi, formatFraisDossier(null));
+  }
+
+  // Remplacer le placeholder {{ADRESSE_ENTITE}}
+  if (context && context.adresseEntite) {
+    result = result.replace(/\{\{ADRESSE_ENTITE\}\}/gi, context.adresseEntite);
+  } else {
+    result = result.replace(/\{\{ADRESSE_ENTITE\}\}/gi, '');
   }
   
   // Auto-détection : remplacer "Mois 20XX" par la date actuelle
