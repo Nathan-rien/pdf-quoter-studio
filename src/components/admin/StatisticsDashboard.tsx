@@ -135,20 +135,23 @@ export function StatisticsDashboard() {
     .sort((a, b) => b.count - a.count);
 
   const formatAmount = (v: number | null) => {
-    if (v === null) return '-';
+    if (v === null) return 'N/A';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
   };
 
-  const KpiCard = ({ title, value, icon: Icon, sub }: { title: string; value: string; icon: any; sub?: string }) => (
+  const withAmountPct = totalProposals > 0 ? Math.round((withAmount.length / totalProposals) * 100) : 0;
+  const hasAmountData = withAmount.length > 0;
+
+  const KpiCard = ({ title, value, icon: Icon, sub, noData }: { title: string; value: string; icon: any; sub?: string; noData?: boolean }) => (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs text-muted-foreground mb-1">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
+            <p className={`text-2xl font-bold ${noData ? 'text-muted-foreground' : ''}`}>{value}</p>
             {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
           </div>
-          <div className="p-2 rounded-lg bg-primary/10 text-primary">
+          <div className={`p-2 rounded-lg ${noData ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>
             <Icon className="h-4 w-4" />
           </div>
         </div>
@@ -190,6 +193,26 @@ export function StatisticsDashboard() {
         </div>
       </div>
 
+      {/* Bannière info si peu de données avec montants */}
+      {!hasAmountData && totalProposals > 0 && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted border border-border text-muted-foreground text-xs">
+          <Euro className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            Les <strong className="text-foreground">{totalProposals} propositions existantes</strong> ont été générées avant l'activation du suivi des montants. 
+            Les nouvelles exportations PDF alimenteront automatiquement ces statistiques.
+          </p>
+        </div>
+      )}
+      {hasAmountData && withAmountPct < 100 && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted border border-border text-muted-foreground text-xs">
+          <Euro className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            Montants disponibles pour <strong className="text-foreground">{withAmount.length} / {totalProposals} propositions</strong> ({withAmountPct}%). 
+            Les anciennes exportations n'ont pas de montant enregistré.
+          </p>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
@@ -200,19 +223,22 @@ export function StatisticsDashboard() {
         />
         <KpiCard
           title="Montant moyen"
-          value={formatAmount(avgAmount)}
+          value={hasAmountData ? formatAmount(avgAmount) : 'N/A'}
           icon={Euro}
-          sub="Par proposition"
+          sub={hasAmountData ? `Sur ${withAmount.length} proposition(s) avec montant` : 'Aucun montant enregistré'}
+          noData={!hasAmountData}
         />
         <KpiCard
           title="Montant le plus haut"
-          value={formatAmount(maxAmount)}
+          value={hasAmountData ? formatAmount(maxAmount) : 'N/A'}
           icon={ArrowUpRight}
+          noData={!hasAmountData}
         />
         <KpiCard
           title="Montant le plus bas"
-          value={formatAmount(minAmount)}
+          value={hasAmountData ? formatAmount(minAmount) : 'N/A'}
           icon={ArrowDownRight}
+          noData={!hasAmountData}
         />
       </div>
 
