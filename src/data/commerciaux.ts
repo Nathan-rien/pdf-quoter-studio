@@ -20,8 +20,8 @@ export const COMMERCIAUX: Commercial[] = [
     id: 'vb-cybertek', 
     entity: 'cybertek-pro', 
     nom: 'Victor Bordaraud', 
-    telephone: '06 70 82 18 23', 
-    email: 'v.bordaraud@cybertek-pro.fr', 
+    telephone: '06 08 35 94 75', 
+    email: 'v.bordaraud@cybertek-pro.fr',
     adresse: '130, rue Achard - Bât. U, 33300 Bordeaux – France' 
   },
   { 
