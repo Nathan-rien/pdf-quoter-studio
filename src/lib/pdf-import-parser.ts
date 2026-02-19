@@ -203,11 +203,53 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       if (cpVille) {
         result.client!.codePostal = cpVille[1];
         result.client!.ville = cleanCityName(cpVille[2]);
+        // Do NOT break — continue to extract phone and email that may follow
+        continue;
+      }
+
+      // Phone number (after postal code)
+      if (!result.client!.telephone && /^0\d[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}$/.test(line.replace(/\s/g, ''))) {
+        result.client!.telephone = line.trim();
+        continue;
+      }
+
+      // Client email (after postal code)
+      if (!result.client!.email && /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(line.trim())) {
+        result.client!.email = line.trim();
+        continue;
+      }
+    }
+  }
+
+  // Extract email from ADRESSE DE FACTURATION block (Commande PDFs) — takes priority over livraison email
+  const facturationIdx = lines.findIndex((l) => /ADRESSE\s+DE\s+FACTURATION/i.test(l));
+  if (facturationIdx !== -1) {
+    for (let i = facturationIdx + 1; i < Math.min(facturationIdx + 12, lines.length); i++) {
+      const line = lines[i];
+      if (/S\.?A\.?S\.?\s+GROUPE\s+CYBERTEK|SIEGE\s+SOCIAL/i.test(line)) continue;
+      if (/COMMENTAIRES|BON\s+POUR\s+ACCORD/i.test(line)) break;
+
+      // Phone (fallback if not already found)
+      if (!result.client!.telephone && /^0\d[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}$/.test(line.replace(/\s/g, ''))) {
+        result.client!.telephone = line.trim();
+      }
+      // Email from billing address overrides livraison email (billing contact = decision maker)
+      if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(line.trim())) {
+        result.client!.email = line.trim();
         break;
       }
     }
   }
-  
+
+  // Global email fallback: find any non-Cybertek email in the document
+  if (!result.client!.email) {
+    const allEmails = [...text.matchAll(/([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/gi)];
+    const clientEmail = allEmails.find((m) => !/@cybertek/i.test(m[1]));
+    if (clientEmail) {
+      result.client!.email = clientEmail[1];
+    }
+  }
+
   // Fallback: Extract client name from specific patterns if not found
   if (!result.client!.nom) {
     const clientNameMatch = text.match(/GROUPE\s+KEDGE\s+BUSINESS\s+SCHOOL/i) ||
