@@ -28,6 +28,8 @@ import {
   LayoutTemplate,
   Wrench,
   Star,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -58,10 +60,81 @@ const CHART_COLORS = [
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
+// Sub-component: accordion table for service/option proposals
+function ServiceDetailTable({
+  items,
+  expanded,
+  onToggle,
+  colorSet,
+}: {
+  items: { name: string; proposals: ExportRecord[] }[];
+  expanded: string | null;
+  onToggle: (name: string) => void;
+  colorSet: string[];
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[80px] text-sm text-muted-foreground">
+        Aucune donnée disponible
+      </div>
+    );
+  }
+  return (
+    <div className="divide-y divide-border">
+      {items.map((item, i) => {
+        const isOpen = expanded === item.name;
+        return (
+          <div key={item.name}>
+            <button
+              className="w-full flex items-center gap-3 py-2.5 px-1 hover:bg-muted/50 transition-colors text-left"
+              onClick={() => onToggle(item.name)}
+            >
+              {isOpen ? (
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              )}
+              <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: colorSet[i % colorSet.length] }} />
+              <span className="text-sm flex-1 truncate">{item.name}</span>
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+                style={{ background: colorSet[i % colorSet.length] + '22', color: colorSet[i % colorSet.length] }}
+              >
+                {item.proposals.length} prop.
+              </span>
+            </button>
+            {isOpen && (
+              <div className="pl-8 pb-2 space-y-1">
+                {item.proposals.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
+                    <span className="text-foreground font-medium truncate max-w-[140px]">{p.proposal_name}</span>
+                    {p.client_name && (
+                      <>
+                        <span className="text-border">|</span>
+                        <span className="truncate max-w-[120px]">{p.client_name}</span>
+                      </>
+                    )}
+                    <span className="text-border">|</span>
+                    <span className="shrink-0">
+                      {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function StatisticsDashboard() {
   const [records, setRecords] = useState<ExportRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterYear, setFilterYear] = useState<string>(String(new Date().getFullYear()));
+  const [expandedOption, setExpandedOption] = useState<string | null>(null);
+  const [expandedNosOption, setExpandedNosOption] = useState<string | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -191,6 +264,29 @@ export function StatisticsDashboard() {
     .slice(0, 8);
 
   const hasOptionsData = topAdditionalOptions.length > 0 || topNosOptions.length > 0;
+
+  // Detailed maps: all services/options → associated proposals
+  const optionProposalsMap: Record<string, ExportRecord[]> = {};
+  filteredRecords.forEach(r => {
+    ((r.selected_options_names as string[]) || []).forEach((name: string) => {
+      if (!optionProposalsMap[name]) optionProposalsMap[name] = [];
+      optionProposalsMap[name].push(r);
+    });
+  });
+  const allOptionsWithProposals = Object.entries(optionProposalsMap)
+    .map(([name, proposals]) => ({ name, proposals }))
+    .sort((a, b) => b.proposals.length - a.proposals.length);
+
+  const nosOptionProposalsMap: Record<string, ExportRecord[]> = {};
+  filteredRecords.forEach(r => {
+    ((r.selected_nos_options_names as string[]) || []).forEach((name: string) => {
+      if (!nosOptionProposalsMap[name]) nosOptionProposalsMap[name] = [];
+      nosOptionProposalsMap[name].push(r);
+    });
+  });
+  const allNosOptionsWithProposals = Object.entries(nosOptionProposalsMap)
+    .map(([name, proposals]) => ({ name, proposals }))
+    .sort((a, b) => b.proposals.length - a.proposals.length);
 
   const formatAmount = (v: number | null) => {
     if (v === null) return 'N/A';
@@ -587,6 +683,45 @@ export function StatisticsDashboard() {
                 })}
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Listes détaillées Services / Nos Options avec propositions associées */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Services additionnels — détail */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-primary" />
+              Services additionnels — détail par proposition
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-1 max-h-[400px] overflow-y-auto">
+            <ServiceDetailTable
+              items={allOptionsWithProposals}
+              expanded={expandedOption}
+              onToggle={(name) => setExpandedOption(prev => prev === name ? null : name)}
+              colorSet={CHART_COLORS}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Nos Options — détail */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Star className="h-4 w-4 text-primary" />
+              Nos Options — détail par proposition
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-1 max-h-[400px] overflow-y-auto">
+            <ServiceDetailTable
+              items={allNosOptionsWithProposals}
+              expanded={expandedNosOption}
+              onToggle={(name) => setExpandedNosOption(prev => prev === name ? null : name)}
+              colorSet={CHART_COLORS}
+            />
           </CardContent>
         </Card>
       </div>
