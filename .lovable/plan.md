@@ -1,47 +1,67 @@
 
-## Correction : Déplacer l'adresse de l'entité en bas de page 1, centrée
+## Correction du parser PDF Commande : prix unitaire inclus dans la désignation
 
 ### Problème identifié
 
-Dans `RentalProposalPreview.tsx`, la fonction `renderClientData` (lignes 584-622) affiche actuellement l'adresse de l'entité du commercial (`selectedCommercial.adresse`) **à l'intérieur du bloc "Votre interlocuteur"** (ligne 612), comme un sous-texte sous l'email.
+Dans les PDFs de type **Commande Cybertek**, chaque ligne produit suit ce format sur une seule ligne :
 
-L'utilisateur souhaite que cette adresse apparaisse **en bas de page, centrée horizontalement**, au même niveau que l'indicateur "Page 1/7" (composant `PageFooter`, positionné en `bottom-0 right-0`).
+```
+00602456  Carte graphique MSI GeForce RTX 5060 Ti...  408,32 €  3  1 224,96 €
+              ↑ CODE              ↑ DÉSIGNATION         ↑ PU HT  ↑QTE  ↑ TOTAL HT
+```
+
+Le parseur actuel (lignes 609-690 de `src/lib/pdf-import-parser.ts`) :
+1. Détecte correctement la dernière paire `QTE + TOTAL HT` (ex: `3  1 224,96 €`)
+2. Construit la désignation en prenant **tout le texte à gauche** du `matchIndex` de l'amount
+3. Ce texte inclut le **prix unitaire** (`408,32 €`) qui précède la quantité
+
+Le regex de nettoyage existant (ligne 662) cherche un pattern en fin de chaîne, mais le prix unitaire n'est pas en fin — il est suivi de la quantité. Résultat : `408,32 € 3` ou `408,32 €` reste dans la désignation.
 
 ### Solution
 
-Deux modifications dans `src/components/rental-proposal/RentalProposalPreview.tsx` :
+Dans la section "Commande format" du parseur (lignes 659-662 de `pdf-import-parser.ts`), après avoir construit la désignation brute, ajouter un regex supplémentaire qui supprime spécifiquement le pattern **prix unitaire + quantité** qui peut rester dans la désignation :
 
-**1. Supprimer l'adresse du bloc "Votre interlocuteur"**
+**Pattern à supprimer** : toute occurrence de `NNN,NN €  N` (prix unitaire suivi optionnellement de la quantité) dans la désignation.
 
-Ligne 612 à retirer :
-```tsx
-<p className="text-muted-foreground text-[8px] mt-1">{selectedCommercial.adresse}</p>
+Regex à ajouter après la ligne 662 :
+```typescript
+// Strip unit price pattern "NNN,NN € QTE" left in designation (Commande format)
+// Matches: "408,32 € 3" or "408,32 €" followed by standalone digits
+designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€(?:\s+\d+)?/g, '').trim();
 ```
 
-**2. Ajouter l'adresse en pied de page 1, centrée**
-
-La page 1 (`renderPage1`) appelle `renderPageWithEditMode` qui insère `<PageFooter pageNum={pageNum} />` (composant en `absolute bottom-0 right-0`).
-
-La solution la plus propre est d'ajouter l'adresse directement dans `renderClientData` sous forme d'un **second bloc absolu** positionné en bas de page, centré, au même niveau vertical que le `PageFooter`. Ce sera un `absolute bottom-0 left-0 right-0` avec `text-center`.
-
-```tsx
-// Adresse de l'entité en pied de page - centrée, même niveau que Page X/Y
-<div className="absolute bottom-0 left-0 right-0 pb-1 flex justify-center z-40">
-  <span className="text-[9px] text-muted-foreground">
-    {selectedCommercial?.adresse}
-  </span>
-</div>
-```
-
-Ce bloc sera rendu via `renderDynamicContent` (déjà passé à `renderPageWithEditMode`), donc il s'affichera correctement par-dessus les éléments du template, aligné avec le `PageFooter`.
+De plus, le regex existant à la ligne 662 est trop restrictif (n'agit qu'en fin de chaîne avec `$`). Il faut le remplacer par une version globale qui supprime **toutes les occurrences** de patterns monétaires parasites dans la désignation, pas seulement en fin.
 
 ### Fichier modifié
 
-- `src/components/rental-proposal/RentalProposalPreview.tsx`
-  - Ligne 612 : supprimer la ligne affichant `selectedCommercial.adresse` dans le bloc interlocuteur
-  - Après la fermeture du `<div>` de `renderClientData` (avant le `)`) : ajouter le fragment avec l'adresse centrée en `absolute bottom-0`
+**`src/lib/pdf-import-parser.ts`** — section "Commande format", lignes 659-663 :
+
+```typescript
+// AVANT:
+let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
+// Strip trailing unit price pattern "NNN,NN €" that may be left in designation
+designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
+
+// APRÈS:
+let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
+// Strip unit price pattern "NNN,NN € [QTE]" left anywhere in designation (Commande format)
+// e.g. "Carte graphique MSI ... 408,32 € 3" → "Carte graphique MSI ..."
+designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€(?:\s+\d{1,3})?/g, '').trim();
+// Also strip a trailing standalone amount without leading space (safety net)
+designation = designation.replace(/\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
+```
 
 ### Résultat attendu
 
-- **Bloc "Votre interlocuteur"** : affiche uniquement nom, téléphone, email
-- **Bas de page 1, centré** : affiche l'adresse de l'entité (`130, rue Achard...` ou `60 Boulevard de l'hôpital...`) au même niveau que "Page 1/7" (qui reste en bas à droite)
+| Avant | Après |
+|-------|-------|
+| `Carte graphique MSI GeForce RTX 5060 Ti 16G VENTUS 2X OC PLUS 408,32 € 3` | `Carte graphique MSI GeForce RTX 5060 Ti 16G VENTUS 2X OC PLUS` |
+| `Services Garantie Excellence 5 ans 244,99 €` | `Services Garantie Excellence 5 ans` |
+
+Les colonnes **Nb** et **VUN/VTN** continuent d'être correctement extraites (elles sont dérivées du `amountExtracted.qty` et `amountExtracted.total`).
+
+### Considérations
+
+- Le regex `(?:\s+\d{1,3})?` est optionnel pour gérer les cas où la quantité n'est pas toujours explicitement après le prix unitaire.
+- La modification est **non-destructive** pour les PDFs Devis (ils passent par un chemin différent utilisant les refs `SY-`).
+- Les PDFs Grosbill et 3D Dental ne sont pas affectés (leurs parseurs sont distincts).
