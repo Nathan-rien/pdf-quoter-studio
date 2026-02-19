@@ -31,7 +31,7 @@ export default function Index() {
     switch (currentView) {
       case 'rental-proposal':
         return (
-          <RentalProposalDashboard 
+          <RentalProposalDashboard
             onNewProposal={() => {
               useRentalProposalStore.getState().startNewProposal();
               setCurrentView('rental-workflow');
@@ -69,7 +69,6 @@ export default function Index() {
       <AppSidebar
         currentView={currentView}
         onNavigate={(view) => {
-          // Reset highlighted IDs when leaving history
           if (view !== 'history') setHighlightedIds([]);
           setCurrentView(view);
         }}
@@ -77,9 +76,8 @@ export default function Index() {
         canAccessAdmin={canAccessAdmin}
         onSignOut={signOut}
       />
-      
+
       <main className="flex-1 p-3 lg:p-4 overflow-auto">
-        {/* Notification Bell - visible uniquement pour les admins */}
         {isAdmin && (
           <div className="flex justify-end mb-2">
             <AdminNotificationBell
