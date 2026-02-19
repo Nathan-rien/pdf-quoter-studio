@@ -283,6 +283,11 @@ export function RentalProposalExport() {
           </div>
         </div>
       </div>
+      ${selectedCommercial?.adresse ? `
+        <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 40;">
+          ${selectedCommercial.adresse}
+        </div>
+      ` : ''}
     `;
     
     // Page 4 : Tableau des produits (avec pagination multi-pages si nécessaire)
