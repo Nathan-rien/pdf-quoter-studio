@@ -172,6 +172,7 @@ export function calculateLoyerMensuelInvestissement(
  */
 export interface CalculatedMatriceValues {
   coefficient: number | null;
+  coefficientAuto: number | null; // valeur issue du lookup Base Taux (non modifiée par l'override)
   investMarge: number | null;
   servicesInclusLoyers: number | null;
   loyerServicesInclus: number | null;
@@ -192,10 +193,12 @@ export function calculateAllMatriceValues(
   duree: number | null,
   refinanceur: string | null,
   margeAppliquee: number,
-  optionsPrices: (number | null)[]
+  optionsPrices: (number | null)[],
+  coefficientOverride?: number | null
 ): CalculatedMatriceValues {
-  // Lookup coefficient
-  const coefficient = lookupCoefficient(refinanceur, montantInvestissement, duree);
+  // Lookup coefficient (auto), sauf si override fourni
+  const coefficientAuto = lookupCoefficient(refinanceur, montantInvestissement, duree);
+  const coefficient = (coefficientOverride != null) ? coefficientOverride : coefficientAuto;
   
   // Calcul invest margé
   const investMarge = calculateInvestMarge(montantInvestissement, margeAppliquee);
@@ -229,6 +232,7 @@ export function calculateAllMatriceValues(
   
   return {
     coefficient,
+    coefficientAuto,
     investMarge,
     servicesInclusLoyers,
     loyerServicesInclus,

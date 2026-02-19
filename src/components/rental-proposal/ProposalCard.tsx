@@ -43,7 +43,8 @@ export function ProposalCard({
     proposal.duree,
     proposal.refinanceur,
     proposal.margeAppliquee,
-    optionsPrices
+    optionsPrices,
+    proposal.coefficientOverride
   );
 
   const formatNumber = (value: number | null) => {
@@ -191,9 +192,16 @@ export function ProposalCard({
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Coefficient</Label>
-              <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
-                <span>{calculatedValues.coefficient ?? '-'}</span>
-              </div>
+              <Input
+                type="number"
+                step="0.0001"
+                min="0"
+                placeholder={calculatedValues.coefficientAuto !== null ? String(calculatedValues.coefficientAuto) : 'Auto'}
+                value={proposal.coefficientOverride ?? ''}
+                onChange={(e) => onUpdate({
+                  coefficientOverride: e.target.value ? parseFloat(e.target.value) : null
+                })}
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Loyer investissement mensuel</Label>
