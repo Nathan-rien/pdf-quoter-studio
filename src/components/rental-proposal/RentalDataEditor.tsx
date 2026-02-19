@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,8 +61,14 @@ export function RentalDataEditor() {
     getSelectedCommercial,
   } = useRentalProposalStore();
 
-  const { options: adminOptions } = useOptionsAdminStore();
+  const { options: adminOptions, ensureLoaded } = useOptionsAdminStore();
   const activeAdminOptions = adminOptions.filter(opt => opt.isActive);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+
+  useEffect(() => {
+    setIsLoadingOptions(true);
+    ensureLoaded().finally(() => setIsLoadingOptions(false));
+  }, [ensureLoaded]);
 
   const calculatedValues = getCalculatedValues();
 
@@ -431,8 +437,10 @@ export function RentalDataEditor() {
               <div className="flex gap-2">
                 <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={activeAdminOptions.length === 0}>
-                      <Download className="h-4 w-4 mr-2" />
+                    <Button variant="outline" size="sm" disabled={isLoadingOptions || activeAdminOptions.length === 0}>
+                      {isLoadingOptions
+                        ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        : <Download className="h-4 w-4 mr-2" />}
                       Importer depuis Admin
                     </Button>
                   </PopoverTrigger>
@@ -539,8 +547,10 @@ export function RentalDataEditor() {
               <div className="flex gap-2">
                 <Popover open={isNosOptionsPopoverOpen} onOpenChange={setIsNosOptionsPopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={activeAdminOptions.length === 0}>
-                      <Download className="h-4 w-4 mr-2" />
+                    <Button variant="outline" size="sm" disabled={isLoadingOptions || activeAdminOptions.length === 0}>
+                      {isLoadingOptions
+                        ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        : <Download className="h-4 w-4 mr-2" />}
                       Importer depuis Admin
                     </Button>
                   </PopoverTrigger>

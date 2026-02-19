@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDataEditorStore } from "@/stores/dataEditorStore";
 import { useOptionsAdminStore } from "@/stores/optionsAdminStore";
 import { EditableTable, ColumnDef } from "../EditableTable";
@@ -7,7 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Info, Plus, Download } from "lucide-react";
+import { Info, Plus, Download, Loader2 } from "lucide-react";
 
 const optionsColumns: ColumnDef<OptionsServiceRow>[] = [
   { 
@@ -44,6 +44,7 @@ const optionsColumns: ColumnDef<OptionsServiceRow>[] = [
 export function OptionsServicesEditor() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   
   const { 
     optionsServicesData, 
@@ -54,8 +55,13 @@ export function OptionsServicesEditor() {
     getSheetErrors,
   } = useDataEditorStore();
 
-  const { options: adminOptions } = useOptionsAdminStore();
+  const { options: adminOptions, ensureLoaded } = useOptionsAdminStore();
   const activeAdminOptions = adminOptions.filter(opt => opt.isActive);
+
+  useEffect(() => {
+    setIsLoadingOptions(true);
+    ensureLoaded().finally(() => setIsLoadingOptions(false));
+  }, [ensureLoaded]);
 
   const errors = getSheetErrors('optionsServices');
 
@@ -101,8 +107,10 @@ export function OptionsServicesEditor() {
       <div className="flex gap-2">
         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" disabled={activeAdminOptions.length === 0}>
-              <Download className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" disabled={isLoadingOptions || activeAdminOptions.length === 0}>
+              {isLoadingOptions
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : <Download className="h-4 w-4 mr-2" />}
               Importer depuis Admin
             </Button>
           </PopoverTrigger>
