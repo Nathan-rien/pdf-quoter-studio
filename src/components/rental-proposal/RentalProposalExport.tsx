@@ -95,6 +95,12 @@ export function RentalProposalExport() {
       }
       
       const displayName = proposalName || `Proposition ${clientData.nom}` || 'Proposition Commerciale';
+
+      // Récupérer les infos du commercial sélectionné
+      const commercial = selectedCommercial;
+      
+      // Calculer le montant d'investissement (depuis la première proposition ou le store)
+      const montantInvest = matriceData.montantInvestissement;
       
       await supabase.from('proposal_exports').insert({
         proposal_name: displayName,
@@ -107,7 +113,10 @@ export function RentalProposalExport() {
         options_count: selectedOptions.length,
         pdf_html_content: status === 'success' ? htmlContent : null,
         created_by: user.id,
-      });
+        commercial_id: commercial?.id || null,
+        commercial_name: commercial?.nom || null,
+        montant_investissement: montantInvest || null,
+      } as any);
     } catch (err) {
       console.error('Failed to save to history:', err);
       // Ne pas bloquer l'export si l'historique échoue

@@ -7,11 +7,12 @@ import {
   Settings,
   Database,
   Users,
-  LogOut
+  LogOut,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -94,16 +95,26 @@ export function AppSidebar({
               Base Taux
             </Button>
             
-            {/* Admin-only: Access Management */}
+            {/* Admin-only: Statistics + Access Management */}
             {isAdmin && (
-              <Button
-                variant={currentView === 'access-management' ? 'secondary' : 'ghost'}
-                className="w-full justify-start gap-2 h-8 text-sm"
-                onClick={() => onNavigate('access-management')}
-              >
-                <Users className="h-3.5 w-3.5" />
-                Accès
-              </Button>
+              <>
+                <Button
+                  variant={currentView === 'statistics' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('statistics')}
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Statistiques
+                </Button>
+                <Button
+                  variant={currentView === 'access-management' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('access-management')}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Accès
+                </Button>
+              </>
             )}
           </div>
         )}
