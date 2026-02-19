@@ -271,8 +271,10 @@ export function RentalProposalPreview() {
       const indentPx = indentLevel * LIST_INDENT_PX;
       
       // Si contenu HTML enrichi, appliquer la substitution dynamique et sanitization
+      const _commercial = getSelectedCommercial();
+      const substitutionCtx = { fraisDossier: calculatedValues.fraisDossier, adresseEntite: _commercial?.adresse ?? null };
       if (textContent.htmlContent) {
-        const processedHtml = sanitizeHtml(substituteDynamicPlaceholders(textContent.htmlContent, { fraisDossier: calculatedValues.fraisDossier }));
+        const processedHtml = sanitizeHtml(substituteDynamicPlaceholders(textContent.htmlContent, substitutionCtx));
         return (
           <div 
             key={`html-${element.id}-${processedHtml.length}`}
@@ -283,7 +285,7 @@ export function RentalProposalPreview() {
       }
       
       // Fallback sur le texte brut avec support des listes et substitution dynamique
-      const text = substituteDynamicPlaceholders(textContent.text || '', { fraisDossier: calculatedValues.fraisDossier });
+      const text = substituteDynamicPlaceholders(textContent.text || '', substitutionCtx);
       const lines = text.split('\n');
       return (
         <>
