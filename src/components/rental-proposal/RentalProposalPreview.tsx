@@ -583,7 +583,7 @@ export function RentalProposalPreview() {
     
     const renderClientData = () => (
       <>
-        <div className="absolute bottom-16 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
+        <div className="absolute bottom-10 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
           <div className="grid grid-cols-2 gap-4">
             {/* Colonne gauche : Client */}
             <div>
@@ -620,7 +620,7 @@ export function RentalProposalPreview() {
           </div>
         </div>
         {selectedCommercial?.adresse && (
-          <div className="absolute bottom-0 left-0 right-0 pb-1 flex justify-center z-40">
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center z-40">
             <span className="text-[9px] text-muted-foreground">
               {selectedCommercial.adresse}
             </span>
