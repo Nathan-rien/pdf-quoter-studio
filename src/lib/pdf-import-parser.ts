@@ -658,8 +658,11 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         
         // Remove price unit from designation (e.g. "408,32 €" appearing before QTE)
         let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
-        // Strip trailing unit price pattern "NNN,NN €" that may be left in designation
-        designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
+        // Strip unit price pattern "NNN,NN € [QTE]" left anywhere in designation (Commande format)
+        // e.g. "Carte graphique MSI ... 408,32 € 3" → "Carte graphique MSI ..."
+        designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€(?:\s+\d{1,3})?/g, '').trim();
+        // Also strip a trailing standalone amount without leading space (safety net)
+        designation = designation.replace(/\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
         
         // Skip "Produit inclus dans l'extension de garantie" and eco-taxe lines
         if (/Produit\s+inclus/i.test(designation) || /eco-?taxe/i.test(designation)) {
