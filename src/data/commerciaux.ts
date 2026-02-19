@@ -76,7 +76,7 @@ export const COMMERCIAUX: Commercial[] = [
   { 
     id: 'gm-grosbill', 
     entity: 'grosbill-pro', 
-    nom: 'Grégory MOINET', 
+    nom: 'Grégory Moinet', 
     telephone: '07 43 15 32 11', 
     email: 'g.moinet@cybertek-pro.fr', 
     adresse: '60 Boulevard de l\'hôpital, 75013 Paris' 
@@ -84,7 +84,7 @@ export const COMMERCIAUX: Commercial[] = [
   { 
     id: 'mk2-grosbill', 
     entity: 'grosbill-pro', 
-    nom: 'Malek KADERI', 
+    nom: 'Malek Kaderi', 
     telephone: '07 69 55 12 86', 
     email: 'm.kaderi@grosbill-pro.com', 
     adresse: '60 Boulevard de l\'hôpital, 75013 Paris' 
