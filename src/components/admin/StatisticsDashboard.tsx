@@ -83,27 +83,39 @@ function ServiceDetailTable({
     <div className="divide-y divide-border">
       {items.map((item, i) => {
         const isOpen = expanded === item.name;
+        const hasProposals = item.proposals.length > 0;
         return (
           <div key={item.name}>
             <button
-              className="w-full flex items-center gap-3 py-2.5 px-1 hover:bg-muted/50 transition-colors text-left"
-              onClick={() => onToggle(item.name)}
+              className={`w-full flex items-center gap-3 py-2.5 px-1 transition-colors text-left ${
+                hasProposals ? 'hover:bg-muted/50 cursor-pointer' : 'cursor-default opacity-60'
+              }`}
+              onClick={() => hasProposals && onToggle(item.name)}
             >
-              {isOpen ? (
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              {hasProposals ? (
+                isOpen ? (
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                )
               ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="h-3.5 w-3.5 shrink-0" />
               )}
-              <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: colorSet[i % colorSet.length] }} />
+              <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: hasProposals ? colorSet[i % colorSet.length] : 'hsl(var(--muted-foreground))' }} />
               <span className="text-sm flex-1 truncate">{item.name}</span>
               <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
-                style={{ background: colorSet[i % colorSet.length] + '22', color: colorSet[i % colorSet.length] }}
+                className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                  hasProposals ? '' : 'bg-muted text-muted-foreground'
+                }`}
+                style={hasProposals ? {
+                  background: colorSet[i % colorSet.length] + '22',
+                  color: colorSet[i % colorSet.length],
+                } : undefined}
               >
                 {item.proposals.length} prop.
               </span>
             </button>
-            {isOpen && (
+            {isOpen && hasProposals && (
               <div className="pl-8 pb-2 space-y-1">
                 {item.proposals.map((p) => (
                   <div key={p.id} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
@@ -131,6 +143,7 @@ function ServiceDetailTable({
 
 export function StatisticsDashboard() {
   const [records, setRecords] = useState<ExportRecord[]>([]);
+  const [allServiceOptions, setAllServiceOptions] = useState<{ id: string; title: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterYear, setFilterYear] = useState<string>(String(new Date().getFullYear()));
   const [expandedOption, setExpandedOption] = useState<string | null>(null);
@@ -139,14 +152,21 @@ export function StatisticsDashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('proposal_exports')
-        .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
-        .eq('status', 'success')
-        .order('created_at', { ascending: true });
+      const [exportRes, optionsRes] = await Promise.all([
+        supabase
+          .from('proposal_exports')
+          .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
+          .eq('status', 'success')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('options_services')
+          .select('id, title, is_active')
+          .order('sort_order', { ascending: true }),
+      ]);
 
-      if (error) throw error;
-      setRecords((data as any) || []);
+      if (exportRes.error) throw exportRes.error;
+      setRecords((exportRes.data as any) || []);
+      setAllServiceOptions((optionsRes.data || []).map(o => ({ id: o.id, title: o.title })));
     } catch (err) {
       console.error('Error fetching stats:', err);
     } finally {
@@ -273,9 +293,18 @@ export function StatisticsDashboard() {
       optionProposalsMap[name].push(r);
     });
   });
-  const allOptionsWithProposals = Object.entries(optionProposalsMap)
-    .map(([name, proposals]) => ({ name, proposals }))
-    .sort((a, b) => b.proposals.length - a.proposals.length);
+  // Fusion avec le référentiel complet options_services
+  const knownNames = new Set(allServiceOptions.map(o => o.title));
+  const allOptionsWithProposals = [
+    ...allServiceOptions.map(opt => ({
+      name: opt.title,
+      proposals: optionProposalsMap[opt.title] || [],
+    })),
+    // Services orphelins (présents dans propositions mais plus dans le référentiel)
+    ...Object.entries(optionProposalsMap)
+      .filter(([name]) => !knownNames.has(name))
+      .map(([name, proposals]) => ({ name, proposals })),
+  ].sort((a, b) => b.proposals.length - a.proposals.length);
 
   const nosOptionProposalsMap: Record<string, ExportRecord[]> = {};
   filteredRecords.forEach(r => {
@@ -284,9 +313,16 @@ export function StatisticsDashboard() {
       nosOptionProposalsMap[name].push(r);
     });
   });
-  const allNosOptionsWithProposals = Object.entries(nosOptionProposalsMap)
-    .map(([name, proposals]) => ({ name, proposals }))
-    .sort((a, b) => b.proposals.length - a.proposals.length);
+  // Idem pour Nos Options — même référentiel (options_services couvre les deux catégories)
+  const allNosOptionsWithProposals = [
+    ...allServiceOptions.map(opt => ({
+      name: opt.title,
+      proposals: nosOptionProposalsMap[opt.title] || [],
+    })),
+    ...Object.entries(nosOptionProposalsMap)
+      .filter(([name]) => !knownNames.has(name))
+      .map(([name, proposals]) => ({ name, proposals })),
+  ].sort((a, b) => b.proposals.length - a.proposals.length);
 
   const formatAmount = (v: number | null) => {
     if (v === null) return 'N/A';
