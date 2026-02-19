@@ -1,83 +1,122 @@
 
-## Problème : Adresse de l'entité absente du PDF généré
+## Problème : Email client non extrait dans les PDFs "Commande" Cybertek
 
 ### Diagnostic précis
 
-L'aperçu (`RentalProposalPreview.tsx`) affiche bien l'adresse du commercial en bas de page 1 (lignes 622-628) via un bloc absolu `bottom-0`. Mais dans l'export PDF (`RentalProposalExport.tsx`), le bloc dynamique de la page 1 (lignes 261-286) ne contient que :
-- Les données du client (nom, adresse, code postal, email)
-- Les coordonnées du commercial (nom, téléphone, email)
-
-**L'adresse de l'entité (`selectedCommercial.adresse`) n'est jamais injectée dans le HTML du PDF.**
-
-### Solution : Ajouter l'adresse de l'entité dans le bloc dynamique de la page 1 du PDF
-
-Dans `generateDynamicContentByPage()` (ligne 261), le bloc `dynamicContent[1]` est enrichi avec un élément positionné en bas de page, identique à ce qu'affiche l'aperçu.
-
-Le bloc final ressemblera à :
+Le PDF `Commande_6397708_20260217_10h21.pdf` a la structure suivante (deux colonnes côte à côte) :
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  [SPARKLAB SRL          ]  [Votre interlocuteur         ]│
-│  [Avenue des Cailles 62 ]  [Grégory Moinet              ]│
-│  [75013 PARIS           ]  [07 43 15 32 11              ]│
-│  [olivier@supercube.com ]  [g.moinet@cybertek-pro.fr    ]│
-└──────────────────────────────────────────────────────────┘
-     60 Boulevard de l'hôpital, 75013 Paris        ← ici
+ADRESSE DE LIVRAISON         ADRESSE DE FACTURATION
+SIERRA PRODUCTIONS           SIERRA PRODUCTIONS
+40-42 QUAI DU POINT DU JOUR  40-42 QUAI DU POINT DU JOUR
+BATIMENT QUAI OUEST          BATIMENT QUAI OUEST
+N° CLIENT: 2500096           92650 BOULOGNE BILLANCOURT CEDEX FR
+15/01/2026 12:19             06 09 21 89 87
+92650 BOULOGNE...  FR        mgiorgetti@aso.fr
+06 09 21 89 87
+rdebry@aso.fr
 ```
+
+Il y a **deux bugs** dans `parseCybertekText()` :
+
+**Bug 1 — La boucle s'arrête trop tôt**
+À la ligne 206, dès que le parser trouve le code postal + ville, il exécute `break`. Résultat : les lignes téléphone et email qui viennent **après** dans le bloc livraison ne sont jamais lues.
+
+**Bug 2 — L'email client n'est pas extrait**
+La boucle du bloc `ADRESSE DE LIVRAISON` (lignes 168-208) ne contient aucune logique pour extraire `result.client.email` ni `result.client.telephone`. Seuls le nom, l'adresse et le code postal/ville sont récupérés.
+
+**Bug 3 — Pas de fallback sur l'ADRESSE DE FACTURATION**
+Le PDF Commande contient aussi un bloc `ADRESSE DE FACTURATION` (à droite) qui a un email différent (`mgiorgetti@aso.fr`). Pour les Commandes, cet email de facturation est celui du vrai décideur client. Il devrait être utilisé en priorité s'il est différent.
+
+### Solution
+
+**Fichier modifié : `src/lib/pdf-import-parser.ts`**
+
+#### Modification 1 — Continuer après le code postal pour extraire téléphone et email
+
+Dans la boucle `ADRESSE DE LIVRAISON`, supprimer le `break` après la détection CP+ville et continuer à scanner pour extraire :
+- Téléphone (`/^0\d[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}$/`)
+- Email (`/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i`)
+
+```typescript
+// Postal code + City
+const cpVille = line.match(/^(\d{5})\s+(.+?)(?:\s+FR)?$/i);
+if (cpVille) {
+  result.client!.codePostal = cpVille[1];
+  result.client!.ville = cleanCityName(cpVille[2]);
+  // ← NE PAS break ici, continuer pour extraire tel/email
+  continue;
+}
+
+// Phone number
+if (!result.client!.telephone && /^0\d[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}$/.test(line.replace(/\s/g, ''))) {
+  result.client!.telephone = line.trim();
+  continue;
+}
+
+// Client email
+if (!result.client!.email && /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(line.trim())) {
+  result.client!.email = line.trim();
+  continue;
+}
+```
+
+#### Modification 2 — Fallback sur l'ADRESSE DE FACTURATION pour l'email
+
+Pour les PDFs Commande (qui n'ont pas de `Contact commercial direct`), ajouter une extraction du bloc `ADRESSE DE FACTURATION` pour récupérer l'email de facturation, qui prend la priorité sur l'email de livraison :
+
+```typescript
+// Extract email from ADRESSE DE FACTURATION block (Commande PDFs)
+const facturationIdx = lines.findIndex((l) => /ADRESSE\s+DE\s+FACTURATION/i.test(l));
+if (facturationIdx !== -1) {
+  for (let i = facturationIdx + 1; i < Math.min(facturationIdx + 12, lines.length); i++) {
+    const line = lines[i];
+    if (/S\.?A\.?S\.?\s+GROUPE\s+CYBERTEK|SIEGE\s+SOCIAL/i.test(line)) continue;
+    if (/COMMENTAIRES|BON\s+POUR\s+ACCORD/i.test(line)) break;
+    
+    // Phone
+    if (!result.client!.telephone && /^0\d[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}$/.test(line.replace(/\s/g, ''))) {
+      result.client!.telephone = line.trim();
+    }
+    // Email from billing address takes priority (override livraison email)
+    if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(line.trim())) {
+      result.client!.email = line.trim(); // override
+      break;
+    }
+  }
+}
+```
+
+#### Modification 3 — Fallback regex global pour email client
+
+Si les deux blocs échouent (PDF Devis sans blocs structurés), ajouter un fallback regex global qui cherche un email qui n'est **pas** un email Cybertek (commercial@cybertek-pro.fr) :
+
+```typescript
+// Global email fallback for client
+if (!result.client!.email) {
+  const allEmails = [...text.matchAll(/([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/gi)];
+  const clientEmail = allEmails.find(m => !/@cybertek/i.test(m[1]));
+  if (clientEmail) {
+    result.client!.email = clientEmail[1];
+  }
+}
+```
+
+### Résultat attendu après correction
+
+Pour le PDF `Commande_6397708_20260217_10h21.pdf` :
+
+| Champ | Avant | Après |
+|-------|-------|-------|
+| `client.email` | `null` | `mgiorgetti@aso.fr` (facturation) |
+| `client.telephone` | `null` | `06 09 21 89 87` |
+| `client.nom` | `SIERRA PRODUCTIONS` (inchangé) | `SIERRA PRODUCTIONS` |
+| `client.adresse` | `40-42 QUAI DU POINT...` | `40-42 QUAI DU POINT...` |
 
 ### Fichier modifié
 
-**`src/components/rental-proposal/RentalProposalExport.tsx`** — uniquement la section `dynamicContent[1]` dans `generateDynamicContentByPage()` (autour de la ligne 285).
+| Fichier | Modification |
+|---------|-------------|
+| `src/lib/pdf-import-parser.ts` | 3 modifications dans `parseCybertekText()` : (1) ne plus `break` après CP/ville, extraire tel+email; (2) scanner ADRESSE DE FACTURATION; (3) fallback regex global |
 
-Ajout juste avant le `</div>` fermant du bloc dynamique de la page 1 :
-
-```html
-<!-- Adresse de l'entité en bas de page, centré -->
-${selectedCommercial?.adresse ? `
-  <div style="
-    position: absolute;
-    bottom: 0px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 8px;
-    color: #6b7280;
-    padding-bottom: 4px;
-  ">
-    ${selectedCommercial.adresse}
-  </div>
-` : ''}
-```
-
-Attention : ce bloc doit être positionné **en dehors** du `dynamic-content` existant (qui a `position: absolute; bottom: 40px`), et placé dans un second élément avec `position: absolute; bottom: 0`.
-
-### Implémentation précise
-
-Le bloc `dynamicContent[1]` actuel est un seul `div.dynamic-content` avec `bottom: 40px`. L'adresse doit être dans un **second div absolu** avec `bottom: 0` (séparé du premier), pour reproduire fidèlement le comportement de l'aperçu.
-
-```html
-dynamicContent[1] = `
-  <!-- Bloc client + commercial -->
-  <div class="dynamic-content" style="position: absolute; bottom: 40px; left: 5%; right: 5%; ...">
-    ...contenu existant...
-  </div>
-  
-  <!-- Adresse de l'entité en pied de page -->
-  ${selectedCommercial?.adresse ? `
-    <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 40;">
-      ${selectedCommercial.adresse}
-    </div>
-  ` : ''}
-`;
-```
-
-### Pourquoi pas le placeholder `{{ADRESSE_ENTITE}}` ?
-
-Le mécanisme `{{ADRESSE_ENTITE}}` dans `substituteDynamicPlaceholders` fonctionne uniquement pour les éléments texte **du template** qui contiennent littéralement `{{ADRESSE_ENTITE}}` dans leur contenu. Si le template de l'utilisateur ne l'a pas intégré (il est probable que non), il faut injecter l'adresse directement via le bloc dynamique — comme c'est déjà fait pour les données client et commercial.
-
-### Impact
-
-- Aucune modification de base de données
-- Aucune modification de l'aperçu (déjà correct)
-- Un seul fichier modifié : `RentalProposalExport.tsx`
-- Parité parfaite aperçu ↔ PDF pour l'adresse de l'entité
+Aucune modification de base de données. Aucune modification d'interface.
