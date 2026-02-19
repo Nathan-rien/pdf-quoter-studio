@@ -1,78 +1,139 @@
 
-## Remplacement du graphique "Évolution du montant moyen" par 4 nouvelles statistiques
+## Statistiques des options et services les plus proposés
 
-### Contexte
+### Contexte et constat technique
 
-Le graphique "Évolution du montant moyen d'investissement" (LineChart) sera supprimé et remplacé par 4 nouvelles statistiques, toutes calculables depuis les données disponibles dans `proposal_exports`.
+La table `proposal_exports` ne stocke actuellement que `options_count` (un nombre entier). Pour savoir **quelles options/services spécifiques** sont les plus proposés, il faut enrichir les données sauvegardées lors de chaque export PDF et exploiter ces nouvelles données dans le dashboard.
 
-Note importante : les colonnes `partner_name` et `duration` n'existent pas en base. Les stats "Nombre de propositions par partenaire" et "Durée de contrat la plus choisie" ne peuvent pas être implémentées telles quelles. À la place, des statistiques pertinentes basées sur les champs réellement disponibles (`client_name`, `commercial_name`, `montant_investissement`, `options_count`, `template_name`, `created_at`) seront proposées.
+### Ce qui est insuffisant aujourd'hui
 
-### Ce qui est supprimé
+- `options_count: 3` → on sait qu'il y a 3 options, mais lesquelles ? Impossible à dire.
+- Les noms des options (ex: "Pro-Tection", "Pro-Flex") viennent du store Zustand uniquement, pas de la base.
 
-- Le `<LineChart>` "Évolution du montant moyen d'investissement" (lignes 313-345 de `StatisticsDashboard.tsx`)
-- L'import `LineChart`, `Line`, `Legend` de recharts (devenus inutilisés)
-- L'import `TrendingUp` de lucide-react (devenu inutilisé)
-- Le calcul `avgByMonth` / `avgMonthlyData` (devenus inutilisés)
+### Plan en 3 étapes
 
-### Ce qui est ajouté à la place
+---
 
-4 nouvelles statistiques remplacent le LineChart, organisées en une grille 2×2 (ou 4 colonnes sur grand écran) sous les graphiques existants :
+### Étape 1 — Migration base de données
 
-#### 1. Montant total investi par mois (BarChart cumulé)
-Un nouveau graphique à barres montrant la **somme totale** des `montant_investissement` par mois (et non la moyenne).
-- Données : `filteredRecords` → sommer `montant_investissement` par mois
-- Axe Y : formaté en `k€`
-- Tooltip : montant formaté en euros
-- Icône : `Euro`
+Ajouter deux colonnes JSONB dans `proposal_exports` pour stocker les noms des options choisies :
 
-#### 2. Top clients (barres horizontales)
-Un classement des clients avec le plus de propositions exportées.
-- Données : `filteredRecords` → grouper par `client_name`, trier par count décroissant, top 5
-- Affichage : liste avec barres de progression horizontales (même style que "Détail par commercial")
-- Icône : `Building2`
-
-#### 3. Propositions avec options (donut)
-Un PieChart donut montrant la répartition entre propositions **avec options** (`options_count > 0`) et **sans options**.
-- Données : count de `filteredRecords` avec `options_count > 0` vs `=== 0`
-- Affichage : donut 2 segments + légende
-- Icône : `Package`
-
-#### 4. Template le plus utilisé (barres)
-Un petit BarChart ou une liste montrant quels templates ont été utilisés le plus souvent.
-- Données : `filteredRecords` → grouper par `template_name`, trier par count
-- Affichage : liste avec barres de progression (top 5)
-- Icône : `LayoutTemplate`
-
-### Organisation visuelle finale
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ [KPI x4]                                                        │
-├───────────────────────┬─────────────────────────────────────────┤
-│ Propositions par mois │ Répartition par commercial (donut)      │
-├───────────────────────┴─────────────────────────────────────────┤
-│ Montant total investi par mois (nouveau BarChart)               │
-├───────────────────────┬─────────────────────────────────────────┤
-│ Top clients           │ Propositions avec/sans options (donut)  │
-├───────────────────────┴─────────────────────────────────────────┤
-│ Détail par commercial (tableau existant)                        │
-│ Template le plus utilisé (liste/barres)                         │
-└─────────────────────────────────────────────────────────────────┘
+```sql
+ALTER TABLE proposal_exports
+  ADD COLUMN IF NOT EXISTS selected_options_names jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS selected_nos_options_names jsonb DEFAULT '[]'::jsonb;
 ```
 
-### Fichier modifié
+- `selected_options_names` : tableau des noms des **Services additionnels** cochés (onglet "Services inclus", page 5)
+- `selected_nos_options_names` : tableau des noms des **Nos Options** cochées (page 6)
 
-Uniquement `src/components/admin/StatisticsDashboard.tsx` :
+Les anciennes lignes auront `[]` par défaut (rétrocompatible).
 
-1. Supprimer l'import `LineChart`, `Line`, `Legend`, `TrendingUp`
-2. Ajouter l'import `Building2`, `Package`, `LayoutTemplate`
-3. Supprimer les calculs `avgByMonth` / `avgMonthlyData`
-4. Ajouter les calculs :
-   - `totalByMonth` : somme de `montant_investissement` par mois
-   - `topClients` : top 5 clients par nombre de propositions
-   - `withOptionsPie` : [{ name: 'Avec options', count }, { name: 'Sans option', count }]
-   - `templateUsage` : top 5 templates utilisés
-5. Supprimer le bloc JSX du LineChart (lignes 313-345)
-6. Ajouter les 4 nouveaux blocs JSX à la place
+---
 
-Aucune modification de base de données requise — toutes les données sont déjà disponibles dans `proposal_exports`.
+### Étape 2 — Alimenter les colonnes lors de l'export
+
+Dans `src/components/rental-proposal/RentalProposalExport.tsx`, la fonction `saveToHistory()` (ligne ~105) est enrichie avec :
+
+```typescript
+selected_options_names: selectedOptions.map(o => o.name),
+selected_nos_options_names: selectedNosOptions.map(o => o.name),
+```
+
+Ces données sont déjà disponibles dans le composant (`selectedOptions` et `selectedNosOptions` sont définis lignes 68-69).
+
+---
+
+### Étape 3 — Nouvelles sections dans le dashboard
+
+Dans `src/components/admin/StatisticsDashboard.tsx` :
+
+**3a. Mise à jour de l'interface et du fetch**
+
+```typescript
+interface ExportRecord {
+  // ... existant ...
+  selected_options_names: string[] | null;
+  selected_nos_options_names: string[] | null;
+}
+```
+
+La requête Supabase inclut les deux nouvelles colonnes.
+
+**3b. Calculs d'agrégation**
+
+```typescript
+// Top Services additionnels
+const optionNamesCount: Record<string, number> = {};
+filteredRecords.forEach(r => {
+  (r.selected_options_names || []).forEach(name => {
+    optionNamesCount[name] = (optionNamesCount[name] || 0) + 1;
+  });
+});
+const topAdditionalOptions = Object.entries(optionNamesCount)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 8);
+
+// Top Nos Options
+const nosOptionNamesCount: Record<string, number> = {};
+filteredRecords.forEach(r => {
+  (r.selected_nos_options_names || []).forEach(name => {
+    nosOptionNamesCount[name] = (nosOptionNamesCount[name] || 0) + 1;
+  });
+});
+const topNosOptions = Object.entries(nosOptionNamesCount)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 8);
+```
+
+**3c. Deux nouvelles cartes visuelles**
+
+Ajoutées à la fin du dashboard (avant le tableau détail par commercial), avec le même style que "Top clients" :
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  [Wrench]  Services additionnels les plus proposés       │
+│                                                          │
+│  ● Pro-Tection     ████████████████░░░░  12 prop.       │
+│  ● Pro-Flex        ████████████░░░░░░░░   8 prop.       │
+│  ● Pro-Spare       ████████░░░░░░░░░░░░   6 prop.       │
+│  ...                                                     │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│  [Star]  Nos Options les plus proposées                  │
+│                                                          │
+│  ● Option A        ████████████████░░░░   9 prop.       │
+│  ● Option B        ████████░░░░░░░░░░░░   5 prop.       │
+│  ...                                                     │
+└──────────────────────────────────────────────────────────┘
+```
+
+Ces deux cartes sont côte à côte en grille 2 colonnes (ou 1 colonne sur mobile).
+
+Un message informatif est affiché si aucune donnée n'est encore disponible (les nouvelles colonnes étant vides pour les exports historiques) :
+
+> "Les nouvelles exportations alimenteront automatiquement ces statistiques."
+
+---
+
+### Fichiers modifiés
+
+| Fichier | Modification |
+|---------|-------------|
+| Migration SQL | Ajouter `selected_options_names` et `selected_nos_options_names` dans `proposal_exports` |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Sauvegarder les noms des options sélectionnées dans `saveToHistory()` |
+| `src/components/admin/StatisticsDashboard.tsx` | Lire les nouvelles colonnes, calculer les tops, afficher 2 nouvelles cartes |
+
+### Icônes
+
+- Services additionnels → `Wrench` (lucide-react)
+- Nos Options → `Star` (lucide-react)
+
+### Rétrocompatibilité
+
+- Les exports existants auront `[]` (tableau vide) dans les nouvelles colonnes — aucun impact sur les stats existantes.
+- Les cartes affichent un message "Aucune donnée disponible" si les tableaux sont tous vides.
+- Aucune modification du workflow utilisateur (l'enrichissement est transparent lors de l'export).
