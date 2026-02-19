@@ -643,7 +643,7 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(
       1 as PDFPageNumber, 
       page1Elements, 
-      page1Elements.length > 0 ? renderClientData : undefined,
+      renderClientData,
       fallbackContent
     );
   };
