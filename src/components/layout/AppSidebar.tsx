@@ -67,8 +67,8 @@ export function AppSidebar({
           Historique
         </Button>
 
-        {/* Onglet Mes infos - visible uniquement pour les commerciaux */}
-        {isCommercial && !isAdmin && (
+        {/* Onglet Mes infos - visible pour les commerciaux et les admins */}
+        {(isCommercial || isAdmin) && (
           <Button
             variant={currentView === 'mes-infos' ? 'secondary' : 'ghost'}
             className="w-full justify-start gap-2 h-8 text-sm"
