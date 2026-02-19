@@ -975,11 +975,16 @@ export function RentalProposalPreview() {
             <div className="space-y-1.5">
               {selectedNosOptions.map((option) => (
                 <div key={option.id} className="border border-primary/20 rounded overflow-hidden bg-primary/5">
-                  <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">
-                    {/* Case vide pour signature client */}
-                    <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-                     <span className="font-semibold text-[11px]">{option.name}</span>
-                   </div>
+                   <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">
+                     {/* Case vide pour signature client */}
+                     <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
+                      <span className="font-semibold text-[11px]">{option.name}</span>
+                      {option.price !== null && option.price !== undefined && (
+                        <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
+                          {formatNumber(option.price)} €/mois
+                        </span>
+                      )}
+                    </div>
                   {option.description && (
                     <div className="px-3 py-1.5 bg-background">
                       <div className="text-[9px] text-muted-foreground space-y-0.5">
