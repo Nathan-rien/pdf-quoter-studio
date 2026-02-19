@@ -943,34 +943,29 @@ export function RentalProposalPreview() {
                 <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
                   <CheckCircle className="h-3 w-3 text-foreground/70" />
                   <span className="font-semibold text-[11px]">{option.name}</span>
-                  {option.price !== null && (
-                    <span className="ml-auto text-[10px] text-primary font-medium">
-                      {formatNumber(option.price)} €/mois
-                    </span>
-                  )}
-                </div>
-                {option.description && (
-                  <div className="px-3 py-1.5 bg-background">
-                    <div className="text-[9px] text-muted-foreground space-y-0.5">
-                      {option.description.split('\n').map((item, i) => {
-                        const trimmed = item.trim();
-                        if (!trimmed) return null;
-                        const isSubItem = trimmed.startsWith('- ');
-                        return (
-                          <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
-                            {isSubItem ? trimmed : `• ${trimmed}`}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Nos Options - fusionnées depuis l'onglet "Nos Options" (anciennement Page 6) */}
+                 </div>
+                 {option.description && (
+                   <div className="px-3 py-1.5 bg-background">
+                     <div className="text-[9px] text-muted-foreground space-y-0.5">
+                       {option.description.split('\n').map((item, i) => {
+                         const trimmed = item.trim();
+                         if (!trimmed) return null;
+                         const isSubItem = trimmed.startsWith('- ');
+                         return (
+                           <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                             {isSubItem ? trimmed : `• ${trimmed}`}
+                           </div>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 )}
+               </div>
+             ))}
+           </div>
+         )}
+ 
+         {/* Nos Options - fusionnées depuis l'onglet "Nos Options" (anciennement Page 6) */}
         {selectedNosOptions.length > 0 && (
           <>
             <div className="mt-6 mb-1.5 flex items-center gap-2">
@@ -983,13 +978,8 @@ export function RentalProposalPreview() {
                   <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">
                     {/* Case vide pour signature client */}
                     <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-                    <span className="font-semibold text-[11px]">{option.name}</span>
-                    {option.price !== null && (
-                      <span className="ml-auto text-[10px] text-primary font-medium">
-                        {formatNumber(option.price)} €/mois
-                      </span>
-                    )}
-                  </div>
+                     <span className="font-semibold text-[11px]">{option.name}</span>
+                   </div>
                   {option.description && (
                     <div className="px-3 py-1.5 bg-background">
                       <div className="text-[9px] text-muted-foreground space-y-0.5">
@@ -1043,13 +1033,8 @@ export function RentalProposalPreview() {
               <div key={option.id} className="border rounded overflow-hidden">
                 <div className="bg-muted px-4 py-2 flex items-center gap-2">
                   <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
-                  <span className="font-semibold text-[14px]">{option.name}</span>
-                  {option.price !== null && (
-                    <span className="ml-auto text-[11px] text-primary font-medium">
-                      {formatNumber(option.price)} €/mois
-                    </span>
-                  )}
-                </div>
+                   <span className="font-semibold text-[14px]">{option.name}</span>
+                 </div>
                 {option.description && (
                   <div className="px-4 py-3 bg-background">
                     <div className="text-[10px] text-muted-foreground space-y-1">
@@ -1121,13 +1106,8 @@ export function RentalProposalPreview() {
               <div key={option.id} className="border rounded overflow-hidden">
                 <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
                   <CheckCircle className="h-3 w-3 text-foreground/70" />
-                  <span className="font-semibold text-[11px]">{option.name}</span>
-                  {option.price !== null && (
-                    <span className="ml-auto text-[9px] text-primary font-medium">
-                      {formatNumber(option.price)} €/mois
-                    </span>
-                  )}
-                </div>
+                   <span className="font-semibold text-[11px]">{option.name}</span>
+                 </div>
                 {option.description && (
                   <div className="px-3 py-2 bg-background">
                     <div className="text-[8px] text-muted-foreground space-y-0.5">

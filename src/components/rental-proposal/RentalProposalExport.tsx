@@ -463,12 +463,6 @@ export function RentalProposalExport() {
             </div>
             ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
           </div>
-          ${opt.price !== null ? `
-            <div style="text-align: right;">
-              <span style="font-weight: 600; color: #2563eb; font-size: 9px;">${formatNumber(opt.price)} €</span>
-              <span style="display: block; font-size: 7px; color: #9ca3af;">/mois</span>
-            </div>
-          ` : ''}
         </div>
       </div>
     `).join('');
@@ -491,11 +485,6 @@ export function RentalProposalExport() {
                   </div>
                   ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
                 </div>
-                ${opt.price !== null ? `
-                  <div style="text-align: right; white-space: nowrap;">
-                    <span style="font-weight: 600; color: #374151; font-size: 9px;">${formatNumber(opt.price)} € / mois</span>
-                  </div>
-                ` : ''}
               </div>
             </div>
           </div>
