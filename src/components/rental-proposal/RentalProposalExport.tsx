@@ -479,9 +479,12 @@ export function RentalProposalExport() {
             <div style="padding: 6px;">
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
-                    <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
+                      <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
+                    </div>
+                    ${opt.price !== null && opt.price !== undefined ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.price)} € / mois</span>` : ''}
                   </div>
                   ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
                 </div>
