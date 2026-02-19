@@ -1,67 +1,90 @@
 
-## Correction du parser PDF Commande : prix unitaire inclus dans la désignation
+## Masquer les prix des options dans l'aperçu et le PDF
 
 ### Problème identifié
 
-Dans les PDFs de type **Commande Cybertek**, chaque ligne produit suit ce format sur une seule ligne :
+Dans la section "Les services inclus dans votre offre" (Page 5), les prix des options (ex : `10,00 €/mois`) sont affichés dans :
+- **L'aperçu** (`RentalProposalPreview.tsx`) — 4 endroits différents
+- **L'export PDF** (`RentalProposalExport.tsx`) — 2 endroits
 
+L'utilisateur souhaite que ces prix n'apparaissent plus, que ce soit dans l'aperçu ou dans le PDF généré.
+
+### Fichiers à modifier
+
+#### 1. `src/components/rental-proposal/RentalProposalPreview.tsx`
+
+Supprimer les 4 blocs conditionnels affichant le prix :
+
+**Lignes 946-950** — Options additionnelles (optionsServices) sur Page 5 :
+```tsx
+// SUPPRIMER :
+{option.price !== null && (
+  <span className="ml-auto text-[10px] text-primary font-medium">
+    {formatNumber(option.price)} €/mois
+  </span>
+)}
 ```
-00602456  Carte graphique MSI GeForce RTX 5060 Ti...  408,32 €  3  1 224,96 €
-              ↑ CODE              ↑ DÉSIGNATION         ↑ PU HT  ↑QTE  ↑ TOTAL HT
+
+**Lignes 987-991** — Nos Options fusionnées sur Page 5 :
+```tsx
+// SUPPRIMER :
+{option.price !== null && (
+  <span className="ml-auto text-[10px] text-primary font-medium">
+    {formatNumber(option.price)} €/mois
+  </span>
+)}
 ```
 
-Le parseur actuel (lignes 609-690 de `src/lib/pdf-import-parser.ts`) :
-1. Détecte correctement la dernière paire `QTE + TOTAL HT` (ex: `3  1 224,96 €`)
-2. Construit la désignation en prenant **tout le texte à gauche** du `matchIndex` de l'amount
-3. Ce texte inclut le **prix unitaire** (`408,32 €`) qui précède la quantité
+**Lignes 1047-1051** — Nos Options sur Page 6 (ancienne page dédiée) :
+```tsx
+// SUPPRIMER :
+{option.price !== null && (
+  <span className="ml-auto text-[11px] text-primary font-medium">
+    {formatNumber(option.price)} €/mois
+  </span>
+)}
+```
 
-Le regex de nettoyage existant (ligne 662) cherche un pattern en fin de chaîne, mais le prix unitaire n'est pas en fin — il est suivi de la quantité. Résultat : `408,32 € 3` ou `408,32 €` reste dans la désignation.
+**Lignes 1125-1129** — Autres occurrences potentielles :
+```tsx
+// SUPPRIMER :
+{option.price !== null && (
+  <span className="ml-auto text-[9px] text-primary font-medium">
+    {formatNumber(option.price)} €/mois
+  </span>
+)}
+```
 
-### Solution
+#### 2. `src/components/rental-proposal/RentalProposalExport.tsx`
 
-Dans la section "Commande format" du parseur (lignes 659-662 de `pdf-import-parser.ts`), après avoir construit la désignation brute, ajouter un regex supplémentaire qui supprime spécifiquement le pattern **prix unitaire + quantité** qui peut rester dans la désignation :
+Supprimer les 2 blocs conditionnels affichant le prix dans le HTML généré pour le PDF :
 
-**Pattern à supprimer** : toute occurrence de `NNN,NN €  N` (prix unitaire suivi optionnellement de la quantité) dans la désignation.
-
-Regex à ajouter après la ligne 662 :
+**Lignes 466-471** — Options additionnelles (optionsServices) :
 ```typescript
-// Strip unit price pattern "NNN,NN € QTE" left in designation (Commande format)
-// Matches: "408,32 € 3" or "408,32 €" followed by standalone digits
-designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€(?:\s+\d+)?/g, '').trim();
+// SUPPRIMER :
+${opt.price !== null ? `
+  <div style="text-align: right;">
+    <span style="font-weight: 600; color: #2563eb; font-size: 9px;">${formatNumber(opt.price)} €</span>
+    <span style="display: block; font-size: 7px; color: #9ca3af;">/mois</span>
+  </div>
+` : ''}
 ```
 
-De plus, le regex existant à la ligne 662 est trop restrictif (n'agit qu'en fin de chaîne avec `$`). Il faut le remplacer par une version globale qui supprime **toutes les occurrences** de patterns monétaires parasites dans la désignation, pas seulement en fin.
-
-### Fichier modifié
-
-**`src/lib/pdf-import-parser.ts`** — section "Commande format", lignes 659-663 :
-
+**Lignes 494-498** — Nos Options :
 ```typescript
-// AVANT:
-let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
-// Strip trailing unit price pattern "NNN,NN €" that may be left in designation
-designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
-
-// APRÈS:
-let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
-// Strip unit price pattern "NNN,NN € [QTE]" left anywhere in designation (Commande format)
-// e.g. "Carte graphique MSI ... 408,32 € 3" → "Carte graphique MSI ..."
-designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€(?:\s+\d{1,3})?/g, '').trim();
-// Also strip a trailing standalone amount without leading space (safety net)
-designation = designation.replace(/\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
+// SUPPRIMER :
+${opt.price !== null ? `
+  <div style="text-align: right; white-space: nowrap;">
+    <span style="font-weight: 600; color: #374151; font-size: 9px;">${formatNumber(opt.price)} € / mois</span>
+  </div>
+` : ''}
 ```
 
 ### Résultat attendu
 
 | Avant | Après |
 |-------|-------|
-| `Carte graphique MSI GeForce RTX 5060 Ti 16G VENTUS 2X OC PLUS 408,32 € 3` | `Carte graphique MSI GeForce RTX 5060 Ti 16G VENTUS 2X OC PLUS` |
-| `Services Garantie Excellence 5 ans 244,99 €` | `Services Garantie Excellence 5 ans` |
+| Titre de l'option + `10,00 €/mois` à droite | Titre de l'option uniquement |
+| Prix affiché en bleu dans le PDF | Aucun prix visible |
 
-Les colonnes **Nb** et **VUN/VTN** continuent d'être correctement extraites (elles sont dérivées du `amountExtracted.qty` et `amountExtracted.total`).
-
-### Considérations
-
-- Le regex `(?:\s+\d{1,3})?` est optionnel pour gérer les cas où la quantité n'est pas toujours explicitement après le prix unitaire.
-- La modification est **non-destructive** pour les PDFs Devis (ils passent par un chemin différent utilisant les refs `SY-`).
-- Les PDFs Grosbill et 3D Dental ne sont pas affectés (leurs parseurs sont distincts).
+Les prix restent stockés dans les données (pour d'éventuels calculs internes) mais ne sont plus rendus visuellement dans l'aperçu ni dans le PDF exporté.
