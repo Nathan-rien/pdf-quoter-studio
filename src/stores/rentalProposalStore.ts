@@ -58,7 +58,9 @@ export interface OptionService {
   id: string;
   name: string;
   description: string;
-  price: number | null;
+  price: number | null;           // montant "au mois"
+  priceTotal: number | null;      // montant "au total"
+  showPriceMode: 'mensuel' | 'total'; // quel montant afficher
   selected: boolean;
 }
 
@@ -482,7 +484,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set(state => ({
           optionsServices: [
             ...state.optionsServices,
-            { id, name, description, price, selected: true },
+            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel' as const, selected: true },
           ],
           hasUnsavedChanges: true,
         }));
@@ -519,7 +521,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set(state => ({
           nosOptions: [
             ...state.nosOptions,
-            { id, name, description, price, selected: true },
+            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel', selected: true },
           ],
           hasUnsavedChanges: true,
         }));
