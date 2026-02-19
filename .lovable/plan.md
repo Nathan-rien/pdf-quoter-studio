@@ -1,118 +1,87 @@
 
-## Affichage de tous les services/options dans Statistiques (avec compteur 0 si jamais proposé)
+## Remonter l'adresse en bas de page 1 (Aperçu et PDF)
 
-### Problème
+### Diagnostic
 
-Les tableaux accordéon "Services additionnels — détail" et "Nos Options — détail" n'affichent que les services **déjà présents dans au moins une proposition exportée**. Un service qui n'a jamais été sélectionné est invisible.
+L'adresse de l'entité (ex: "60 Boulevard de l'hôpital, 75013 Paris") est positionnée en absolu très près du bas du canvas :
+
+| Composant | Bloc client (grille) | Adresse |
+|---|---|---|
+| **Aperçu (React)** | `bottom-16` (64px) | `bottom-0 pb-1` (≈4px) |
+| **Export PDF (HTML)** | `bottom: 40px` | `bottom: 4px` |
+
+Sur un canvas de 919px représentant une page A4, les 4px du bas correspondent à la zone de marge d'impression physique (≈1mm). À l'impression ou à la génération PDF, cette zone est systématiquement rognée par les imprimantes.
 
 ### Solution
 
-Charger le référentiel complet depuis `options_services` (table base de données) et **fusionner** avec les données de propositions existantes. Chaque service apparaîtra avec son compteur réel (0 si jamais proposé).
-
-### Logique de fusion
-
-```text
-Référentiel (options_services)    Propositions (proposal_exports)
-──────────────────────────────    ─────────────────────────────────
-Pro-Tection                  →    2 propositions  ✓
-Pro-Actif                    →    0 propositions  (nouveau — affiché avec 0)
-Pro-Flex                     →    0 propositions  (nouveau — affiché avec 0)
-Pro-Optimisée                →    1 proposition   ✓
-Pro-support informatique     →    3 propositions  ✓
-...                               ...
-```
+Remonter les deux éléments de sorte que :
+1. L'adresse soit à une hauteur sûre (au moins ~14-16px / 4mm du bas physique)
+2. Le bloc client remonte en conséquence pour ne pas chevaucher l'adresse
 
 ### Modifications techniques
 
-**Fichier unique : `src/components/admin/StatisticsDashboard.tsx`**
+**Fichier 1 : `src/components/rental-proposal/RentalProposalPreview.tsx`**
 
-#### 1. Nouvel état : chargement du référentiel
-
-```typescript
-const [allServiceOptions, setAllServiceOptions] = useState<{ id: string; title: string }[]>([]);
-```
-
-Dans `fetchData()`, ajouter un appel parallèle à `options_services` :
-
-```typescript
-const [exportRes, optionsRes] = await Promise.all([
-  supabase.from('proposal_exports').select(...).eq('status', 'success').order('created_at', { ascending: true }),
-  supabase.from('options_services').select('id, title, is_active').order('sort_order', { ascending: true })
-]);
-setRecords(exportRes.data || []);
-setAllServiceOptions((optionsRes.data || []).map(o => ({ id: o.id, title: o.title })));
-```
-
-#### 2. Fusion avec les propositions
-
-Les deux maps `allOptionsWithProposals` et `allNosOptionsWithProposals` sont recalculées en **partant du référentiel complet** :
-
-```typescript
-// Pour Services additionnels (selected_options_names)
-const optionProposalsMap: Record<string, ExportRecord[]> = {};
-filteredRecords.forEach(r => {
-  ((r.selected_options_names as string[]) || []).forEach((name: string) => {
-    if (!optionProposalsMap[name]) optionProposalsMap[name] = [];
-    optionProposalsMap[name].push(r);
-  });
-});
-// Partir du référentiel, ajouter ceux qui n'ont aucune proposition
-const allOptionsWithProposals = allServiceOptions.map(opt => ({
-  name: opt.title,
-  proposals: optionProposalsMap[opt.title] || [],
-})).sort((a, b) => b.proposals.length - a.proposals.length);
-// Ajouter les services orphelins (dans propositions mais plus dans le référentiel)
-const knownNames = new Set(allServiceOptions.map(o => o.title));
-Object.entries(optionProposalsMap)
-  .filter(([name]) => !knownNames.has(name))
-  .forEach(([name, proposals]) => allOptionsWithProposals.push({ name, proposals }));
-```
-
-Idem pour `allNosOptionsWithProposals` avec `selected_nos_options_names`.
-
-#### 3. Adaptation du composant `ServiceDetailTable`
-
-Ajouter un indicateur visuel pour les services à **0 proposition** : compteur affiché en gris neutre au lieu de la couleur de la barre.
-
-```text
-▶ Pro-Tection          2 prop.   ← couleur vive
-▶ Pro-Actif            0 prop.   ← gris neutre
-▶ Pro-Flex             0 prop.   ← gris neutre
-▶ Pro-Optimisée        1 prop.   ← couleur vive
-```
-
-Dans `ServiceDetailTable`, conditionner le style du badge :
+Ligne ~623 — adresse dans `renderClientData()` :
 
 ```tsx
-const hasProposals = item.proposals.length > 0;
-// Badge
-<span
-  className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-    hasProposals ? '' : 'bg-muted text-muted-foreground'
-  }`}
-  style={hasProposals ? {
-    background: colorSet[i % colorSet.length] + '22',
-    color: colorSet[i % colorSet.length]
-  } : undefined}
->
-  {item.proposals.length} prop.
-</span>
+// AVANT
+<div className="absolute bottom-0 left-0 right-0 pb-1 flex justify-center z-40">
+
+// APRÈS
+<div className="absolute bottom-3 left-0 right-0 flex justify-center z-40">
 ```
 
-Le bouton d'expansion est désactivé (`pointer-events-none` ou `cursor-default`) si `proposals.length === 0`.
+`bottom-3` = 12px depuis le bas, soit environ 3mm — suffisant pour éviter le rognage dans l'aperçu.
 
-#### 4. État vide
+Ligne ~586 — bloc client (grille) dans `renderClientData()` :
 
-Si le référentiel `options_services` est vide ET qu'il n'y a aucune proposition, afficher le message "Aucune donnée disponible" comme avant.
+```tsx
+// AVANT
+<div className="absolute bottom-16 left-4 right-4 ...">
 
-### Résultat attendu
+// APRÈS
+<div className="absolute bottom-10 left-4 right-4 ...">
+```
 
-| Service | Avant | Après |
-|---------|-------|-------|
-| Pro-Tection | Visible si proposé | Toujours visible |
-| Pro-Actif | Visible si proposé | Toujours visible, 0 prop. |
-| Pro-Flex | Invisible si jamais proposé | Visible, 0 prop. |
-| Pro-Optimisée | Visible (1 prop.) | Visible (1 prop.) |
-| Pro-support informatique | Visible (3 prop.) | Visible (3 prop.) |
+`bottom-10` = 40px, ce qui laisse de l'espace pour l'adresse à 12px + une marge visuelle.
 
-Un seul fichier modifié : `StatisticsDashboard.tsx`. Aucune modification de base de données.
+**Fichier 2 : `src/components/rental-proposal/RentalProposalExport.tsx`**
+
+Ligne ~262 — bloc client HTML :
+
+```html
+<!-- AVANT -->
+style="position: absolute; bottom: 40px; ..."
+
+<!-- APRÈS -->
+style="position: absolute; bottom: 55px; ..."
+```
+
+Ligne ~287 — adresse HTML :
+
+```html
+<!-- AVANT -->
+style="position: absolute; bottom: 4px; ... font-size: 8px;"
+
+<!-- APRÈS -->
+style="position: absolute; bottom: 14px; ... font-size: 8px;"
+```
+
+`14px` depuis le bas dans un canvas de 919px ≈ 4,5mm de marge physique — zone sûre pour toutes les imprimantes standard (marge minimale habituelle : 5mm).
+
+### Résumé des valeurs
+
+| | Avant | Après |
+|---|---|---|
+| **Adresse (Aperçu)** | `bottom-0 pb-1` ≈ 4px | `bottom-3` = 12px |
+| **Bloc client (Aperçu)** | `bottom-16` = 64px | `bottom-10` = 40px |
+| **Adresse (Export PDF)** | `bottom: 4px` | `bottom: 14px` |
+| **Bloc client (Export PDF)** | `bottom: 40px` | `bottom: 55px` |
+
+### Fichiers modifiés
+
+| Fichier | Lignes concernées |
+|---|---|
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | ~586, ~623 |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | ~262, ~287 |
