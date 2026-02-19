@@ -255,8 +255,11 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       ...initialState,
 
       importFromPDF: (result, fileName) => {
-        // Calculer le montant investissement depuis Total HT du PDF
-        const montantInvestissement = result.totaux.totalHT;
+        // Calculer le montant investissement depuis la somme des lignes Invest (plus fiable que totalHT du PDF)
+        const lignesTotal = result.lignes.length > 0
+          ? Math.round(result.lignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100) / 100
+          : null;
+        const montantInvestissement = lignesTotal ?? result.totaux.totalHT;
         
         // Générer un nom de proposition par défaut basé sur le client et la date
         const clientName = result.client.nom || 'Client';
