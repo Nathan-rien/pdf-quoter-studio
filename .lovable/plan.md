@@ -1,90 +1,74 @@
 
-## Masquer les prix des options dans l'aperçu et le PDF
+## Réafficher les prix uniquement dans le bloc "Nos Options"
 
-### Problème identifié
+### Contexte
 
-Dans la section "Les services inclus dans votre offre" (Page 5), les prix des options (ex : `10,00 €/mois`) sont affichés dans :
-- **L'aperçu** (`RentalProposalPreview.tsx`) — 4 endroits différents
-- **L'export PDF** (`RentalProposalExport.tsx`) — 2 endroits
+La correction précédente a supprimé l'affichage des prix pour **toutes** les options. Or la règle est :
+- **Services inclus** (`selectedOptions`) → prix **masqués** (déjà correct)
+- **Nos Options** (`selectedNosOptions`) → prix doivent **apparaître**
 
-L'utilisateur souhaite que ces prix n'apparaissent plus, que ce soit dans l'aperçu ou dans le PDF généré.
+Les prix sont stockés dans le champ `price: number | null` de chaque `NosOption`/`OptionService`.
 
 ### Fichiers à modifier
 
-#### 1. `src/components/rental-proposal/RentalProposalPreview.tsx`
+#### 1. `src/components/rental-proposal/RentalProposalPreview.tsx` — Bloc Nos Options (aperçu)
 
-Supprimer les 4 blocs conditionnels affichant le prix :
+Dans `renderNosOptionsPage` (lignes 1032-1055), le header de chaque carte affiche uniquement le nom. Il faut ajouter le prix à droite, comme il existait avant :
 
-**Lignes 946-950** — Options additionnelles (optionsServices) sur Page 5 :
+**Avant (ligne 1034-1037)** :
 ```tsx
-// SUPPRIMER :
-{option.price !== null && (
-  <span className="ml-auto text-[10px] text-primary font-medium">
-    {formatNumber(option.price)} €/mois
-  </span>
-)}
+<div className="bg-muted px-4 py-2 flex items-center gap-2">
+  <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
+  <span className="font-semibold text-[14px]">{option.name}</span>
+</div>
 ```
 
-**Lignes 987-991** — Nos Options fusionnées sur Page 5 :
+**Après** :
 ```tsx
-// SUPPRIMER :
-{option.price !== null && (
-  <span className="ml-auto text-[10px] text-primary font-medium">
-    {formatNumber(option.price)} €/mois
-  </span>
-)}
+<div className="bg-muted px-4 py-2 flex items-center gap-2">
+  <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
+  <span className="font-semibold text-[14px]">{option.name}</span>
+  {option.price !== null && option.price !== undefined && (
+    <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
+      {formatNumber(option.price)} €/mois
+    </span>
+  )}
+</div>
 ```
 
-**Lignes 1047-1051** — Nos Options sur Page 6 (ancienne page dédiée) :
-```tsx
-// SUPPRIMER :
-{option.price !== null && (
-  <span className="ml-auto text-[11px] text-primary font-medium">
-    {formatNumber(option.price)} €/mois
-  </span>
-)}
-```
+#### 2. `src/components/rental-proposal/RentalProposalExport.tsx` — Bloc Nos Options (PDF)
 
-**Lignes 1125-1129** — Autres occurrences potentielles :
-```tsx
-// SUPPRIMER :
-{option.price !== null && (
-  <span className="ml-auto text-[9px] text-primary font-medium">
-    {formatNumber(option.price)} €/mois
-  </span>
-)}
-```
+Dans la génération HTML de `nosOptionsHTML` (lignes 477-491), le `div` intérieur n'affiche pas de prix. Il faut ajouter le prix en haut à droite du nom, en `flex justify-content: space-between` :
 
-#### 2. `src/components/rental-proposal/RentalProposalExport.tsx`
-
-Supprimer les 2 blocs conditionnels affichant le prix dans le HTML généré pour le PDF :
-
-**Lignes 466-471** — Options additionnelles (optionsServices) :
+**Avant (ligne 482-485)** :
 ```typescript
-// SUPPRIMER :
-${opt.price !== null ? `
-  <div style="text-align: right;">
-    <span style="font-weight: 600; color: #2563eb; font-size: 9px;">${formatNumber(opt.price)} €</span>
-    <span style="display: block; font-size: 7px; color: #9ca3af;">/mois</span>
-  </div>
-` : ''}
+<div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+  <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
+  <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
+</div>
 ```
 
-**Lignes 494-498** — Nos Options :
+**Après** :
 ```typescript
-// SUPPRIMER :
-${opt.price !== null ? `
-  <div style="text-align: right; white-space: nowrap;">
-    <span style="font-weight: 600; color: #374151; font-size: 9px;">${formatNumber(opt.price)} € / mois</span>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
+  <div style="display: flex; align-items: center; gap: 4px;">
+    <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
+    <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
   </div>
-` : ''}
+  ${opt.price !== null && opt.price !== undefined ? `
+    <span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.price)} € / mois</span>
+  ` : ''}
+</div>
 ```
 
 ### Résultat attendu
 
-| Avant | Après |
-|-------|-------|
-| Titre de l'option + `10,00 €/mois` à droite | Titre de l'option uniquement |
-| Prix affiché en bleu dans le PDF | Aucun prix visible |
+| Section | Prix affiché ? |
+|---------|---------------|
+| Services location (permanent) | Non |
+| Services inclus additionnels | Non |
+| **Nos Options** | **Oui** : `9,00 € / mois` en haut à droite |
 
-Les prix restent stockés dans les données (pour d'éventuels calculs internes) mais ne sont plus rendus visuellement dans l'aperçu ni dans le PDF exporté.
+### Fichiers modifiés
+- `src/components/rental-proposal/RentalProposalPreview.tsx` — ligne ~1034-1037
+- `src/components/rental-proposal/RentalProposalExport.tsx` — lignes ~480-488
