@@ -60,7 +60,7 @@ export function ProposalCard({
   return (
     <div className="space-y-4">
       {/* Card Saisie */}
-      <Card>
+      <Card className="bg-blue-50 border-blue-100">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
