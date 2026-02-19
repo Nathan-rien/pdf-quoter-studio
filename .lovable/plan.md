@@ -1,42 +1,54 @@
 
-## Ajout de la liste détaillée Services/Options avec propositions associées
+## Affichage de tous les services/options dans Statistiques (avec compteur 0 si jamais proposé)
 
-### Contexte
+### Problème
 
-Le dashboard Statistiques affiche déjà deux cards en bas de page :
-- **"Services additionnels les plus proposés"** — basé sur `selected_options_names` (page 5)
-- **"Nos Options les plus proposées"** — basé sur `selected_nos_options_names` (page 6)
+Les tableaux accordéon "Services additionnels — détail" et "Nos Options — détail" n'affichent que les services **déjà présents dans au moins une proposition exportée**. Un service qui n'a jamais été sélectionné est invisible.
 
-Ces cards affichent le nom du service + le nombre de propositions, mais sans détail. L'objectif est d'ajouter, sous chacune de ces sections, un tableau exhaustif listant **toutes** les propositions pour chaque service/option (pas seulement le top 8).
+### Solution
 
-### Approche : Tableau expandable (accordéon)
+Charger le référentiel complet depuis `options_services` (table base de données) et **fusionner** avec les données de propositions existantes. Chaque service apparaîtra avec son compteur réel (0 si jamais proposé).
 
-Pour éviter de surcharger la page avec des dizaines de lignes, chaque service aura une **ligne cliquable** qui se développe pour révéler la liste des propositions associées. Le design s'intègre dans les cards existantes.
-
-Structure visuelle par card :
+### Logique de fusion
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│ 🔧 Services additionnels — liste détaillée              │
-├─────────────────────────────────────────────────────────┤
-│ ▶ Garantie étendue              5 propositions          │
-│   └ Acme Corp | 15/02/2026                              │
-│   └ Beta SA   | 12/02/2026                              │
-│ ▶ Pack déploiement              3 propositions          │
-│ ▶ Maintenance préventive        2 propositions          │
-└─────────────────────────────────────────────────────────┘
+Référentiel (options_services)    Propositions (proposal_exports)
+──────────────────────────────    ─────────────────────────────────
+Pro-Tection                  →    2 propositions  ✓
+Pro-Actif                    →    0 propositions  (nouveau — affiché avec 0)
+Pro-Flex                     →    0 propositions  (nouveau — affiché avec 0)
+Pro-Optimisée                →    1 proposition   ✓
+Pro-support informatique     →    3 propositions  ✓
+...                               ...
 ```
 
-### Modification technique
+### Modifications techniques
 
-**Fichier : `src/components/admin/StatisticsDashboard.tsx`**
+**Fichier unique : `src/components/admin/StatisticsDashboard.tsx`**
 
-#### 1. Calcul des données détaillées
-
-Deux nouvelles structures calculées à partir de `filteredRecords` :
+#### 1. Nouvel état : chargement du référentiel
 
 ```typescript
-// Pour chaque service (options page 5), liste des propositions
+const [allServiceOptions, setAllServiceOptions] = useState<{ id: string; title: string }[]>([]);
+```
+
+Dans `fetchData()`, ajouter un appel parallèle à `options_services` :
+
+```typescript
+const [exportRes, optionsRes] = await Promise.all([
+  supabase.from('proposal_exports').select(...).eq('status', 'success').order('created_at', { ascending: true }),
+  supabase.from('options_services').select('id, title, is_active').order('sort_order', { ascending: true })
+]);
+setRecords(exportRes.data || []);
+setAllServiceOptions((optionsRes.data || []).map(o => ({ id: o.id, title: o.title })));
+```
+
+#### 2. Fusion avec les propositions
+
+Les deux maps `allOptionsWithProposals` et `allNosOptionsWithProposals` sont recalculées en **partant du référentiel complet** :
+
+```typescript
+// Pour Services additionnels (selected_options_names)
 const optionProposalsMap: Record<string, ExportRecord[]> = {};
 filteredRecords.forEach(r => {
   ((r.selected_options_names as string[]) || []).forEach((name: string) => {
@@ -44,53 +56,63 @@ filteredRecords.forEach(r => {
     optionProposalsMap[name].push(r);
   });
 });
-// Trié par nombre de propositions décroissant
-const allOptionsWithProposals = Object.entries(optionProposalsMap)
-  .map(([name, proposals]) => ({ name, proposals }))
-  .sort((a, b) => b.proposals.length - a.proposals.length);
-
-// Idem pour Nos Options (page 6)
-const nosOptionProposalsMap: Record<string, ExportRecord[]> = {};
-filteredRecords.forEach(r => {
-  ((r.selected_nos_options_names as string[]) || []).forEach((name: string) => {
-    if (!nosOptionProposalsMap[name]) nosOptionProposalsMap[name] = [];
-    nosOptionProposalsMap[name].push(r);
-  });
-});
-const allNosOptionsWithProposals = Object.entries(nosOptionProposalsMap)
-  .map(([name, proposals]) => ({ name, proposals }))
-  .sort((a, b) => b.proposals.length - a.proposals.length);
+// Partir du référentiel, ajouter ceux qui n'ont aucune proposition
+const allOptionsWithProposals = allServiceOptions.map(opt => ({
+  name: opt.title,
+  proposals: optionProposalsMap[opt.title] || [],
+})).sort((a, b) => b.proposals.length - a.proposals.length);
+// Ajouter les services orphelins (dans propositions mais plus dans le référentiel)
+const knownNames = new Set(allServiceOptions.map(o => o.title));
+Object.entries(optionProposalsMap)
+  .filter(([name]) => !knownNames.has(name))
+  .forEach(([name, proposals]) => allOptionsWithProposals.push({ name, proposals }));
 ```
 
-#### 2. État d'expansion
+Idem pour `allNosOptionsWithProposals` avec `selected_nos_options_names`.
 
-```typescript
-const [expandedOption, setExpandedOption] = useState<string | null>(null);
-const [expandedNosOption, setExpandedNosOption] = useState<string | null>(null);
+#### 3. Adaptation du composant `ServiceDetailTable`
+
+Ajouter un indicateur visuel pour les services à **0 proposition** : compteur affiché en gris neutre au lieu de la couleur de la barre.
+
+```text
+▶ Pro-Tection          2 prop.   ← couleur vive
+▶ Pro-Actif            0 prop.   ← gris neutre
+▶ Pro-Flex             0 prop.   ← gris neutre
+▶ Pro-Optimisée        1 prop.   ← couleur vive
 ```
 
-#### 3. Composant `ServiceDetailTable`
+Dans `ServiceDetailTable`, conditionner le style du badge :
 
-Un sous-composant inline qui prend la liste `allOptionsWithProposals` et rend le tableau accordéon. Chaque ligne :
-- **Ligne principale** : couleur dot + nom du service + badge nombre + chevron
-- **Ligne détail** (si expanded) : liste des propositions avec `proposal_name`, `client_name` et date formatée
+```tsx
+const hasProposals = item.proposals.length > 0;
+// Badge
+<span
+  className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+    hasProposals ? '' : 'bg-muted text-muted-foreground'
+  }`}
+  style={hasProposals ? {
+    background: colorSet[i % colorSet.length] + '22',
+    color: colorSet[i % colorSet.length]
+  } : undefined}
+>
+  {item.proposals.length} prop.
+</span>
+```
 
-#### 4. Deux nouvelles cards ajoutées sous les cards existantes (top 8)
+Le bouton d'expansion est désactivé (`pointer-events-none` ou `cursor-default`) si `proposals.length === 0`.
 
-- **"Services additionnels — détail par proposition"** (basée sur `selected_options_names`)
-- **"Nos Options — détail par proposition"** (basée sur `selected_nos_options_names`)
+#### 4. État vide
 
-Ces deux cards sont dans une grille `grid-cols-1 lg:grid-cols-2` (même layout que les cards du top 8 existantes), avec un état vide identique au style existant.
-
-#### 5. Icônes importées
-
-Ajouter `ChevronRight`, `ChevronDown` depuis `lucide-react` (déjà présent dans le projet).
+Si le référentiel `options_services` est vide ET qu'il n'y a aucune proposition, afficher le message "Aucune donnée disponible" comme avant.
 
 ### Résultat attendu
 
-| Section | Avant | Après |
+| Service | Avant | Après |
 |---------|-------|-------|
-| Services additionnels | Top 8 avec barre progression | + Tableau expandable toutes options |
-| Nos Options | Top 8 avec barre progression | + Tableau expandable toutes options |
+| Pro-Tection | Visible si proposé | Toujours visible |
+| Pro-Actif | Visible si proposé | Toujours visible, 0 prop. |
+| Pro-Flex | Invisible si jamais proposé | Visible, 0 prop. |
+| Pro-Optimisée | Visible (1 prop.) | Visible (1 prop.) |
+| Pro-support informatique | Visible (3 prop.) | Visible (3 prop.) |
 
-Aucune modification de base de données. Un seul fichier modifié : `StatisticsDashboard.tsx`.
+Un seul fichier modifié : `StatisticsDashboard.tsx`. Aucune modification de base de données.
