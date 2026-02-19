@@ -1,94 +1,83 @@
 
-## Diagnostic : Bouton "Importer depuis Admin" désactivé
+## Problème : Adresse de l'entité absente du PDF généré
 
-### Cause racine
+### Diagnostic précis
 
-Le store `useOptionsAdminStore` utilise Zustand avec `persist` (localStorage), mais le chargement depuis la base de données (`loadOptionsFromDB()`) n'est déclenché **qu'à l'intérieur de la page Admin** (`OptionsServicesAdmin.tsx`).
+L'aperçu (`RentalProposalPreview.tsx`) affiche bien l'adresse du commercial en bas de page 1 (lignes 622-628) via un bloc absolu `bottom-0`. Mais dans l'export PDF (`RentalProposalExport.tsx`), le bloc dynamique de la page 1 (lignes 261-286) ne contient que :
+- Les données du client (nom, adresse, code postal, email)
+- Les coordonnées du commercial (nom, téléphone, email)
 
-Résultat :
-- Un **admin** qui visite la page Admin charge les données → le localStorage se remplit → le bouton fonctionne
-- Un **commercial** qui ouvre directement le workflow (sans passer par Admin) a un store vide → `activeAdminOptions.length === 0` → **bouton désactivé**
+**L'adresse de l'entité (`selectedCommercial.adresse`) n'est jamais injectée dans le HTML du PDF.**
 
-De plus, le localStorage étant propre à chaque navigateur/session, la version publiée ne bénéficie pas des données déjà chargées sur Lovable.
+### Solution : Ajouter l'adresse de l'entité dans le bloc dynamique de la page 1 du PDF
 
-### Solution : Chargement automatique au montage des composants consommateurs
+Dans `generateDynamicContentByPage()` (ligne 261), le bloc `dynamicContent[1]` est enrichi avec un élément positionné en bas de page, identique à ce qu'affiche l'aperçu.
 
-Au lieu de dépendre du passage par la page Admin, les deux composants qui utilisent les options admin doivent déclencher eux-mêmes le chargement depuis la base si le store est vide.
+Le bloc final ressemblera à :
 
-La solution la plus propre est de créer un **hook `useEnsureOptionsLoaded`** qui :
-1. Vérifie si le store contient déjà des options (chargées via localStorage ou précédemment)
-2. Si le store est vide, appelle `loadOptionsFromDB()` et peuple le store
-3. Expose un état `isLoading` pour l'affichage conditionnel
-
-Ce hook sera utilisé dans les deux composants concernés :
-- `src/components/data-editor/sheets/OptionsServicesEditor.tsx`
-- `src/components/rental-proposal/RentalDataEditor.tsx`
-
-### Fichiers modifiés
-
-**1. `src/stores/optionsAdminStore.ts`**
-- Ajouter un flag `isLoaded` dans le store pour savoir si un chargement DB a déjà été effectué dans cette session
-- Ajouter une action `ensureLoaded()` dans le store, qui évite les double-chargements
-
-**2. `src/components/data-editor/sheets/OptionsServicesEditor.tsx`**
-- Appeler `ensureLoaded()` au montage via `useEffect`
-- Afficher un indicateur de chargement sur le bouton pendant le fetch
-
-**3. `src/components/rental-proposal/RentalDataEditor.tsx`**
-- Même chose : appeler `ensureLoaded()` au montage via `useEffect`
-- Afficher un indicateur de chargement sur les deux boutons "Importer depuis Admin"
-
-### Implémentation technique
-
-Dans le store, ajout d'un flag `isLoaded` :
-
-```typescript
-// Dans le store
-isLoaded: false,
-ensureLoaded: async () => {
-  if (get().isLoaded) return; // Déjà chargé cette session
-  const dbOptions = await loadOptionsFromDB();
-  if (dbOptions && dbOptions.length > 0) {
-    set({ options: dbOptions, isLoaded: true });
-  } else {
-    set({ isLoaded: true }); // Même si vide, on marque comme chargé
-  }
-},
+```
+┌──────────────────────────────────────────────────────────┐
+│  [SPARKLAB SRL          ]  [Votre interlocuteur         ]│
+│  [Avenue des Cailles 62 ]  [Grégory Moinet              ]│
+│  [75013 PARIS           ]  [07 43 15 32 11              ]│
+│  [olivier@supercube.com ]  [g.moinet@cybertek-pro.fr    ]│
+└──────────────────────────────────────────────────────────┘
+     60 Boulevard de l'hôpital, 75013 Paris        ← ici
 ```
 
-Dans les composants consommateurs :
+### Fichier modifié
 
-```typescript
-const { options: adminOptions, ensureLoaded } = useOptionsAdminStore();
-const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+**`src/components/rental-proposal/RentalProposalExport.tsx`** — uniquement la section `dynamicContent[1]` dans `generateDynamicContentByPage()` (autour de la ligne 285).
 
-useEffect(() => {
-  setIsLoadingOptions(true);
-  ensureLoaded().finally(() => setIsLoadingOptions(false));
-}, [ensureLoaded]);
+Ajout juste avant le `</div>` fermant du bloc dynamique de la page 1 :
 
-// Bouton
-<Button disabled={isLoadingOptions || activeAdminOptions.length === 0}>
-  {isLoadingOptions ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-  Importer depuis Admin
-</Button>
+```html
+<!-- Adresse de l'entité en bas de page, centré -->
+${selectedCommercial?.adresse ? `
+  <div style="
+    position: absolute;
+    bottom: 0px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 8px;
+    color: #6b7280;
+    padding-bottom: 4px;
+  ">
+    ${selectedCommercial.adresse}
+  </div>
+` : ''}
 ```
 
-### Comportement après correction
+Attention : ce bloc doit être positionné **en dehors** du `dynamic-content` existant (qui a `position: absolute; bottom: 40px`), et placé dans un second élément avec `position: absolute; bottom: 0`.
 
-| Scénario | Avant | Après |
-|----------|-------|-------|
-| Commercial ouvre le workflow directement | Store vide → bouton désactivé | Chargement auto depuis DB → bouton actif |
-| Admin revient sur le workflow | Dépend du localStorage | Chargement immédiat (isLoaded=true) |
-| Aucune option définie en admin | Bouton désactivé (correct) | Bouton désactivé (correct, avec message) |
-| Chargement en cours | Bouton désactivé sans indication | Bouton désactivé + spinner visible |
+### Implémentation précise
 
-### Fichiers modifiés
+Le bloc `dynamicContent[1]` actuel est un seul `div.dynamic-content` avec `bottom: 40px`. L'adresse doit être dans un **second div absolu** avec `bottom: 0` (séparé du premier), pour reproduire fidèlement le comportement de l'aperçu.
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/stores/optionsAdminStore.ts` | Ajout de `isLoaded` flag et méthode `ensureLoaded()` |
-| `src/components/data-editor/sheets/OptionsServicesEditor.tsx` | Appel `ensureLoaded()` au montage + spinner |
-| `src/components/rental-proposal/RentalDataEditor.tsx` | Appel `ensureLoaded()` au montage + spinner sur les 2 boutons |
+```html
+dynamicContent[1] = `
+  <!-- Bloc client + commercial -->
+  <div class="dynamic-content" style="position: absolute; bottom: 40px; left: 5%; right: 5%; ...">
+    ...contenu existant...
+  </div>
+  
+  <!-- Adresse de l'entité en pied de page -->
+  ${selectedCommercial?.adresse ? `
+    <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 40;">
+      ${selectedCommercial.adresse}
+    </div>
+  ` : ''}
+`;
+```
 
-Aucune migration base de données requise.
+### Pourquoi pas le placeholder `{{ADRESSE_ENTITE}}` ?
+
+Le mécanisme `{{ADRESSE_ENTITE}}` dans `substituteDynamicPlaceholders` fonctionne uniquement pour les éléments texte **du template** qui contiennent littéralement `{{ADRESSE_ENTITE}}` dans leur contenu. Si le template de l'utilisateur ne l'a pas intégré (il est probable que non), il faut injecter l'adresse directement via le bloc dynamique — comme c'est déjà fait pour les données client et commercial.
+
+### Impact
+
+- Aucune modification de base de données
+- Aucune modification de l'aperçu (déjà correct)
+- Un seul fichier modifié : `RentalProposalExport.tsx`
+- Parité parfaite aperçu ↔ PDF pour l'adresse de l'entité
