@@ -1,47 +1,94 @@
 
-## Mise à jour de la valeur par défaut des "Services inclus"
+## Diagnostic : Bouton "Importer depuis Admin" désactivé
 
-### Diagnostic
+### Cause racine
 
-La valeur affichée dans "Services inclus" provient du **localStorage** du navigateur via Zustand `persist`. Les deux environnements (Lovable preview et version publiée) n'ont pas le même localStorage, d'où la différence.
+Le store `useOptionsAdminStore` utilise Zustand avec `persist` (localStorage), mais le chargement depuis la base de données (`loadOptionsFromDB()`) n'est déclenché **qu'à l'intérieur de la page Admin** (`OptionsServicesAdmin.tsx`).
 
-- Version publiée (modifiée manuellement) : 6 lignes complètes
-- Version Lovable preview (valeur par défaut du code) : seulement 3 lignes
+Résultat :
+- Un **admin** qui visite la page Admin charge les données → le localStorage se remplit → le bouton fonctionne
+- Un **commercial** qui ouvre directement le workflow (sans passer par Admin) a un store vide → `activeAdminOptions.length === 0` → **bouton désactivé**
 
-La valeur par défaut se trouve ligne 231 de `src/stores/rentalProposalStore.ts` :
+De plus, le localStorage étant propre à chaque navigateur/session, la version publiée ne bénéficie pas des données déjà chargées sur Lovable.
+
+### Solution : Chargement automatique au montage des composants consommateurs
+
+Au lieu de dépendre du passage par la page Admin, les deux composants qui utilisent les options admin doivent déclencher eux-mêmes le chargement depuis la base si le store est vide.
+
+La solution la plus propre est de créer un **hook `useEnsureOptionsLoaded`** qui :
+1. Vérifie si le store contient déjà des options (chargées via localStorage ou précédemment)
+2. Si le store est vide, appelle `loadOptionsFromDB()` et peuple le store
+3. Expose un état `isLoading` pour l'affichage conditionnel
+
+Ce hook sera utilisé dans les deux composants concernés :
+- `src/components/data-editor/sheets/OptionsServicesEditor.tsx`
+- `src/components/rental-proposal/RentalDataEditor.tsx`
+
+### Fichiers modifiés
+
+**1. `src/stores/optionsAdminStore.ts`**
+- Ajouter un flag `isLoaded` dans le store pour savoir si un chargement DB a déjà été effectué dans cette session
+- Ajouter une action `ensureLoaded()` dans le store, qui évite les double-chargements
+
+**2. `src/components/data-editor/sheets/OptionsServicesEditor.tsx`**
+- Appeler `ensureLoaded()` au montage via `useEffect`
+- Afficher un indicateur de chargement sur le bouton pendant le fetch
+
+**3. `src/components/rental-proposal/RentalDataEditor.tsx`**
+- Même chose : appeler `ensureLoaded()` au montage via `useEffect`
+- Afficher un indicateur de chargement sur les deux boutons "Importer depuis Admin"
+
+### Implémentation technique
+
+Dans le store, ajout d'un flag `isLoaded` :
 
 ```typescript
-const initialServicesInclus: ServicesInclus = {
-  description: 'Contrat de location et gestion administrative\nOptimisation des coûts et gestion budgétaire\nGestion des évolutions du parc',
-};
+// Dans le store
+isLoaded: false,
+ensureLoaded: async () => {
+  if (get().isLoaded) return; // Déjà chargé cette session
+  const dbOptions = await loadOptionsFromDB();
+  if (dbOptions && dbOptions.length > 0) {
+    set({ options: dbOptions, isLoaded: true });
+  } else {
+    set({ isLoaded: true }); // Même si vide, on marque comme chargé
+  }
+},
 ```
 
-### Ce qui est modifié
+Dans les composants consommateurs :
 
-**Fichier unique :** `src/stores/rentalProposalStore.ts`
+```typescript
+const { options: adminOptions, ensureLoaded } = useOptionsAdminStore();
+const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
-La valeur `initialServicesInclus` est mise à jour avec les 6 lignes complètes souhaitées :
+useEffect(() => {
+  setIsLoadingOptions(true);
+  ensureLoaded().finally(() => setIsLoadingOptions(false));
+}, [ensureLoaded]);
 
+// Bouton
+<Button disabled={isLoadingOptions || activeAdminOptions.length === 0}>
+  {isLoadingOptions ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+  Importer depuis Admin
+</Button>
 ```
-Contrat de location et gestion administrative
-Optimisation des coûts et gestion budgétaire
-Gestion des évolutions (ajout / retrait de matériels en cours de contrat)
-Accès privilégié aux matériels de seconde vie
-Garantie de recyclage / valorisation du matériel en fin de vie (DEEE)
-Mise à disposition du matériel informatique (location possible au-delà de la durée du contrat)
-```
 
-### Impact sur les sessions existantes
+### Comportement après correction
 
-Cette modification met à jour uniquement la valeur par défaut utilisée lors d'un premier démarrage ou après un `resetAll` / `startNewProposal`. Les sessions actives avec un localStorage déjà rempli **ne seront pas affectées automatiquement** car Zustand `persist` conserve la valeur stockée.
+| Scénario | Avant | Après |
+|----------|-------|-------|
+| Commercial ouvre le workflow directement | Store vide → bouton désactivé | Chargement auto depuis DB → bouton actif |
+| Admin revient sur le workflow | Dépend du localStorage | Chargement immédiat (isLoaded=true) |
+| Aucune option définie en admin | Bouton désactivé (correct) | Bouton désactivé (correct, avec message) |
+| Chargement en cours | Bouton désactivé sans indication | Bouton désactivé + spinner visible |
 
-Pour que la Lovable preview reflète les nouvelles valeurs, il suffira de :
-1. Cliquer sur "Nouvelle proposition" dans l'outil, ou
-2. Vider le cache du navigateur, ou
-3. Ouvrir en navigation privée
+### Fichiers modifiés
 
-A noter : après publication, les futurs utilisateurs auront automatiquement les 6 lignes par défaut.
+| Fichier | Modification |
+|---------|-------------|
+| `src/stores/optionsAdminStore.ts` | Ajout de `isLoaded` flag et méthode `ensureLoaded()` |
+| `src/components/data-editor/sheets/OptionsServicesEditor.tsx` | Appel `ensureLoaded()` au montage + spinner |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Appel `ensureLoaded()` au montage + spinner sur les 2 boutons |
 
-### Fichier modifié
-
-- `src/stores/rentalProposalStore.ts` — ligne 231 : mise à jour de `initialServicesInclus.description`
+Aucune migration base de données requise.
