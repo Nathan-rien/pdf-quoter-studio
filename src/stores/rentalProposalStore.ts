@@ -34,6 +34,7 @@ export interface MatriceProposal {
   duree: number | null;
   refinanceur: Partenaire | null;
   margeAppliquee: number;
+  coefficientOverride: number | null; // null = utiliser la valeur auto
 }
 
 interface MatriceData {
@@ -213,6 +214,7 @@ const createDefaultProposal = (): MatriceProposal => ({
   duree: 36,
   refinanceur: 'Lixxbail 1',
   margeAppliquee: 6,
+  coefficientOverride: null,
 });
 
 const initialPDFImportStatus: PDFImportStatus = {
@@ -288,6 +290,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             duree: result.location.duree ?? 36,
             refinanceur: 'Lixxbail 1',
             margeAppliquee: 6,
+            coefficientOverride: null,
           }],
           lignesData: result.lignes,
           proposalName: defaultProposalName,
@@ -740,6 +743,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
               state.proposals = [{
                 id: generateProposalId(),
                 montantInvestissement: state.matriceData?.montantInvestissement ?? null,
+                coefficientOverride: null,
                 duree: state.matriceData?.duree ?? 36,
                 refinanceur: state.matriceData?.refinanceur ?? 'Lixxbail 1',
                 margeAppliquee: state.matriceData?.margeAppliquee ?? 6,
