@@ -1033,8 +1033,13 @@ export function RentalProposalPreview() {
               <div key={option.id} className="border rounded overflow-hidden">
                 <div className="bg-muted px-4 py-2 flex items-center gap-2">
                   <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
-                   <span className="font-semibold text-[14px]">{option.name}</span>
-                 </div>
+                  <span className="font-semibold text-[14px]">{option.name}</span>
+                  {option.price !== null && option.price !== undefined && (
+                    <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
+                      {formatNumber(option.price)} €/mois
+                    </span>
+                  )}
+                </div>
                 {option.description && (
                   <div className="px-4 py-3 bg-background">
                     <div className="text-[10px] text-muted-foreground space-y-1">
