@@ -116,6 +116,8 @@ export function RentalProposalExport() {
         commercial_id: commercial?.id || null,
         commercial_name: commercial?.nom || null,
         montant_investissement: montantInvest || null,
+        selected_options_names: selectedOptions.map(o => o.name).filter(Boolean),
+        selected_nos_options_names: selectedNosOptions.map(o => o.name).filter(Boolean),
       } as any);
     } catch (err) {
       console.error('Failed to save to history:', err);
