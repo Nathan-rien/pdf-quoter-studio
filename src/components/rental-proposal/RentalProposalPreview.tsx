@@ -979,9 +979,14 @@ export function RentalProposalPreview() {
                      {/* Case vide pour signature client */}
                      <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
                       <span className="font-semibold text-[11px]">{option.name}</span>
-                      {option.price !== null && option.price !== undefined && (
+                      {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
                         <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
                           {formatNumber(option.price)} €/mois
+                        </span>
+                      )}
+                      {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
+                        <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
+                          {formatNumber(option.priceTotal!)} €
                         </span>
                       )}
                     </div>
@@ -1036,15 +1041,20 @@ export function RentalProposalPreview() {
           <div className="space-y-3">
             {selectedNosOptions.map((option) => (
               <div key={option.id} className="border rounded overflow-hidden">
-                <div className="bg-muted px-4 py-2 flex items-center gap-2">
-                  <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
-                  <span className="font-semibold text-[14px]">{option.name}</span>
-                  {option.price !== null && option.price !== undefined && (
-                    <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
-                      {formatNumber(option.price)} €/mois
-                    </span>
-                  )}
-                </div>
+                 <div className="bg-muted px-4 py-2 flex items-center gap-2">
+                   <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
+                   <span className="font-semibold text-[14px]">{option.name}</span>
+                   {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
+                     <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
+                       {formatNumber(option.price)} €/mois
+                     </span>
+                   )}
+                   {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
+                     <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
+                       {formatNumber(option.priceTotal!)} €
+                     </span>
+                   )}
+                 </div>
                 {option.description && (
                   <div className="px-4 py-3 bg-background">
                     <div className="text-[10px] text-muted-foreground space-y-1">
