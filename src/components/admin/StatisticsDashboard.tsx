@@ -26,6 +26,8 @@ import {
   Building2,
   Package,
   LayoutTemplate,
+  Wrench,
+  Star,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -39,6 +41,8 @@ interface ExportRecord {
   created_at: string;
   status: string;
   template_name: string;
+  selected_options_names: string[] | null;
+  selected_nos_options_names: string[] | null;
 }
 
 const CHART_COLORS = [
@@ -64,7 +68,7 @@ export function StatisticsDashboard() {
     try {
       const { data, error } = await supabase
         .from('proposal_exports')
-        .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status, template_name')
+        .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
         .eq('status', 'success')
         .order('created_at', { ascending: true });
 
@@ -161,6 +165,32 @@ export function StatisticsDashboard() {
   const commercialData = Object.entries(byCommercial)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
+
+  // Top Services additionnels (options cochées page 5)
+  const optionNamesCount: Record<string, number> = {};
+  filteredRecords.forEach(r => {
+    ((r.selected_options_names as string[]) || []).forEach((name: string) => {
+      optionNamesCount[name] = (optionNamesCount[name] || 0) + 1;
+    });
+  });
+  const topAdditionalOptions = Object.entries(optionNamesCount)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+
+  // Top Nos Options (options cochées page 6)
+  const nosOptionNamesCount: Record<string, number> = {};
+  filteredRecords.forEach(r => {
+    ((r.selected_nos_options_names as string[]) || []).forEach((name: string) => {
+      nosOptionNamesCount[name] = (nosOptionNamesCount[name] || 0) + 1;
+    });
+  });
+  const topNosOptions = Object.entries(nosOptionNamesCount)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+
+  const hasOptionsData = topAdditionalOptions.length > 0 || topNosOptions.length > 0;
 
   const formatAmount = (v: number | null) => {
     if (v === null) return 'N/A';
@@ -488,34 +518,78 @@ export function StatisticsDashboard() {
         </Card>
       )}
 
-      {/* Template le plus utilisé */}
-      {templateUsage.length > 0 && (
+      {/* Options et Services les plus proposés */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Services additionnels */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <LayoutTemplate className="h-4 w-4 text-primary" />
-              Template le plus utilisé
+              <Wrench className="h-4 w-4 text-primary" />
+              Services additionnels les plus proposés
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {templateUsage.map((item, i) => {
-                const pct = Math.round((item.count / (templateUsage[0]?.count || 1)) * 100);
-                return (
-                  <div key={item.name} className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                    <span className="text-sm w-48 truncate">{item.name}</span>
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+            {topAdditionalOptions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[120px] text-sm text-muted-foreground text-center gap-1">
+                <Wrench className="h-5 w-5 opacity-30 mb-1" />
+                <p>Aucune donnée disponible</p>
+                <p className="text-xs">Les nouvelles exportations alimenteront automatiquement ces statistiques.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-1">
+                {topAdditionalOptions.map((item, i) => {
+                  const pct = Math.round((item.count / (topAdditionalOptions[0]?.count || 1)) * 100);
+                  return (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      <span className="text-sm flex-1 truncate">{item.name}</span>
+                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-16 text-right shrink-0">{item.count} prop.</span>
                     </div>
-                    <span className="text-xs text-muted-foreground w-16 text-right">{item.count} prop.</span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+
+        {/* Nos Options */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Star className="h-4 w-4 text-primary" />
+              Nos Options les plus proposées
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topNosOptions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[120px] text-sm text-muted-foreground text-center gap-1">
+                <Star className="h-5 w-5 opacity-30 mb-1" />
+                <p>Aucune donnée disponible</p>
+                <p className="text-xs">Les nouvelles exportations alimenteront automatiquement ces statistiques.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-1">
+                {topNosOptions.map((item, i) => {
+                  const pct = Math.round((item.count / (topNosOptions[0]?.count || 1)) * 100);
+                  return (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      <span className="text-sm flex-1 truncate">{item.name}</span>
+                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-16 text-right shrink-0">{item.count} prop.</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -136,6 +136,8 @@ export type Database = {
           pdf_html_content: string | null
           proposal_name: string
           row_count: number | null
+          selected_nos_options_names: Json | null
+          selected_options_names: Json | null
           status: string
           template_id: string | null
           template_name: string
@@ -153,6 +155,8 @@ export type Database = {
           pdf_html_content?: string | null
           proposal_name: string
           row_count?: number | null
+          selected_nos_options_names?: Json | null
+          selected_options_names?: Json | null
           status?: string
           template_id?: string | null
           template_name: string
@@ -170,6 +174,8 @@ export type Database = {
           pdf_html_content?: string | null
           proposal_name?: string
           row_count?: number | null
+          selected_nos_options_names?: Json | null
+          selected_options_names?: Json | null
           status?: string
           template_id?: string | null
           template_name?: string
