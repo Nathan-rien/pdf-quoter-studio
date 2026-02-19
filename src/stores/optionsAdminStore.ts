@@ -45,8 +45,10 @@ export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface OptionsAdminStateExtended extends OptionsAdminState {
   syncStatus: SyncStatus;
+  isLoaded: boolean;
   setSyncStatus: (status: SyncStatus) => void;
   setOptions: (options: ServiceOptionDefinition[]) => void;
+  ensureLoaded: () => Promise<void>;
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -56,10 +58,21 @@ export const useOptionsAdminStore = create<OptionsAdminStateExtended>()(
     (set, get) => ({
       options: [],
       syncStatus: 'idle' as SyncStatus,
+      isLoaded: false,
 
       setSyncStatus: (status) => set({ syncStatus: status }),
 
       setOptions: (options) => set({ options }),
+
+      ensureLoaded: async () => {
+        if (get().isLoaded) return;
+        const dbOptions = await loadOptionsFromDB();
+        if (dbOptions && dbOptions.length > 0) {
+          set({ options: dbOptions, isLoaded: true });
+        } else {
+          set({ isLoaded: true });
+        }
+      },
 
       addOption: (option) => {
         const newOption: ServiceOptionDefinition = {
