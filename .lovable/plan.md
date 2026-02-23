@@ -1,46 +1,61 @@
 
 
-## Repositionner le logo client sous la date, aligne avec le logo entite
+## Aligner le logo client avec le logo entite et la date
 
 ### Probleme actuel
 
-Le logo client est positionne **a droite** du logo entite (Grosbill) en calculant `left = entityLogo.x + entityLogo.width`. L'utilisateur souhaite qu'il soit place **en dessous** du logo entite, aligne horizontalement (meme position X).
+Le logo client est positionne a `left: 70%` (fixe), ce qui le place trop a droite, completement deconnecte du logo entite. L'utilisateur souhaite :
+- **Alignement horizontal** (meme X) avec le logo entite le plus haut (ex: Grosbill)
+- **Alignement vertical** (meme Y) avec la date du template ("23 fevrier 2026")
 
 ### Solution
 
-Changer le calcul de positionnement pour :
-- **X (left)** : utiliser la meme position X que le logo entite (au lieu de x + width)
-- **Y (top)** : placer le logo client juste en dessous du logo entite (y + height + petit espacement)
+Detecter la position de la date sur le template (element texte contenant un pattern de date ou le placeholder `{{DATE}}`), puis positionner le logo client :
+- **X** : meme position que le logo entite (`entityLogo.position.x`)
+- **Y** : meme position que l'element date sur le template
+
+Si la date n'est pas trouvee, utiliser la position Y du logo entite comme fallback.
 
 ### Modifications
 
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes 590-592)
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes 590-594)
 
 Remplacer :
 ```typescript
-const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
-const rawLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 : 70;
-const logoLeftPct = Math.min(rawLeftPct, 82);
+const logoTopPct = entityLogo 
+  ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
+  : 6;
+const logoLeftPct = 70;
 ```
 
 Par :
 ```typescript
-// Positionner le logo client SOUS le logo entite, meme alignement horizontal
-const logoTopPct = entityLogo 
-  ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 0.5
-  : 6;
+// Trouver l'element date sur le template pour aligner verticalement
+const dateElement = page1Elements.find(el => {
+  if (el.type !== 'text') return false;
+  const text = (el.content as TextContent)?.text || '';
+  return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
+});
+
+// X : aligne avec le logo entite | Y : aligne avec la date
+const logoTopPct = dateElement 
+  ? (dateElement.position.y / CANVAS_SCALE.height) * 100
+  : entityLogo 
+    ? (entityLogo.position.y / CANVAS_SCALE.height) * 100
+    : 2;
 const logoLeftPct = entityLogo 
-  ? (entityLogo.position.x / CANVAS_SCALE.width) * 100 
+  ? (entityLogo.position.x / CANVAS_SCALE.width) * 100
   : 2;
 ```
 
-**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes 263-265)
+**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes 263-267)
 
-Meme changement de calcul pour l'export PDF.
+Meme logique : detecter la date, aligner X avec le logo entite et Y avec la date.
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Logo client positionne sous le logo entite (meme X, Y + height) |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme logique dans l'export PDF |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Logo client aligne horizontalement avec le logo entite et verticalement avec la date |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme logique pour l'export PDF |
+
