@@ -7,6 +7,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Move } from 'lucide-react';
+import { InlineTextEditor } from '@/components/template-editor/InlineTextEditor';
 import { icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
@@ -47,6 +48,7 @@ export function PreviewEditableCanvas({
 }: PreviewEditableCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{
     isDragging: boolean;
     elementId: string | null;
@@ -100,7 +102,7 @@ export function PreviewEditableCanvas({
 
   // Gestion du drag
   const handleMouseDown = useCallback((e: React.MouseEvent, element: EditableElement) => {
-    if (!isEditMode || isElementLocked(element)) return;
+    if (!isEditMode || isElementLocked(element) || inlineEditingId === element.id) return;
     e.preventDefault(); // Empêche la sélection de texte pendant le drag
     e.stopPropagation();
     
@@ -220,8 +222,17 @@ export function PreviewEditableCanvas({
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     if (e.target === canvasRef.current) {
       setSelectedId(null);
+      if (inlineEditingId) setInlineEditingId(null);
     }
-  }, []);
+  }, [inlineEditingId]);
+
+  // Double-clic pour édition inline des textes
+  const handleDoubleClick = useCallback((e: React.MouseEvent, element: EditableElement) => {
+    if (!isEditMode || isElementLocked(element) || element.type !== 'text') return;
+    e.preventDefault();
+    e.stopPropagation();
+    setInlineEditingId(element.id);
+  }, [isEditMode]);
 
   // Rendu du contenu texte
   const renderTextContent = (textContent: TextContent, elementId: string) => {
@@ -298,25 +309,48 @@ export function PreviewEditableCanvas({
           style={style}
           className={wrapperClasses}
           onMouseDown={(e) => handleMouseDown(e, element)}
+          onDoubleClick={(e) => handleDoubleClick(e, element)}
         >
-          <div 
-            className="px-0.5 py-px"
-            style={{
-              fontFamily: fontValue,
-              fontSize: `${scaledFontSize}px`,
-              color: content.color || '#1f2937',
-              fontWeight: content.bold ? 'bold' : 'normal',
-              fontStyle: content.italic ? 'italic' : 'normal',
-              textDecoration: content.underline ? 'underline' : 'none',
-              lineHeight: 1.2,
-              textAlign: content.textAlign || 'left',
-              width: '100%',
-            }}
-          >
-            <div className="whitespace-pre-wrap break-words">
-              {renderTextContent(content, element.id)}
+          {inlineEditingId === element.id ? (
+            <InlineTextEditor
+              content={content}
+              onContentChange={(html, plainText) => {
+                updateElementFromPreview(element.id, pageNumber, {
+                  content: { htmlContent: html, text: plainText },
+                });
+              }}
+              onExit={() => setInlineEditingId(null)}
+              style={{
+                fontFamily: fontValue,
+                fontSize: `${scaledFontSize}px`,
+                color: content.color || '#1f2937',
+                fontWeight: content.bold ? 'bold' : 'normal',
+                fontStyle: content.italic ? 'italic' : 'normal',
+                textDecoration: content.underline ? 'underline' : 'none',
+                lineHeight: 1.2,
+                textAlign: (content.textAlign || 'left') as any,
+              }}
+            />
+          ) : (
+            <div 
+              className="px-0.5 py-px"
+              style={{
+                fontFamily: fontValue,
+                fontSize: `${scaledFontSize}px`,
+                color: content.color || '#1f2937',
+                fontWeight: content.bold ? 'bold' : 'normal',
+                fontStyle: content.italic ? 'italic' : 'normal',
+                textDecoration: content.underline ? 'underline' : 'none',
+                lineHeight: 1.2,
+                textAlign: content.textAlign || 'left',
+                width: '100%',
+              }}
+            >
+              <div className="whitespace-pre-wrap break-words">
+                {renderTextContent(content, element.id)}
+              </div>
             </div>
-          </div>
+          )}
           {isSelected && isEditMode && !locked && renderResizeHandles(element)}
         </div>
       );
