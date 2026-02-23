@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy, Loader2, GripVertical, SeparatorHorizontal } from 'lucide-react';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy, Loader2, GripVertical, SeparatorHorizontal, ImagePlus, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -261,6 +261,58 @@ export function RentalDataEditor() {
                   value={clientData.telephone}
                   onChange={(e) => updateClientField('telephone', e.target.value)}
                 />
+              </div>
+
+              {/* Logo client upload */}
+              <div className="space-y-2">
+                <Label>Logo client</Label>
+                {clientData.logoUrl ? (
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-16 h-16 border rounded-md overflow-hidden bg-muted/30 flex items-center justify-center">
+                      <img
+                        src={clientData.logoUrl}
+                        alt="Logo client"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="iconSm"
+                      onClick={() => updateClientField('logoUrl', '')}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/svg+xml"
+                      className="hidden"
+                      id="client-logo-upload"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            updateClientField('logoUrl', ev.target?.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('client-logo-upload')?.click()}
+                    >
+                      <ImagePlus className="h-4 w-4 mr-2" />
+                      Ajouter un logo
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

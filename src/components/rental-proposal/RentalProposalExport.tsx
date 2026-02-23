@@ -254,8 +254,13 @@ export function RentalProposalExport() {
     const excludeElementIds: Record<number, string[]> = {};
     const date = new Date().toLocaleDateString('fr-FR');
     
-    // Page 1 : Données client et commercial
+    // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
+      ${clientData.logoUrl ? `
+        <div style="position: absolute; top: 12px; right: 5%; z-index: 40;">
+          <img src="${clientData.logoUrl}" alt="Logo client" style="height: 40px; object-fit: contain;" />
+        </div>
+      ` : ''}
       <div class="dynamic-content" style="position: absolute; bottom: 55px; left: 5%; right: 5%; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div>

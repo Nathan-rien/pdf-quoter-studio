@@ -25,6 +25,7 @@ interface ClientData {
   ville: string;
   telephone: string;
   email: string;
+  logoUrl: string;
 }
 
 // NEW: Individual proposal type for multi-proposal support
@@ -195,6 +196,7 @@ const initialClientData: ClientData = {
   ville: '',
   telephone: '',
   email: '',
+  logoUrl: '',
 };
 
 const initialMatriceData: MatriceData = {
@@ -283,6 +285,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             ville: result.client.ville || '',
             telephone: result.client.telephone || '',
             email: result.client.email || '',
+            logoUrl: '',
           },
           matriceData: {
             ...initialMatriceData,

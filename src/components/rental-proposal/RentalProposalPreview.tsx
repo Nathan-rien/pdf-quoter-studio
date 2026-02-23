@@ -583,6 +583,16 @@ export function RentalProposalPreview() {
     
     const renderClientData = () => (
       <>
+        {/* Logo client - affiché à droite du logo entité, sous la date */}
+        {clientData.logoUrl && (
+          <div className="absolute top-3 right-4 z-40">
+            <img
+              src={clientData.logoUrl}
+              alt="Logo client"
+              style={{ height: '30px', objectFit: 'contain' }}
+            />
+          </div>
+        )}
         <div className="absolute bottom-10 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
           <div className="grid grid-cols-2 gap-4">
             {/* Colonne gauche : Client */}
