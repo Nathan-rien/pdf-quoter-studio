@@ -1,72 +1,64 @@
 
 
-## Detecter le debordement de la page 4 et deporter le contenu sur une page supplementaire
+## Auto-selection du commercial et du template pour les commerciaux
 
-### Probleme
+### Contexte
 
-Quand le tableau d'investissements contient suffisamment de lignes pour tenir sur une seule page (moins de 22 lignes) mais qu'il reste peu de place, les sections "Votre offre", "Avantages" et "Condition de l'offre" debordent en bas de page et sont tronquees.
+Actuellement, les commerciaux doivent manuellement selectionner leur entite, leur nom, et le template correspondant a chaque proposition. L'objectif est d'automatiser ces choix pour les utilisateurs ayant le role "commercial", tout en laissant les administrateurs libres de tout modifier.
 
-### Solution
+### Deux comportements selon le role
 
-Introduire un seuil : si le nombre de lignes du tableau depasse un certain nombre (environ 13 lignes), le contenu de pied de page (offre, avantages, conditions, commentaire) est automatiquement reporte sur une page supplementaire dediee, meme si le tableau tient techniquement sur une seule page.
+| Comportement | Commercial | Admin |
+|---|---|---|
+| Entite et nom pre-remplis et verrouilles | Oui | Non |
+| Etape "Template" visible dans le workflow | Non (auto-selection) | Oui |
+| Passage de "Donnees" a "Apercu" | Direct | Via l'etape Template |
+
+### Correspondance entite / template
+
+Les templates en base de donnees sont :
+- **Cybertek Pro** : `fd0e078b-0000-4000-8000-000000000000` ("Proposition Commerciale CybertekPro")
+- **Grosbill Pro** : `f153bcea-1770-4021-8446-177002144623` ("Proposition Commerciale GrosbillPro")
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/lib/canvas-constants.ts` | Ajouter une constante `INVEST_LINES_SINGLE_PAGE_MAX` (seuil a partir duquel le footer est deporte sur une page dediee, meme en single-page) |
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Modifier la logique de chunking pour creer une page footer dediee quand les lignes depassent le seuil, meme si elles tiennent en un seul chunk |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Appliquer la meme logique de debordement dans l'export PDF |
+| `src/components/rental-proposal/RentalWorkflow.tsx` | Recevoir `isAdmin`/`isCommercial` via props ou hook. Masquer l'etape "Template" pour les commerciaux. Auto-selectionner le template quand le commercial est identifie. Adapter la navigation (Donnees -> Apercu directement). |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Utiliser `useCommercialIdentity` et `useAuth` pour pre-remplir et verrouiller (lecture seule) les champs entite/commercial quand l'utilisateur a le role commercial. |
+| `src/stores/rentalProposalStore.ts` | Adapter `canNavigateToStep` pour accepter un parametre optionnel indiquant que l'etape template est masquee (ou rendre la logique independante de l'etape template quand le template est deja selectionne). |
+| `src/pages/Index.tsx` | Passer les props de role au `RentalWorkflow` si necessaire. |
 
 ### Detail technique
 
-**1. Nouvelle constante (`canvas-constants.ts`)**
+**1. RentalDataEditor - Verrouillage commercial**
+
+Importer `useCommercialIdentity` et `useAuth`. Quand `isCommercial` est vrai et que l'identite commerciale est resolue :
+- Pre-remplir `commercialData.entity` et `commercialData.commercialId` via les actions du store (`updateCommercialEntity`, `selectCommercial`) dans un `useEffect`.
+- Rendre les deux `Select` en mode `disabled` avec un badge "Verrouille" a cote.
+- L'admin conserve l'acces complet aux selecteurs.
+
+**2. RentalWorkflow - Masquer l'etape Template**
+
+- Importer `useAuth` et `useCommercialIdentity`.
+- Definir un flag `skipTemplateStep = isCommercial && !isAdmin`.
+- Filtrer `WORKFLOW_STEPS` pour exclure l'etape `'template'` quand `skipTemplateStep` est vrai.
+- Dans un `useEffect`, quand `skipTemplateStep` est vrai et que l'entite du commercial est connue, appeler `selectTemplateForProposal(templateId)` avec l'ID correspondant a l'entite :
 
 ```text
-// Seuil en single-page : au-dela de ce nombre de lignes,
-// le footer (Votre offre + Avantages + Conditions) est deporte sur une page dediee
-export const INVEST_SINGLE_PAGE_FOOTER_THRESHOLD = 13;
+const ENTITY_TEMPLATE_MAP: Record<CommercialEntity, string> = {
+  'cybertek-pro': 'fd0e078b-0000-4000-8000-000000000000',
+  'grosbill-pro': 'f153bcea-1770-4021-8446-177002144623',
+};
 ```
 
-**2. Logique de chunking modifiee (`RentalProposalPreview.tsx` et `RentalProposalExport.tsx`)**
+**3. Store - Adapter canNavigateToStep**
 
-Actuellement :
-- Si `totalLines <= INVEST_LINES_PAGE1` (22) : un seul chunk, tout sur une page
-- Sinon : multi-page avec page footer dediee
+Le `canNavigateToStep` utilise un tableau ordonne `['import', 'data', 'template', 'preview', 'export']`. Quand l'etape template est masquee, la navigation doit passer directement de `'data'` a `'preview'`. Deux approches possibles :
+- Passer le flag `skipTemplateStep` dans les composants et adapter la logique dans `RentalWorkflow` (plus simple, pas de changement au store).
+- Concretement : dans `RentalWorkflow`, la variable `WORKFLOW_STEPS` filtree est deja utilisee pour `handleNext`/`handlePrevious`, donc la navigation fonctionnera naturellement. Il suffit d'ajuster `canNavigateToStep` dans le store pour ne pas exiger que `currentStep === 'template'` avant `'preview'` quand `selectedTemplateId` est deja rempli.
 
-Nouvelle logique :
-- Si `totalLines <= INVEST_SINGLE_PAGE_FOOTER_THRESHOLD` (13) : un seul chunk, tout sur une page (assez de place)
-- Si `totalLines <= INVEST_LINES_PAGE1` (22) : un seul chunk pour les donnees + un chunk vide (0) pour le footer sur une page dediee
-- Sinon : logique multi-page existante (inchangee)
+La modification dans le store sera minimale : dans le cas `'preview'`, la condition verifie deja `selectedTemplateId !== null`, ce qui sera satisfait par l'auto-selection. Il faut juste permettre de sauter de `'data'` a `'preview'` (actuellement bloque par `targetIndex > currentIndex + 1`). On ajoutera un parametre optionnel `skipTemplate?: boolean` a `canNavigateToStep`, ou bien on assouplira la regle : si `selectedTemplateId` est deja rempli, on autorise le saut de l'etape template.
 
-En concret, dans les deux fichiers, la fonction de chunking devient :
-
-```text
-const investChunks = (() => {
-  const totalLines = lignesData.length;
-  if (totalLines <= INVEST_SINGLE_PAGE_FOOTER_THRESHOLD) return [totalLines];
-  if (totalLines <= INVEST_LINES_PAGE1) {
-    // Le tableau tient sur une page mais pas assez de place pour le footer
-    // -> reporter le footer sur une page dediee
-    return [totalLines, 0];
-  }
-  const chunks = [INVEST_LINES_PAGE1];
-  let remaining = totalLines - INVEST_LINES_PAGE1;
-  while (remaining > 0) {
-    chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
-    remaining -= INVEST_LINES_CONTINUATION;
-  }
-  chunks.push(0);
-  return chunks;
-})();
-```
-
-La variable `isMultiPage` existante (et les conditions `isLastChunk`, `isLastDataChunk`) fonctionnent deja correctement car elles se basent sur `investChunks.length > 1`, ce qui sera vrai des que le footer est deporte. Aucune autre modification logique n'est necessaire.
-
-### Ce qui ne change pas
-
-- Le rendu du tableau de produits
-- Le rendu des elements en flux (Avantages, Conditions, Commentaire)
-- La logique de pagination multi-page existante (plus de 22 lignes)
-- Les autres pages du template
+**4. Pas de changement dans Index.tsx** - Les hooks `useAuth` et `useCommercialIdentity` seront appeles directement dans les composants concernes.
 
