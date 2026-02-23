@@ -260,9 +260,13 @@ export function RentalProposalExport() {
     const entityLogo = entityLogos.length > 0 
       ? entityLogos.reduce((top: any, el: any) => el.position.y < top.position.y ? el : top)
       : null;
-    const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
-    const rawLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 : 70;
-    const logoLeftPct = Math.min(rawLeftPct, 82);
+    // Positionner le logo client SOUS le logo entité, même alignement horizontal
+    const logoTopPct = entityLogo 
+      ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 0.5
+      : 6;
+    const logoLeftPct = entityLogo 
+      ? (entityLogo.position.x / CANVAS_SCALE.width) * 100 
+      : 2;
 
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
