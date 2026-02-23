@@ -1,49 +1,32 @@
 
-
-## Corriger l'alignement du logo client sur tous les templates
+## Ajuster la taille par defaut du logo client pour correspondre au logo entite
 
 ### Probleme
-Sur le template Cybertek Pro, le logo client n'est pas aligne a la meme hauteur que le logo entite. La formule actuelle utilise un decalage fixe de `-1.5%` qui fonctionne pour le template Grosbill Pro mais pas pour Cybertek Pro, car les logos entite ont des tailles et positions differentes selon le template.
-
-### Cause
-Le calcul `autoTopPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100 - 1.5` ne prend pas en compte la hauteur reelle du logo client (30px par defaut). Le `-1.5%` est un ajustement arbitraire qui ne s'adapte pas aux differentes configurations de template.
+Le logo client a une hauteur par defaut fixe de 30px (apercu) / 40px (export), independamment de la taille reelle du logo entite dans le template. Sur certains templates, cela rend le logo client beaucoup plus gros que le logo entite.
 
 ### Solution
-Remplacer le decalage fixe par un calcul qui centre veritablement le logo client par rapport au centre vertical du logo entite, en tenant compte de la hauteur du logo client :
-
-```text
-// Centre vertical du logo entite en %
-entityCenterPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100
-
-// Hauteur du logo client en % du canvas
-clientLogoHeightPct = clientLogoHeight / canvasHeight * 100
-
-// Position top pour centrer verticalement
-autoTopPct = entityCenterPct - clientLogoHeightPct / 2
-```
+Utiliser la hauteur du logo entite comme reference pour la hauteur par defaut du logo client, au lieu d'un nombre fixe.
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `RentalProposalPreview.tsx` | Remplacer le `-1.5` par un centrage dynamique base sur la hauteur du logo client (30px par defaut) |
-| `RentalProposalExport.tsx` | Meme correction pour l'export PDF (hauteur 40px par defaut) |
+| `RentalProposalPreview.tsx` | Remplacer `clientLogoOverride?.height ?? 30` par `clientLogoOverride?.height ?? entityLogo?.size.height ?? 30` |
+| `RentalProposalExport.tsx` | Remplacer `clientLogoOverride?.height ?? 40` par `clientLogoOverride?.height ?? entityLogo?.size.height ?? 40` |
 
 ### Detail technique
 
-Dans les deux fichiers, le changement est minimal (1 ligne) :
+La hauteur par defaut du logo client sera desormais celle du logo entite du template actif. Le fallback (30/40) ne s'applique que si aucun logo entite n'est trouve.
 
 **Avant :**
 ```
-autoTopPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100 - 1.5
+height: clientLogoOverride?.height ?? 30
 ```
 
 **Apres :**
 ```
-clientLogoHeightPx = clientLogoOverride?.height ?? DEFAULT_HEIGHT
-entityCenterPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100
-autoTopPct = entityCenterPct - (clientLogoHeightPx / canvasHeight * 100) / 2
+const defaultLogoHeight = entityLogo?.size.height ?? 30;
+height: clientLogoOverride?.height ?? defaultLogoHeight
 ```
 
-Cela garantit un alignement correct quel que soit le template utilise.
-
+Le meme `defaultLogoHeight` est utilise dans le calcul de centrage (`clientLogoHeightPx`), ce qui garantit un alignement parfait.
