@@ -596,9 +596,9 @@ export function RentalProposalPreview() {
 
       // X : à droite du logo entité | Y : sous la date
       const logoTopPct = dateElement 
-        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
+        ? (dateElement.position.y / CANVAS_SCALE.height) * 100
         : entityLogo 
-          ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
+          ? (entityLogo.position.y / CANVAS_SCALE.height) * 100
           : 6;
       const logoLeftPct = entityLogo 
         ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
