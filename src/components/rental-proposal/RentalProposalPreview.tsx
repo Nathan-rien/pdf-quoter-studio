@@ -583,7 +583,7 @@ export function RentalProposalPreview() {
     
     const renderClientData = () => {
       // Positionner le logo client dynamiquement à droite du logo entité
-      const entityLogo = page1Elements.find(el => el.type === 'image');
+      const entityLogo = page1Elements.find(el => el.type === 'image' && (el.content as ImageContent)?.logoId);
       const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
       const rawLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 : 70;
       const logoLeftPct = Math.min(rawLeftPct, 82);
