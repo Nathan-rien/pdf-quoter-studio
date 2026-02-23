@@ -615,15 +615,16 @@ export function RentalProposalPreview() {
         ? clientLogoOverride.height 
         : CLIENT_LOGO_SIZE.height; // fixe pour centrage uniforme
       const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
-      // autoTopPct : positionner sous la date avec marge
-      const autoTopPct = dateElement
-        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 2
-        : entityLogo
-          ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
+      // autoTopPct : centrer verticalement avec le logo entité
+      const clientLogoHalfHeightPct = (CLIENT_LOGO_SIZE.height / 2 / CANVAS_SCALE.height) * 100;
+      const autoTopPct = entityLogo
+        ? entityCenterPct - clientLogoHalfHeightPct
+        : dateElement
+          ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 2
           : 6;
-      // autoLeftPct : centrer sous la date
-      const autoLeftPct = dateElement
-        ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+      // autoLeftPct : à droite du logo entité
+      const autoLeftPct = entityLogo
+        ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
         : 50;
 
       return {
@@ -632,7 +633,7 @@ export function RentalProposalPreview() {
         width: clientLogoOverride?.width ?? Math.round(defaultWidthPct * CANVAS_DISPLAY_MAX_WIDTH / 100),
         heightPx: clientLogoHeightPx,
         heightPct: clientLogoHeightPct,
-        useTranslate: true,
+        useTranslate: !entityLogo,
       };
     };
 

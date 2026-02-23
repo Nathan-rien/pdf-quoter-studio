@@ -276,24 +276,25 @@ export function RentalProposalExport() {
     const logoHeightVal = clientLogoOverride?.height ?? defaultLogoHeight;
     const logoWidthVal = clientLogoOverride?.width ?? defaultLogoWidth;
 
-    // Position par défaut : centré sous la date (aligné sur l'aperçu)
-    // autoTopPct : positionner sous la date avec marge
-    const autoTopPct = dateElement
-      ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 2
-      : entityLogo
-        ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
+    // Position par défaut : à droite du logo entité, centré verticalement
+    const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
+    const clientLogoHalfHeightPct = (CLIENT_LOGO_SIZE.height / 2 / CANVAS_SCALE.height) * 100;
+    const autoTopPct = entityLogo
+      ? entityCenterPct - clientLogoHalfHeightPct
+      : dateElement
+        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 2
         : 6;
-    // autoLeftPct : centrer sous la date
-    const autoLeftPct = dateElement
-      ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+    const autoLeftPct = entityLogo
+      ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
       : 50;
     const finalLogoTopPct = clientLogoOverride?.top ?? autoTopPct;
     const finalLogoLeftPct = clientLogoOverride?.left ?? autoLeftPct;
+    const useTranslate = !entityLogo;
 
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
       ${clientData.logoUrl ? `
-        <div style="position: absolute; top: ${finalLogoTopPct}%; left: ${finalLogoLeftPct}%; transform: translateX(-50%); z-index: 40;">
+        <div style="position: absolute; top: ${finalLogoTopPct}%; left: ${finalLogoLeftPct}%;${useTranslate ? ' transform: translateX(-50%);' : ''} z-index: 40;">
           <img src="${clientData.logoUrl}" alt="Logo client" style="height: ${logoHeightVal}px; width: ${logoWidthVal}px; object-fit: contain;" />
         </div>
       ` : ''}
