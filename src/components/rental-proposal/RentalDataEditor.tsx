@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy, Loader2, GripVertical, SeparatorHorizontal } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,6 +44,8 @@ export function RentalDataEditor() {
     deleteProposal,
     updateLigne,
     addLigne,
+    addSeparatorLigne,
+    reorderLigne,
     deleteLigne,
     updateServicesInclus,
     addOptionService,
@@ -71,6 +73,8 @@ export function RentalDataEditor() {
   }, [ensureLoaded]);
 
   const calculatedValues = getCalculatedValues();
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const toggleAdminOption = (optionId: string) => {
     setSelectedAdminOptions(prev => 
@@ -724,6 +728,10 @@ export function RentalDataEditor() {
                     onCheckedChange={(checked) => updateMatriceField('investShowOffer', checked)}
                   />
                 </div>
+                <Button variant="outline" size="sm" onClick={addSeparatorLigne}>
+                  <SeparatorHorizontal className="h-4 w-4 mr-2" />
+                  Séparation
+                </Button>
                 <Button variant="outline" size="sm" onClick={addLigne}>
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter
@@ -735,6 +743,7 @@ export function RentalDataEditor() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10"></TableHead>
                       <TableHead className="min-w-[420px]">Désignation</TableHead>
                       <TableHead className="w-28 text-right">Nb</TableHead>
                       {matriceData.investShowPrices && (
@@ -749,53 +758,100 @@ export function RentalDataEditor() {
                   <TableBody>
                     {lignesData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={matriceData.investShowPrices ? 5 : 3} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={matriceData.investShowPrices ? 6 : 4} className="text-center text-muted-foreground py-8">
                           Aucune ligne de produit
                         </TableCell>
                       </TableRow>
                     ) : (
-                      lignesData.map((ligne, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="min-w-[420px] align-top">
-                            <AutoResizeTextarea
-                              value={ligne.designation}
-                              onChange={(e) => updateLigne(index, { designation: e.target.value })}
-                              className="min-h-[72px]"
-                              rows={3}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={ligne.quantite}
-                              onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
-                              className="h-8 text-right w-full"
-                            />
-                          </TableCell>
-                          {matriceData.investShowPrices && (
-                            <>
-                              <TableCell>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={ligne.prixUnitaire ?? ''}
-                                  onChange={(e) => updateLigne(index, { prixUnitaire: e.target.value ? parseFloat(e.target.value) : null })}
-                                  className="h-8 text-right w-full"
+                      lignesData.map((ligne, index) => {
+                        const colCount = matriceData.investShowPrices ? 6 : 4;
+                        
+                        if (ligne.isSeparator) {
+                          return (
+                            <TableRow
+                              key={index}
+                              draggable
+                              onDragStart={() => setDragIndex(index)}
+                              onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
+                              onDrop={() => { if (dragIndex !== null && dragIndex !== index) reorderLigne(dragIndex, index); setDragIndex(null); setDragOverIndex(null); }}
+                              onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                              className={`bg-blue-50 border-blue-100 ${dragIndex === index ? 'opacity-40' : ''} ${dragOverIndex === index && dragIndex !== index ? 'border-t-2 border-t-primary' : ''}`}
+                            >
+                              <TableCell className="w-10 cursor-grab active:cursor-grabbing px-1">
+                                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              </TableCell>
+                              <TableCell colSpan={colCount - 2}>
+                                <AutoResizeTextarea
+                                  value={ligne.designation}
+                                  onChange={(e) => updateLigne(index, { designation: e.target.value })}
+                                  placeholder="Description de la section..."
+                                  className="min-h-[36px] bg-transparent border-blue-200 focus-visible:ring-blue-300"
+                                  rows={1}
                                 />
                               </TableCell>
-                              <TableCell className="text-right font-medium">
-                                {formatNumber(ligne.totalHT)} €
+                              <TableCell>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteLigne(index)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
                               </TableCell>
-                            </>
-                          )}
-                          <TableCell>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteLigne(index)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                            </TableRow>
+                          );
+                        }
+
+                        return (
+                          <TableRow
+                            key={index}
+                            draggable
+                            onDragStart={() => setDragIndex(index)}
+                            onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
+                            onDrop={() => { if (dragIndex !== null && dragIndex !== index) reorderLigne(dragIndex, index); setDragIndex(null); setDragOverIndex(null); }}
+                            onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                            className={`${dragIndex === index ? 'opacity-40' : ''} ${dragOverIndex === index && dragIndex !== index ? 'border-t-2 border-t-primary' : ''}`}
+                          >
+                            <TableCell className="w-10 cursor-grab active:cursor-grabbing px-1">
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                            </TableCell>
+                            <TableCell className="min-w-[420px] align-top">
+                              <AutoResizeTextarea
+                                value={ligne.designation}
+                                onChange={(e) => updateLigne(index, { designation: e.target.value })}
+                                className="min-h-[72px]"
+                                rows={3}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={ligne.quantite}
+                                onChange={(e) => updateLigne(index, { quantite: parseInt(e.target.value) || 1 })}
+                                className="h-8 text-right w-full"
+                              />
+                            </TableCell>
+                            {matriceData.investShowPrices && (
+                              <>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={ligne.prixUnitaire ?? ''}
+                                    onChange={(e) => updateLigne(index, { prixUnitaire: e.target.value ? parseFloat(e.target.value) : null })}
+                                    className="h-8 text-right w-full"
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatNumber(ligne.totalHT)} €
+                                </TableCell>
+                              </>
+                            )}
+                            <TableCell>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteLigne(index)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -803,7 +859,7 @@ export function RentalDataEditor() {
               {matriceData.investShowPrices && lignesData.length > 0 && (
                 <div className="flex justify-end mt-3">
                   <div className="text-sm font-semibold">
-                    Total : {formatNumber(lignesData.reduce((sum, l) => sum + (l.totalHT || 0), 0))} € HT
+                    Total : {formatNumber(lignesData.filter(l => !l.isSeparator).reduce((sum, l) => sum + (l.totalHT || 0), 0))} € HT
                   </div>
                 </div>
               )}

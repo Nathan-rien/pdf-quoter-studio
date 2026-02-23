@@ -146,6 +146,8 @@ interface RentalProposalActions {
   // Lignes produits
   updateLigne: (index: number, updates: Partial<PDFProductLine>) => void;
   addLigne: () => void;
+  addSeparatorLigne: () => void;
+  reorderLigne: (fromIndex: number, toIndex: number) => void;
   deleteLigne: (index: number) => void;
   
   // Services inclus (bloc permanent)
@@ -421,17 +423,17 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           const newLignes = [...state.lignesData];
           if (newLignes[index]) {
             newLignes[index] = { ...newLignes[index], ...updates };
-            // Recalculate totalHT if quantity or unit price changed
-            if (updates.quantite !== undefined || updates.prixUnitaire !== undefined) {
+            // Recalculate totalHT if quantity or unit price changed (skip separators)
+            if (!newLignes[index].isSeparator && (updates.quantite !== undefined || updates.prixUnitaire !== undefined)) {
               const ligne = newLignes[index];
               if (ligne.prixUnitaire !== null) {
                 ligne.totalHT = Math.round(ligne.prixUnitaire * ligne.quantite * 100) / 100;
               }
             }
           }
-          // Recalculer le montant investissement total et synchroniser vers toutes les propositions
+          // Recalculer le montant investissement total (exclure les séparateurs)
           const newMontantInvestissement = Math.round(
-            newLignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+            newLignes.filter(l => !l.isSeparator).reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
           ) / 100;
           return { 
             lignesData: newLignes, 
@@ -449,7 +451,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             { reference: null, designation: '', prixUnitaire: null, quantite: 1, totalHT: 0 },
           ];
           const newMontantInvestissement = Math.round(
-            newLignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+            newLignes.filter(l => !l.isSeparator).reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
           ) / 100;
           return {
             lignesData: newLignes,
@@ -460,11 +462,30 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         });
       },
 
+      addSeparatorLigne: () => {
+        set(state => ({
+          lignesData: [
+            ...state.lignesData,
+            { reference: null, designation: '', prixUnitaire: null, quantite: 0, totalHT: 0, isSeparator: true },
+          ],
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      reorderLigne: (fromIndex, toIndex) => {
+        set(state => {
+          const newLignes = [...state.lignesData];
+          const [moved] = newLignes.splice(fromIndex, 1);
+          newLignes.splice(toIndex, 0, moved);
+          return { lignesData: newLignes, hasUnsavedChanges: true };
+        });
+      },
+
       deleteLigne: (index) => {
         set(state => {
           const newLignes = state.lignesData.filter((_, i) => i !== index);
           const newMontantInvestissement = Math.round(
-            newLignes.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+            newLignes.filter(l => !l.isSeparator).reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
           ) / 100;
           return {
             lignesData: newLignes,
