@@ -178,6 +178,7 @@ export function ClientLogoDraggable({
       style={{
         top: `${topPct}%`,
         left: `${leftPct}%`,
+        transform: useTranslateX ? 'translateX(-50%)' : undefined,
         width: width ? `${width}px` : 'auto',
         ...heightStyle,
       }}
