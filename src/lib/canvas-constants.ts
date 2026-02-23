@@ -40,5 +40,9 @@ export const INVEST_LINES_CONTINUATION = 32;
 // Nombre de lignes réservées pour le footer (totaux + proposition financière + avantages + conditions)
 export const INVEST_FOOTER_RESERVED_LINES = 9;
 
+// Seuil en single-page : au-delà de ce nombre de lignes,
+// le footer (Votre offre + Avantages + Conditions) est déporté sur une page dédiée
+export const INVEST_SINGLE_PAGE_FOOTER_THRESHOLD = 13;
+
 // Largeur maximale d'affichage du canvas (identique Éditeur/Aperçu)
 export const CANVAS_DISPLAY_MAX_WIDTH = 580;

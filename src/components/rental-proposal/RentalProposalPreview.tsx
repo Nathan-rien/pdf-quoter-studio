@@ -35,7 +35,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -189,7 +189,11 @@ export function RentalProposalPreview() {
   // Découper les lignes en chunks, puis vérifier si le dernier chunk nécessite une page footer dédiée
   const investChunks = (() => {
     const totalLines = lignesData.length;
-    if (totalLines <= INVEST_LINES_PAGE1) return [totalLines]; // un seul chunk
+    if (totalLines <= INVEST_SINGLE_PAGE_FOOTER_THRESHOLD) return [totalLines];
+    if (totalLines <= INVEST_LINES_PAGE1) {
+      // Le tableau tient sur une page mais pas assez de place pour le footer
+      return [totalLines, 0];
+    }
     const chunks = [INVEST_LINES_PAGE1];
     let remaining = totalLines - INVEST_LINES_PAGE1;
     while (remaining > 0) {
