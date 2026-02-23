@@ -268,32 +268,29 @@ export function RentalProposalExport() {
       return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
     });
 
-    // Position par défaut : aligné verticalement avec le centre du logo entité, juste à sa droite
-    const minLeftPct = entityLogo 
-      ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
-      : 25;
+    // Taille fixe du logo client (alignée sur l'aperçu)
+    const CLIENT_LOGO_SIZE = { width: 50, height: 50 }; // unités canvas (650x919)
     const exportScale = 794 / CANVAS_SCALE.width;
-    const defaultLogoHeight = entityLogo
-      ? Math.round(entityLogo.size.height * exportScale)
-      : 40;
-    const clientLogoHeightPx = clientLogoOverride?.height ?? defaultLogoHeight;
-    const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
-    const logoTopPct = entityLogo 
-      ? entityCenterPct - (clientLogoHeightPx / CANVAS_SCALE.height * 100) / 2
-      : dateElement 
-        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
-        : 6;
-    const logoLeftPct = minLeftPct;
-    const finalLogoTopPct = clientLogoOverride?.top ?? logoTopPct;
-    const finalLogoLeftPct = clientLogoOverride?.left ?? logoLeftPct;
-    const logoWidthStyle = clientLogoOverride?.width ? `width: ${clientLogoOverride.width}px;` : '';
+    const defaultLogoHeight = Math.round(CLIENT_LOGO_SIZE.height * exportScale);
+    const defaultLogoWidth = Math.round(CLIENT_LOGO_SIZE.width * exportScale);
     const logoHeightVal = clientLogoOverride?.height ?? defaultLogoHeight;
+    const logoWidthVal = clientLogoOverride?.width ?? defaultLogoWidth;
+
+    // Position par défaut : centré sous la date (aligné sur l'aperçu)
+    const autoTopPct = dateElement
+      ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 1
+      : 6;
+    const autoLeftPct = dateElement
+      ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+      : 50;
+    const finalLogoTopPct = clientLogoOverride?.top ?? autoTopPct;
+    const finalLogoLeftPct = clientLogoOverride?.left ?? autoLeftPct;
 
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
       ${clientData.logoUrl ? `
-        <div style="position: absolute; top: ${finalLogoTopPct}%; left: ${finalLogoLeftPct}%; z-index: 40;">
-          <img src="${clientData.logoUrl}" alt="Logo client" style="height: ${logoHeightVal}px; ${logoWidthStyle} object-fit: contain;" />
+        <div style="position: absolute; top: ${finalLogoTopPct}%; left: ${finalLogoLeftPct}%; transform: translateX(-50%); z-index: 40;">
+          <img src="${clientData.logoUrl}" alt="Logo client" style="height: ${logoHeightVal}px; width: ${logoWidthVal}px; object-fit: contain;" />
         </div>
       ` : ''}
       <div class="dynamic-content" style="position: absolute; bottom: 55px; left: 5%; right: 5%; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
