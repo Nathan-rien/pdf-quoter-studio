@@ -1,6 +1,10 @@
 /**
  * Logo client déplaçable et redimensionnable en mode Modifier
  * Utilise le même pattern de drag/resize que PreviewEditableCanvas
+ * 
+ * Supporte deux modes de hauteur :
+ * - heightPct : pourcentage du conteneur parent (identique au rendu du logo entité)
+ * - heightPx : hauteur fixe en pixels (utilisé après un override manuel)
  */
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -14,7 +18,10 @@ interface ClientLogoDraggableProps {
   topPct: number;
   leftPct: number;
   width?: number;
-  height: number;
+  /** Hauteur en pourcentage du conteneur (mode par défaut, fidèle au logo entité) */
+  heightPct?: number;
+  /** Hauteur en pixels (mode override après redimensionnement manuel) */
+  heightPx?: number;
   useTranslateX: boolean;
   isEditMode: boolean;
   onUpdate: (override: ClientLogoOverride) => void;
@@ -27,7 +34,8 @@ export function ClientLogoDraggable({
   topPct,
   leftPct,
   width,
-  height,
+  heightPct,
+  heightPx,
   useTranslateX,
   isEditMode,
   onUpdate,
@@ -40,6 +48,13 @@ export function ClientLogoDraggable({
   const [isResizing, setIsResizing] = useState(false);
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; top: number; left: number } | null>(null);
   const resizeStartRef = useRef<{ mouseX: number; mouseY: number; width: number; height: number; corner: string } | null>(null);
+
+  // Style de hauteur : pourcentage ou pixels
+  const heightStyle: React.CSSProperties = heightPx
+    ? { height: `${heightPx}px` }
+    : heightPct
+      ? { height: `${heightPct}%` }
+      : { height: '30px' };
 
   const getParentRect = useCallback(() => {
     return containerRef.current?.parentElement?.getBoundingClientRect() || null;
@@ -67,7 +82,7 @@ export function ClientLogoDraggable({
         top: Math.max(0, Math.min(95, dragStartRef.current.top + deltaYPct)),
         left: Math.max(0, Math.min(95, dragStartRef.current.left + deltaXPct)),
         width: width || 0,
-        height,
+        height: heightPx || 0,
       });
     };
 
@@ -80,18 +95,24 @@ export function ClientLogoDraggable({
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-  }, [isEditMode, topPct, leftPct, width, height, onUpdate, getParentRect]);
+  }, [isEditMode, topPct, leftPct, width, heightPx, onUpdate, getParentRect]);
 
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, corner: string) => {
     if (!isEditMode) return;
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
+    
+    // Pour le resize, on doit connaître la hauteur réelle en pixels
+    const imgEl = containerRef.current?.querySelector('img');
+    const currentHeightPx = imgEl?.offsetHeight || heightPx || 80;
+    const currentWidthPx = imgEl?.offsetWidth || width || 80;
+    
     resizeStartRef.current = {
       mouseX: e.clientX,
       mouseY: e.clientY,
-      width: width || 80,
-      height,
+      width: currentWidthPx,
+      height: currentHeightPx,
       corner,
     };
 
@@ -119,7 +140,7 @@ export function ClientLogoDraggable({
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-  }, [isEditMode, width, height, topPct, leftPct, onUpdate]);
+  }, [isEditMode, width, heightPx, topPct, leftPct, onUpdate]);
 
   const resizeCorners = ['nw', 'ne', 'sw', 'se'] as const;
 
@@ -139,7 +160,7 @@ export function ClientLogoDraggable({
           alt="Logo client"
           style={{
             width: width ? `${width}px` : undefined,
-            height: `${height}px`,
+            ...heightStyle,
             objectFit: 'contain',
           }}
         />
@@ -194,7 +215,7 @@ export function ClientLogoDraggable({
         alt="Logo client"
         style={{
           width: width ? `${width}px` : undefined,
-          height: `${height}px`,
+          ...heightStyle,
           objectFit: 'contain',
         }}
         draggable={false}

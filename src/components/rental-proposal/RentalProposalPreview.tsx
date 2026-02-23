@@ -603,14 +603,20 @@ export function RentalProposalPreview() {
       const minLeftPct = entityLogo 
         ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
         : 25;
-      const previewScale = CANVAS_DISPLAY_MAX_WIDTH / CANVAS_SCALE.width;
-      const defaultLogoHeight = entityLogo
-        ? Math.round(entityLogo.size.height * previewScale)
-        : 30;
-      const clientLogoHeightPx = clientLogoOverride?.height ?? defaultLogoHeight;
+      // Hauteur par défaut en pourcentage du conteneur (identique au rendu du logo entité via getSharedElementStyle)
+      const defaultLogoHeightPct = entityLogo
+        ? (entityLogo.size.height / CANVAS_SCALE.height) * 100
+        : (30 / 820) * 100; // fallback ~3.66%
+      const clientLogoHeightPct = clientLogoOverride?.height
+        ? undefined // override = pixels, pas de pourcentage
+        : defaultLogoHeightPct;
+      const clientLogoHeightPx = clientLogoOverride?.height ?? undefined;
+      const clientLogoHeightForCenter = clientLogoOverride?.height 
+        ? clientLogoOverride.height 
+        : entityLogo?.size.height ?? 30; // en unités canvas pour le centrage
       const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
       const autoTopPct = entityLogo 
-        ? entityCenterPct - (clientLogoHeightPx / CANVAS_SCALE.height * 100) / 2
+        ? entityCenterPct - (clientLogoHeightForCenter / CANVAS_SCALE.height * 100) / 2
         : dateElement 
           ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
           : 6;
@@ -620,7 +626,8 @@ export function RentalProposalPreview() {
         topPct: clientLogoOverride?.top ?? autoTopPct,
         leftPct: clientLogoOverride?.left ?? autoLeftPct,
         width: clientLogoOverride?.width ?? undefined,
-        height: clientLogoOverride?.height ?? defaultLogoHeight,
+        heightPx: clientLogoHeightPx,
+        heightPct: clientLogoHeightPct,
         useTranslate: false,
       };
     };
@@ -635,7 +642,8 @@ export function RentalProposalPreview() {
           topPct={pos.topPct}
           leftPct={pos.leftPct}
           width={pos.width}
-          height={pos.height}
+          heightPx={pos.heightPx}
+          heightPct={pos.heightPct}
           useTranslateX={pos.useTranslate}
           isEditMode={isEditMode}
           onUpdate={updateClientLogoOverride}
@@ -657,7 +665,8 @@ export function RentalProposalPreview() {
               topPct={pos.topPct}
               leftPct={pos.leftPct}
               width={pos.width}
-              height={pos.height}
+              heightPx={pos.heightPx}
+              heightPct={pos.heightPct}
               useTranslateX={pos.useTranslate}
               isEditMode={false}
               onUpdate={updateClientLogoOverride}
