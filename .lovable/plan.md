@@ -1,27 +1,51 @@
 
 
-## Corriger l'injection des frais de dossier dans l'export PDF
+## Rendre l'email et le telephone modifiables par l'admin
 
-### Probleme
-Le montant des frais de dossier n'apparait plus dans le PDF exporte (affiche "–" au lieu du montant reel).
+### Contexte
+Actuellement, dans la section "Commerciaux pre-autorises", l'email est stocke en base mais affiche en lecture seule, et le telephone provient du referentiel statique (`COMMERCIAUX`). L'admin ne peut modifier ni l'un ni l'autre.
 
-### Cause racine
-Dans `RentalProposalExport.tsx`, la fonction `generatePDFContentFromTemplate` est wrappee dans un `useCallback` dont le tableau de dependances (ligne 596) ne contient ni `calculatedValues` ni `selectedCommercial`. Le closure capture donc des valeurs perimees (initiales/nulles) de `calculatedValues.fraisDossier` et `selectedCommercial?.adresse`.
+### Modifications necessaires
+
+#### 1. Migration base de donnees
+Ajouter une colonne `telephone` (texte, nullable) a la table `pre_registered_commercials`.
 
 ```text
-// Ligne 596 actuelle :
-}, [latestVersion, activeTemplate, generateDynamicContentByPage]);
-
-// Correction :
-}, [latestVersion, activeTemplate, generateDynamicContentByPage, calculatedValues, selectedCommercial]);
+ALTER TABLE public.pre_registered_commercials ADD COLUMN telephone text;
 ```
 
-### Fichier modifie
+#### 2. Mise a jour du composant AccessManagement.tsx
+
+**Affichage inline editable** : Remplacer l'affichage statique de l'email et du telephone par des champs `Input` editables directement dans les cellules du tableau.
+
+- Chaque cellule email affichera un `Input` avec l'icone Mail
+- Chaque cellule telephone affichera un `Input` avec l'icone Phone
+- Un bouton "Enregistrer" (icone check) apparaitra sur la ligne lorsqu'une modification est detectee
+- Les modifications seront sauvegardees via un appel `supabase.update()` sur `pre_registered_commercials`
+
+**Etat local** : Utiliser un state `editedFields` (map par `commercial_id`) pour stocker les valeurs modifiees avant sauvegarde.
+
+**Logique de sauvegarde** :
+```text
+supabase.from('pre_registered_commercials')
+  .update({ email: newEmail, telephone: newTel })
+  .eq('commercial_id', id)
+```
+
+#### 3. Propagation au insert (nouveau profil)
+Lors de la creation d'un nouveau profil (mode referentiel), inserer aussi le telephone du commercial selectionne. En mode manuel, ajouter un champ telephone dans le formulaire (deja present dans le state `newProfile`).
+
+### Detail technique
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Ajouter `calculatedValues` et `selectedCommercial` dans les dependances du `useCallback` de `generatePDFContentFromTemplate` (ligne 596) |
+| Migration SQL | Ajouter colonne `telephone` a `pre_registered_commercials` |
+| `AccessManagement.tsx` | Rendre les cellules email/telephone editables inline avec sauvegarde |
+| `AccessManagement.tsx` | Inserer le telephone lors de la creation de profil |
+| `AccessManagement.tsx` | Fetch la colonne `telephone` dans `fetchPreRegistered` |
 
-### Impact
-Aucun changement de comportement ou de rendu. Le seul effet est que les valeurs financieres (frais de dossier, adresse entite) seront correctement a jour au moment de la generation du PDF.
+### Ce qui ne change pas
+- La structure globale du tableau et les autres colonnes (Nom, ID Commercial, Date)
+- Le referentiel statique `COMMERCIAUX`
+- Les permissions RLS existantes
 
