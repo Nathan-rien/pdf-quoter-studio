@@ -615,14 +615,16 @@ export function RentalProposalPreview() {
         ? clientLogoOverride.height 
         : CLIENT_LOGO_SIZE.height; // fixe pour centrage uniforme
       const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
-      const autoTopPct = dateElement
-        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 1
-        : 6;
-      const autoLeftPct = entityLogo
-        ? ((entityLogo.position.x + entityLogo.size.width / 2) / CANVAS_SCALE.width) * 100
+      // autoTopPct : aligner verticalement avec le logo entité
+      const autoTopPct = entityLogo
+        ? (entityLogo.position.y / CANVAS_SCALE.height) * 100
         : dateElement
-          ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
-          : 50;
+          ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 1
+          : 6;
+      // autoLeftPct : centrer sous la date
+      const autoLeftPct = dateElement
+        ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+        : 50;
 
       return {
         topPct: clientLogoOverride?.top ?? autoTopPct,
