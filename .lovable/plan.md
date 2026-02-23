@@ -1,87 +1,53 @@
 
-## Remonter l'adresse en bas de page 1 (Aperçu et PDF)
+## Audit de securite et desactivation de l'envoi d'email
 
-### Diagnostic
+### 1. Masquer l'envoi d'email (Export)
 
-L'adresse de l'entité (ex: "60 Boulevard de l'hôpital, 75013 Paris") est positionnée en absolu très près du bas du canvas :
+Dans `src/components/rental-proposal/RentalProposalExport.tsx` :
 
-| Composant | Bloc client (grille) | Adresse |
-|---|---|---|
-| **Aperçu (React)** | `bottom-16` (64px) | `bottom-0 pb-1` (≈4px) |
-| **Export PDF (HTML)** | `bottom: 40px` | `bottom: 4px` |
+- Remplacer la structure `Tabs` (onglets "Telecharger" / "Envoyer par email") par le contenu direct du telechargement PDF, sans onglets
+- Supprimer les imports inutilises : `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Mail`, `EmailSendForm`
+- Supprimer les fonctions `generatePDFContent` et `generateFallbackPDFContent` qui ne servaient qu'a l'email
 
-Sur un canvas de 919px représentant une page A4, les 4px du bas correspondent à la zone de marge d'impression physique (≈1mm). À l'impression ou à la génération PDF, cette zone est systématiquement rognée par les imprimantes.
+Le composant `EmailSendForm.tsx` reste dans le code (non supprime) pour pouvoir etre reactive plus tard.
 
-### Solution
+**Resultat visuel** : le bloc export affiche directement le bouton "Telecharger le PDF" et le nom du fichier, sans aucun onglet.
 
-Remonter les deux éléments de sorte que :
-1. L'adresse soit à une hauteur sûre (au moins ~14-16px / 4mm du bas physique)
-2. Le bloc client remonte en conséquence pour ne pas chevaucher l'adresse
+### 2. Securite -- Corriger la politique RLS de `pre_registered_commercials`
 
-### Modifications techniques
+La politique `Trigger function can read pre_registered_commercials` utilise `USING (true)`, ce qui expose les emails et noms de tous les commerciaux a n'importe quel utilisateur connecte.
 
-**Fichier 1 : `src/components/rental-proposal/RentalProposalPreview.tsx`**
+**Correction SQL** :
+```sql
+DROP POLICY IF EXISTS "Trigger function can read pre_registered_commercials"
+  ON pre_registered_commercials;
 
-Ligne ~623 — adresse dans `renderClientData()` :
-
-```tsx
-// AVANT
-<div className="absolute bottom-0 left-0 right-0 pb-1 flex justify-center z-40">
-
-// APRÈS
-<div className="absolute bottom-3 left-0 right-0 flex justify-center z-40">
+CREATE POLICY "Admins or own email can read pre_registered"
+  ON pre_registered_commercials FOR SELECT TO authenticated
+  USING (
+    has_role(auth.uid(), 'admin'::app_role)
+    OR lower(email) = lower(auth.jwt()->>'email')
+  );
 ```
 
-`bottom-3` = 12px depuis le bas, soit environ 3mm — suffisant pour éviter le rognage dans l'aperçu.
+Le trigger `handle_new_user` est `SECURITY DEFINER` et bypass le RLS, donc il continue de fonctionner.
 
-Ligne ~586 — bloc client (grille) dans `renderClientData()` :
+### 3. Securite -- Activer la protection contre les mots de passe compromis
 
-```tsx
-// AVANT
-<div className="absolute bottom-16 left-4 right-4 ...">
+Activer la verification HaveIBeenPwned dans la configuration d'authentification pour rejeter les mots de passe presents dans des fuites connues.
 
-// APRÈS
-<div className="absolute bottom-10 left-4 right-4 ...">
-```
+### 4. Securite -- Validation serveur dans la fonction Edge `send-proposal-email`
 
-`bottom-10` = 40px, ce qui laisse de l'espace pour l'adresse à 12px + une marge visuelle.
+Meme si l'email est desactive cote UI, la fonction Edge reste deployee. Ajouter une validation des entrees :
+- Format des emails (regex)
+- Longueur du sujet (max 200 caracteres) et du message (max 10 000 caracteres)
+- Valeurs numeriques positives
 
-**Fichier 2 : `src/components/rental-proposal/RentalProposalExport.tsx`**
+### Resume des fichiers modifies
 
-Ligne ~262 — bloc client HTML :
-
-```html
-<!-- AVANT -->
-style="position: absolute; bottom: 40px; ..."
-
-<!-- APRÈS -->
-style="position: absolute; bottom: 55px; ..."
-```
-
-Ligne ~287 — adresse HTML :
-
-```html
-<!-- AVANT -->
-style="position: absolute; bottom: 4px; ... font-size: 8px;"
-
-<!-- APRÈS -->
-style="position: absolute; bottom: 14px; ... font-size: 8px;"
-```
-
-`14px` depuis le bas dans un canvas de 919px ≈ 4,5mm de marge physique — zone sûre pour toutes les imprimantes standard (marge minimale habituelle : 5mm).
-
-### Résumé des valeurs
-
-| | Avant | Après |
-|---|---|---|
-| **Adresse (Aperçu)** | `bottom-0 pb-1` ≈ 4px | `bottom-3` = 12px |
-| **Bloc client (Aperçu)** | `bottom-16` = 64px | `bottom-10` = 40px |
-| **Adresse (Export PDF)** | `bottom: 4px` | `bottom: 14px` |
-| **Bloc client (Export PDF)** | `bottom: 40px` | `bottom: 55px` |
-
-### Fichiers modifiés
-
-| Fichier | Lignes concernées |
+| Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | ~586, ~623 |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | ~262, ~287 |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Retrait des onglets email, affichage direct du PDF |
+| Migration SQL | Correction politique RLS `pre_registered_commercials` |
+| `supabase/functions/send-proposal-email/index.ts` | Ajout validation des entrees |
+| Configuration auth | Activation leaked password protection |
