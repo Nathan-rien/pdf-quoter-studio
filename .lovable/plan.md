@@ -1,50 +1,35 @@
 
 
-## Corriger la taille du logo client (probleme d'echelle)
+## Corriger le rendu du logo client : appliquer la hauteur au conteneur, pas a l'image
 
 ### Probleme
-Le logo entite est positionne en pourcentage du canvas (via `getSharedElementStyle`), donc il s'adapte a la taille reelle du conteneur. Le logo client, lui, utilise directement `entityLogo.size.height` (coordonnees canvas, ex: 72px dans un espace de 919px) comme valeur pixel CSS brute. Resultat : le logo client est affiche beaucoup trop gros.
+Le logo entite est rendu via un wrapper `div` qui recoit `width` et `height` en pourcentage du canvas (via `getSharedElementStyle`), avec l'image en `w-full h-full object-contain`. Le logo client, lui, applique `height: X%` directement sur la balise `img`, a l'interieur d'un wrapper `div` sans hauteur explicite. En CSS, un pourcentage de hauteur sur un enfant est ignore si le parent n'a pas de hauteur definie. Resultat : l'image s'affiche a sa taille naturelle, beaucoup trop grande.
 
 ### Solution
-Appliquer un facteur d'echelle pour convertir la hauteur canvas en pixels reels dans le conteneur d'apercu :
+Deplacer la propriete `heightPct` (et `heightPx`) du `img` vers le wrapper `div`, puis utiliser `w-full h-full object-contain` sur l'image, exactement comme le fait le rendu du logo entite.
 
-```text
-scaleFactor = CANVAS_DISPLAY_MAX_WIDTH / CANVAS_SCALE.width  (580 / 650 = 0.892)
-defaultLogoHeight = entityLogo.size.height * scaleFactor
-```
-
-Exemple : un logo entite de 72px dans le canvas donne 72 * 0.892 = 64px affiches, au lieu de 72px bruts.
-
-### Fichiers modifies
+### Fichier modifie
 
 | Fichier | Modification |
 |---|---|
-| `RentalProposalPreview.tsx` | Multiplier `entityLogo.size.height` par `CANVAS_DISPLAY_MAX_WIDTH / CANVAS_SCALE.width` pour obtenir la bonne taille en pixels |
-| `RentalProposalExport.tsx` | Meme correction avec le facteur d'echelle de l'export PDF |
+| `ClientLogoDraggable.tsx` | Appliquer `heightStyle` et `width` sur le wrapper `div`, mettre l'image en `w-full h-full object-contain` |
 
 ### Detail technique
 
-**Preview (RentalProposalPreview.tsx) :**
-
+**Avant (simplifie) :**
 ```text
-// AVANT
-const defaultLogoHeight = entityLogo?.size.height ?? 30;
-
-// APRES
-const previewScale = CANVAS_DISPLAY_MAX_WIDTH / CANVAS_SCALE.width;
-const defaultLogoHeight = entityLogo
-  ? Math.round(entityLogo.size.height * previewScale)
-  : 30;
+<div style={{ top, left, position: absolute }}>          <!-- pas de hauteur -->
+  <img style={{ height: '7.8%', objectFit: contain }} />  <!-- % ignore -->
+</div>
 ```
 
-**Export (RentalProposalExport.tsx) :**
-L'export utilise un conteneur de 794px de large (A4 a 96dpi). Le facteur est donc `794 / 650 = 1.22`.
-
+**Apres :**
 ```text
-const exportScale = 794 / CANVAS_SCALE.width;
-const defaultLogoHeight = entityLogo
-  ? Math.round(entityLogo.size.height * exportScale)
-  : 40;
+<div style={{ top, left, position: absolute, height: '7.8%', width: '...' }}>
+  <img className="w-full h-full object-contain" />
+</div>
 ```
 
-Le calcul de centrage vertical (`entityCenterPct`, `autoTopPct`) reste inchange car il utilise deja des pourcentages.
+Cela reproduit exactement le pattern de rendu du logo entite dans `PreviewEditableCanvas` (lignes 329-349) et garantit que le pourcentage de hauteur est resolu par rapport au conteneur du canvas (qui a une hauteur explicite via `aspect-[210/297]`).
+
+Le meme changement s'applique aux deux modes de rendu du composant (lecture et edition). La largeur du wrapper sera definie soit par `width` (override en px) soit par `auto` (taille naturelle de l'image contrainte par la hauteur).
