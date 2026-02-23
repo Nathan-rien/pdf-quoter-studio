@@ -603,7 +603,10 @@ export function RentalProposalPreview() {
       const minLeftPct = entityLogo 
         ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
         : 25;
-      const defaultLogoHeight = entityLogo?.size.height ?? 30;
+      const previewScale = CANVAS_DISPLAY_MAX_WIDTH / CANVAS_SCALE.width;
+      const defaultLogoHeight = entityLogo
+        ? Math.round(entityLogo.size.height * previewScale)
+        : 30;
       const clientLogoHeightPx = clientLogoOverride?.height ?? defaultLogoHeight;
       const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
       const autoTopPct = entityLogo 
