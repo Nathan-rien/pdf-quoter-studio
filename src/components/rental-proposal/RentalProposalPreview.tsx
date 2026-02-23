@@ -606,7 +606,7 @@ export function RentalProposalPreview() {
 
       // Position par défaut : aligné verticalement avec le centre du logo entité, juste à sa droite
       const minLeftPct = entityLogo 
-        ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
+        ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 4
         : 25;
       // Taille fixe du logo client, indépendante du logo entité
       const CLIENT_LOGO_SIZE = { width: 50, height: 50 }; // unités canvas (650x919)
@@ -629,7 +629,7 @@ export function RentalProposalPreview() {
           : 6;
       // autoLeftPct : à droite du logo entité
       const autoLeftPct = entityLogo
-        ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
+        ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 4
         : 50;
 
       return {
