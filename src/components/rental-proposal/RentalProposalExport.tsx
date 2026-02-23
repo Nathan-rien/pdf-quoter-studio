@@ -272,7 +272,8 @@ export function RentalProposalExport() {
     const minLeftPct = entityLogo 
       ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
       : 25;
-    const clientLogoHeightPx = clientLogoOverride?.height ?? 40;
+    const defaultLogoHeight = entityLogo?.size.height ?? 40;
+    const clientLogoHeightPx = clientLogoOverride?.height ?? defaultLogoHeight;
     const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
     const logoTopPct = entityLogo 
       ? entityCenterPct - (clientLogoHeightPx / CANVAS_SCALE.height * 100) / 2
@@ -283,7 +284,7 @@ export function RentalProposalExport() {
     const finalLogoTopPct = clientLogoOverride?.top ?? logoTopPct;
     const finalLogoLeftPct = clientLogoOverride?.left ?? logoLeftPct;
     const logoWidthStyle = clientLogoOverride?.width ? `width: ${clientLogoOverride.width}px;` : '';
-    const logoHeightVal = clientLogoOverride?.height ?? 40;
+    const logoHeightVal = clientLogoOverride?.height ?? defaultLogoHeight;
 
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
