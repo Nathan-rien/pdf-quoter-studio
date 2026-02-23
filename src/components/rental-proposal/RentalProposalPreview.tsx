@@ -615,12 +615,12 @@ export function RentalProposalPreview() {
         ? clientLogoOverride.height 
         : CLIENT_LOGO_SIZE.height; // fixe pour centrage uniforme
       const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
-      const autoTopPct = entityLogo 
-        ? entityCenterPct - (clientLogoHeightForCenter / CANVAS_SCALE.height * 100) / 2
-        : dateElement 
-          ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
-          : 6;
-      const autoLeftPct = minLeftPct;
+      const autoTopPct = dateElement
+        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 1
+        : 6;
+      const autoLeftPct = dateElement
+        ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+        : 50;
 
       return {
         topPct: clientLogoOverride?.top ?? autoTopPct,
@@ -628,7 +628,7 @@ export function RentalProposalPreview() {
         width: clientLogoOverride?.width ?? Math.round(defaultWidthPct * CANVAS_DISPLAY_MAX_WIDTH / 100),
         heightPx: clientLogoHeightPx,
         heightPct: clientLogoHeightPct,
-        useTranslate: false,
+        useTranslate: true,
       };
     };
 
