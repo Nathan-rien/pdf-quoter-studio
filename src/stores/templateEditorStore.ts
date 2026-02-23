@@ -122,7 +122,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   updateElementFromPreview: (
     elementId: string, 
     pageNumber: PDFPageNumber, 
-    updates: { position?: { x: number; y: number }; size?: { width: number; height: number } }
+    updates: { position?: { x: number; y: number }; size?: { width: number; height: number }; content?: Partial<TextContent> }
   ) => boolean;
   
   // Getter pour obtenir la version de travail courante (pour l'aperçu en mode édition)
@@ -1603,11 +1603,18 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     const updatedPages = [...currentVersion.pages];
     const updatedElements = [...updatedPages[pageIndex].elements];
     
-    updatedElements[elementIndex] = {
+    const updatedElement = {
       ...element,
       position: updates.position || element.position,
       size: updates.size || element.size,
     };
+    
+    // Fusionner le contenu texte si fourni
+    if (updates.content && element.type === 'text') {
+      updatedElement.content = { ...element.content, ...updates.content };
+    }
+    
+    updatedElements[elementIndex] = updatedElement;
     
     updatedPages[pageIndex] = { ...updatedPages[pageIndex], elements: updatedElements };
     
