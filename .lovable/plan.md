@@ -1,50 +1,52 @@
 
 
-## Rendre les lignes de separation visibles dans l'apercu et le PDF
+## Ajout d'un logo client dans la section "Informations client"
 
-### Probleme
+### Objectif
 
-Les lignes marquees `isSeparator: true` sont rendues comme des lignes produits normales dans l'apercu (Preview) et le PDF exporte. Elles affichent une quantite de 0, un prix unitaire vide et un total de 0,00 au lieu d'apparaitre comme des bandeaux bleus avec leur description.
+Permettre a l'utilisateur d'uploader une image (JPEG, PNG, SVG) comme logo du client. Ce logo s'affichera sur la page 1 (couverture) du template, a droite du logo existant de l'entite (en dessous de la date), aligne horizontalement.
 
 ### Modifications
 
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes ~803-818)
+**Fichier : `src/stores/rentalProposalStore.ts`**
 
-Dans le rendu du tableau des produits (boucle `pageLines.map`), ajouter une condition sur `ligne.isSeparator` :
-- Si `isSeparator === true` : rendre une ligne pleine largeur (`col-span-12` ou `col-span-8` selon `investShowPrices`) avec un fond bleu ciel (`bg-blue-50`), affichant la designation en gras comme titre de section
-- Sinon : garder le rendu actuel (designation, quantite, prix unitaire, total HT)
+- Ajouter un champ `logoUrl: string` dans l'interface `ClientData` (valeur initiale : `''`)
+- Ajouter la validation de ce champ dans le `merge` de rehydratation (comme les autres champs string de `clientData`)
+- Le champ est mis a jour via `updateClientField('logoUrl', dataUrl)` comme les autres champs texte
 
-**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes ~309-313)
+**Fichier : `src/components/rental-proposal/RentalDataEditor.tsx`**
 
-Dans la fonction `makeRowHTML`, ajouter une condition similaire :
-- Si `ligne.isSeparator === true` : generer un `<tr>` avec un seul `<td colspan="4">` (ou 2 si prix masques), fond `#EFF6FF` (equivalent de `bg-blue-50`), texte en gras, affichant la designation
-- Sinon : garder le HTML actuel
+- Dans la carte "Informations client", ajouter un bloc **apres le champ Telephone** :
+  - Label "Logo client"
+  - Un `<input type="file" accept="image/*">` masque, declenche par un bouton ou une zone de drop
+  - A la selection du fichier, convertir en Data URL via `FileReader.readAsDataURL()` et appeler `updateClientField('logoUrl', dataUrl)`
+  - Si un logo est deja charge : afficher une miniature (64x64) avec un bouton de suppression (croix) qui remet `logoUrl` a `''`
 
-### Detail technique
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`**
 
-Apercu (Preview) - rendu conditionnel dans le `.map()` :
-```
-Si ligne.isSeparator :
-  -> div pleine largeur, bg-blue-50, border-blue-100
-  -> Texte de la designation en semi-bold, taille 8px
-Sinon :
-  -> Rendu grille standard (designation, qte, PU, total)
-```
+- Dans `renderPage1` > `renderClientData()` :
+  - Ajouter au-dessus du bloc client (ou a droite du logo entite template), une `<img>` affichant `clientData.logoUrl` si non vide
+  - Positionnement : a droite du logo entite existant, en dessous de la date, aligne horizontalement
+  - Taille : hauteur contrainte (~30px dans le preview) avec `object-contain` pour respecter les proportions
 
-Export PDF (HTML) - rendu conditionnel dans `makeRowHTML` :
-```
-Si ligne.isSeparator :
-  -> <tr><td colspan="4" style="background:#EFF6FF; font-weight:600; padding:6px 8px;">
-       designation
-     </td></tr>
-Sinon :
-  -> HTML standard existant
-```
+**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`**
 
-### Fichiers modifies
+- Dans `generateDynamicContentByPage()`, page 1 :
+  - Ajouter un `<img>` HTML inline avec le `clientData.logoUrl` (Data URL) si non vide
+  - Position : a droite du logo entite, meme alignement vertical, hauteur ~40px
+
+### Compatibilite avec l'existant
+
+- Le champ `logoUrl` est optionnel (`string` vide par defaut), les donnees existantes ne sont pas impactees
+- La rehydratation Zustand traite les champs manquants comme `''`
+- Aucun upload distant ou stockage cloud n'est necessaire : le logo est stocke en Data URL dans le localStorage via le store persiste
+
+### Resume technique
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Rendu conditionnel des separateurs dans le tableau produits (fond bleu, pleine largeur) |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Rendu HTML conditionnel des separateurs dans `makeRowHTML` (colspan, fond bleu) |
+| `src/stores/rentalProposalStore.ts` | Ajout `logoUrl` dans `ClientData`, validation rehydratation |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Zone d'upload logo client avec apercu et suppression |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Affichage du logo client a droite du logo entite sur la page 1 |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Injection HTML du logo client dans la page 1 du PDF |
 
