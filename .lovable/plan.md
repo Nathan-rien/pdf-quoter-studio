@@ -1,34 +1,34 @@
 
 
-## Recentrer le logo client sous la date
+## Uniformiser le positionnement du logo client (style Grosbill Pro)
 
 ### Probleme
-Le logo client est actuellement positionne a droite du logo entite. Il doit etre centre horizontalement sous la date ("23 fevrier 2026"), comme c'etait le cas avant.
+Le dernier changement a centre le logo client sous la date (`translateX(-50%)`). Sur le template Grosbill Pro ca fonctionne visuellement, mais sur Cybertek Pro le logo se retrouve a un endroit different et trop gros. Le rendu doit etre identique sur les deux templates : logo client place a droite du logo entite, aligne verticalement avec lui.
 
 ### Solution
-Modifier le calcul de `autoLeftPct` dans `getLogoPositionData` pour utiliser le centre horizontal de l'element date au lieu de la position a droite du logo entite. Reactiver `translateX(-50%)` pour centrer le logo sur ce point.
+Revenir au positionnement "a droite du logo entite" (`autoLeftPct = minLeftPct`) et desactiver `translateX(-50%)` (`useTranslate: false`), exactement comme avant le changement de centrage.
 
 ### Fichier modifie
 
 | Fichier | Modification |
 |---|---|
-| `RentalProposalPreview.tsx` | Modifier `getLogoPositionData` : calculer `autoLeftPct` a partir du centre de l'element date, et remettre `useTranslate: true` |
+| `RentalProposalPreview.tsx` | Remettre `autoLeftPct = minLeftPct` et `useTranslate: false` dans `getLogoPositionData` |
 
 ### Detail technique
 
-**Avant :**
+Lignes 623-633 de `RentalProposalPreview.tsx` :
+
 ```text
-const autoLeftPct = minLeftPct;  // = droite du logo entite + 2%
+// AVANT (actuel, casse Cybertek Pro)
+const autoLeftPct = dateElement
+  ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+  : 50;
+return { ..., useTranslate: true };
+
+// APRES (revient au style Grosbill Pro)
+const autoLeftPct = minLeftPct;
 return { ..., useTranslate: false };
 ```
 
-**Apres :**
-```text
-const autoLeftPct = dateElement
-  ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
-  : 50;  // fallback centre de la page
-return { ..., useTranslate: true };  // translateX(-50%) pour centrer
-```
-
-Le centrage vertical par rapport au logo entite est conserve. Seul le positionnement horizontal change pour revenir sous la date.
+Cela positionne le logo client juste a droite du logo entite (+ 2% de marge) et le centre verticalement par rapport a lui, quel que soit le template utilise.
 
