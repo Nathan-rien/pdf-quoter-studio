@@ -599,25 +599,23 @@ export function RentalProposalPreview() {
         return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
       });
 
-      const autoTopPct = dateElement 
-        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
-        : entityLogo 
-          ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
-          : 6;
-      const dateCenterXPct = dateElement
-        ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
-        : null;
+      // Position par défaut : aligné verticalement avec le centre du logo entité, juste à sa droite
       const minLeftPct = entityLogo 
         ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
         : 25;
-      const autoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
+      const autoTopPct = entityLogo 
+        ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 - 1.5
+        : dateElement 
+          ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
+          : 6;
+      const autoLeftPct = minLeftPct;
 
       return {
         topPct: clientLogoOverride?.top ?? autoTopPct,
         leftPct: clientLogoOverride?.left ?? autoLeftPct,
         width: clientLogoOverride?.width ?? undefined,
         height: clientLogoOverride?.height ?? 30,
-        useTranslate: !clientLogoOverride && dateCenterXPct !== null,
+        useTranslate: false,
       };
     };
 
