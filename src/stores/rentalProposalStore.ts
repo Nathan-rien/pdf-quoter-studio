@@ -47,6 +47,8 @@ interface MatriceData {
   investShowPrices: boolean;
   // Toggle affichage du bloc "Votre offre"
   investShowOffer: boolean;
+  // Commentaire libre affiché sous Avantages/Conditions sur la page 4
+  commentaire: string;
   
   // Legacy fields (kept for backward compatibility, will be migrated to proposals[0])
   duree: number | null;
@@ -219,6 +221,7 @@ const initialMatriceData: MatriceData = {
   showCoutLocatifAnnuel: true,
   investShowPrices: true,
   investShowOffer: true,
+  commentaire: '',
   // Legacy fields
   duree: 36,
   refinanceur: 'Lixxbail 1',
