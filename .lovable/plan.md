@@ -1,46 +1,41 @@
 
 
-## Decaler le logo client sous la date (sans chevaucher)
+## Corriger le decalage du logo client entre mode Modifier et Lecture
 
-### Probleme
+### Probleme identifie
 
-Le logo client est actuellement positionne a `entityLogo.position.y` (bord superieur du logo entite), ce qui le place au meme niveau vertical que le logo entite et la date. Sur le template Cybertek Pro, cela provoque un chevauchement visible avec le texte de la date.
+Le composant `ClientLogoDraggable` applique un `transform: translateX(-50%)` **uniquement en mode lecture** (pour centrer le logo sur le point `leftPct`). En mode edition, cette transformation n'est pas appliquee : le bord gauche du logo est place directement a `leftPct`.
+
+Quand l'utilisateur deplace le logo en mode edition, la position sauvegardee correspond au bord gauche. En repassant en mode lecture, le `translateX(-50%)` decale le logo vers la gauche de la moitie de sa largeur, creant le decalage visible sur les captures.
 
 ### Solution
 
-Modifier `autoTopPct` pour positionner le logo client **sous la date** avec une marge, plutot qu'au meme Y que le logo entite. La logique sera :
+Appliquer le meme `translateX(-50%)` en mode edition dans `ClientLogoDraggable`, pour que le comportement soit identique dans les deux modes. Cela garantit que la position stockee (`leftPct`) represente toujours le centre du logo.
 
-- Si un element date existe : placer le logo client sous la date (`dateElement.position.y + dateElement.size.height`) + une marge de 2%
-- Sinon si un logo entite existe : sous le logo entite + marge
-- Sinon : valeur par defaut (6%)
-
-Le centrage horizontal (sous la date) reste inchange.
-
-### Fichiers modifies
+### Fichier modifie
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Modifier `autoTopPct` : positionner sous la date + 2% de marge |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme modification pour garantir la parite preview/export |
+| `src/components/rental-proposal/ClientLogoDraggable.tsx` | Ajouter `transform: translateX(-50%)` dans le style du conteneur en mode edition (quand `useTranslateX` est vrai), pour que le rendu soit identique au mode lecture |
 
 ### Detail technique
 
-**Calcul actuel** :
+Dans `ClientLogoDraggable.tsx`, le mode edition (ligne ~140) a ce style :
+
 ```text
-autoTopPct = entityLogo.position.y / CANVAS_SCALE.height * 100
+style={{
+  top: `${topPct}%`,
+  left: `${leftPct}%`,
+  width: width ? `${width}px` : 'auto',
+  ...heightStyle,
+}}
 ```
 
-**Nouveau calcul** :
-```text
-autoTopPct = dateElement
-  ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 2
-  : entityLogo
-    ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
-    : 6
-```
+Il manque le `transform: translateX(-50%)` que le mode lecture applique (ligne ~125). L'ajout de cette transformation dans le mode edition corrigera le decalage.
 
 ### Ce qui ne change pas
-- Le centrage horizontal (sous la date via `translateX(-50%)`)
-- La taille du logo client (50x50 unites canvas)
-- Le mode drag-and-drop et `clientLogoOverride`
+- La logique de positionnement automatique (`autoTopPct` / `autoLeftPct`)
+- Le fonctionnement du drag-and-drop (les deltas en pourcentage restent corrects)
+- Le mode lecture
+- L'export PDF
 
