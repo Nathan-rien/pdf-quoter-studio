@@ -258,7 +258,8 @@ export function RentalProposalExport() {
     const page1Elements = latestVersion?.pages?.[0]?.elements || [];
     const entityLogo = page1Elements.find((el: any) => el.type === 'image');
     const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
-    const logoLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2 : 70;
+    const rawLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 : 70;
+    const logoLeftPct = Math.min(rawLeftPct, 82);
 
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
