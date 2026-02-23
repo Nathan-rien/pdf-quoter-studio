@@ -277,14 +277,16 @@ export function RentalProposalExport() {
     const logoWidthVal = clientLogoOverride?.width ?? defaultLogoWidth;
 
     // Position par défaut : centré sous la date (aligné sur l'aperçu)
-    const autoTopPct = dateElement
-      ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 1
-      : 6;
-    const autoLeftPct = entityLogo
-      ? ((entityLogo.position.x + entityLogo.size.width / 2) / CANVAS_SCALE.width) * 100
+    // autoTopPct : aligner verticalement avec le logo entité
+    const autoTopPct = entityLogo
+      ? (entityLogo.position.y / CANVAS_SCALE.height) * 100
       : dateElement
-        ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
-        : 50;
+        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 1
+        : 6;
+    // autoLeftPct : centrer sous la date
+    const autoLeftPct = dateElement
+      ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+      : 50;
     const finalLogoTopPct = clientLogoOverride?.top ?? autoTopPct;
     const finalLogoLeftPct = clientLogoOverride?.left ?? autoLeftPct;
 
