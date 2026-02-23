@@ -6,6 +6,7 @@ export interface PDFProductLine {
   prixUnitaire: number | null;
   quantite: number;
   totalHT: number;
+  isSeparator?: boolean;
 }
 
 export interface PDFParseResult {
