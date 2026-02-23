@@ -1,46 +1,41 @@
 
 
-## Corriger la visibilite du logo client sur la page 1
+## Corriger le positionnement du logo client sur la page 1
 
 ### Cause racine
 
-Le calcul de `logoLeftPct` peut depasser 100% selon la position et la taille du logo entite dans le template. Comme le conteneur de la page a `overflow-hidden`, le logo client est rendu en dehors de la zone visible.
-
-Exemple : si le logo entite est a `x=484` avec `width=156`, le calcul donne `(484+156)/650*100 + 2 = 100.5%` -- le logo est hors champ.
+Le code actuel utilise `page1Elements.find(el => el.type === 'image')` pour trouver le logo entite. Or, cela trouve le **premier** element image de la page, qui est l'image de fond (le batiment), pas le logo Grosbill. Le logo entite se distingue par la presence d'un `logoId` dans son `ImageContent`.
 
 ### Correction
 
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`**
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (ligne ~586)
 
-Changer la logique de positionnement pour placer le logo client **a droite** du logo entite avec un clamp pour rester dans les limites visibles :
-- Calculer `logoLeftPct` comme avant mais avec `Math.min(..., 85)` pour garantir la visibilite
-- Aligner verticalement au centre du logo entite (pas juste au top) en utilisant la hauteur du logo entite
-- Si le logo deborde a droite, le placer en dessous du logo entite plutot qu'a cote
-
-**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`**
-
-Appliquer le meme clamp dans le HTML genere pour le PDF.
-
-### Detail technique
-
+Remplacer :
 ```
-// Preview
 const entityLogo = page1Elements.find(el => el.type === 'image');
-const logoTopPct = entityLogo 
-  ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 
-  : 2;
-const rawLeftPct = entityLogo 
-  ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 
-  : 70;
-const logoLeftPct = Math.min(rawLeftPct, 82);
+```
+Par :
+```
+const entityLogo = page1Elements.find(el => 
+  el.type === 'image' && (el.content as ImageContent)?.logoId
+);
 ```
 
-Le meme clamp est applique dans l'export PDF.
+Cela cible specifiquement l'element logo (qui a un `logoId`) et ignore l'image de fond.
+
+**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (ligne ~259)
+
+Meme correction :
+```
+const entityLogo = page1Elements.find((el: any) => 
+  el.type === 'image' && el.content?.logoId
+);
+```
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Clamp du positionnement horizontal du logo client pour rester visible |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme clamp dans le HTML genere |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Filtrer sur `logoId` pour trouver le vrai logo entite |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme filtre dans l'export PDF |
 
