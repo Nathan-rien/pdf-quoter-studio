@@ -25,7 +25,7 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD } from '@/lib/canvas-constants';
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 
@@ -367,7 +367,11 @@ export function RentalProposalExport() {
     // Découper les lignes en chunks avec logique de footer overflow
     const investChunksLocal: number[] = (() => {
       const totalLines = lignesData.length;
-      if (totalLines <= INVEST_LINES_PAGE1) return [totalLines];
+      if (totalLines <= INVEST_SINGLE_PAGE_FOOTER_THRESHOLD) return [totalLines];
+      if (totalLines <= INVEST_LINES_PAGE1) {
+        // Le tableau tient sur une page mais pas assez de place pour le footer
+        return [totalLines, 0];
+      }
       const TOTAL_RESERVED = 6;
       const LAST_CHUNK_MAX = INVEST_LINES_CONTINUATION - TOTAL_RESERVED;
       const chunks = [INVEST_LINES_PAGE1];
