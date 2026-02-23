@@ -1,35 +1,34 @@
 
 
-## Corriger le rendu du logo client : appliquer la hauteur au conteneur, pas a l'image
+## Recentrer le logo client sous la date
 
 ### Probleme
-Le logo entite est rendu via un wrapper `div` qui recoit `width` et `height` en pourcentage du canvas (via `getSharedElementStyle`), avec l'image en `w-full h-full object-contain`. Le logo client, lui, applique `height: X%` directement sur la balise `img`, a l'interieur d'un wrapper `div` sans hauteur explicite. En CSS, un pourcentage de hauteur sur un enfant est ignore si le parent n'a pas de hauteur definie. Resultat : l'image s'affiche a sa taille naturelle, beaucoup trop grande.
+Le logo client est actuellement positionne a droite du logo entite. Il doit etre centre horizontalement sous la date ("23 fevrier 2026"), comme c'etait le cas avant.
 
 ### Solution
-Deplacer la propriete `heightPct` (et `heightPx`) du `img` vers le wrapper `div`, puis utiliser `w-full h-full object-contain` sur l'image, exactement comme le fait le rendu du logo entite.
+Modifier le calcul de `autoLeftPct` dans `getLogoPositionData` pour utiliser le centre horizontal de l'element date au lieu de la position a droite du logo entite. Reactiver `translateX(-50%)` pour centrer le logo sur ce point.
 
 ### Fichier modifie
 
 | Fichier | Modification |
 |---|---|
-| `ClientLogoDraggable.tsx` | Appliquer `heightStyle` et `width` sur le wrapper `div`, mettre l'image en `w-full h-full object-contain` |
+| `RentalProposalPreview.tsx` | Modifier `getLogoPositionData` : calculer `autoLeftPct` a partir du centre de l'element date, et remettre `useTranslate: true` |
 
 ### Detail technique
 
-**Avant (simplifie) :**
+**Avant :**
 ```text
-<div style={{ top, left, position: absolute }}>          <!-- pas de hauteur -->
-  <img style={{ height: '7.8%', objectFit: contain }} />  <!-- % ignore -->
-</div>
+const autoLeftPct = minLeftPct;  // = droite du logo entite + 2%
+return { ..., useTranslate: false };
 ```
 
 **Apres :**
 ```text
-<div style={{ top, left, position: absolute, height: '7.8%', width: '...' }}>
-  <img className="w-full h-full object-contain" />
-</div>
+const autoLeftPct = dateElement
+  ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+  : 50;  // fallback centre de la page
+return { ..., useTranslate: true };  // translateX(-50%) pour centrer
 ```
 
-Cela reproduit exactement le pattern de rendu du logo entite dans `PreviewEditableCanvas` (lignes 329-349) et garantit que le pourcentage de hauteur est resolu par rapport au conteneur du canvas (qui a une hauteur explicite via `aspect-[210/297]`).
+Le centrage vertical par rapport au logo entite est conserve. Seul le positionnement horizontal change pour revenir sous la date.
 
-Le meme changement s'applique aux deux modes de rendu du composant (lecture et edition). La largeur du wrapper sera definie soit par `width` (override en px) soit par `auto` (taille naturelle de l'image contrainte par la hauteur).
