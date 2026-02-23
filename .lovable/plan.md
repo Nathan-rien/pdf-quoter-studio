@@ -1,48 +1,50 @@
 
 
-## Bouton "+" d'insertion de separateur entre chaque ligne
+## Rendre les lignes de separation visibles dans l'apercu et le PDF
 
-### Objectif
+### Probleme
 
-Remplacer le bouton "Separation" du header par des boutons "+" discrets positionnes entre chaque ligne du tableau Invest, permettant d'inserer une ligne de separation exactement a l'endroit souhaite.
+Les lignes marquees `isSeparator: true` sont rendues comme des lignes produits normales dans l'apercu (Preview) et le PDF exporte. Elles affichent une quantite de 0, un prix unitaire vide et un total de 0,00 au lieu d'apparaitre comme des bandeaux bleus avec leur description.
 
 ### Modifications
 
-**Fichier : `src/stores/rentalProposalStore.ts`**
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes ~803-818)
 
-- Modifier `addSeparatorLigne` pour accepter un parametre optionnel `atIndex?: number` qui insere le separateur a une position precise (au lieu de toujours l'ajouter en fin de liste)
+Dans le rendu du tableau des produits (boucle `pageLines.map`), ajouter une condition sur `ligne.isSeparator` :
+- Si `isSeparator === true` : rendre une ligne pleine largeur (`col-span-12` ou `col-span-8` selon `investShowPrices`) avec un fond bleu ciel (`bg-blue-50`), affichant la designation en gras comme titre de section
+- Sinon : garder le rendu actuel (designation, quantite, prix unitaire, total HT)
 
-**Fichier : `src/components/rental-proposal/RentalDataEditor.tsx`**
+**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes ~309-313)
 
-1. **Supprimer** le bouton "Separation" du header (lignes 731-734)
+Dans la fonction `makeRowHTML`, ajouter une condition similaire :
+- Si `ligne.isSeparator === true` : generer un `<tr>` avec un seul `<td colspan="4">` (ou 2 si prix masques), fond `#EFF6FF` (equivalent de `bg-blue-50`), texte en gras, affichant la designation
+- Sinon : garder le HTML actuel
 
-2. **Ajouter une ligne intermediaire entre chaque ligne du tableau** : apres chaque `TableRow` (produit ou separateur), afficher une micro-ligne contenant un bouton "+" centre, qui insere un separateur a la position `index + 1`
+### Detail technique
 
-3. **Style du bouton "+"** :
-   - Ligne de hauteur reduite (~20px), fond transparent
-   - Bouton circulaire discret (icone `Plus`, taille 16px) centre horizontalement
-   - Visible au survol de la zone uniquement (opacity 0 par defaut, opacity 100 au hover du `TableRow` intermediaire)
-   - Meme colonne que la poignee de drag (premiere colonne), ou bien `colSpan` sur toute la largeur avec le bouton centre
-
-4. **Ajouter aussi un bouton "+" avant la premiere ligne** pour pouvoir inserer un separateur tout en haut
-
-### Rendu visuel attendu
-
-```text
-[+ btn discret]          <-- insert separateur en position 0
-[grip] Ligne produit 1
-[+ btn discret]          <-- insert separateur en position 1
-[grip] Ligne produit 2
-[+ btn discret]          <-- insert separateur en position 2
-[grip] Separateur bleu
-[+ btn discret]          <-- insert separateur en position 3
-[grip] Ligne produit 3
+Apercu (Preview) - rendu conditionnel dans le `.map()` :
+```
+Si ligne.isSeparator :
+  -> div pleine largeur, bg-blue-50, border-blue-100
+  -> Texte de la designation en semi-bold, taille 8px
+Sinon :
+  -> Rendu grille standard (designation, qte, PU, total)
 ```
 
-### Resume technique
+Export PDF (HTML) - rendu conditionnel dans `makeRowHTML` :
+```
+Si ligne.isSeparator :
+  -> <tr><td colspan="4" style="background:#EFF6FF; font-weight:600; padding:6px 8px;">
+       designation
+     </td></tr>
+Sinon :
+  -> HTML standard existant
+```
+
+### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/stores/rentalProposalStore.ts` | Parametre `atIndex` dans `addSeparatorLigne` |
-| `src/components/rental-proposal/RentalDataEditor.tsx` | Retrait bouton header, ajout lignes intermediaires avec bouton "+" |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Rendu conditionnel des separateurs dans le tableau produits (fond bleu, pleine largeur) |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Rendu HTML conditionnel des separateurs dans `makeRowHTML` (colspan, fond bleu) |
 
