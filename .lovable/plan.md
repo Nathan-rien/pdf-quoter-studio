@@ -1,51 +1,37 @@
 
-## Corriger la taille et la position du logo client sur tous les templates
 
-### Probleme
-Le logo client herite actuellement de la hauteur du logo entite du template (`entityLogo.size.height`). Or, les templates Grosbill Pro et Cybertek Pro ont des logos entite de tailles tres differentes, ce qui donne un logo client beaucoup plus gros sur Cybertek Pro. De plus, sans largeur par defaut (`width: auto`), le logo s'affiche a sa largeur naturelle, ce qui aggrave l'ecart visuel.
+## Centrer le logo client sous la date
 
-### Cause racine
-```text
-defaultLogoHeightPct = (entityLogo.size.height / 919) * 100
-```
-Si le logo entite Cybertek fait 72px de haut en canvas, ca donne ~7.8%, tandis que Grosbill a ~4.3%. Le logo client prend alors une taille completement differente selon le template.
+### Modification unique
+Fichier : `RentalProposalPreview.tsx`, lignes 618-631
 
-### Solution
-Utiliser une taille fixe pour le logo client, independante du logo entite. La taille par defaut sera un carre raisonnable (ex: 50x50 en unites canvas, soit ~5.4% de hauteur). La position reste alignee a droite du logo entite et centree verticalement par rapport a lui.
+Deux changements dans `getLogoPositionData` :
 
-### Fichier modifie
-
-| Fichier | Modification |
-|---|---|
-| `RentalProposalPreview.tsx` | Dans `getLogoPositionData`, remplacer le calcul dynamique de hauteur/largeur par des valeurs fixes |
+1. **Position verticale (`autoTopPct`)** : placer le logo sous la date au lieu de le centrer verticalement par rapport au logo entite
+2. **Position horizontale (`autoLeftPct`)** : centrer sur le milieu horizontal de la date au lieu de le placer a droite du logo entite
+3. **`useTranslate: true`** : reactiver `translateX(-50%)` pour que le `left` represente le centre du logo
 
 ### Detail technique
 
-**Constantes par defaut du logo client (en unites canvas) :**
 ```text
-CLIENT_LOGO_DEFAULT = { width: 50, height: 50 }  // en unites canvas (650x919)
+// AVANT (ligne 618-623)
+const autoTopPct = entityLogo 
+  ? entityCenterPct - (clientLogoHeightForCenter / CANVAS_SCALE.height * 100) / 2
+  : dateElement 
+    ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
+    : 6;
+const autoLeftPct = minLeftPct;
+
+// APRES
+const autoTopPct = dateElement
+  ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 1
+  : 6;
+const autoLeftPct = dateElement
+  ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+  : 50;
 ```
 
-**Calculs modifies dans `getLogoPositionData` :**
-```text
-// AVANT : taille heritee du logo entite (varie selon template)
-const defaultLogoHeightPct = entityLogo
-  ? (entityLogo.size.height / CANVAS_SCALE.height) * 100
-  : (30 / 820) * 100;
+Et ligne 631 : `useTranslate: true` au lieu de `false`.
 
-// APRES : taille fixe independante du template
-const CLIENT_LOGO_SIZE = { width: 50, height: 50 };
-const defaultLogoHeightPct = (CLIENT_LOGO_SIZE.height / CANVAS_SCALE.height) * 100;
-const defaultWidthPct = (CLIENT_LOGO_SIZE.width / CANVAS_SCALE.width) * 100;
-```
+Rien d'autre n'est modifie : la taille fixe (50x50), la largeur par defaut, les overrides manuels restent identiques.
 
-**Largeur par defaut :**
-Quand il n'y a pas d'override, transmettre une largeur calculee a partir du pourcentage et de la largeur d'affichage du canvas (580px) :
-```text
-width: clientLogoOverride?.width ?? Math.round(defaultWidthPct * 580 / 100)
-```
-
-**Centrage vertical :**
-Le centrage vertical utilise desormais `CLIENT_LOGO_SIZE.height` au lieu de `entityLogo.size.height`, ce qui garantit le meme decalage sur tous les templates.
-
-Cela garantit que le logo client a exactement la meme taille et le meme positionnement relatif quel que soit le template selectionne.
