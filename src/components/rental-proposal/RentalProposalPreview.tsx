@@ -603,17 +603,17 @@ export function RentalProposalPreview() {
       const minLeftPct = entityLogo 
         ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
         : 25;
-      // Hauteur par défaut en pourcentage du conteneur (identique au rendu du logo entité via getSharedElementStyle)
-      const defaultLogoHeightPct = entityLogo
-        ? (entityLogo.size.height / CANVAS_SCALE.height) * 100
-        : (30 / 820) * 100; // fallback ~3.66%
+      // Taille fixe du logo client, indépendante du logo entité
+      const CLIENT_LOGO_SIZE = { width: 50, height: 50 }; // unités canvas (650x919)
+      const defaultLogoHeightPct = (CLIENT_LOGO_SIZE.height / CANVAS_SCALE.height) * 100;
+      const defaultWidthPct = (CLIENT_LOGO_SIZE.width / CANVAS_SCALE.width) * 100;
       const clientLogoHeightPct = clientLogoOverride?.height
         ? undefined // override = pixels, pas de pourcentage
         : defaultLogoHeightPct;
       const clientLogoHeightPx = clientLogoOverride?.height ?? undefined;
       const clientLogoHeightForCenter = clientLogoOverride?.height 
         ? clientLogoOverride.height 
-        : entityLogo?.size.height ?? 30; // en unités canvas pour le centrage
+        : CLIENT_LOGO_SIZE.height; // fixe pour centrage uniforme
       const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
       const autoTopPct = entityLogo 
         ? entityCenterPct - (clientLogoHeightForCenter / CANVAS_SCALE.height * 100) / 2
@@ -625,7 +625,7 @@ export function RentalProposalPreview() {
       return {
         topPct: clientLogoOverride?.top ?? autoTopPct,
         leftPct: clientLogoOverride?.left ?? autoLeftPct,
-        width: clientLogoOverride?.width ?? undefined,
+        width: clientLogoOverride?.width ?? Math.round(defaultWidthPct * CANVAS_DISPLAY_MAX_WIDTH / 100),
         heightPx: clientLogoHeightPx,
         heightPct: clientLogoHeightPct,
         useTranslate: false,
