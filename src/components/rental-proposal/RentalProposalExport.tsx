@@ -26,7 +26,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES } from '@/lib/canvas-constants';
-import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML } from '@/lib/pdf-html-generator';
+import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 
 export function RentalProposalExport() {
@@ -582,6 +582,11 @@ export function RentalProposalExport() {
     
     console.log(`[Export] Generating PDF from template: ${activeTemplate?.name}, version ${latestVersion.versionNumber}`);
     
+    // Définir le contexte de substitution AVANT generateDynamicContentByPage
+    // car renderFlowTextElementToHTML y accède via la variable module-level
+    const substitutionContext = { fraisDossier: calculatedValues.fraisDossier, adresseEntite: selectedCommercial?.adresse ?? null };
+    setPdfSubstitutionContext(substitutionContext);
+    
     // Générer le contenu dynamique pour chaque page
     const { content: dynamicContentByPage, excludeIds, extraPagesAfter } = generateDynamicContentByPage();
     
@@ -589,7 +594,7 @@ export function RentalProposalExport() {
     return generatePDFDocumentHTML(
       latestVersion,
       dynamicContentByPage,
-      { fraisDossier: calculatedValues.fraisDossier, adresseEntite: selectedCommercial?.adresse ?? null },
+      substitutionContext,
       excludeIds,
       extraPagesAfter
     );

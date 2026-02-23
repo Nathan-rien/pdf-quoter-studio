@@ -31,6 +31,14 @@ const normalizeZIndex = (element: EditableElement): number => (element.zIndex ??
 // Module-level substitution context for the current PDF generation pass
 let _pdfSubstitutionContext: SubstitutionContext | undefined;
 
+/**
+ * Permet de définir le contexte de substitution avant d'appeler renderFlowTextElementToHTML
+ * depuis l'extérieur (ex: generateDynamicContentByPage dans RentalProposalExport)
+ */
+export function setPdfSubstitutionContext(context: SubstitutionContext | undefined) {
+  _pdfSubstitutionContext = context;
+}
+
 // Cache pour les images base64 (éviter les conversions répétées)
 const imageCache = new Map<string, string>();
 
