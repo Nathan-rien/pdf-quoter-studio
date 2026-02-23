@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Shield, UserPlus, Trash2, Loader2, Building2, RefreshCw, Plus, ChevronDown, ChevronRight, Phone, Mail } from 'lucide-react';
+import { Users, Shield, UserPlus, Trash2, Loader2, Building2, RefreshCw, Plus, ChevronDown, ChevronRight, Phone, Mail, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +41,12 @@ interface PreRegisteredCommercial {
   email: string;
   full_name: string;
   created_at: string;
+  telephone: string | null;
+}
+
+interface EditedFields {
+  email?: string;
+  telephone?: string;
 }
 
 export function AccessManagement() {
@@ -56,6 +62,8 @@ export function AccessManagement() {
   const [showPreRegistered, setShowPreRegistered] = useState(true);
   const [deletingCommercialId, setDeletingCommercialId] = useState<string | null>(null);
   const [confirmDeleteCommercial, setConfirmDeleteCommercial] = useState<string | null>(null);
+  const [editedFields, setEditedFields] = useState<Record<string, EditedFields>>({});
+  const [savingFieldsId, setSavingFieldsId] = useState<string | null>(null);
 
   // Dialog nouveau profil
   const [showNewProfileDialog, setShowNewProfileDialog] = useState(false);
@@ -80,7 +88,7 @@ export function AccessManagement() {
     try {
       const { data, error } = await supabase
         .from('pre_registered_commercials')
-        .select('commercial_id, email, full_name, created_at')
+        .select('commercial_id, email, full_name, created_at, telephone')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setPreRegistered(data || []);
@@ -163,10 +171,14 @@ export function AccessManagement() {
     const name = useExistingCommercial
       ? COMMERCIAUX.find(c => c.id === selectedExistingId)?.nom || ''
       : newProfile.full_name.trim();
+    const selectedCommercial = COMMERCIAUX.find(c => c.id === selectedExistingId);
     const email = useExistingCommercial
-      ? COMMERCIAUX.find(c => c.id === selectedExistingId)?.email || ''
+      ? selectedCommercial?.email || ''
       : newProfile.email.trim();
     const commercialId = useExistingCommercial ? selectedExistingId : newProfile.commercial_id.trim();
+    const telephone = useExistingCommercial
+      ? selectedCommercial?.telephone || null
+      : (newProfile.telephone.trim() || null);
 
     if (!name || !email || !commercialId) {
       toast({ variant: 'destructive', title: 'Champs manquants', description: 'Nom, email et identifiant commercial sont requis.' });
@@ -179,7 +191,8 @@ export function AccessManagement() {
         full_name: name,
         email: email.toLowerCase(),
         commercial_id: commercialId,
-      });
+        telephone,
+      } as any);
       if (error) throw error;
       toast({ title: 'Profil ajouté', description: `${name} a été ajouté à la liste des commerciaux autorisés.` });
       setShowNewProfileDialog(false);
@@ -207,6 +220,48 @@ export function AccessManagement() {
       setDeletingCommercialId(null);
       setConfirmDeleteCommercial(null);
     }
+  };
+
+  const handleSaveFields = async (commercialId: string) => {
+    const fields = editedFields[commercialId];
+    if (!fields) return;
+    setSavingFieldsId(commercialId);
+    try {
+      const updatePayload: Record<string, string> = {};
+      if (fields.email !== undefined) updatePayload.email = fields.email;
+      if (fields.telephone !== undefined) updatePayload.telephone = fields.telephone;
+      const { error } = await supabase
+        .from('pre_registered_commercials')
+        .update(updatePayload)
+        .eq('commercial_id', commercialId);
+      if (error) throw error;
+      setPreRegistered(prev => prev.map(p =>
+        p.commercial_id === commercialId
+          ? { ...p, ...(fields.email !== undefined && { email: fields.email }), ...(fields.telephone !== undefined && { telephone: fields.telephone }) }
+          : p
+      ));
+      setEditedFields(prev => { const n = { ...prev }; delete n[commercialId]; return n; });
+      toast({ title: 'Enregistré' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder les modifications.' });
+    } finally {
+      setSavingFieldsId(null);
+    }
+  };
+
+  const handleFieldChange = (commercialId: string, field: 'email' | 'telephone', value: string, originalValue: string) => {
+    setEditedFields(prev => {
+      const current = prev[commercialId] || {};
+      const updated = { ...current, [field]: value };
+      // If value is back to original, remove the field
+      if (value === originalValue) {
+        delete updated[field];
+      }
+      if (Object.keys(updated).length === 0) {
+        const n = { ...prev }; delete n[commercialId]; return n;
+      }
+      return { ...prev, [commercialId]: updated };
+    });
   };
 
   const formatDate = (dateString: string) =>
@@ -274,48 +329,74 @@ export function AccessManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nom</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead>Email / Téléphone</TableHead>
                     <TableHead>ID Commercial</TableHead>
                     <TableHead>Ajouté le</TableHead>
-                    <TableHead className="w-10"></TableHead>
+                    <TableHead className="w-20"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {preRegistered.map((p) => {
                     const commercialData = COMMERCIAUX.find(c => c.id === p.commercial_id);
                     const entityLabel = commercialData ? ENTITIES.find(e => e.id === commercialData.entity)?.label : null;
+                    const edited = editedFields[p.commercial_id];
+                    const hasChanges = !!edited;
+                    const currentEmail = edited?.email ?? p.email;
+                    const currentTel = edited?.telephone ?? (p as any).telephone ?? commercialData?.telephone ?? '';
                     return (
                       <TableRow key={p.commercial_id}>
                         <TableCell className="font-medium">
                           <div>{p.full_name}</div>
                           {entityLabel && <div className="text-[10px] text-muted-foreground">{entityLabel}</div>}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Mail className="h-3 w-3" />
-                            {p.email}
-                          </div>
-                          {commercialData?.telephone && (
-                            <div className="flex items-center gap-1 text-muted-foreground text-[10px]">
-                              <Phone className="h-3 w-3" />
-                              {commercialData.telephone}
+                        <TableCell>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <Input
+                                value={currentEmail}
+                                onChange={e => handleFieldChange(p.commercial_id, 'email', e.target.value, p.email)}
+                                className="h-7 text-xs"
+                              />
                             </div>
-                          )}
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <Input
+                                value={currentTel}
+                                onChange={e => handleFieldChange(p.commercial_id, 'telephone', e.target.value, (p as any).telephone ?? commercialData?.telephone ?? '')}
+                                placeholder="Téléphone"
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{p.commercial_id}</code>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{formatDate(p.created_at)}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => setConfirmDeleteCommercial(p.commercial_id)}
-                            disabled={deletingCommercialId === p.commercial_id}
-                          >
-                            {deletingCommercialId === p.commercial_id
-                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              : <Trash2 className="h-3.5 w-3.5" />}
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {hasChanges && (
+                              <Button
+                                variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary"
+                                onClick={() => handleSaveFields(p.commercial_id)}
+                                disabled={savingFieldsId === p.commercial_id}
+                              >
+                                {savingFieldsId === p.commercial_id
+                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  : <Check className="h-3.5 w-3.5" />}
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setConfirmDeleteCommercial(p.commercial_id)}
+                              disabled={deletingCommercialId === p.commercial_id}
+                            >
+                              {deletingCommercialId === p.commercial_id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -500,6 +581,16 @@ export function AccessManagement() {
                     type="email"
                     value={newProfile.email}
                     onChange={e => setNewProfile(p => ({ ...p, email: e.target.value }))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Téléphone</Label>
+                  <Input
+                    placeholder="Ex: 06 12 34 56 78"
+                    type="tel"
+                    value={newProfile.telephone}
+                    onChange={e => setNewProfile(p => ({ ...p, telephone: e.target.value }))}
                     className="h-8 text-sm"
                   />
                 </div>

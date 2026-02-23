@@ -1,0 +1,1 @@
+ALTER TABLE public.pre_registered_commercials ADD COLUMN telephone text;
