@@ -1,49 +1,46 @@
 
 
-## Repositionner le logo client a cote du logo entite sur la page 1
+## Corriger la visibilite du logo client sur la page 1
 
-### Probleme
+### Cause racine
 
-Le logo client est actuellement positionne en haut a droite de la page (position absolue `top-3 right-4` dans le Preview, `top: 12px; right: 5%` dans l'export PDF). Il devrait etre place a droite du logo entite du template, aligne verticalement avec celui-ci, sous la date.
+Le calcul de `logoLeftPct` peut depasser 100% selon la position et la taille du logo entite dans le template. Comme le conteneur de la page a `overflow-hidden`, le logo client est rendu en dehors de la zone visible.
 
-### Approche
+Exemple : si le logo entite est a `x=484` avec `width=156`, le calcul donne `(484+156)/650*100 + 2 = 100.5%` -- le logo est hors champ.
 
-Puisque le logo entite est un element du template dont la position est configurable (via l'editeur), le logo client doit etre positionne dynamiquement en fonction de la position reelle du logo entite sur la page 1.
+### Correction
 
-### Modifications
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`**
 
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes ~584-595)
+Changer la logique de positionnement pour placer le logo client **a droite** du logo entite avec un clamp pour rester dans les limites visibles :
+- Calculer `logoLeftPct` comme avant mais avec `Math.min(..., 85)` pour garantir la visibilite
+- Aligner verticalement au centre du logo entite (pas juste au top) en utilisant la hauteur du logo entite
+- Si le logo deborde a droite, le placer en dessous du logo entite plutot qu'a cote
 
-Dans `renderClientData()` de `renderPage1` :
-1. Recuperer les elements de la page 1 (`page1Elements`) et trouver le premier element de type `image` (le logo entite)
-2. Si un logo entite est trouve : positionner le logo client a sa droite, aligne verticalement (meme `top`, decale en `left` de la largeur du logo entite + une marge)
-3. Si aucun logo entite n'est trouve : fallback en bas a gauche ou a cote du bloc client
-4. Utiliser les coordonnees en pourcentage (comme les autres elements du template) pour garantir la coherence visuelle
+**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`**
 
-Remplacement du bloc actuel :
+Appliquer le meme clamp dans le HTML genere pour le PDF.
+
+### Detail technique
+
 ```
-{clientData.logoUrl && (
-  <div className="absolute top-3 right-4 z-40">
-```
-Par un calcul dynamique base sur l'element logo entite :
-```
+// Preview
 const entityLogo = page1Elements.find(el => el.type === 'image');
-const logoTop = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 10;
-const logoLeft = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2 : 70;
+const logoTopPct = entityLogo 
+  ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 
+  : 2;
+const rawLeftPct = entityLogo 
+  ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 
+  : 70;
+const logoLeftPct = Math.min(rawLeftPct, 82);
 ```
-Puis positionner le logo client avec `top: logoTop%` et `left: logoLeft%`.
 
-**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes ~258-263)
+Le meme clamp est applique dans l'export PDF.
 
-Dans `generateDynamicContentByPage()`, page 1 :
-1. Meme logique : trouver l'element image sur la page 1 du template
-2. Calculer la position en pourcentage a droite du logo entite
-3. Remplacer le positionnement fixe `top: 12px; right: 5%` par les coordonnees calculees
-
-### Resume technique
+### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Positionner le logo client dynamiquement a droite du logo entite du template |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme logique de positionnement dynamique dans le HTML genere |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Clamp du positionnement horizontal du logo client pour rester visible |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme clamp dans le HTML genere |
 
