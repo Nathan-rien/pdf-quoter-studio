@@ -1,62 +1,61 @@
 
 
-## Rendre le logo client deplacable et redimensionnable en mode Modifier
+## Corriger le logo client qui disparait en mode Modifier
 
-### Contexte
-Actuellement, le logo client sur la page 1 est rendu en position calculee automatiquement (centre sous la date, a droite du logo entite). Il n'est pas interactif en mode "Modifier". L'objectif est de permettre a l'utilisateur de deplacer et redimensionner ce logo comme les autres elements du template.
+### Cause du probleme
+Le `ClientLogoDraggable` est rendu a l'interieur de `renderClientData`, qui est passe comme `renderDynamicContent` a `PreviewEditableCanvas`. En mode edition, ce contenu dynamique est place dans un wrapper `<div>` avec `cursor-move` et potentiellement un `transform: translate()` (via `dynamicContentOffset`). Le logo, positionne en `absolute` avec des pourcentages, se retrouve positionne par rapport a ce wrapper au lieu de la page entiere, ce qui le fait disparaitre ou le place hors de la zone visible.
 
-### Approche
-Ajouter un etat `clientLogoOverride` dans le store `rentalProposalStore` qui stocke la position et la taille personnalisees du logo client. En mode Modifier, le logo sera rendu avec des poignees de deplacement et de redimensionnement.
+### Solution
+Separer le logo client du contenu dynamique. Le logo doit etre rendu directement dans le canvas de la page, independamment du bloc dynamique (carte client/commercial).
 
 ### Changements
 
-**1. `src/stores/rentalProposalStore.ts`**
-- Ajouter une interface `ClientLogoOverride` avec `position: {x, y}` et `size: {width, height}` (en pourcentages du canvas)
-- Ajouter `clientLogoOverride: ClientLogoOverride | null` dans le state
-- Ajouter une action `updateClientLogoOverride` pour mettre a jour position/taille
-- Ajouter une action `resetClientLogoOverride` pour revenir au placement automatique
+**1. `src/components/rental-proposal/PreviewEditableCanvas.tsx`**
+- Ajouter une prop optionnelle `renderOverlayContent?: () => React.ReactNode` pour du contenu qui se rend directement dans le canvas (hors du wrapper dynamique)
+- Rendre ce contenu apres les elements statiques mais en dehors du wrapper dynamique
 
 **2. `src/components/rental-proposal/RentalProposalPreview.tsx`**
-- Dans `renderClientData`, utiliser `clientLogoOverride` si defini, sinon le calcul automatique actuel
-- En mode edit, rendre le logo dans un conteneur interactif avec :
-  - Curseur `move` et bordure de selection au survol/clic
-  - Drag-and-drop pour deplacer (memes mecanismes que PreviewEditableCanvas)
-  - Poignees de redimensionnement aux 4 coins
-  - Les nouvelles valeurs sont sauvegardees dans le store via `updateClientLogoOverride`
-- En mode lecture, rendu inchange (position depuis override ou calcul auto)
-
-**3. `src/components/rental-proposal/RentalProposalExport.tsx`**
-- Lire `clientLogoOverride` du store
-- Si defini, utiliser les valeurs de position/taille pour le rendu PDF
-- Sinon, conserver le calcul automatique actuel
+- Extraire le rendu du `ClientLogoDraggable` de `renderClientData` dans une fonction separee `renderClientLogo`
+- Passer `renderClientLogo` via la nouvelle prop `renderOverlayContent` de `PreviewEditableCanvas`
+- `renderClientData` ne contient plus que la carte client/commercial (le bloc en bas de page)
+- En mode lecture, le logo continue d'etre rendu normalement dans `renderClientData`
 
 ### Detail technique
 
 ```text
-// Nouveau dans le store
-interface ClientLogoOverride {
-  top: number;    // % du canvas
-  left: number;   // % du canvas
-  width: number;  // px (taille de l'image)
-  height: number; // px (taille de l'image)
+// PreviewEditableCanvas - nouvelle prop
+interface PreviewEditableCanvasProps {
+  // ... existant
+  renderOverlayContent?: () => React.ReactNode; // NEW
 }
 
-// Dans renderClientData (mode edit)
-- Wrapper <div> avec onMouseDown pour le drag
-- 4 poignees de resize (nw, ne, sw, se)
-- Badge "Deplacer" visible au survol (comme les blocs dynamiques)
-- Mise a jour du store a chaque mouvement
+// Rendu dans le canvas (hors du wrapper dynamique)
+{renderOverlayContent?.()}
 
-// Persistence
-- Les valeurs sont persistees via zustand/persist (deja configure)
-- Un reset est possible pour revenir au placement automatique
+// RentalProposalPreview - separation
+const renderClientLogo = () => {
+  // Calcul de position + rendu de ClientLogoDraggable
+  // (le code qui est actuellement au debut de renderClientData)
+};
+
+const renderClientData = () => {
+  // En mode lecture : logo + carte client (inchange)
+  // En mode edit : seulement la carte client (logo via overlay)
+};
+
+return renderPageWithEditMode(
+  1,
+  page1Elements,
+  renderClientData,
+  fallbackContent,
+  isEditMode ? renderClientLogo : undefined  // overlay
+);
 ```
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `rentalProposalStore.ts` | Ajout interface + state + actions pour clientLogoOverride |
-| `RentalProposalPreview.tsx` | Logo client interactif en mode edit (drag + resize) |
-| `RentalProposalExport.tsx` | Lecture de clientLogoOverride pour le PDF |
+| `PreviewEditableCanvas.tsx` | Ajout prop `renderOverlayContent` + rendu dans le canvas |
+| `RentalProposalPreview.tsx` | Separation logo/carte, passage du logo en overlay, adaptation de `renderPageWithEditMode` |
 
