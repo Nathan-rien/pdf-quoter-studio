@@ -306,7 +306,12 @@ export function RentalProposalExport() {
         </tr>
       </thead>`;
     
-    const makeRowHTML = (ligne: typeof lignesData[0]) => `
+    const makeRowHTML = (ligne: typeof lignesData[0]) => {
+      if (ligne.isSeparator) {
+        const colCount = investShowPrices ? 4 : 2;
+        return `<tr><td colspan="${colCount}" style="background:#EFF6FF; font-weight:600; padding:6px 8px; border-bottom:1px solid #BFDBFE; color:#1e40af; font-size:${tableFontSize};">${ligne.designation || ''}</td></tr>`;
+      }
+      return `
       <tr>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
@@ -315,6 +320,7 @@ export function RentalProposalExport() {
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(ligne.totalHT)} €</td>
         ` : ''}
       </tr>`;
+    };
     
     // Découper les lignes en chunks avec logique de footer overflow
     const investChunksLocal: number[] = (() => {

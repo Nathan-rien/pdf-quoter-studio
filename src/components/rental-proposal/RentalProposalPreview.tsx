@@ -802,19 +802,28 @@ export function RentalProposalPreview() {
             
             <div className="divide-y divide-border">
               {pageLines.map((ligne, idx) => (
-                <div 
-                  key={idx} 
-                  className={`grid ${investShowPrices ? 'grid-cols-12' : 'grid-cols-8'} gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20`}
-                >
-                  <div className="col-span-6 break-words whitespace-normal leading-tight py-0.5 line-clamp-2">{ligne.designation || '-'}</div>
-                  <div className="col-span-2 text-center">{ligne.quantite}</div>
-                  {investShowPrices && (
-                    <>
-                      <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
-                      <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
-                    </>
-                  )}
-                </div>
+                ligne.isSeparator ? (
+                  <div
+                    key={idx}
+                    className={`${investShowPrices ? 'col-span-12' : 'col-span-8'} bg-blue-50 border-blue-100 px-2 py-1 text-[8px] font-semibold text-blue-800`}
+                  >
+                    {ligne.designation || ''}
+                  </div>
+                ) : (
+                  <div 
+                    key={idx} 
+                    className={`grid ${investShowPrices ? 'grid-cols-12' : 'grid-cols-8'} gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20`}
+                  >
+                    <div className="col-span-6 break-words whitespace-normal leading-tight py-0.5 line-clamp-2">{ligne.designation || '-'}</div>
+                    <div className="col-span-2 text-center">{ligne.quantite}</div>
+                    {investShowPrices && (
+                      <>
+                        <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
+                        <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
+                      </>
+                    )}
+                  </div>
+                )
               ))}
             </div>
           </div>
