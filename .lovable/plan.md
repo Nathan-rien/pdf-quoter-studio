@@ -1,53 +1,46 @@
 
-## Audit de securite et desactivation de l'envoi d'email
 
-### 1. Masquer l'envoi d'email (Export)
+## Drag-and-drop et lignes de separation dans l'onglet Invest
 
-Dans `src/components/rental-proposal/RentalProposalExport.tsx` :
+### 1. Ajouter le drag-and-drop sur les lignes produits
 
-- Remplacer la structure `Tabs` (onglets "Telecharger" / "Envoyer par email") par le contenu direct du telechargement PDF, sans onglets
-- Supprimer les imports inutilises : `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Mail`, `EmailSendForm`
-- Supprimer les fonctions `generatePDFContent` et `generateFallbackPDFContent` qui ne servaient qu'a l'email
+**Approche** : Utiliser l'API native HTML5 Drag and Drop (pas de librairie externe) pour reordonner les lignes dans le tableau Invest.
 
-Le composant `EmailSendForm.tsx` reste dans le code (non supprime) pour pouvoir etre reactive plus tard.
+**Modifications dans le store** (`src/stores/rentalProposalStore.ts`) :
+- Ajouter une action `reorderLigne(fromIndex: number, toIndex: number)` qui deplace une ligne d'un index a un autre dans le tableau `lignesData`
+- Pas de recalcul du montant total necessaire (les lignes ne changent pas, juste leur ordre)
 
-**Resultat visuel** : le bloc export affiche directement le bouton "Telecharger le PDF" et le nom du fichier, sans aucun onglet.
+**Modifications dans le composant** (`src/components/rental-proposal/RentalDataEditor.tsx`) :
+- Ajouter les attributs `draggable`, `onDragStart`, `onDragOver`, `onDrop` sur chaque `TableRow` de l'onglet Invest
+- Afficher une poignee de deplacement (icone `GripVertical`) sur la gauche de chaque ligne
+- Effet visuel pendant le drag : opacite reduite sur la ligne source, indicateur de position d'insertion
 
-### 2. Securite -- Corriger la politique RLS de `pre_registered_commercials`
+### 2. Ajouter des lignes de separation
 
-La politique `Trigger function can read pre_registered_commercials` utilise `USING (true)`, ce qui expose les emails et noms de tous les commerciaux a n'importe quel utilisateur connecte.
+**Modification du type** (`src/lib/pdf-import-parser.ts`) :
+- Ajouter un champ optionnel `isSeparator?: boolean` dans `PDFProductLine`
+- Les lignes separatrices n'ont pas de quantite, prix unitaire, ou total -- seules `designation` (qui sert de description) et `isSeparator: true` sont definies
 
-**Correction SQL** :
-```sql
-DROP POLICY IF EXISTS "Trigger function can read pre_registered_commercials"
-  ON pre_registered_commercials;
+**Modification du store** (`src/stores/rentalProposalStore.ts`) :
+- Ajouter une action `addSeparatorLigne()` qui insere une ligne avec `isSeparator: true`, `designation: ''`, `quantite: 0`, `prixUnitaire: null`, `totalHT: 0`
+- Les lignes separatrices sont exclues du calcul du montant investissement total
 
-CREATE POLICY "Admins or own email can read pre_registered"
-  ON pre_registered_commercials FOR SELECT TO authenticated
-  USING (
-    has_role(auth.uid(), 'admin'::app_role)
-    OR lower(email) = lower(auth.jwt()->>'email')
-  );
-```
+**Modifications dans le composant** (`src/components/rental-proposal/RentalDataEditor.tsx`) :
+- Ajouter un bouton "Ajouter une separation" a cote du bouton "+ Ajouter"
+- Pour les lignes separatrices : afficher une seule cellule qui prend toute la largeur du tableau, avec :
+  - Fond bleu ciel (`bg-blue-50`, coherent avec la carte "Saisie" existante dans `ProposalCard`)
+  - Bordure bleue discrete (`border-blue-100`)
+  - Un champ texte (AutoResizeTextarea) pour la description, placeholder "Description de la section..."
+  - Le bouton de suppression habituel
 
-Le trigger `handle_new_user` est `SECURITY DEFINER` et bypass le RLS, donc il continue de fonctionner.
+### 3. Impact sur l'apercu et le PDF
 
-### 3. Securite -- Activer la protection contre les mots de passe compromis
+Les lignes separatrices seront filtrees dans le rendu PDF (seules les lignes produits sont comptabilisees). L'ordre des lignes sera celui defini par l'utilisateur via le drag-and-drop.
 
-Activer la verification HaveIBeenPwned dans la configuration d'authentification pour rejeter les mots de passe presents dans des fuites connues.
-
-### 4. Securite -- Validation serveur dans la fonction Edge `send-proposal-email`
-
-Meme si l'email est desactive cote UI, la fonction Edge reste deployee. Ajouter une validation des entrees :
-- Format des emails (regex)
-- Longueur du sujet (max 200 caracteres) et du message (max 10 000 caracteres)
-- Valeurs numeriques positives
-
-### Resume des fichiers modifies
+### Resume technique des fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Retrait des onglets email, affichage direct du PDF |
-| Migration SQL | Correction politique RLS `pre_registered_commercials` |
-| `supabase/functions/send-proposal-email/index.ts` | Ajout validation des entrees |
-| Configuration auth | Activation leaked password protection |
+| `src/lib/pdf-import-parser.ts` | Ajout champ `isSeparator` dans `PDFProductLine` |
+| `src/stores/rentalProposalStore.ts` | Actions `reorderLigne` et `addSeparatorLigne`, exclusion separateurs du total |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Drag-and-drop sur les lignes, rendu conditionnel des separateurs, bouton "Ajouter une separation" |
