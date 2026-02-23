@@ -4,7 +4,7 @@
  * Structure fixe de 8 pages avec mode édition optionnel
  */
 
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -42,6 +42,7 @@ import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZoneType } from '@/types/pdf-template';
 import { PreviewEditableCanvas } from './PreviewEditableCanvas';
+import { ClientLogoDraggable } from './ClientLogoDraggable';
 
 export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
@@ -68,6 +69,9 @@ export function RentalProposalPreview() {
     getAllProposalsCalculations,
     dynamicContentOffsets,
     updateDynamicContentOffset,
+    clientLogoOverride,
+    updateClientLogoOverride,
+    resetClientLogoOverride,
   } = useRentalProposalStore();
 
   const { 
@@ -594,33 +598,43 @@ export function RentalProposalPreview() {
         return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
       });
 
-      // X : centré sous la date, à droite du logo entité | Y : sous la date
-      const logoTopPct = dateElement 
+      // Calcul auto de la position
+      const autoTopPct = dateElement 
         ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
         : entityLogo 
           ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
           : 6;
-      // Centrer le logo sous la date : on prend le centre X de la date
       const dateCenterXPct = dateElement
         ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
         : null;
-      // Minimum X : à droite du logo entité
       const minLeftPct = entityLogo 
         ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
         : 25;
-      const logoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
+      const autoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
+
+      // Utiliser l'override si défini, sinon le calcul automatique
+      const logoTopPct = clientLogoOverride?.top ?? autoTopPct;
+      const logoLeftPct = clientLogoOverride?.left ?? autoLeftPct;
+      const logoWidth = clientLogoOverride?.width ?? undefined;
+      const logoHeight = clientLogoOverride?.height ?? 30;
+      const useTranslate = !clientLogoOverride && dateCenterXPct !== null;
 
       return (
       <>
-        {/* Logo client - centré sous la date, à droite du logo entité */}
+        {/* Logo client - draggable/resizable en mode edit */}
         {clientData.logoUrl && (
-          <div className="absolute z-40" style={{ top: `${logoTopPct}%`, left: `${logoLeftPct}%`, transform: dateCenterXPct !== null ? 'translateX(-50%)' : undefined }}>
-            <img
-              src={clientData.logoUrl}
-              alt="Logo client"
-              style={{ height: '30px', objectFit: 'contain' }}
-            />
-          </div>
+          <ClientLogoDraggable
+            logoUrl={clientData.logoUrl}
+            topPct={logoTopPct}
+            leftPct={logoLeftPct}
+            width={logoWidth}
+            height={logoHeight}
+            useTranslateX={useTranslate}
+            isEditMode={isEditMode}
+            onUpdate={updateClientLogoOverride}
+            onReset={resetClientLogoOverride}
+            hasOverride={clientLogoOverride !== null}
+          />
         )}
         <div className="absolute bottom-10 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
           <div className="grid grid-cols-2 gap-4">

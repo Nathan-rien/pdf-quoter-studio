@@ -77,6 +77,14 @@ interface ServicesInclus {
   description: string;
 }
 
+// Override pour la position/taille du logo client (mode Modifier)
+export interface ClientLogoOverride {
+  top: number;    // % du canvas
+  left: number;   // % du canvas
+  width: number;  // px
+  height: number; // px
+}
+
 interface RentalProposalState {
   // Import status
   pdfImportStatus: PDFImportStatus;
@@ -110,6 +118,9 @@ interface RentalProposalState {
   
   // Template sélectionné pour la proposition
   selectedTemplateId: string | null;
+  
+  // Override position/taille du logo client
+  clientLogoOverride: ClientLogoOverride | null;
   
   // Offsets de position des blocs dynamiques par page (session uniquement)
   dynamicContentOffsets: Record<number, { x: number; y: number }>;
@@ -184,6 +195,10 @@ interface RentalProposalActions {
   updateDynamicContentOffset: (pageNumber: number, offset: { x: number; y: number }) => void;
   resetDynamicContentOffsets: () => void;
   
+  // Client logo override
+  updateClientLogoOverride: (override: ClientLogoOverride) => void;
+  resetClientLogoOverride: () => void;
+  
   // Reset
   resetAll: () => void;
   startNewProposal: () => void;
@@ -247,6 +262,7 @@ const initialState: RentalProposalState = {
   nosOptions: [],
   proposalName: '',
   selectedTemplateId: null,
+  clientLogoOverride: null,
   dynamicContentOffsets: {},
   currentStep: 'import',
   hasUnsavedChanges: false,
@@ -673,6 +689,14 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
 
       resetDynamicContentOffsets: () => {
         set({ dynamicContentOffsets: {} });
+      },
+
+      updateClientLogoOverride: (override) => {
+        set({ clientLogoOverride: override, hasUnsavedChanges: true });
+      },
+
+      resetClientLogoOverride: () => {
+        set({ clientLogoOverride: null, hasUnsavedChanges: true });
       },
 
       markAsSaved: () => {
