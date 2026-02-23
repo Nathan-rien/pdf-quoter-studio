@@ -594,15 +594,15 @@ export function RentalProposalPreview() {
         return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
       });
 
-      // X : aligné avec le logo entité | Y : aligné avec la date
+      // X : à droite du logo entité | Y : sous la date
       const logoTopPct = dateElement 
-        ? (dateElement.position.y / CANVAS_SCALE.height) * 100
+        ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
         : entityLogo 
-          ? (entityLogo.position.y / CANVAS_SCALE.height) * 100
-          : 2;
+          ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
+          : 6;
       const logoLeftPct = entityLogo 
-        ? (entityLogo.position.x / CANVAS_SCALE.width) * 100
-        : 2;
+        ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
+        : 25;
 
       return (
       <>
