@@ -620,9 +620,7 @@ export function RentalProposalPreview() {
         : dateElement 
           ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
           : 6;
-      const autoLeftPct = dateElement
-        ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
-        : 50;
+      const autoLeftPct = minLeftPct;
 
       return {
         topPct: clientLogoOverride?.top ?? autoTopPct,
@@ -630,7 +628,7 @@ export function RentalProposalPreview() {
         width: clientLogoOverride?.width ?? undefined,
         heightPx: clientLogoHeightPx,
         heightPct: clientLogoHeightPct,
-        useTranslate: true,
+        useTranslate: false,
       };
     };
 
