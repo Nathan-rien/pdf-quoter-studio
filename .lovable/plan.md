@@ -1,52 +1,49 @@
 
 
-## Ajout d'un logo client dans la section "Informations client"
+## Repositionner le logo client a cote du logo entite sur la page 1
 
-### Objectif
+### Probleme
 
-Permettre a l'utilisateur d'uploader une image (JPEG, PNG, SVG) comme logo du client. Ce logo s'affichera sur la page 1 (couverture) du template, a droite du logo existant de l'entite (en dessous de la date), aligne horizontalement.
+Le logo client est actuellement positionne en haut a droite de la page (position absolue `top-3 right-4` dans le Preview, `top: 12px; right: 5%` dans l'export PDF). Il devrait etre place a droite du logo entite du template, aligne verticalement avec celui-ci, sous la date.
+
+### Approche
+
+Puisque le logo entite est un element du template dont la position est configurable (via l'editeur), le logo client doit etre positionne dynamiquement en fonction de la position reelle du logo entite sur la page 1.
 
 ### Modifications
 
-**Fichier : `src/stores/rentalProposalStore.ts`**
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes ~584-595)
 
-- Ajouter un champ `logoUrl: string` dans l'interface `ClientData` (valeur initiale : `''`)
-- Ajouter la validation de ce champ dans le `merge` de rehydratation (comme les autres champs string de `clientData`)
-- Le champ est mis a jour via `updateClientField('logoUrl', dataUrl)` comme les autres champs texte
+Dans `renderClientData()` de `renderPage1` :
+1. Recuperer les elements de la page 1 (`page1Elements`) et trouver le premier element de type `image` (le logo entite)
+2. Si un logo entite est trouve : positionner le logo client a sa droite, aligne verticalement (meme `top`, decale en `left` de la largeur du logo entite + une marge)
+3. Si aucun logo entite n'est trouve : fallback en bas a gauche ou a cote du bloc client
+4. Utiliser les coordonnees en pourcentage (comme les autres elements du template) pour garantir la coherence visuelle
 
-**Fichier : `src/components/rental-proposal/RentalDataEditor.tsx`**
+Remplacement du bloc actuel :
+```
+{clientData.logoUrl && (
+  <div className="absolute top-3 right-4 z-40">
+```
+Par un calcul dynamique base sur l'element logo entite :
+```
+const entityLogo = page1Elements.find(el => el.type === 'image');
+const logoTop = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 10;
+const logoLeft = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2 : 70;
+```
+Puis positionner le logo client avec `top: logoTop%` et `left: logoLeft%`.
 
-- Dans la carte "Informations client", ajouter un bloc **apres le champ Telephone** :
-  - Label "Logo client"
-  - Un `<input type="file" accept="image/*">` masque, declenche par un bouton ou une zone de drop
-  - A la selection du fichier, convertir en Data URL via `FileReader.readAsDataURL()` et appeler `updateClientField('logoUrl', dataUrl)`
-  - Si un logo est deja charge : afficher une miniature (64x64) avec un bouton de suppression (croix) qui remet `logoUrl` a `''`
+**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes ~258-263)
 
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`**
-
-- Dans `renderPage1` > `renderClientData()` :
-  - Ajouter au-dessus du bloc client (ou a droite du logo entite template), une `<img>` affichant `clientData.logoUrl` si non vide
-  - Positionnement : a droite du logo entite existant, en dessous de la date, aligne horizontalement
-  - Taille : hauteur contrainte (~30px dans le preview) avec `object-contain` pour respecter les proportions
-
-**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`**
-
-- Dans `generateDynamicContentByPage()`, page 1 :
-  - Ajouter un `<img>` HTML inline avec le `clientData.logoUrl` (Data URL) si non vide
-  - Position : a droite du logo entite, meme alignement vertical, hauteur ~40px
-
-### Compatibilite avec l'existant
-
-- Le champ `logoUrl` est optionnel (`string` vide par defaut), les donnees existantes ne sont pas impactees
-- La rehydratation Zustand traite les champs manquants comme `''`
-- Aucun upload distant ou stockage cloud n'est necessaire : le logo est stocke en Data URL dans le localStorage via le store persiste
+Dans `generateDynamicContentByPage()`, page 1 :
+1. Meme logique : trouver l'element image sur la page 1 du template
+2. Calculer la position en pourcentage a droite du logo entite
+3. Remplacer le positionnement fixe `top: 12px; right: 5%` par les coordonnees calculees
 
 ### Resume technique
 
 | Fichier | Modification |
 |---|---|
-| `src/stores/rentalProposalStore.ts` | Ajout `logoUrl` dans `ClientData`, validation rehydratation |
-| `src/components/rental-proposal/RentalDataEditor.tsx` | Zone d'upload logo client avec apercu et suppression |
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Affichage du logo client a droite du logo entite sur la page 1 |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | Injection HTML du logo client dans la page 1 du PDF |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Positionner le logo client dynamiquement a droite du logo entite du template |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Meme logique de positionnement dynamique dans le HTML genere |
 
