@@ -23,7 +23,7 @@ import { COMMERCIAUX, ENTITIES } from "@/data/commerciaux";
 
 export function MesInfosView() {
   const { commercial, isLoading } = useCommercialIdentity();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // Édition du téléphone uniquement (les autres infos sont gérées par l'admin)
   const [editingPhone, setEditingPhone] = useState(false);
@@ -71,6 +71,45 @@ export function MesInfosView() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
+      </div>
+    );
+  }
+
+  // Admin sans profil commercial : afficher les infos de base du compte
+  if (!commercial && isAdmin) {
+    return (
+      <div className="space-y-4 animate-fade-in max-w-lg">
+        <div>
+          <h2 className="text-lg font-semibold">Mes informations</h2>
+          <p className="text-muted-foreground text-sm">Votre profil administrateur</p>
+        </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                <User className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base">{user?.user_metadata?.full_name || user?.email || 'Administrateur'}</CardTitle>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Admin</Badge>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Mail className="h-3 w-3" />
+                Email
+              </Label>
+              <Input value={user?.email || ''} readOnly className="h-8 text-sm bg-muted/40 cursor-not-allowed" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pour apparaître comme commercial, demandez à un administrateur de vous ajouter dans la liste des commerciaux pré-enregistrés.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
