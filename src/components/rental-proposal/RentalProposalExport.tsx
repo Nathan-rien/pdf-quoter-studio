@@ -593,7 +593,7 @@ export function RentalProposalExport() {
       excludeIds,
       extraPagesAfter
     );
-  }, [latestVersion, activeTemplate, generateDynamicContentByPage]);
+  }, [latestVersion, activeTemplate, generateDynamicContentByPage, calculatedValues, selectedCommercial]);
   
 
   return (
