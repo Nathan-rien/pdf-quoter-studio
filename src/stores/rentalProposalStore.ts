@@ -663,8 +663,16 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         // Can always go back
         if (targetIndex < currentIndex) return true;
 
-        // Cannot skip steps
-        if (targetIndex > currentIndex + 1) return false;
+        // Allow skipping the template step if a template is already selected
+        const canSkipTemplate = state.selectedTemplateId !== null;
+        if (targetIndex > currentIndex + 1) {
+          // Only allow skipping exactly the template step (data -> preview)
+          if (canSkipTemplate && state.currentStep === 'data' && step === 'preview') {
+            // Still check prerequisites for preview
+            return state.pdfImportStatus.isImported && state.lignesData.length > 0;
+          }
+          return false;
+        }
 
         // Specific conditions
         switch (step) {
