@@ -986,7 +986,7 @@ export function RentalProposalPreview() {
               </div>
             )}
             {matriceData.commentaire && (
-              <div className="mt-2 whitespace-pre-wrap" style={{ fontSize: `${Math.max(12 * PREVIEW_FONT_SCALE, 6)}px`, lineHeight: 1.4 }}>
+              <div className="mt-2 whitespace-pre-wrap" style={{ fontSize: `${Math.max(26 * PREVIEW_FONT_SCALE, 8)}px`, lineHeight: 1.4, color: '#1f2937' }}>
                 {matriceData.commentaire}
               </div>
             )}
