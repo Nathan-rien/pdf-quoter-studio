@@ -254,10 +254,16 @@ export function RentalProposalExport() {
     const excludeElementIds: Record<number, string[]> = {};
     const date = new Date().toLocaleDateString('fr-FR');
     
+    // Positionner le logo client dynamiquement à droite du logo entité
+    const page1Elements = latestVersion?.pages?.[0]?.elements || [];
+    const entityLogo = page1Elements.find((el: any) => el.type === 'image');
+    const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
+    const logoLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2 : 70;
+
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
       ${clientData.logoUrl ? `
-        <div style="position: absolute; top: 12px; right: 5%; z-index: 40;">
+        <div style="position: absolute; top: ${logoTopPct}%; left: ${logoLeftPct}%; z-index: 40;">
           <img src="${clientData.logoUrl}" alt="Logo client" style="height: 40px; object-fit: contain;" />
         </div>
       ` : ''}
