@@ -608,7 +608,7 @@ export function RentalProposalPreview() {
       const minLeftPct = entityLogo 
         ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
         : 25;
-      const logoLeftPct = dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct;
+      const logoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
 
       return (
       <>

@@ -279,7 +279,7 @@ export function RentalProposalExport() {
     const minLeftPct = entityLogo 
       ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
       : 25;
-    const logoLeftPct = dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct;
+    const logoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
     const logoTransform = dateCenterXPct !== null ? 'transform: translateX(-50%);' : '';
 
     // Page 1 : Données client et commercial + logo client
