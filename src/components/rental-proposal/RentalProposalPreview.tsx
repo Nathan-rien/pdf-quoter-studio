@@ -587,11 +587,22 @@ export function RentalProposalPreview() {
       const entityLogo = entityLogos.length > 0 
         ? entityLogos.reduce((top, el) => el.position.y < top.position.y ? el : top)
         : null;
-      // Positionner le logo client à droite, sous la date
-      const logoTopPct = entityLogo 
-        ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
-        : 6;
-      const logoLeftPct = 70;
+      // Trouver l'élément date sur le template pour aligner verticalement
+      const dateElement = page1Elements.find(el => {
+        if (el.type !== 'text') return false;
+        const text = (el.content as TextContent)?.text || '';
+        return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
+      });
+
+      // X : aligné avec le logo entité | Y : aligné avec la date
+      const logoTopPct = dateElement 
+        ? (dateElement.position.y / CANVAS_SCALE.height) * 100
+        : entityLogo 
+          ? (entityLogo.position.y / CANVAS_SCALE.height) * 100
+          : 2;
+      const logoLeftPct = entityLogo 
+        ? (entityLogo.position.x / CANVAS_SCALE.width) * 100
+        : 2;
 
       return (
       <>
