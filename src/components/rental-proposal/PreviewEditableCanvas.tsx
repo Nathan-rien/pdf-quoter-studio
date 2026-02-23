@@ -27,6 +27,7 @@ interface PreviewEditableCanvasProps {
   elements: EditableElement[];
   dynamicZones?: DynamicZoneWithBounds[];
   renderDynamicContent?: () => React.ReactNode;
+  renderOverlayContent?: () => React.ReactNode;
   pageFooter: React.ReactNode;
   isEditMode: boolean;
   dynamicContentOffset?: { x: number; y: number };
@@ -38,6 +39,7 @@ export function PreviewEditableCanvas({
   elements,
   dynamicZones = [],
   renderDynamicContent,
+  renderOverlayContent,
   pageFooter,
   isEditMode,
   dynamicContentOffset,
@@ -522,6 +524,9 @@ export function PreviewEditableCanvas({
 
       {/* Zones dynamiques */}
       {dynamicZones.map(zone => renderDynamicZone(zone))}
+
+      {/* Contenu overlay (rendu directement dans le canvas, hors du wrapper dynamique) */}
+      {renderOverlayContent?.()}
 
       {/* Contenu dynamique (déplaçable en mode édition) */}
       {renderDynamicContent && (
