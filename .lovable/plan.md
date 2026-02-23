@@ -1,40 +1,46 @@
 
 
-## Positionner le logo client a cote du logo entite superieur (sous la date)
+## Repositionner le logo client sous la date, aligne avec le logo entite
 
-### Probleme
+### Probleme actuel
 
-Il y a deux logos avec `logoId` sur la page 1 du template : un en haut a gauche (le logo principal, sous la date) et un en bas a droite (le footer). Le `find` actuel retourne le premier dans l'ordre du tableau, qui est probablement le logo du footer. Le client logo se retrouve donc positionne pres du bas de la page, hors de la zone attendue.
+Le logo client est positionne **a droite** du logo entite (Grosbill) en calculant `left = entityLogo.x + entityLogo.width`. L'utilisateur souhaite qu'il soit place **en dessous** du logo entite, aligne horizontalement (meme position X).
 
 ### Solution
 
-Selectionner specifiquement le logo **le plus haut** sur la page (celui avec la plus petite valeur `y`), puis placer le logo client a sa droite, au meme niveau vertical.
+Changer le calcul de positionnement pour :
+- **X (left)** : utiliser la meme position X que le logo entite (au lieu de x + width)
+- **Y (top)** : placer le logo client juste en dessous du logo entite (y + height + petit espacement)
 
 ### Modifications
 
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes 586-589)
+**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes 590-592)
 
-Remplacer la selection par `find` par un filtrage puis tri par position Y :
-
+Remplacer :
 ```typescript
-// Trouver TOUS les logos entite sur la page 1, puis prendre celui le plus haut (plus petit Y)
-const entityLogos = page1Elements.filter(el => 
-  el.type === 'image' && (el.content as ImageContent)?.logoId
-);
-const entityLogo = entityLogos.length > 0 
-  ? entityLogos.reduce((top, el) => el.position.y < top.position.y ? el : top)
-  : null;
+const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
+const rawLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 : 70;
+const logoLeftPct = Math.min(rawLeftPct, 82);
 ```
 
-Le reste du calcul (logoTopPct, logoLeftPct avec clamp) reste identique.
+Par :
+```typescript
+// Positionner le logo client SOUS le logo entite, meme alignement horizontal
+const logoTopPct = entityLogo 
+  ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 0.5
+  : 6;
+const logoLeftPct = entityLogo 
+  ? (entityLogo.position.x / CANVAS_SCALE.width) * 100 
+  : 2;
+```
 
-**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes 259-262)
+**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (lignes 263-265)
 
-Meme logique : filtrer puis selectionner le logo avec le Y minimum.
+Meme changement de calcul pour l'export PDF.
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Selectionner le logo entite le plus haut (min Y) au lieu du premier trouve |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Logo client positionne sous le logo entite (meme X, Y + height) |
 | `src/components/rental-proposal/RentalProposalExport.tsx` | Meme logique dans l'export PDF |
