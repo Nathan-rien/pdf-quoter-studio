@@ -285,7 +285,7 @@ export function RentalProposalExport() {
         ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 2
         : 6;
     const autoLeftPct = entityLogo
-      ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
+      ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 4
       : 50;
     const finalLogoTopPct = clientLogoOverride?.top ?? autoTopPct;
     const finalLogoLeftPct = clientLogoOverride?.left ?? autoLeftPct;
