@@ -342,7 +342,7 @@ export function AccessManagement() {
                     const edited = editedFields[p.commercial_id];
                     const hasChanges = !!edited;
                     const currentEmail = edited?.email ?? p.email;
-                    const currentTel = edited?.telephone ?? (p as any).telephone ?? commercialData?.telephone ?? '';
+                    const currentTel = edited?.telephone ?? p.telephone ?? '';
                     return (
                       <TableRow key={p.commercial_id}>
                         <TableCell className="font-medium">
@@ -363,7 +363,7 @@ export function AccessManagement() {
                               <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                               <Input
                                 value={currentTel}
-                                onChange={e => handleFieldChange(p.commercial_id, 'telephone', e.target.value, (p as any).telephone ?? commercialData?.telephone ?? '')}
+                                onChange={e => handleFieldChange(p.commercial_id, 'telephone', e.target.value, p.telephone ?? '')}
                                 placeholder="Téléphone"
                                 className="h-7 text-xs"
                               />
