@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { FileUp, Table, Eye, Download, Check, ChevronRight, ChevronLeft, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,9 @@ import { RentalProposalPreview } from './RentalProposalPreview';
 import { RentalProposalExport } from './RentalProposalExport';
 import { TemplateSelector } from './TemplateSelector';
 import { useRentalProposalStore, RentalWorkflowStep } from '@/stores/rentalProposalStore';
+import { useAuth } from '@/hooks/useAuth';
+import { useCommercialIdentity } from '@/hooks/useCommercialIdentity';
+import { CommercialEntity } from '@/data/commerciaux';
 import { cn } from '@/lib/utils';
 
 interface WorkflowStepConfig {
@@ -17,7 +20,7 @@ interface WorkflowStepConfig {
   icon: React.ElementType;
 }
 
-const WORKFLOW_STEPS: WorkflowStepConfig[] = [
+const ALL_WORKFLOW_STEPS: WorkflowStepConfig[] = [
   { id: 'import', label: 'Import PDF', icon: FileUp },
   { id: 'data', label: 'Données', icon: Table },
   { id: 'template', label: 'Template', icon: FileText },
@@ -25,7 +28,15 @@ const WORKFLOW_STEPS: WorkflowStepConfig[] = [
   { id: 'export', label: 'Export', icon: Download },
 ];
 
+const ENTITY_TEMPLATE_MAP: Record<CommercialEntity, string> = {
+  'cybertek-pro': 'fd0e078b-0000-4000-8000-000000000000',
+  'grosbill-pro': 'f153bcea-1770-4021-8446-177002144623',
+};
+
 export function RentalWorkflow() {
+  const { isAdmin, isCommercial } = useAuth();
+  const { commercial } = useCommercialIdentity();
+
   const {
     currentStep,
     pdfImportStatus,
@@ -35,7 +46,25 @@ export function RentalWorkflow() {
     canNavigateToStep,
     importFromPDF,
     markAsSaved,
+    selectTemplateForProposal,
   } = useRentalProposalStore();
+
+  const skipTemplateStep = isCommercial && !isAdmin;
+
+  // Auto-select template based on commercial entity
+  useEffect(() => {
+    if (skipTemplateStep && commercial?.entity) {
+      const templateId = ENTITY_TEMPLATE_MAP[commercial.entity];
+      if (templateId) {
+        selectTemplateForProposal(templateId);
+      }
+    }
+  }, [skipTemplateStep, commercial?.entity, selectTemplateForProposal]);
+
+  const WORKFLOW_STEPS = useMemo(
+    () => skipTemplateStep ? ALL_WORKFLOW_STEPS.filter(s => s.id !== 'template') : ALL_WORKFLOW_STEPS,
+    [skipTemplateStep]
+  );
 
   const currentStepIndex = WORKFLOW_STEPS.findIndex(s => s.id === currentStep);
 

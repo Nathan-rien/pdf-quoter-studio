@@ -19,12 +19,19 @@ import { BASE_TAUX_DATA } from '@/data/base-taux';
 import { getConditionFinContrat } from '@/data/frais-dossier';
 import { ENTITIES, getCommerciauxByEntity, CommercialEntity } from '@/data/commerciaux';
 import { ProposalCard } from './ProposalCard';
+import { useAuth } from '@/hooks/useAuth';
+import { useCommercialIdentity } from '@/hooks/useCommercialIdentity';
+import { ReadOnlyBadge } from '@/components/ui/read-only-badge';
 
 export function RentalDataEditor() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
   const [isNosOptionsPopoverOpen, setIsNosOptionsPopoverOpen] = useState(false);
   const [selectedNosAdminOptions, setSelectedNosAdminOptions] = useState<string[]>([]);
+
+  const { isAdmin, isCommercial } = useAuth();
+  const { commercial, commercialId } = useCommercialIdentity();
+  const lockCommercialFields = isCommercial && !isAdmin;
 
   const {
     clientData,
@@ -71,6 +78,18 @@ export function RentalDataEditor() {
     setIsLoadingOptions(true);
     ensureLoaded().finally(() => setIsLoadingOptions(false));
   }, [ensureLoaded]);
+
+  // Auto-fill commercial identity for commercial users
+  useEffect(() => {
+    if (lockCommercialFields && commercial && commercialId) {
+      if (commercialData.entity !== commercial.entity) {
+        updateCommercialEntity(commercial.entity);
+      }
+      if (commercialData.commercialId !== commercialId) {
+        selectCommercial(commercialId);
+      }
+    }
+  }, [lockCommercialFields, commercial, commercialId]);
 
   const calculatedValues = getCalculatedValues();
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -323,6 +342,7 @@ export function RentalDataEditor() {
               <CardTitle className="text-lg flex items-center gap-2">
                 <Briefcase className="h-4 w-4" />
                 Commercial associé
+                {lockCommercialFields && <ReadOnlyBadge size="sm" />}
               </CardTitle>
               <CardDescription>Sélectionnez l'entité et le commercial en charge de cette proposition</CardDescription>
             </CardHeader>
@@ -334,6 +354,7 @@ export function RentalDataEditor() {
                   <Select
                     value={commercialData.entity ?? ''}
                     onValueChange={(value) => updateCommercialEntity(value as CommercialEntity)}
+                    disabled={lockCommercialFields}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Choisir une entité..." />
@@ -352,7 +373,7 @@ export function RentalDataEditor() {
                   <Select
                     value={commercialData.commercialId ?? ''}
                     onValueChange={(value) => selectCommercial(value)}
-                    disabled={!commercialData.entity}
+                    disabled={lockCommercialFields || !commercialData.entity}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Choisir un commercial..." />
