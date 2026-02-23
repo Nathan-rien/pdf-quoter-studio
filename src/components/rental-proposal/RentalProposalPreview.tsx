@@ -4,7 +4,7 @@
  * Structure fixe de 8 pages avec mode édition optionnel
  */
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -43,6 +43,7 @@ import type { EditableElement, TextContent, ImageContent, ShapeContent, IconCont
 import type { PDFPageNumber, DynamicZoneType } from '@/types/pdf-template';
 import { PreviewEditableCanvas } from './PreviewEditableCanvas';
 import { ClientLogoDraggable } from './ClientLogoDraggable';
+import { InlineTextEditor } from '@/components/template-editor/InlineTextEditor';
 
 export function RentalProposalPreview() {
   const [currentPreviewPage, setCurrentPreviewPage] = React.useState(1);
@@ -80,8 +81,12 @@ export function RentalProposalPreview() {
     getTemplateLatestVersion, 
     preparePreviewEditing, 
     getCurrentVersionForPreview,
+    updateElementFromPreview,
     allVersions 
   } = useTemplateEditorStore();
+  
+  // État pour l'édition inline des éléments en flux relatif
+  const [flowInlineEditingId, setFlowInlineEditingId] = useState<string | null>(null);
   
   // Utiliser le template sélectionné dans le workflow, ou fallback sur le template actif
   const activeTemplate = React.useMemo(() => {
@@ -831,40 +836,74 @@ export function RentalProposalPreview() {
       // Calcul de la largeur max en pourcentage (identique à getSharedElementStyle)
       const maxWidthPercent = Math.max(Math.min((element.size.width / CANVAS_SCALE.width) * 100, 100), 5);
       
+      const isInlineEditing = flowInlineEditingId === element.id;
+      
       return (
         <div
           key={element.id}
-          className={cn("mb-0.5", (element.type === 'text' && (element.content as any)?.bold && idx > 0) && "mt-3")}
+          className={cn(
+            "mb-0.5", 
+            (element.type === 'text' && (element.content as any)?.bold && idx > 0) && "mt-3",
+            isEditMode && !element.isDynamic && "cursor-text hover:ring-1 hover:ring-primary/30 rounded"
+          )}
           style={{
             width: 'fit-content',
             maxWidth: `${maxWidthPercent}%`,
             zIndex: previewZIndex(element),
           }}
+          onDoubleClick={(e) => {
+            if (!isEditMode || element.isDynamic) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setFlowInlineEditingId(element.id);
+          }}
         >
-          <div 
-            className="px-0.5 py-px"
-            style={{
-              fontFamily: fontValue,
-              fontSize: `${scaledFontSize}px`,
-              color: content.color || '#1f2937',
-              fontWeight: content.bold ? 'bold' : 'normal',
-              fontStyle: content.italic ? 'italic' : 'normal',
-              textDecoration: content.underline ? 'underline' : 'none',
-              lineHeight: 1.2,
-              textAlign: content.textAlign || 'left',
-              width: '100%',
-            }}
-          >
-            <div className="whitespace-pre-wrap break-words">
-              {content.htmlContent ? (
-                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(
-                  substituteDynamicPlaceholders(content.htmlContent, { fraisDossier: calculatedValues.fraisDossier })
-                ) }} />
-              ) : (
-                substituteDynamicPlaceholders(content.text || '', { fraisDossier: calculatedValues.fraisDossier })
-              )}
+          {isInlineEditing ? (
+            <InlineTextEditor
+              content={content}
+              onContentChange={(html, plainText) => {
+                updateElementFromPreview(element.id, 4 as PDFPageNumber, {
+                  content: { htmlContent: html, text: plainText },
+                });
+              }}
+              onExit={() => setFlowInlineEditingId(null)}
+              style={{
+                fontFamily: fontValue,
+                fontSize: `${scaledFontSize}px`,
+                color: content.color || '#1f2937',
+                fontWeight: content.bold ? 'bold' : 'normal',
+                fontStyle: content.italic ? 'italic' : 'normal',
+                textDecoration: content.underline ? 'underline' : 'none',
+                lineHeight: 1.2,
+                textAlign: (content.textAlign || 'left') as any,
+              }}
+            />
+          ) : (
+            <div 
+              className="px-0.5 py-px"
+              style={{
+                fontFamily: fontValue,
+                fontSize: `${scaledFontSize}px`,
+                color: content.color || '#1f2937',
+                fontWeight: content.bold ? 'bold' : 'normal',
+                fontStyle: content.italic ? 'italic' : 'normal',
+                textDecoration: content.underline ? 'underline' : 'none',
+                lineHeight: 1.2,
+                textAlign: content.textAlign || 'left',
+                width: '100%',
+              }}
+            >
+              <div className="whitespace-pre-wrap break-words">
+                {content.htmlContent ? (
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(
+                    substituteDynamicPlaceholders(content.htmlContent, { fraisDossier: calculatedValues.fraisDossier })
+                  ) }} />
+                ) : (
+                  substituteDynamicPlaceholders(content.text || '', { fraisDossier: calculatedValues.fraisDossier })
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       );
     };
