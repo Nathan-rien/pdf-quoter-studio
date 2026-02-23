@@ -581,11 +581,17 @@ export function RentalProposalPreview() {
     const page1Elements = getStaticPageElements(1 as PDFPageNumber);
     const selectedCommercial = getSelectedCommercial();
     
-    const renderClientData = () => (
+    const renderClientData = () => {
+      // Positionner le logo client dynamiquement à droite du logo entité
+      const entityLogo = page1Elements.find(el => el.type === 'image');
+      const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
+      const logoLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2 : 70;
+
+      return (
       <>
-        {/* Logo client - affiché à droite du logo entité, sous la date */}
+        {/* Logo client - affiché à droite du logo entité, aligné verticalement */}
         {clientData.logoUrl && (
-          <div className="absolute top-3 right-4 z-40">
+          <div className="absolute z-40" style={{ top: `${logoTopPct}%`, left: `${logoLeftPct}%` }}>
             <img
               src={clientData.logoUrl}
               alt="Logo client"
@@ -637,8 +643,8 @@ export function RentalProposalPreview() {
           </div>
         )}
       </>
-    );
-    
+    ); };
+
     const fallbackContent = (
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="text-center">
