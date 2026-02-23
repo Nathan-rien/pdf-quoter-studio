@@ -1,52 +1,62 @@
 
 
-## Aligner le logo client a cote du logo entite (comme Grosbill Pro)
+## 1. Deplacer "Frais de dossier" a gauche de la carte "Condition fin de contrat"
 
-### Probleme
+### Modification
 
-Le positionnement actuel place le logo client **sous la date** (`dateElement.y + height + 2%`), centre horizontalement. Sur Grosbill Pro, cela donne un bon resultat par coincidence (la date et le logo entite sont proches verticalement). Sur Cybertek Pro, la date est plus haute, donc le logo client se retrouve decale vers le bas, sous le logo entite au lieu d'etre a cote.
+Inverser l'ordre des deux colonnes dans la carte "Condition fin de contrat" de l'onglet Matrice :
+- **Colonne gauche** : Label "Frais de dossier" + montant (actuellement a droite)
+- **Colonne droite** : Badge condition fin de contrat (actuellement a gauche)
 
-### Solution
+### Fichier
 
-Changer la logique pour positionner le logo client **a droite du logo entite, verticalement centre avec lui** -- ce qui correspond au rendu Grosbill Pro visible sur la capture de reference.
+`src/components/rental-proposal/RentalDataEditor.tsx` (lignes 439-457) : inverser les deux `<div>` enfants du `grid grid-cols-2`.
 
-| Axe | Ancien calcul | Nouveau calcul |
-|---|---|---|
-| **Top (Y)** | Sous la date + 2% | Centre vertical du logo entite - moitie de la hauteur du logo client |
-| **Left (X)** | Centre de la date | Bord droit du logo entite + 2% de marge |
+---
+
+## 2. Ajouter un champ "Commentaire" avec injection dans l'Apercu et le PDF
+
+### Principe
+
+Un champ texte libre "Commentaire" est ajoute dans la carte "Condition fin de contrat". Son contenu est affiche automatiquement dans l'Apercu et le PDF, sous les sections "Avantages" et "Conditions de l'offre" (elements en flux relatif de la page 4).
 
 ### Fichiers modifies
 
-**`src/components/rental-proposal/RentalProposalPreview.tsx`** (lignes ~618-627)
+| Fichier | Modification |
+|---|---|
+| `src/stores/rentalProposalStore.ts` | Ajouter `commentaire: string` dans `MatriceData`, initialise a `''`. Pas de nouvelle action necessaire car `updateMatriceField` couvre deja ce champ. |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Ajouter un champ `Textarea` "Commentaire" sous la carte "Condition fin de contrat" (ou dans la meme carte, sous les deux colonnes). Lie a `matriceData.commentaire` via `updateMatriceField('commentaire', value)`. |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Apres le rendu des `elementsBelow` (ligne ~985), ajouter un bloc conditionnel qui affiche `matriceData.commentaire` si non vide, avec un style coherent (meme taille de police que les elements de flux). |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Apres `flowElementsHTML` (ligne ~460), ajouter le HTML du commentaire si non vide, avec le meme style que les elements de flux. |
 
-Remplacer le calcul de `autoTopPct` et `autoLeftPct` :
+### Detail technique
 
-```
-// autoTopPct : centrer verticalement avec le logo entite
-const clientLogoHalfHeightPct = (CLIENT_LOGO_SIZE.height / 2 / CANVAS_SCALE.height) * 100;
-const autoTopPct = entityLogo
-  ? entityCenterPct - clientLogoHalfHeightPct
-  : dateElement
-    ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 2
-    : 6;
-// autoLeftPct : a droite du logo entite
-const autoLeftPct = entityLogo
-  ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
-  : 50;
+**Store** : Ajouter dans `MatriceData` :
+```text
+commentaire: string;  // Commentaire libre affiché sous Avantages/Conditions
 ```
 
-Desactiver `translateX(-50%)` quand le logo est positionne a droite du logo entite (le bord gauche = position souhaitee) :
+Valeur initiale : `''`
 
+**Preview** (apres ligne ~986) :
+```text
+{matriceData.commentaire && (
+  <div className="mt-2" style={{ fontSize: scaledFontSize, ... }}>
+    {matriceData.commentaire}
+  </div>
+)}
 ```
-useTranslate: !entityLogo,
+
+**Export** (apres `flowElementsHTML`) :
+```text
+if (commentaire) {
+  flowElementsHTML += `<div style="margin-top: 8px; font-size: 10px;">
+    ${commentaire}
+  </div>`;
+}
 ```
-
-**`src/components/rental-proposal/RentalProposalExport.tsx`** (lignes ~279-291)
-
-Meme logique appliquee a l'identique, avec un `transform: translateX(-50%)` conditionnel (absent si positionne a droite du logo entite).
 
 ### Ce qui ne change pas
-- Taille du logo client (50x50 unites canvas)
-- Mode drag-and-drop et `clientLogoOverride`
-- Rendu des autres elements
-
+- Les elements de template existants (Avantages, Conditions)
+- La logique de substitution des placeholders
+- Le drag-and-drop des blocs dynamiques
