@@ -272,8 +272,10 @@ export function RentalProposalExport() {
     const minLeftPct = entityLogo 
       ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
       : 25;
+    const clientLogoHeightPx = clientLogoOverride?.height ?? 40;
+    const entityCenterPct = entityLogo ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 : 0;
     const logoTopPct = entityLogo 
-      ? ((entityLogo.position.y + entityLogo.size.height / 2) / CANVAS_SCALE.height) * 100 - 1.5
+      ? entityCenterPct - (clientLogoHeightPx / CANVAS_SCALE.height * 100) / 2
       : dateElement 
         ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
         : 6;
