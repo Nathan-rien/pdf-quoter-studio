@@ -1,51 +1,58 @@
 
 
-## Rendre l'email et le telephone modifiables par l'admin
+## Centrer le logo client sous la date dans l'export PDF
 
-### Contexte
-Actuellement, dans la section "Commerciaux pre-autorises", l'email est stocke en base mais affiche en lecture seule, et le telephone provient du referentiel statique (`COMMERCIAUX`). L'admin ne peut modifier ni l'un ni l'autre.
+### Probleme identifie
 
-### Modifications necessaires
-
-#### 1. Migration base de donnees
-Ajouter une colonne `telephone` (texte, nullable) a la table `pre_registered_commercials`.
+Le positionnement horizontal du logo client dans l'export PDF (`RentalProposalExport.tsx`) est calcule a partir du centre de l'element date du template :
 
 ```text
-ALTER TABLE public.pre_registered_commercials ADD COLUMN telephone text;
+autoLeftPct = (dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width * 100
 ```
 
-#### 2. Mise a jour du composant AccessManagement.tsx
+Or, l'element date utilise `width: fit-content` dans le template, ce qui signifie que `dateElement.size.width` (stocke dans le template) ne correspond pas forcement a la largeur reelle rendue. De plus, le `transform: translateX(-50%)` ne suffit pas toujours a garantir un centrage parfait si le point de reference est decale.
 
-**Affichage inline editable** : Remplacer l'affichage statique de l'email et du telephone par des champs `Input` editables directement dans les cellules du tableau.
+L'apercu (`RentalProposalPreview.tsx`) utilise la meme logique mais via le composant `ClientLogoDraggable`, ce qui peut creer un ecart supplementaire entre apercu et export.
 
-- Chaque cellule email affichera un `Input` avec l'icone Mail
-- Chaque cellule telephone affichera un `Input` avec l'icone Phone
-- Un bouton "Enregistrer" (icone check) apparaitra sur la ligne lorsqu'une modification est detectee
-- Les modifications seront sauvegardees via un appel `supabase.update()` sur `pre_registered_commercials`
+### Solution
 
-**Etat local** : Utiliser un state `editedFields` (map par `commercial_id`) pour stocker les valeurs modifiees avant sauvegarde.
+Modifier le calcul de positionnement dans les deux fichiers pour :
 
-**Logique de sauvegarde** :
-```text
-supabase.from('pre_registered_commercials')
-  .update({ email: newEmail, telephone: newTel })
-  .eq('commercial_id', id)
-```
+1. **Centrer le logo client sur le centre horizontal du logo entite** (plutot que sur le centre de l'element date), car l'utilisateur demande un alignement avec le logo entite.
+2. **Fallback sur le centre de la date** si aucun logo entite n'est present.
+3. **Garantir la parite** entre `RentalProposalPreview.tsx` et `RentalProposalExport.tsx`.
 
-#### 3. Propagation au insert (nouveau profil)
-Lors de la creation d'un nouveau profil (mode referentiel), inserer aussi le telephone du commercial selectionne. En mode manuel, ajouter un champ telephone dans le formulaire (deja present dans le state `newProfile`).
-
-### Detail technique
+### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| Migration SQL | Ajouter colonne `telephone` a `pre_registered_commercials` |
-| `AccessManagement.tsx` | Rendre les cellules email/telephone editables inline avec sauvegarde |
-| `AccessManagement.tsx` | Inserer le telephone lors de la creation de profil |
-| `AccessManagement.tsx` | Fetch la colonne `telephone` dans `fetchPreRegistered` |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Recalculer `autoLeftPct` en se basant sur le centre horizontal du logo entite. Conserver le fallback sur la date. |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Appliquer la meme logique de centrage dans `getLogoPositionData()` pour que l'apercu soit fidelement aligne avec l'export. |
+
+### Detail technique
+
+**Calcul actuel** (les deux fichiers) :
+```text
+autoLeftPct = (dateElement.x + dateElement.width / 2) / canvasWidth * 100
+```
+
+**Nouveau calcul** :
+```text
+// Priorite : centrer sur le logo entite
+if (entityLogo) {
+  autoLeftPct = (entityLogo.x + entityLogo.width / 2) / canvasWidth * 100
+} else if (dateElement) {
+  autoLeftPct = (dateElement.x + dateElement.width / 2) / canvasWidth * 100
+} else {
+  autoLeftPct = 50 // centre de la page
+}
+```
+
+Le `top` reste inchange (sous la date + 1%).
 
 ### Ce qui ne change pas
-- La structure globale du tableau et les autres colonnes (Nom, ID Commercial, Date)
-- Le referentiel statique `COMMERCIAUX`
-- Les permissions RLS existantes
+- La taille du logo client (50x50 unites canvas)
+- Le mode drag-and-drop en mode "Modifier"
+- Le `clientLogoOverride` (quand l'utilisateur a manuellement repositionne le logo)
+- Le rendu des autres elements de la page 1
 
