@@ -46,6 +46,7 @@ export function RentalProposalExport() {
     getCalculatedValues,
     getSelectedCommercial,
     getAllProposalsCalculations,
+    clientLogoOverride,
   } = useRentalProposalStore();
 
   const investShowPrices = matriceData.investShowPrices;
@@ -280,13 +281,17 @@ export function RentalProposalExport() {
       ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
       : 25;
     const logoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
-    const logoTransform = dateCenterXPct !== null ? 'transform: translateX(-50%);' : '';
+    const finalLogoTopPct = clientLogoOverride?.top ?? logoTopPct;
+    const finalLogoLeftPct = clientLogoOverride?.left ?? logoLeftPct;
+    const logoTransform = !clientLogoOverride && dateCenterXPct !== null ? 'transform: translateX(-50%);' : '';
+    const logoWidthStyle = clientLogoOverride?.width ? `width: ${clientLogoOverride.width}px;` : '';
+    const logoHeightVal = clientLogoOverride?.height ?? 40;
 
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
       ${clientData.logoUrl ? `
-        <div style="position: absolute; top: ${logoTopPct}%; left: ${logoLeftPct}%; z-index: 40; ${logoTransform}">
-          <img src="${clientData.logoUrl}" alt="Logo client" style="height: 40px; object-fit: contain;" />
+        <div style="position: absolute; top: ${finalLogoTopPct}%; left: ${finalLogoLeftPct}%; z-index: 40; ${logoTransform}">
+          <img src="${clientData.logoUrl}" alt="Logo client" style="height: ${logoHeightVal}px; ${logoWidthStyle} object-fit: contain;" />
         </div>
       ` : ''}
       <div class="dynamic-content" style="position: absolute; bottom: 55px; left: 5%; right: 5%; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
