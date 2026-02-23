@@ -1,43 +1,49 @@
 
 
-## Enregistrer la position par defaut du logo client
+## Corriger l'alignement du logo client sur tous les templates
 
-### Ce qui change
-Actuellement, le logo client est positionne automatiquement **sous la date**. D'apres votre positionnement manuel (capture d'ecran), vous souhaitez que le logo client soit place **a la meme hauteur que le logo entite**, juste a sa droite.
+### Probleme
+Sur le template Cybertek Pro, le logo client n'est pas aligne a la meme hauteur que le logo entite. La formule actuelle utilise un decalage fixe de `-1.5%` qui fonctionne pour le template Grosbill Pro mais pas pour Cybertek Pro, car les logos entite ont des tailles et positions differentes selon le template.
 
-### Modifications
+### Cause
+Le calcul `autoTopPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100 - 1.5` ne prend pas en compte la hauteur reelle du logo client (30px par defaut). Le `-1.5%` est un ajustement arbitraire qui ne s'adapte pas aux differentes configurations de template.
 
-**1. `src/components/rental-proposal/RentalProposalPreview.tsx`**
-Changer le calcul automatique de `autoTopPct` pour aligner le logo client verticalement avec le **centre** du logo entite (au lieu de le placer sous la date) :
-- `autoTopPct` : calcule a partir de la position Y du logo entite (centre vertical), au lieu de la position sous la date
-- `autoLeftPct` : garde la logique actuelle (juste a droite du logo entite + 2%)
-- Supprime le `translateX(-50%)` car le logo n'est plus centre sous la date
-
-**2. `src/components/rental-proposal/RentalProposalExport.tsx`**
-Appliquer exactement le meme changement au calcul de position pour l'export PDF.
-
-### Detail technique
+### Solution
+Remplacer le decalage fixe par un calcul qui centre veritablement le logo client par rapport au centre vertical du logo entite, en tenant compte de la hauteur du logo client :
 
 ```text
-// AVANT (sous la date)
-autoTopPct = ((dateElement.y + dateElement.height) / canvasHeight) * 100 + 0.5
+// Centre vertical du logo entite en %
+entityCenterPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100
 
-// APRES (aligne avec le logo entite)
-autoTopPct = entityLogo 
-  ? ((entityLogo.y + entityLogo.height / 2) / canvasHeight) * 100 - 1.5
-  : dateElement 
-    ? ((dateElement.y + dateElement.height) / canvasHeight) * 100 + 0.5
-    : 6
+// Hauteur du logo client en % du canvas
+clientLogoHeightPct = clientLogoHeight / canvasHeight * 100
 
-autoLeftPct = minLeftPct  // directement a droite du logo entite, sans centrage sous la date
+// Position top pour centrer verticalement
+autoTopPct = entityCenterPct - clientLogoHeightPct / 2
 ```
-
-Le positionnement manuel (drag/resize) reste disponible pour des ajustements fins, mais la position par defaut sera desormais celle que vous avez definie.
 
 ### Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `RentalProposalPreview.tsx` | Nouveau calcul par defaut de la position du logo client |
-| `RentalProposalExport.tsx` | Meme calcul par defaut pour l'export PDF |
+| `RentalProposalPreview.tsx` | Remplacer le `-1.5` par un centrage dynamique base sur la hauteur du logo client (30px par defaut) |
+| `RentalProposalExport.tsx` | Meme correction pour l'export PDF (hauteur 40px par defaut) |
+
+### Detail technique
+
+Dans les deux fichiers, le changement est minimal (1 ligne) :
+
+**Avant :**
+```
+autoTopPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100 - 1.5
+```
+
+**Apres :**
+```
+clientLogoHeightPx = clientLogoOverride?.height ?? DEFAULT_HEIGHT
+entityCenterPct = (entityLogo.y + entityLogo.height / 2) / canvasHeight * 100
+autoTopPct = entityCenterPct - (clientLogoHeightPx / canvasHeight * 100) / 2
+```
+
+Cela garantit un alignement correct quel que soit le template utilise.
 
