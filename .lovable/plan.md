@@ -1,40 +1,24 @@
 
 
-## Positionner le logo client sous la date, a droite du logo entite
+## Decaler le logo client de 1% vers la gauche
 
-### Probleme actuel
+Modification simple : soustraire 1 au pourcentage calcule pour `logoLeftPct` dans les deux fichiers.
 
-Le logo client est aligne verticalement **au meme niveau** que la date (`dateElement.position.y`), alors que l'utilisateur veut qu'il soit **en dessous** de la date. La position horizontale (a droite du logo entite) est correcte.
+### Fichiers modifies
 
-### Solution
+| Fichier | Ligne | Modification |
+|---|---|---|
+| `RentalProposalPreview.tsx` | 611 | `logoLeftPct = ... - 1` |
+| `RentalProposalExport.tsx` | 282 | `logoLeftPct = ... - 1` |
 
-Utiliser `dateElement.position.y + dateElement.size.height` (le bas de la date) au lieu de `dateElement.position.y` (le haut de la date), avec un petit offset pour l'espacement.
+### Detail
 
-### Modifications
-
-**Fichier : `src/components/rental-proposal/RentalProposalPreview.tsx`** (ligne 598-602)
-
-Remplacer le calcul de `logoTopPct` :
-```typescript
-// Avant
-const logoTopPct = dateElement 
-  ? (dateElement.position.y / CANVAS_SCALE.height) * 100
-  : ...
+```text
+// Avant (ligne 611 / 282)
+const logoLeftPct = dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct;
 
 // Apres
-const logoTopPct = dateElement 
-  ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
-  : ...
+const logoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
 ```
 
-**Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`** (ligne 271-275)
-
-Meme modification pour l'export PDF.
-
-### Resume
-
-| Fichier | Modification |
-|---|---|
-| `RentalProposalPreview.tsx` | Logo client positionne sous la date (bas de l'element date + offset) |
-| `RentalProposalExport.tsx` | Meme logique pour l'export PDF |
-
+Cela decale le logo client de 1% vers la gauche par rapport a sa position actuelle, tout en gardant la logique de centrage sous la date et la contrainte de rester a droite du logo entite.
