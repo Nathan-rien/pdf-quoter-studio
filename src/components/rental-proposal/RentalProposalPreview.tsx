@@ -985,6 +985,11 @@ export function RentalProposalPreview() {
                 {elementsBelow.map((el, idx) => renderFlowElement(el, idx))}
               </div>
             )}
+            {matriceData.commentaire && (
+              <div className="mt-2 whitespace-pre-wrap" style={{ fontSize: `${Math.max(10 * PREVIEW_FONT_SCALE, 6)}px`, lineHeight: 1.4 }}>
+                {matriceData.commentaire}
+              </div>
+            )}
           </>
         )}
       </div>

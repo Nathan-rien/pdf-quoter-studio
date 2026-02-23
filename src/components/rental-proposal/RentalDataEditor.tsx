@@ -438,6 +438,12 @@ export function RentalDataEditor() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Frais de dossier</Label>
+                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                    <span className="font-medium">{calculatedValues.fraisDossier ?? '-'} €</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
                   {proposals[0]?.refinanceur ? (
                     <Badge 
                       variant={getConditionFinContrat(proposals[0].refinanceur) === 'Reprise obligatoire loueur' ? 'destructive' : 'default'}
@@ -449,12 +455,17 @@ export function RentalDataEditor() {
                     <Badge variant="secondary" className="text-sm">Sélectionnez un refinanceur</Badge>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Frais de dossier</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span className="font-medium">{calculatedValues.fraisDossier ?? '-'} €</span>
-                  </div>
-                </div>
+              </div>
+
+              {/* Commentaire libre */}
+              <div className="mt-4 space-y-2">
+                <Label>Commentaire</Label>
+                <AutoResizeTextarea
+                  placeholder="Commentaire libre affiché sous Avantages / Conditions de l'offre..."
+                  value={matriceData.commentaire || ''}
+                  onChange={(e) => updateMatriceField('commentaire', e.target.value)}
+                  className="min-h-[60px]"
+                />
               </div>
             </CardContent>
           </Card>
