@@ -530,8 +530,8 @@ export function RentalProposalExport() {
    */
   const generatePDFContentFromTemplate = useCallback(async (): Promise<string> => {
     if (!latestVersion || latestVersion.pages.length === 0) {
-      console.warn('[Export] No template version found, using fallback');
-      return generateFallbackPDFContent();
+      console.warn('[Export] No template version found');
+      throw new Error('Aucun template disponible pour générer le PDF');
     }
     
     console.log(`[Export] Generating PDF from template: ${activeTemplate?.name}, version ${latestVersion.versionNumber}`);
