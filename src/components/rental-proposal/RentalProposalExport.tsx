@@ -256,7 +256,10 @@ export function RentalProposalExport() {
     
     // Positionner le logo client dynamiquement à droite du logo entité
     const page1Elements = latestVersion?.pages?.[0]?.elements || [];
-    const entityLogo = page1Elements.find((el: any) => el.type === 'image' && el.content?.logoId);
+    const entityLogos = page1Elements.filter((el: any) => el.type === 'image' && el.content?.logoId);
+    const entityLogo = entityLogos.length > 0 
+      ? entityLogos.reduce((top: any, el: any) => el.position.y < top.position.y ? el : top)
+      : null;
     const logoTopPct = entityLogo ? (entityLogo.position.y / CANVAS_SCALE.height) * 100 : 2;
     const rawLeftPct = entityLogo ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 1.5 : 70;
     const logoLeftPct = Math.min(rawLeftPct, 82);
