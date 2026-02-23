@@ -151,12 +151,6 @@ export function TemplateSelector() {
           })}
         </div>
 
-        {/* Message d'aide */}
-        {!selectedTemplateId && (
-          <p className="text-sm text-muted-foreground mt-4 text-center">
-            Sélectionnez un template pour continuer vers l'aperçu.
-          </p>
-        )}
       </CardContent>
     </Card>
   );
