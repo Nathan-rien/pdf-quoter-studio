@@ -153,16 +153,14 @@ export function ClientLogoDraggable({
           top: `${topPct}%`,
           left: `${leftPct}%`,
           transform: useTranslateX ? 'translateX(-50%)' : undefined,
+          width: width ? `${width}px` : 'auto',
+          ...heightStyle,
         }}
       >
         <img
           src={logoUrl}
           alt="Logo client"
-          style={{
-            width: width ? `${width}px` : undefined,
-            ...heightStyle,
-            objectFit: 'contain',
-          }}
+          className="w-full h-full object-contain"
         />
       </div>
     );
@@ -180,6 +178,8 @@ export function ClientLogoDraggable({
       style={{
         top: `${topPct}%`,
         left: `${leftPct}%`,
+        width: width ? `${width}px` : 'auto',
+        ...heightStyle,
       }}
       onMouseDown={handleMouseDown}
       onMouseEnter={() => setIsHovered(true)}
@@ -213,11 +213,7 @@ export function ClientLogoDraggable({
       <img
         src={logoUrl}
         alt="Logo client"
-        style={{
-          width: width ? `${width}px` : undefined,
-          ...heightStyle,
-          objectFit: 'contain',
-        }}
+        className="w-full h-full object-contain"
         draggable={false}
       />
 
