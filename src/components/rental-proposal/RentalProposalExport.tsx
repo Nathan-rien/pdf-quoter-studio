@@ -267,20 +267,25 @@ export function RentalProposalExport() {
       return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
     });
 
-    // X : à droite du logo entité | Y : sous la date
+    // X : centré sous la date, à droite du logo entité | Y : sous la date
     const logoTopPct = dateElement 
       ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
       : entityLogo 
         ? ((entityLogo.position.y + entityLogo.size.height) / CANVAS_SCALE.height) * 100 + 1
         : 6;
-    const logoLeftPct = entityLogo 
+    const dateCenterXPct = dateElement
+      ? ((dateElement.position.x + dateElement.size.width / 2) / CANVAS_SCALE.width) * 100
+      : null;
+    const minLeftPct = entityLogo 
       ? ((entityLogo.position.x + entityLogo.size.width) / CANVAS_SCALE.width) * 100 + 2
       : 25;
+    const logoLeftPct = dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct;
+    const logoTransform = dateCenterXPct !== null ? 'transform: translateX(-50%);' : '';
 
     // Page 1 : Données client et commercial + logo client
     dynamicContent[1] = `
       ${clientData.logoUrl ? `
-        <div style="position: absolute; top: ${logoTopPct}%; left: ${logoLeftPct}%; z-index: 40;">
+        <div style="position: absolute; top: ${logoTopPct}%; left: ${logoLeftPct}%; z-index: 40; ${logoTransform}">
           <img src="${clientData.logoUrl}" alt="Logo client" style="height: 40px; object-fit: contain;" />
         </div>
       ` : ''}
