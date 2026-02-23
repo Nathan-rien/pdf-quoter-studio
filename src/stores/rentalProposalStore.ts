@@ -146,7 +146,7 @@ interface RentalProposalActions {
   // Lignes produits
   updateLigne: (index: number, updates: Partial<PDFProductLine>) => void;
   addLigne: () => void;
-  addSeparatorLigne: () => void;
+  addSeparatorLigne: (atIndex?: number) => void;
   reorderLigne: (fromIndex: number, toIndex: number) => void;
   deleteLigne: (index: number) => void;
   
@@ -462,14 +462,17 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         });
       },
 
-      addSeparatorLigne: () => {
-        set(state => ({
-          lignesData: [
-            ...state.lignesData,
-            { reference: null, designation: '', prixUnitaire: null, quantite: 0, totalHT: 0, isSeparator: true },
-          ],
-          hasUnsavedChanges: true,
-        }));
+      addSeparatorLigne: (atIndex?: number) => {
+        set(state => {
+          const newSeparator = { reference: null, designation: '', prixUnitaire: null, quantite: 0, totalHT: 0, isSeparator: true };
+          const newLignes = [...state.lignesData];
+          if (atIndex !== undefined && atIndex >= 0 && atIndex <= newLignes.length) {
+            newLignes.splice(atIndex, 0, newSeparator);
+          } else {
+            newLignes.push(newSeparator);
+          }
+          return { lignesData: newLignes, hasUnsavedChanges: true };
+        });
       },
 
       reorderLigne: (fromIndex, toIndex) => {
