@@ -1,18 +1,57 @@
 
+## Permettre l'edition inline des textes dans l'Apercu en mode Modifier
 
-## Augmenter la taille du commentaire dans l'apercu et l'export PDF
+### Objectif
 
-### Constat
+En mode "Modifier" de l'Apercu, un double-clic sur un element texte ouvre un editeur inline (contentEditable) identique a celui du Template Editor, permettant de modifier le texte directement sur le canvas.
 
-Le commentaire est actuellement rendu en 10px dans l'export et `10 * PREVIEW_FONT_SCALE` dans l'apercu -- plus petit que les textes "Avantages" et "Conditions de l'offre" qui l'entourent.
+### Fichiers modifies
 
-### Modification
+| Fichier | Modification |
+|---|---|
+| `src/stores/templateEditorStore.ts` | Etendre `updateElementFromPreview` pour accepter aussi des mises a jour de `content` (TextContent partiel) |
+| `src/components/rental-proposal/PreviewEditableCanvas.tsx` | Ajouter l'edition inline des textes : etat `inlineEditingId`, double-clic pour activer, import et rendu de `InlineTextEditor`, gestion de la sauvegarde et sortie |
 
-Passer la taille de police du commentaire de **10px a 12px** (et de `10 * PREVIEW_FONT_SCALE` a `12 * PREVIEW_FONT_SCALE` dans l'apercu), pour etre coherent avec les elements de flux voisins.
+### Detail technique
 
-| Fichier | Ligne | Changement |
-|---|---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | ~989 | `10 * PREVIEW_FONT_SCALE` → `12 * PREVIEW_FONT_SCALE` |
-| `src/components/rental-proposal/RentalProposalExport.tsx` | ~461 | `font-size: 10px` → `font-size: 12px` |
+**1. Store - Etendre `updateElementFromPreview`**
 
-Aucun autre fichier impacte.
+Modifier la signature pour accepter un champ `content` optionnel dans les updates :
+
+```text
+updateElementFromPreview: (
+  elementId: string,
+  pageNumber: PDFPageNumber,
+  updates: {
+    position?: { x: number; y: number };
+    size?: { width: number; height: number };
+    content?: Partial<TextContent>;  // NOUVEAU
+  }
+) => boolean;
+```
+
+Dans l'implementation (~ligne 1576), si `updates.content` est fourni, fusionner avec le contenu existant de l'element :
+
+```text
+if (updates.content && element.type === 'text') {
+  element.content = { ...element.content, ...updates.content };
+}
+```
+
+**2. PreviewEditableCanvas - Ajout de l'edition inline**
+
+- Importer `InlineTextEditor` depuis `@/components/template-editor/InlineTextEditor`
+- Ajouter un etat local `inlineEditingId: string | null`
+- Sur **double-clic** d'un element texte non verrouille en mode edit : activer `inlineEditingId`
+- Dans `renderElement` pour les textes : si `inlineEditingId === element.id`, rendre `InlineTextEditor` a la place du texte statique
+- `onContentChange` : appeler `updateElementFromPreview(id, pageNumber, { content: { htmlContent, text } })`
+- `onExit` : remettre `inlineEditingId` a null
+- Empecher le drag quand on est en edition inline (ignorer `handleMouseDown` si `inlineEditingId` est actif)
+- Clic sur le canvas vide : sortir du mode inline
+
+### Ce qui ne change pas
+
+- Le composant `InlineTextEditor` existant (reutilise tel quel)
+- La logique de drag/resize existante
+- Le rendu des elements non-texte
+- Les zones dynamiques (toujours protegees)
