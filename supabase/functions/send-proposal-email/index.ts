@@ -225,10 +225,71 @@ const handler = async (req: Request): Promise<Response> => {
       pdfFileName
     } = data;
 
-    // Validation
+    // ==========================================
+    // INPUT VALIDATION
+    // ==========================================
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const MAX_SUBJECT_LENGTH = 200;
+    const MAX_MESSAGE_LENGTH = 10000;
+
     if (!to || !subject) {
       return new Response(
         JSON.stringify({ error: "Email destinataire et sujet requis" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validate email format for all recipients
+    const allToEmails = to.split(',').map(e => e.trim()).filter(Boolean);
+    const invalidToEmails = allToEmails.filter(e => !EMAIL_REGEX.test(e));
+    if (invalidToEmails.length > 0) {
+      return new Response(
+        JSON.stringify({ error: `Format email invalide : ${invalidToEmails.join(', ')}` }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (cc) {
+      const allCcEmails = cc.split(',').map(e => e.trim()).filter(Boolean);
+      const invalidCcEmails = allCcEmails.filter(e => !EMAIL_REGEX.test(e));
+      if (invalidCcEmails.length > 0) {
+        return new Response(
+          JSON.stringify({ error: `Format email CC invalide : ${invalidCcEmails.join(', ')}` }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
+    if (subject.length > MAX_SUBJECT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Le sujet ne doit pas dépasser ${MAX_SUBJECT_LENGTH} caractères` }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (message && message.length > MAX_MESSAGE_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Le message ne doit pas dépasser ${MAX_MESSAGE_LENGTH} caractères` }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validate numeric values are positive
+    if (typeof investmentAmount === 'number' && investmentAmount < 0) {
+      return new Response(
+        JSON.stringify({ error: "Le montant d'investissement doit être positif" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    if (typeof duration === 'number' && duration <= 0) {
+      return new Response(
+        JSON.stringify({ error: "La durée doit être positive" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    if (typeof monthlyRent === 'number' && monthlyRent < 0) {
+      return new Response(
+        JSON.stringify({ error: "Le loyer mensuel doit être positif" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
