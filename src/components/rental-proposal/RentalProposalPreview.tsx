@@ -508,7 +508,8 @@ export function RentalProposalPreview() {
     pageNum: PDFPageNumber,
     staticElements: EditableElement[],
     renderDynamicContent?: () => React.ReactNode,
-    fallbackContent?: React.ReactNode
+    fallbackContent?: React.ReactNode,
+    renderOverlayContent?: () => React.ReactNode
   ) => {
     // Mode édition : utiliser PreviewEditableCanvas
     if (isEditMode) {
@@ -517,6 +518,7 @@ export function RentalProposalPreview() {
           pageNumber={pageNum}
           elements={staticElements}
           renderDynamicContent={renderDynamicContent}
+          renderOverlayContent={renderOverlayContent}
           pageFooter={<PageFooter pageNum={pageNum} />}
           isEditMode={isEditMode}
           dynamicContentOffset={dynamicContentOffsets[pageNum]}
@@ -585,20 +587,18 @@ export function RentalProposalPreview() {
     const page1Elements = getStaticPageElements(1 as PDFPageNumber);
     const selectedCommercial = getSelectedCommercial();
     
-    const renderClientData = () => {
-      // Positionner le logo client dynamiquement à droite du logo entité
+    // Calcul commun de la position du logo client
+    const getLogoPositionData = () => {
       const entityLogos = page1Elements.filter(el => el.type === 'image' && (el.content as ImageContent)?.logoId);
       const entityLogo = entityLogos.length > 0 
         ? entityLogos.reduce((top, el) => el.position.y < top.position.y ? el : top)
         : null;
-      // Trouver l'élément date sur le template pour aligner verticalement
       const dateElement = page1Elements.find(el => {
         if (el.type !== 'text') return false;
         const text = (el.content as TextContent)?.text || '';
         return text.includes('{{DATE}}') || /janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre/i.test(text);
       });
 
-      // Calcul auto de la position
       const autoTopPct = dateElement 
         ? ((dateElement.position.y + dateElement.size.height) / CANVAS_SCALE.height) * 100 + 0.5
         : entityLogo 
@@ -612,30 +612,56 @@ export function RentalProposalPreview() {
         : 25;
       const autoLeftPct = (dateCenterXPct !== null ? Math.max(dateCenterXPct, minLeftPct) : minLeftPct) - 1;
 
-      // Utiliser l'override si défini, sinon le calcul automatique
-      const logoTopPct = clientLogoOverride?.top ?? autoTopPct;
-      const logoLeftPct = clientLogoOverride?.left ?? autoLeftPct;
-      const logoWidth = clientLogoOverride?.width ?? undefined;
-      const logoHeight = clientLogoOverride?.height ?? 30;
-      const useTranslate = !clientLogoOverride && dateCenterXPct !== null;
+      return {
+        topPct: clientLogoOverride?.top ?? autoTopPct,
+        leftPct: clientLogoOverride?.left ?? autoLeftPct,
+        width: clientLogoOverride?.width ?? undefined,
+        height: clientLogoOverride?.height ?? 30,
+        useTranslate: !clientLogoOverride && dateCenterXPct !== null,
+      };
+    };
 
+    // Logo client rendu en overlay (hors du wrapper dynamique) en mode edit
+    const renderClientLogo = () => {
+      if (!clientData.logoUrl) return null;
+      const pos = getLogoPositionData();
+      return (
+        <ClientLogoDraggable
+          logoUrl={clientData.logoUrl}
+          topPct={pos.topPct}
+          leftPct={pos.leftPct}
+          width={pos.width}
+          height={pos.height}
+          useTranslateX={pos.useTranslate}
+          isEditMode={isEditMode}
+          onUpdate={updateClientLogoOverride}
+          onReset={resetClientLogoOverride}
+          hasOverride={clientLogoOverride !== null}
+        />
+      );
+    };
+
+    const renderClientData = () => {
       return (
       <>
-        {/* Logo client - draggable/resizable en mode edit */}
-        {clientData.logoUrl && (
-          <ClientLogoDraggable
-            logoUrl={clientData.logoUrl}
-            topPct={logoTopPct}
-            leftPct={logoLeftPct}
-            width={logoWidth}
-            height={logoHeight}
-            useTranslateX={useTranslate}
-            isEditMode={isEditMode}
-            onUpdate={updateClientLogoOverride}
-            onReset={resetClientLogoOverride}
-            hasOverride={clientLogoOverride !== null}
-          />
-        )}
+        {/* Logo client en mode lecture (en mode edit, rendu via overlay) */}
+        {!isEditMode && clientData.logoUrl && (() => {
+          const pos = getLogoPositionData();
+          return (
+            <ClientLogoDraggable
+              logoUrl={clientData.logoUrl}
+              topPct={pos.topPct}
+              leftPct={pos.leftPct}
+              width={pos.width}
+              height={pos.height}
+              useTranslateX={pos.useTranslate}
+              isEditMode={false}
+              onUpdate={updateClientLogoOverride}
+              onReset={resetClientLogoOverride}
+              hasOverride={clientLogoOverride !== null}
+            />
+          );
+        })()}
         <div className="absolute bottom-10 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
           <div className="grid grid-cols-2 gap-4">
             {/* Colonne gauche : Client */}
@@ -705,7 +731,8 @@ export function RentalProposalPreview() {
       1 as PDFPageNumber, 
       page1Elements, 
       renderClientData,
-      fallbackContent
+      fallbackContent,
+      isEditMode ? renderClientLogo : undefined
     );
   };
 
