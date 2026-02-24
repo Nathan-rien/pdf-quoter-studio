@@ -552,10 +552,13 @@ export function RentalProposalPreview() {
         {/* Toujours appeler le contenu dynamique s'il existe, avec offset/scale si défini */}
         {renderDynamicContent && (
           <div style={{
+            position: 'absolute' as const,
+            inset: 0,
             transform: dynamicContentOffsets[pageNum]
               ? `translate(${(dynamicContentOffsets[pageNum].x / CANVAS_SCALE.width) * 100}%, ${(dynamicContentOffsets[pageNum].y / CANVAS_SCALE.height) * 100}%) scale(${dynamicContentOffsets[pageNum].scaleX ?? 1}, ${dynamicContentOffsets[pageNum].scaleY ?? 1})`
               : undefined,
             transformOrigin: 'top left',
+            pointerEvents: 'none' as const,
           }}>
             {renderDynamicContent()}
           </div>
