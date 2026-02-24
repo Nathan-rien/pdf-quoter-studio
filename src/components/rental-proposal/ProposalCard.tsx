@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
@@ -217,14 +217,7 @@ export function ProposalCard({
             </div>
             {showCoutLocatifAnnuel && (
               <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-muted-foreground">Coût locatif annuel</Label>
-                  <Switch
-                    checked={showCoutLocatifAnnuel}
-                    onCheckedChange={onToggleCoutLocatif}
-                    className="scale-75"
-                  />
-                </div>
+                <Label className="text-xs text-muted-foreground">Coût locatif annuel</Label>
                 <div className="flex items-center h-9 px-2 bg-muted rounded text-sm">
                   <span>{formatPercent(calculatedValues.coutLocatifAnnuel)}</span>
                 </div>
