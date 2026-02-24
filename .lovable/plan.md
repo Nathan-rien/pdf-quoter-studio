@@ -1,35 +1,42 @@
 
-## Retirer le Switch doublon "Coût locatif annuel" dans la carte Données
 
-### Problème
+## Harmoniser la typographie du commentaire avec les titres Avantages/Conditions
 
-Le toggle Switch "Coût locatif annuel" apparaît en doublon : une fois en haut de la section (bouton principal) et une fois à côté du champ dans la carte "Données" de chaque ProposalCard. Seul celui du haut doit être conservé.
+### Probleme
 
-### Modification
+Le texte saisi dans le champ "Commentaire" s'affiche sur la Page 4 avec une taille de base de 26px et sans police explicite. Les titres "Avantages" et "Condition de l'offre" utilisent 28px en police Garet (Outfit). Le commentaire doit adopter la meme taille et la meme police.
+
+### Modifications
 
 | Fichier | Changement |
 |---|---|
-| `src/components/rental-proposal/ProposalCard.tsx` | Retirer le composant `Switch` à l'intérieur du bloc "Coût locatif annuel" dans la section Données (lignes 163-168), en gardant uniquement le label simple et la valeur affichée |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` (ligne 1032) | Changer la taille de base de 26 a 28, ajouter `fontFamily: 'Outfit, sans-serif'` |
+| `src/components/rental-proposal/RentalProposalExport.tsx` (ligne 465) | Changer `font-size: 12px` a `font-size: 14px` et ajouter `font-family: Outfit, sans-serif` pour correspondre au ratio d'export |
 
-### Détail technique
+### Detail technique
 
-Dans `ProposalCard.tsx`, remplacer le bloc contenant le `Switch` intégré au label par un simple label :
+**Preview (RentalProposalPreview.tsx, ligne 1032)**
 
-Avant :
+Le style inline passe de :
 ```text
-<div className="flex items-center justify-between">
-  <Label className="text-xs text-muted-foreground">Coût locatif annuel</Label>
-  <Switch
-    checked={showCoutLocatifAnnuel}
-    onCheckedChange={onToggleCoutLocatif}
-    className="scale-75"
-  />
-</div>
+fontSize: Math.max(26 * PREVIEW_FONT_SCALE, 8)  (= 10.4px)
+```
+a :
+```text
+fontSize: Math.max(28 * PREVIEW_FONT_SCALE, 8)  (= 11.2px)
+fontFamily: 'Outfit, sans-serif'
 ```
 
-Après :
+**Export PDF (RentalProposalExport.tsx, ligne 465)**
+
+Le style inline passe de :
 ```text
-<Label className="text-xs text-muted-foreground">Coût locatif annuel</Label>
+font-size: 12px
+```
+a :
+```text
+font-size: 14px; font-family: Outfit, sans-serif
 ```
 
-L'import de `Switch` pourra aussi être retiré du fichier s'il n'est plus utilisé ailleurs dans ce composant. Les props `onToggleCoutLocatif` restent dans l'interface car elles sont utilisées par le composant parent pour le toggle principal.
+Le ratio 28 -> 14px correspond au facteur d'echelle standard de l'export PDF (x0.5 par rapport a la base template).
+
