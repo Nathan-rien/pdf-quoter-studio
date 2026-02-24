@@ -63,68 +63,6 @@ export function RentalProposalDashboard({ onNewProposal, onResumeProposal, onVie
         </div>
       </div>
 
-      {/* Quick Actions Grid */}
-      <div className="grid md:grid-cols-3 gap-3">
-        <Card 
-          variant="interactive" 
-          onClick={onNewProposal}
-          className="group"
-        >
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-accent/10 text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
-                <Plus className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm mb-0.5">Nouvelle proposition</h3>
-                <p className="text-xs text-muted-foreground">
-                  Démarrer une nouvelle proposition
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          variant={hasActiveProposal ? "interactive" : "default"} 
-          onClick={hasActiveProposal ? onResumeProposal : undefined}
-          className={cn(!hasActiveProposal && "opacity-60")}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-warning/10 text-warning">
-                <Building2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm mb-0.5">Reprendre</h3>
-                <p className="text-xs text-muted-foreground">
-                  {hasActiveProposal 
-                    ? "Continuer la proposition en cours"
-                    : "Aucune proposition en cours"
-                  }
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card variant="interactive" onClick={onViewHistory}>
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-muted text-muted-foreground group-hover:bg-secondary transition-colors">
-                <History className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm mb-0.5">Historique</h3>
-                <p className="text-xs text-muted-foreground">
-                  Consulter les propositions précédentes
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Status Cards - 3 colonnes sur large écran */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Current Status */}
