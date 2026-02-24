@@ -1,42 +1,66 @@
 
 
-## Harmoniser la typographie du commentaire avec les titres Avantages/Conditions
+## Redimensionner et deplacer les elements dynamiques en mode edition
 
-### Probleme
+### Contexte
 
-Le texte saisi dans le champ "Commentaire" s'affiche sur la Page 4 avec une taille de base de 26px et sans police explicite. Les titres "Avantages" et "Condition de l'offre" utilisent 28px en police Garet (Outfit). Le commentaire doit adopter la meme taille et la meme police.
+Actuellement, les blocs de contenu dynamique (tableau d'investissement, propositions locatives, avantages, etc.) peuvent etre deplaces en mode edition mais pas redimensionnes. L'objectif est d'ajouter des poignees de redimensionnement sur ces blocs pour permettre de les reduire ou agrandir via un facteur d'echelle (CSS `transform: scale()`).
 
-### Modifications
+### Approche technique
 
-| Fichier | Changement |
+Utiliser un facteur de scale (`scaleX`, `scaleY`) applique via `transform: scale()` sur le wrapper du contenu dynamique, combine avec le deplacement existant. Des poignees de redimensionnement apparaitront aux 4 coins du bloc en mode edition.
+
+### Fichiers modifies
+
+| Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/RentalProposalPreview.tsx` (ligne 1032) | Changer la taille de base de 26 a 28, ajouter `fontFamily: 'Outfit, sans-serif'` |
-| `src/components/rental-proposal/RentalProposalExport.tsx` (ligne 465) | Changer `font-size: 12px` a `font-size: 14px` et ajouter `font-family: Outfit, sans-serif` pour correspondre au ratio d'export |
+| `src/stores/rentalProposalStore.ts` | Etendre le type `dynamicContentOffsets` pour inclure un facteur de scale (`scaleX`, `scaleY`) en plus de `x` et `y`. Ajouter une action `updateDynamicContentScale`. |
+| `src/components/rental-proposal/PreviewEditableCanvas.tsx` | Ajouter des poignees de resize sur le wrapper du contenu dynamique. Gerer le drag des poignees pour calculer le nouveau scale. Appliquer `transform: scale()` combine avec `translate()`. |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Passer le scale au canvas et le callback de mise a jour. |
 
 ### Detail technique
 
-**Preview (RentalProposalPreview.tsx, ligne 1032)**
+**1. Store - Nouveau type et action**
 
-Le style inline passe de :
+Le type de `dynamicContentOffsets` evolue de :
 ```text
-fontSize: Math.max(26 * PREVIEW_FONT_SCALE, 8)  (= 10.4px)
+Record<number, { x: number; y: number }>
 ```
 a :
 ```text
-fontSize: Math.max(28 * PREVIEW_FONT_SCALE, 8)  (= 11.2px)
-fontFamily: 'Outfit, sans-serif'
+Record<number, { x: number; y: number; scaleX: number; scaleY: number }>
 ```
 
-**Export PDF (RentalProposalExport.tsx, ligne 465)**
+Valeurs par defaut du scale : `scaleX: 1, scaleY: 1`. Les actions existantes `updateDynamicContentOffset` integrent le scale. Une nouvelle action `updateDynamicContentScale` permet de modifier uniquement le scale.
 
-Le style inline passe de :
+**2. PreviewEditableCanvas - Poignees de resize**
+
+- Ajouter un state `dynamicResizeState` (similaire au `resizeState` existant pour les elements statiques) qui track le coin tire et les dimensions de depart.
+- En mode edition, afficher 4 poignees de coin (petits carres 8x8px) sur le wrapper du contenu dynamique.
+- Au drag d'une poignee, calculer le ratio de scale en divisant le nouveau delta par la taille initiale du bloc.
+- Limiter le scale entre 0.3 (minimum) et 1.5 (maximum) pour eviter les debordements ou le contenu illisible.
+- Appliquer `transform: translate(...) scale(scaleX, scaleY)` avec `transform-origin: top left`.
+- Le badge affichera "Deplacer / Redimensionner".
+
+**3. RentalProposalPreview - Transmission du scale**
+
+- Extraire `scaleX` et `scaleY` depuis `dynamicContentOffsets[pageNum]` (defaut 1).
+- Les passer au `PreviewEditableCanvas` via les props existantes `dynamicContentOffset`.
+- Le callback `onDynamicContentDrag` transmet deja l'objet complet avec x/y ; on y ajoutera scaleX/scaleY.
+
+### Rendu visuel en mode edition
+
 ```text
-font-size: 12px
-```
-a :
-```text
-font-size: 14px; font-family: Outfit, sans-serif
++--[Deplacer / Redimensionner]----+
+|  o                            o |   <- poignees coin (nw, ne)
+|                                 |
+|   [Contenu dynamique scale]     |
+|                                 |
+|  o                            o |   <- poignees coin (sw, se)
++---------------------------------+
 ```
 
-Le ratio 28 -> 14px correspond au facteur d'echelle standard de l'export PDF (x0.5 par rapport a la base template).
+### Impact sur l'export PDF
+
+Aucun impact sur l'export PDF : le scale est un ajustement visuel pour l'apercu uniquement (les offsets ne sont deja pas utilises pour l'export).
 
