@@ -462,7 +462,7 @@ export function RentalProposalExport() {
         </div>
       ` : ''}
       ${flowElementsHTML}
-      ${matriceData.commentaire ? `<div style="margin-top: 8px; font-size: 12px; white-space: pre-wrap; line-height: 1.4;">${matriceData.commentaire.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+      ${matriceData.commentaire ? `<div style="margin-top: 8px; font-size: 14px; font-family: Outfit, sans-serif; white-space: pre-wrap; line-height: 1.4;">${matriceData.commentaire.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
     `;
 
     // Chunk 0 : page 4 du template
