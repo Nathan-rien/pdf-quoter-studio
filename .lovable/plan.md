@@ -1,51 +1,49 @@
 
 
-## Corriger le deplacement et le redimensionnement des elements dynamiques
+## Corriger la coherence du positionnement entre mode edition et mode lecture
 
 ### Cause racine
 
-Le wrapper du contenu dynamique dans `PreviewEditableCanvas.tsx` utilise `position: relative`, mais son contenu enfant (tableaux, offres) utilise `position: absolute`. En CSS, les enfants absolus ne contribuent pas a la hauteur du parent, ce qui fait que le wrapper s'effondre a 0px de hauteur. Resultat : aucune zone cliquable, pas de poignees visibles, pas de badge visible.
+Le wrapper du contenu dynamique a un positionnement different selon le mode :
+- **Mode edition** (`PreviewEditableCanvas.tsx` ligne 644) : `position: absolute; inset: 0` -- couvre tout le canvas
+- **Mode lecture** (`RentalProposalPreview.tsx` ligne 554) : `<div>` sans positionnement -- taille determinee par le contenu enfant
+
+Le `transform: translate(X%, Y%)` est calcule en pourcentage de la taille du conteneur. Comme la taille du conteneur change entre les deux modes, le deplacement visuel est different.
 
 ### Correction
 
 | Fichier | Modification |
 |---|---|
-| `src/components/rental-proposal/PreviewEditableCanvas.tsx` | Changer le wrapper dynamique de `relative` a `absolute inset-0` pour qu'il couvre toute la surface du canvas et capte les evenements souris |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` (lignes 553-561) | Ajouter `position: absolute; inset: 0; pointerEvents: none` au wrapper du contenu dynamique en mode lecture pour qu'il ait exactement les memes dimensions que le wrapper en mode edition |
 
 ### Detail technique
 
-**Ligne 641-685 du fichier PreviewEditableCanvas.tsx**
+Le wrapper en mode lecture passe de :
 
-Remplacer la classe `relative` du wrapper par `absolute inset-0` :
-
-Avant :
 ```text
-className={cn(
-  "relative",
-  isEditMode && onDynamicContentDrag
-    ? "cursor-move border-2 border-dashed border-primary/40 rounded"
-    : "pointer-events-none"
-)}
+<div style={{
+  transform: ...
+  transformOrigin: 'top left',
+}}>
 ```
 
-Apres :
+a :
+
 ```text
-className={cn(
-  "absolute inset-0",
-  isEditMode && onDynamicContentDrag
-    ? "cursor-move"
-    : "pointer-events-none"
-)}
+<div style={{
+  position: 'absolute',
+  inset: 0,
+  transform: ...
+  transformOrigin: 'top left',
+  pointerEvents: 'none',
+}}>
 ```
 
-On retire aussi le `border-dashed` du wrapper (il couvre maintenant tout le canvas, la bordure serait trompeuse). Le badge "Deplacer / Redimensionner" est repositionne en `top-1 left-1` au lieu de `-top-5` (puisque le wrapper couvre desormais tout le canvas, le badge doit etre a l'interieur).
-
-Les poignees de redimensionnement aux 4 coins fonctionneront naturellement : elles se positionnent aux coins du wrapper qui couvre le canvas entier. Le scale (0.3 a 1.5) s'applique via `transform: scale()` sur ce meme wrapper, et le contenu absolu a l'interieur suit la transformation.
+Cela garantit que le conteneur a les memes dimensions (100% du canvas) dans les deux modes, ce qui rend le calcul de `translate(X%, Y%)` identique. Le `pointerEvents: none` empeche toute interaction en mode lecture.
 
 ### Impact
 
-- Le deplacement (drag) du contenu dynamique fonctionnera en cliquant n'importe ou sur le contenu
-- Les 4 poignees de redimensionnement seront visibles aux coins du canvas en mode edition
-- Aucun impact sur le mode lecture ni sur l'export PDF
-- Le badge sera visible en haut a gauche du canvas en mode edition
+- Le contenu dynamique apparaitra au meme endroit en mode lecture et en mode edition
+- Aucun impact sur l'export PDF
+- Aucun impact sur les interactions en mode lecture (pointer-events desactives)
 
