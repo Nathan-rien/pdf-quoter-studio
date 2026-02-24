@@ -1,66 +1,51 @@
 
 
-## Redimensionner et deplacer les elements dynamiques en mode edition
+## Corriger le deplacement et le redimensionnement des elements dynamiques
 
-### Contexte
+### Cause racine
 
-Actuellement, les blocs de contenu dynamique (tableau d'investissement, propositions locatives, avantages, etc.) peuvent etre deplaces en mode edition mais pas redimensionnes. L'objectif est d'ajouter des poignees de redimensionnement sur ces blocs pour permettre de les reduire ou agrandir via un facteur d'echelle (CSS `transform: scale()`).
+Le wrapper du contenu dynamique dans `PreviewEditableCanvas.tsx` utilise `position: relative`, mais son contenu enfant (tableaux, offres) utilise `position: absolute`. En CSS, les enfants absolus ne contribuent pas a la hauteur du parent, ce qui fait que le wrapper s'effondre a 0px de hauteur. Resultat : aucune zone cliquable, pas de poignees visibles, pas de badge visible.
 
-### Approche technique
-
-Utiliser un facteur de scale (`scaleX`, `scaleY`) applique via `transform: scale()` sur le wrapper du contenu dynamique, combine avec le deplacement existant. Des poignees de redimensionnement apparaitront aux 4 coins du bloc en mode edition.
-
-### Fichiers modifies
+### Correction
 
 | Fichier | Modification |
 |---|---|
-| `src/stores/rentalProposalStore.ts` | Etendre le type `dynamicContentOffsets` pour inclure un facteur de scale (`scaleX`, `scaleY`) en plus de `x` et `y`. Ajouter une action `updateDynamicContentScale`. |
-| `src/components/rental-proposal/PreviewEditableCanvas.tsx` | Ajouter des poignees de resize sur le wrapper du contenu dynamique. Gerer le drag des poignees pour calculer le nouveau scale. Appliquer `transform: scale()` combine avec `translate()`. |
-| `src/components/rental-proposal/RentalProposalPreview.tsx` | Passer le scale au canvas et le callback de mise a jour. |
+| `src/components/rental-proposal/PreviewEditableCanvas.tsx` | Changer le wrapper dynamique de `relative` a `absolute inset-0` pour qu'il couvre toute la surface du canvas et capte les evenements souris |
 
 ### Detail technique
 
-**1. Store - Nouveau type et action**
+**Ligne 641-685 du fichier PreviewEditableCanvas.tsx**
 
-Le type de `dynamicContentOffsets` evolue de :
+Remplacer la classe `relative` du wrapper par `absolute inset-0` :
+
+Avant :
 ```text
-Record<number, { x: number; y: number }>
-```
-a :
-```text
-Record<number, { x: number; y: number; scaleX: number; scaleY: number }>
-```
-
-Valeurs par defaut du scale : `scaleX: 1, scaleY: 1`. Les actions existantes `updateDynamicContentOffset` integrent le scale. Une nouvelle action `updateDynamicContentScale` permet de modifier uniquement le scale.
-
-**2. PreviewEditableCanvas - Poignees de resize**
-
-- Ajouter un state `dynamicResizeState` (similaire au `resizeState` existant pour les elements statiques) qui track le coin tire et les dimensions de depart.
-- En mode edition, afficher 4 poignees de coin (petits carres 8x8px) sur le wrapper du contenu dynamique.
-- Au drag d'une poignee, calculer le ratio de scale en divisant le nouveau delta par la taille initiale du bloc.
-- Limiter le scale entre 0.3 (minimum) et 1.5 (maximum) pour eviter les debordements ou le contenu illisible.
-- Appliquer `transform: translate(...) scale(scaleX, scaleY)` avec `transform-origin: top left`.
-- Le badge affichera "Deplacer / Redimensionner".
-
-**3. RentalProposalPreview - Transmission du scale**
-
-- Extraire `scaleX` et `scaleY` depuis `dynamicContentOffsets[pageNum]` (defaut 1).
-- Les passer au `PreviewEditableCanvas` via les props existantes `dynamicContentOffset`.
-- Le callback `onDynamicContentDrag` transmet deja l'objet complet avec x/y ; on y ajoutera scaleX/scaleY.
-
-### Rendu visuel en mode edition
-
-```text
-+--[Deplacer / Redimensionner]----+
-|  o                            o |   <- poignees coin (nw, ne)
-|                                 |
-|   [Contenu dynamique scale]     |
-|                                 |
-|  o                            o |   <- poignees coin (sw, se)
-+---------------------------------+
+className={cn(
+  "relative",
+  isEditMode && onDynamicContentDrag
+    ? "cursor-move border-2 border-dashed border-primary/40 rounded"
+    : "pointer-events-none"
+)}
 ```
 
-### Impact sur l'export PDF
+Apres :
+```text
+className={cn(
+  "absolute inset-0",
+  isEditMode && onDynamicContentDrag
+    ? "cursor-move"
+    : "pointer-events-none"
+)}
+```
 
-Aucun impact sur l'export PDF : le scale est un ajustement visuel pour l'apercu uniquement (les offsets ne sont deja pas utilises pour l'export).
+On retire aussi le `border-dashed` du wrapper (il couvre maintenant tout le canvas, la bordure serait trompeuse). Le badge "Deplacer / Redimensionner" est repositionne en `top-1 left-1` au lieu de `-top-5` (puisque le wrapper couvre desormais tout le canvas, le badge doit etre a l'interieur).
+
+Les poignees de redimensionnement aux 4 coins fonctionneront naturellement : elles se positionnent aux coins du wrapper qui couvre le canvas entier. Le scale (0.3 a 1.5) s'applique via `transform: scale()` sur ce meme wrapper, et le contenu absolu a l'interieur suit la transformation.
+
+### Impact
+
+- Le deplacement (drag) du contenu dynamique fonctionnera en cliquant n'importe ou sur le contenu
+- Les 4 poignees de redimensionnement seront visibles aux coins du canvas en mode edition
+- Aucun impact sur le mode lecture ni sur l'export PDF
+- Le badge sera visible en haut a gauche du canvas en mode edition
 
