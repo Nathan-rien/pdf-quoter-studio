@@ -671,7 +671,7 @@ export function PreviewEditableCanvas({
                 <div
                   key={`dynamic-resize-${corner}`}
                   className={cn(
-                    "absolute w-4 h-4 bg-primary border-2 border-white rounded-full z-50 shadow-md",
+                    "absolute w-5 h-5 bg-primary border-2 border-white rounded-full z-50 shadow-lg ring-2 ring-primary/40 animate-pulse",
                     corner === 'nw' && 'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
                     corner === 'ne' && 'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
                     corner === 'sw' && 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
