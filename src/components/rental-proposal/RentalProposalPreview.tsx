@@ -70,6 +70,7 @@ export function RentalProposalPreview() {
     getAllProposalsCalculations,
     dynamicContentOffsets,
     updateDynamicContentOffset,
+    updateDynamicContentScale,
     clientLogoOverride,
     updateClientLogoOverride,
     resetClientLogoOverride,
@@ -532,6 +533,7 @@ export function RentalProposalPreview() {
           isEditMode={isEditMode}
           dynamicContentOffset={dynamicContentOffsets[pageNum]}
           onDynamicContentDrag={(offset) => updateDynamicContentOffset(pageNum, offset)}
+          onDynamicContentScale={(scaleX, scaleY) => updateDynamicContentScale(pageNum, scaleX, scaleY)}
         />
       );
     }
@@ -547,8 +549,17 @@ export function RentalProposalPreview() {
           {staticElements.map(el => renderTemplateElement(el))}
         </React.Fragment>
 
-        {/* Toujours appeler le contenu dynamique s'il existe */}
-        {renderDynamicContent?.()}
+        {/* Toujours appeler le contenu dynamique s'il existe, avec offset/scale si défini */}
+        {renderDynamicContent && (
+          <div style={{
+            transform: dynamicContentOffsets[pageNum]
+              ? `translate(${(dynamicContentOffsets[pageNum].x / CANVAS_SCALE.width) * 100}%, ${(dynamicContentOffsets[pageNum].y / CANVAS_SCALE.height) * 100}%) scale(${dynamicContentOffsets[pageNum].scaleX ?? 1}, ${dynamicContentOffsets[pageNum].scaleY ?? 1})`
+              : undefined,
+            transformOrigin: 'top left',
+          }}>
+            {renderDynamicContent()}
+          </div>
+        )}
 
         {/* Fallback seulement si AUCUN contenu (ni statique ni dynamique) */}
         {staticElements.length === 0 && !renderDynamicContent && (

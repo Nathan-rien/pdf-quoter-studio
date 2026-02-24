@@ -124,8 +124,8 @@ interface RentalProposalState {
   // Override position/taille du logo client
   clientLogoOverride: ClientLogoOverride | null;
   
-  // Offsets de position des blocs dynamiques par page (session uniquement)
-  dynamicContentOffsets: Record<number, { x: number; y: number }>;
+  // Offsets de position et scale des blocs dynamiques par page (session uniquement)
+  dynamicContentOffsets: Record<number, { x: number; y: number; scaleX: number; scaleY: number }>;
   
   // Workflow
   currentStep: RentalWorkflowStep;
@@ -194,7 +194,8 @@ interface RentalProposalActions {
   markAsSaved: () => void;
   
   // Dynamic content offsets
-  updateDynamicContentOffset: (pageNumber: number, offset: { x: number; y: number }) => void;
+  updateDynamicContentOffset: (pageNumber: number, offset: { x: number; y: number; scaleX?: number; scaleY?: number }) => void;
+  updateDynamicContentScale: (pageNumber: number, scaleX: number, scaleY: number) => void;
   resetDynamicContentOffsets: () => void;
   
   // Client logo override
@@ -690,12 +691,37 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       },
 
       updateDynamicContentOffset: (pageNumber, offset) => {
-        set(state => ({
-          dynamicContentOffsets: {
-            ...state.dynamicContentOffsets,
-            [pageNumber]: offset,
-          },
-        }));
+        set(state => {
+          const existing = state.dynamicContentOffsets[pageNumber];
+          return {
+            dynamicContentOffsets: {
+              ...state.dynamicContentOffsets,
+              [pageNumber]: {
+                x: offset.x,
+                y: offset.y,
+                scaleX: offset.scaleX ?? existing?.scaleX ?? 1,
+                scaleY: offset.scaleY ?? existing?.scaleY ?? 1,
+              },
+            },
+          };
+        });
+      },
+
+      updateDynamicContentScale: (pageNumber, scaleX, scaleY) => {
+        set(state => {
+          const existing = state.dynamicContentOffsets[pageNumber];
+          return {
+            dynamicContentOffsets: {
+              ...state.dynamicContentOffsets,
+              [pageNumber]: {
+                x: existing?.x ?? 0,
+                y: existing?.y ?? 0,
+                scaleX,
+                scaleY,
+              },
+            },
+          };
+        });
       },
 
       resetDynamicContentOffsets: () => {

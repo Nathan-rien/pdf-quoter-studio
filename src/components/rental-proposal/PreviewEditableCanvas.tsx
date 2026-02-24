@@ -31,8 +31,9 @@ interface PreviewEditableCanvasProps {
   renderOverlayContent?: () => React.ReactNode;
   pageFooter: React.ReactNode;
   isEditMode: boolean;
-  dynamicContentOffset?: { x: number; y: number };
+  dynamicContentOffset?: { x: number; y: number; scaleX?: number; scaleY?: number };
   onDynamicContentDrag?: (offset: { x: number; y: number }) => void;
+  onDynamicContentScale?: (scaleX: number, scaleY: number) => void;
 }
 
 export function PreviewEditableCanvas({
@@ -45,6 +46,7 @@ export function PreviewEditableCanvas({
   isEditMode,
   dynamicContentOffset,
   onDynamicContentDrag,
+  onDynamicContentScale,
 }: PreviewEditableCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -74,6 +76,16 @@ export function PreviewEditableCanvas({
     startY: number;
     offsetStartX: number;
     offsetStartY: number;
+  } | null>(null);
+  const [dynamicResizeState, setDynamicResizeState] = useState<{
+    isResizing: boolean;
+    corner: string;
+    startX: number;
+    startY: number;
+    startScaleX: number;
+    startScaleY: number;
+    containerWidth: number;
+    containerHeight: number;
   } | null>(null);
 
   const { updateElementFromPreview } = useTemplateEditorStore();
@@ -154,8 +166,69 @@ export function PreviewEditableCanvas({
     });
   }, [isEditMode, onDynamicContentDrag, getCanvasCoordinates, dynamicContentOffset]);
 
+  // Gestion du resize pour le contenu dynamique
+  const handleDynamicResizeMouseDown = useCallback((e: React.MouseEvent, corner: string) => {
+    if (!isEditMode || !onDynamicContentScale) return;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const coords = getCanvasCoordinates(e.clientX, e.clientY);
+    // Get the dynamic content wrapper dimensions from the canvas
+    const wrapper = (e.target as HTMLElement).closest('[data-dynamic-wrapper]');
+    const wrapperRect = wrapper?.getBoundingClientRect();
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    
+    const containerWidth = wrapperRect && canvasRect 
+      ? (wrapperRect.width / canvasRect.width) * CANVAS_SCALE.width 
+      : CANVAS_SCALE.width;
+    const containerHeight = wrapperRect && canvasRect 
+      ? (wrapperRect.height / canvasRect.height) * CANVAS_SCALE.height 
+      : CANVAS_SCALE.height * 0.5;
+    
+    setDynamicResizeState({
+      isResizing: true,
+      corner,
+      startX: coords.x,
+      startY: coords.y,
+      startScaleX: dynamicContentOffset?.scaleX ?? 1,
+      startScaleY: dynamicContentOffset?.scaleY ?? 1,
+      containerWidth,
+      containerHeight,
+    });
+  }, [isEditMode, onDynamicContentScale, getCanvasCoordinates, dynamicContentOffset]);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const coords = getCanvasCoordinates(e.clientX, e.clientY);
+
+    // Dynamic content resize
+    if (dynamicResizeState?.isResizing && onDynamicContentScale) {
+      const deltaX = coords.x - dynamicResizeState.startX;
+      const deltaY = coords.y - dynamicResizeState.startY;
+      
+      let scaleFactorX = dynamicResizeState.startScaleX;
+      let scaleFactorY = dynamicResizeState.startScaleY;
+      
+      const corner = dynamicResizeState.corner;
+      if (corner.includes('e')) {
+        scaleFactorX = dynamicResizeState.startScaleX + deltaX / dynamicResizeState.containerWidth;
+      }
+      if (corner.includes('w')) {
+        scaleFactorX = dynamicResizeState.startScaleX - deltaX / dynamicResizeState.containerWidth;
+      }
+      if (corner.includes('s')) {
+        scaleFactorY = dynamicResizeState.startScaleY + deltaY / dynamicResizeState.containerHeight;
+      }
+      if (corner.includes('n')) {
+        scaleFactorY = dynamicResizeState.startScaleY - deltaY / dynamicResizeState.containerHeight;
+      }
+      
+      // Clamp between 0.3 and 1.5
+      scaleFactorX = Math.max(0.3, Math.min(1.5, scaleFactorX));
+      scaleFactorY = Math.max(0.3, Math.min(1.5, scaleFactorY));
+      
+      onDynamicContentScale(scaleFactorX, scaleFactorY);
+      return;
+    }
 
     // Dynamic content drag
     if (dynamicDragState?.isDragging && onDynamicContentDrag) {
@@ -211,12 +284,13 @@ export function PreviewEditableCanvas({
         });
       }
     }
-  }, [dragState, resizeState, dynamicDragState, elements, getCanvasCoordinates, updateElementFromPreview, pageNumber, onDynamicContentDrag]);
+  }, [dragState, resizeState, dynamicDragState, dynamicResizeState, elements, getCanvasCoordinates, updateElementFromPreview, pageNumber, onDynamicContentDrag, onDynamicContentScale]);
 
   const handleMouseUp = useCallback(() => {
     setDragState(null);
     setResizeState(null);
     setDynamicDragState(null);
+    setDynamicResizeState(null);
   }, []);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
@@ -562,18 +636,21 @@ export function PreviewEditableCanvas({
       {/* Contenu overlay (rendu directement dans le canvas, hors du wrapper dynamique) */}
       {renderOverlayContent?.()}
 
-      {/* Contenu dynamique (déplaçable en mode édition) */}
+      {/* Contenu dynamique (déplaçable et redimensionnable en mode édition) */}
       {renderDynamicContent && (
         <div 
+          data-dynamic-wrapper
           className={cn(
+            "relative",
             isEditMode && onDynamicContentDrag
               ? "cursor-move border-2 border-dashed border-primary/40 rounded"
               : "pointer-events-none"
           )}
           style={{
             transform: dynamicContentOffset 
-              ? `translate(${(dynamicContentOffset.x / CANVAS_SCALE.width) * 100}%, ${(dynamicContentOffset.y / CANVAS_SCALE.height) * 100}%)`
+              ? `translate(${(dynamicContentOffset.x / CANVAS_SCALE.width) * 100}%, ${(dynamicContentOffset.y / CANVAS_SCALE.height) * 100}%) scale(${dynamicContentOffset.scaleX ?? 1}, ${dynamicContentOffset.scaleY ?? 1})`
               : undefined,
+            transformOrigin: 'top left',
           }}
           onMouseDown={handleDynamicMouseDown}
         >
@@ -583,10 +660,28 @@ export function PreviewEditableCanvas({
               className="absolute -top-5 left-1 z-50 gap-1 text-[8px] py-0 px-1.5"
             >
               <Move className="h-2.5 w-2.5" />
-              Déplacer
+              Déplacer / Redimensionner
             </Badge>
           )}
           {renderDynamicContent()}
+          {/* Poignées de redimensionnement pour le contenu dynamique */}
+          {isEditMode && onDynamicContentScale && (
+            <>
+              {(['nw', 'ne', 'sw', 'se'] as const).map(corner => (
+                <div
+                  key={`dynamic-resize-${corner}`}
+                  className={cn(
+                    "absolute w-2 h-2 bg-primary rounded-full z-50",
+                    corner === 'nw' && 'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
+                    corner === 'ne' && 'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
+                    corner === 'sw' && 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
+                    corner === 'se' && 'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize',
+                  )}
+                  onMouseDown={(e) => handleDynamicResizeMouseDown(e, corner)}
+                />
+              ))}
+            </>
+          )}
         </div>
       )}
 
