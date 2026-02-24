@@ -641,9 +641,9 @@ export function PreviewEditableCanvas({
         <div 
           data-dynamic-wrapper
           className={cn(
-            "relative",
+            "absolute inset-0",
             isEditMode && onDynamicContentDrag
-              ? "cursor-move border-2 border-dashed border-primary/40 rounded"
+              ? "cursor-move"
               : "pointer-events-none"
           )}
           style={{
@@ -657,7 +657,7 @@ export function PreviewEditableCanvas({
           {isEditMode && onDynamicContentDrag && (
             <Badge 
               variant="secondary" 
-              className="absolute -top-5 left-1 z-50 gap-1 text-[8px] py-0 px-1.5"
+              className="absolute top-1 left-1 z-50 gap-1 text-[8px] py-0 px-1.5"
             >
               <Move className="h-2.5 w-2.5" />
               Déplacer / Redimensionner
