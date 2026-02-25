@@ -2,6 +2,18 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   BarChart,
   Bar,
@@ -13,6 +25,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import {
   FileText,
@@ -30,8 +43,11 @@ import {
   Star,
   ChevronRight,
   ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface ExportRecord {
   id: string;
@@ -148,11 +164,13 @@ export function StatisticsDashboard() {
   const [filterYear, setFilterYear] = useState<string>(String(new Date().getFullYear()));
   const [expandedOption, setExpandedOption] = useState<string | null>(null);
   const [expandedNosOption, setExpandedNosOption] = useState<string | null>(null);
+  const [resetDate, setResetDate] = useState<Date | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [exportRes, optionsRes] = await Promise.all([
+      const [exportRes, optionsRes, settingsRes] = await Promise.all([
         supabase
           .from('proposal_exports')
           .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
@@ -162,11 +180,20 @@ export function StatisticsDashboard() {
           .from('options_services')
           .select('id, title, is_active')
           .order('sort_order', { ascending: true }),
+        supabase
+          .from('admin_settings')
+          .select('value')
+          .eq('key', 'stats_reset_date')
+          .single(),
       ]);
 
       if (exportRes.error) throw exportRes.error;
       setRecords((exportRes.data as any) || []);
       setAllServiceOptions((optionsRes.data || []).map(o => ({ id: o.id, title: o.title })));
+      
+      if (settingsRes.data?.value) {
+        setResetDate(new Date(settingsRes.data.value));
+      }
     } catch (err) {
       console.error('Error fetching stats:', err);
     } finally {
@@ -178,13 +205,45 @@ export function StatisticsDashboard() {
     fetchData();
   }, []);
 
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('admin_settings')
+        .upsert({ key: 'stats_reset_date', value: now, updated_at: now } as any);
+      
+      if (error) throw error;
+      
+      setResetDate(new Date(now));
+      toast({
+        title: "Statistiques remises à zéro",
+        description: "Les statistiques afficheront uniquement les données à partir de maintenant.",
+      });
+    } catch (err) {
+      console.error('Error resetting stats:', err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de remettre à zéro les statistiques.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  // Filtrer par date de reset d'abord
+  const baseRecords = resetDate
+    ? records.filter(r => new Date(r.created_at) >= resetDate)
+    : records;
+
   // Filtrer par année
-  const filteredRecords = records.filter(r => {
+  const filteredRecords = baseRecords.filter(r => {
     if (filterYear === 'all') return true;
     return new Date(r.created_at).getFullYear() === parseInt(filterYear);
   });
 
-  const availableYears = [...new Set(records.map(r => new Date(r.created_at).getFullYear()))].sort((a, b) => b - a);
+  const availableYears = [...new Set(baseRecords.map(r => new Date(r.created_at).getFullYear()))].sort((a, b) => b - a);
 
   // KPI calculations
   const totalProposals = filteredRecords.length;
@@ -259,6 +318,28 @@ export function StatisticsDashboard() {
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
 
+  // === Propositions par jour et par commercial (30 derniers jours actifs) ===
+  const dailyCommercialMap: Record<string, Record<string, number>> = {};
+  filteredRecords.forEach(r => {
+    const day = format(new Date(r.created_at), 'dd/MM');
+    const dayKey = format(new Date(r.created_at), 'yyyy-MM-dd'); // for sorting
+    const commercial = r.commercial_name || 'Non renseigné';
+    if (!dailyCommercialMap[dayKey]) dailyCommercialMap[dayKey] = {};
+    dailyCommercialMap[dayKey][commercial] = (dailyCommercialMap[dayKey][commercial] || 0) + 1;
+  });
+
+  const uniqueCommercials = [...new Set(filteredRecords.map(r => r.commercial_name || 'Non renseigné'))];
+  
+  const sortedDays = Object.keys(dailyCommercialMap).sort().slice(-30);
+  const dailyChartData = sortedDays.map(dayKey => {
+    const dayLabel = format(new Date(dayKey), 'dd/MM');
+    const entry: Record<string, any> = { day: dayLabel };
+    uniqueCommercials.forEach(c => {
+      entry[c] = dailyCommercialMap[dayKey]?.[c] || 0;
+    });
+    return entry;
+  });
+
   // Top Services additionnels (options cochées page 5)
   const optionNamesCount: Record<string, number> = {};
   filteredRecords.forEach(r => {
@@ -293,14 +374,12 @@ export function StatisticsDashboard() {
       optionProposalsMap[name].push(r);
     });
   });
-  // Fusion avec le référentiel complet options_services
   const knownNames = new Set(allServiceOptions.map(o => o.title));
   const allOptionsWithProposals = [
     ...allServiceOptions.map(opt => ({
       name: opt.title,
       proposals: optionProposalsMap[opt.title] || [],
     })),
-    // Services orphelins (présents dans propositions mais plus dans le référentiel)
     ...Object.entries(optionProposalsMap)
       .filter(([name]) => !knownNames.has(name))
       .map(([name, proposals]) => ({ name, proposals })),
@@ -313,7 +392,6 @@ export function StatisticsDashboard() {
       nosOptionProposalsMap[name].push(r);
     });
   });
-  // Idem pour Nos Options — même référentiel (options_services couvre les deux catégories)
   const allNosOptionsWithProposals = [
     ...allServiceOptions.map(opt => ({
       name: opt.title,
@@ -366,6 +444,34 @@ export function StatisticsDashboard() {
           <p className="text-sm text-muted-foreground">Aperçu global des propositions exportées</p>
         </div>
         <div className="flex items-center gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <RotateCcw className="h-3.5 w-3.5" />
+                Remettre à zéro
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remettre à zéro les statistiques ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Les données historiques ne seront pas supprimées. Les statistiques afficheront uniquement les propositions créées à partir de maintenant.
+                  {resetDate && (
+                    <span className="block mt-2 text-foreground font-medium">
+                      Dernière remise à zéro : {resetDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction onClick={handleReset} disabled={isResetting}>
+                  {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Confirmer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Select value={filterYear} onValueChange={setFilterYear}>
             <SelectTrigger className="h-8 w-28 text-sm">
               <SelectValue />
@@ -382,6 +488,15 @@ export function StatisticsDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Badge date de reset */}
+      {resetDate && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs font-normal">
+            Données depuis le {resetDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </Badge>
+        </div>
+      )}
 
       {/* Bannière info si peu de données avec montants */}
       {!hasAmountData && totalProposals > 0 && (
@@ -527,6 +642,49 @@ export function StatisticsDashboard() {
                   formatter={(v: number) => [formatAmount(v), 'Total investi']}
                 />
                 <Bar dataKey="montant" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Propositions par jour et par commercial */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Propositions par jour et par commercial
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dailyChartData.length === 0 ? (
+            <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+              Aucune donnée disponible
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={dailyChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="day" tick={{ fontSize: 9 }} interval={Math.max(0, Math.floor(dailyChartData.length / 15))} />
+                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                  formatter={(v: number, name: string) => [v + ' proposition(s)', name]}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11 }}
+                  iconType="square"
+                  iconSize={10}
+                />
+                {uniqueCommercials.map((commercial, i) => (
+                  <Bar
+                    key={commercial}
+                    dataKey={commercial}
+                    stackId="a"
+                    fill={CHART_COLORS[i % CHART_COLORS.length]}
+                    radius={i === uniqueCommercials.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           )}
