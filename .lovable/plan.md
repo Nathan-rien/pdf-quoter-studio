@@ -2,67 +2,83 @@
 
 ## Probleme
 
-La pagination actuelle ne prend en compte que le nombre de lignes produit (`lignesData.length`) pour decider du decoupage en pages. Le bloc "Votre offre" (propositions financieres) + les elements en flux (Avantages, Conditions) + le commentaire sont toujours places sur le dernier chunk, sans verifier s'ils tiennent dans l'espace restant.
-
-Avec 4 propositions comme dans la capture, ce bloc fait environ 20-24 "lignes equivalentes" alors que `INVEST_FOOTER_RESERVED_LINES = 9` n'en reserve que 9. Le contenu deborde de la page.
+La page 5 (Services inclus + Nos Options) a un `maxHeight: 82%` avec `overflow: hidden`. Quand il y a beaucoup de services et d'options, le contenu est tronque sans aucun mecanisme de pagination. Le meme probleme existe dans l'export PDF.
 
 ## Approche
 
-Calculer dynamiquement le nombre de lignes equivalentes que le footer occupe en fonction du nombre de propositions, puis ajuster la capacite du dernier chunk de donnees pour que le footer ait assez de place. Si le footer seul depasse la capacite d'une page, il faut le decouper sur plusieurs pages.
+Implementer une pagination automatique pour le contenu services/options, identique a celle du tableau investissements :
+- Mesurer le contenu total en "blocs equivalents"
+- Si le contenu depasse la capacite d'une page, creer des pages de continuation automatiques
+- Les pages supplementaires sont inserees apres la page 5 du template
+
+## Constantes de dimensionnement
+
+Ajouter dans `canvas-constants.ts` :
+
+```
+// Pagination des services/options (Page 5)
+export const SERVICES_ITEMS_PAGE1 = 8;      // blocs max sur page 1 (avec titre + Services location)  
+export const SERVICES_ITEMS_CONTINUATION = 12; // blocs max sur pages de continuation
+```
+
+Chaque bloc = 1 service inclus ou 1 option. Le bloc "Services location" permanent compte pour 1 bloc. Le titre "Nos options" compte pour 1 bloc.
 
 ## Modifications
 
 ### 1. `src/lib/canvas-constants.ts`
-
-Ajouter une constante pour le nombre de lignes equivalentes par proposition :
-
-```
-// Lignes équivalentes par proposition dans "Votre offre" (titre + lignes de détail + marges)
-export const INVEST_LINES_PER_PROPOSAL = 4;
-// Lignes de base du footer (titre "Votre offre" + éléments flow + commentaire + marges)
-export const INVEST_FOOTER_BASE_LINES = 5;
-```
-
-Remplacer `INVEST_FOOTER_RESERVED_LINES = 9` par un calcul dynamique base sur ces constantes.
+- Ajouter `SERVICES_ITEMS_PAGE1 = 8` et `SERVICES_ITEMS_CONTINUATION = 12`
 
 ### 2. `src/components/rental-proposal/RentalProposalPreview.tsx`
 
-Dans le calcul de `investChunks` (lignes 191-207) :
+**Calcul des chunks services** (a cote du calcul `investChunks`) :
+- Construire une liste lineaire de tous les "blocs" a afficher : [servicesLocation, ...selectedOptions, titreNosOptions?, ...selectedNosOptions]
+- Decouper en chunks : premier chunk = `SERVICES_ITEMS_PAGE1`, suivants = `SERVICES_ITEMS_CONTINUATION`
+- `extraServicesPages = max(0, servicesChunks.length - 1)`
+- `totalPages = templatePages + extraInvestPages + extraServicesPages`
 
-- Calculer le nombre de lignes necessaires pour le footer : `footerLines = INVEST_FOOTER_BASE_LINES + proposals.length * INVEST_LINES_PER_PROPOSAL`
-- Utiliser `footerLines` au lieu de `INVEST_FOOTER_RESERVED_LINES` pour determiner la capacite du dernier chunk
-- Si `footerLines > INVEST_LINES_CONTINUATION` (le footer seul depasse une page), generer des chunks footer supplementaires (rare mais possible avec 8+ propositions)
-- Ajuster `INVEST_SINGLE_PAGE_FOOTER_THRESHOLD` pour tenir compte du nombre de propositions : le seuil doit etre `INVEST_LINES_PAGE1 - footerLines`
+**Rendu `renderServicesInclusPage`** :
+- Accepter un parametre `chunkIndex` pour savoir quelle tranche de blocs afficher
+- Page 0 : titre + Services location + premiers blocs
+- Pages suivantes : blocs de continuation sans le titre principal
+- Retirer `maxHeight` et `overflow: hidden`
 
-Le chunk `0` (page footer-only) existant accueille deja le contenu "Votre offre". Il suffit de s'assurer que la capacite du dernier chunk de donnees laisse assez de place, et que le chunk `0` est ajoute des que le footer ne tient pas avec les donnees.
+**`renderCurrentPage`** :
+- Ajouter une plage de pages services apres la page 5 du template (decalee par extraInvestPages)
+- Decaler les pages suivantes (6, 7, 8...) par `extraServicesPages` en plus de `extraInvestPages`
 
 ### 3. `src/components/rental-proposal/RentalProposalExport.tsx`
 
-Meme logique dans `investChunksLocal` (lignes 384-401) :
+**`generateDynamicContentByPage`** :
+- Meme logique de chunking pour le contenu HTML de la page 5
+- Si multi-page : le premier chunk va dans `dynamicContent[5]`, les chunks suivants dans `extraPagesAfter[5]`
+- Retirer `max-height` et `overflow: hidden` du wrapper
 
-- Calculer `footerLines` de la meme maniere
-- Ajuster le seuil et les capacites en consequence
-- Le HTML de `offreAndProposalsHTML` est deja correctement rendu sur le dernier chunk, donc pas de changement de structure
-
-### Detail du calcul
+### Detail du chunking
 
 ```text
-proposalCount = nombre de propositions (ex: 4)
-footerLines = INVEST_FOOTER_BASE_LINES + proposalCount * INVEST_LINES_PER_PROPOSAL
-            = 5 + 4 * 4 = 21
+allBlocs = [
+  { type: 'services-location' },           // toujours present
+  ...selectedOptions.map(o => ({ type: 'option', data: o })),
+  ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' }] : []),
+  ...selectedNosOptions.map(o => ({ type: 'nos-option', data: o })),
+]
 
-Cas single-page :
-  seuil = INVEST_LINES_PAGE1 - footerLines = 22 - 21 = 1
-  → Avec 6 lignes produit et 4 propositions, 6 > 1, donc on cree une page footer dediee
-
-Cas multi-page :
-  LAST_CHUNK_MAX = INVEST_LINES_CONTINUATION - footerLines
-  Si footerLines > INVEST_LINES_CONTINUATION → chunk footer seul (0 lignes data)
+chunk 0 : blocs[0..SERVICES_ITEMS_PAGE1-1]    (page 5 du template)
+chunk 1 : blocs[PAGE1..PAGE1+CONTINUATION-1]   (page supplementaire)
+chunk N : ...
 ```
 
-### Impact
+### Impact sur la navigation
 
-- Le rendu `isLastChunk` qui affiche "Votre offre" reste inchange (il continue a afficher les propositions sur le dernier chunk)
-- Le nombre de pages supplementaires (`extraInvestPages`) augmente automatiquement quand le footer deborde
-- Compatible avec 1 a N propositions sans risque de debordement
+Le calcul de `totalPages` et `renderCurrentPage` gere deja les pages invest supplementaires via un systeme de decalage. Le meme pattern sera applique pour les pages services :
+
+```text
+Pages template : 1, 2, 3, [4, 4+extra_invest...], [5, 5+extra_services...], 6, 7, 8
+```
+
+La logique dans `renderCurrentPage` :
+1. Pages avant investPage → rendu normal
+2. Pages dans la plage invest → `renderProductPage(chunkIndex)`
+3. Pages dans la plage services → `renderServicesInclusPage(chunkIndex)`
+4. Pages apres → decalage par `extraInvestPages + extraServicesPages`
 
