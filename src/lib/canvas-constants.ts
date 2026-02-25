@@ -37,8 +37,18 @@ export const LINES_PER_PAGE = 12;
 export const INVEST_LINES_PAGE1 = 22;
 // Pages suivantes (continuation) : plus de place, juste le tableau
 export const INVEST_LINES_CONTINUATION = 32;
-// Nombre de lignes réservées pour le footer (totaux + proposition financière + avantages + conditions)
+// Nombre de lignes réservées pour le footer (DÉPRÉCIÉ : utiliser le calcul dynamique)
 export const INVEST_FOOTER_RESERVED_LINES = 9;
+
+// Lignes équivalentes par proposition dans "Votre offre" (titre + lignes de détail + marges)
+export const INVEST_LINES_PER_PROPOSAL = 4;
+// Lignes de base du footer (titre "Votre offre" + éléments flow + commentaire + marges)
+export const INVEST_FOOTER_BASE_LINES = 5;
+
+// Calcule dynamiquement le nombre de lignes nécessaires pour le footer
+export function computeFooterLines(proposalCount: number): number {
+  return INVEST_FOOTER_BASE_LINES + proposalCount * INVEST_LINES_PER_PROPOSAL;
+}
 
 // Seuil en single-page : au-delà de ce nombre de lignes,
 // le footer (Votre offre + Avantages + Conditions) est déporté sur une page dédiée

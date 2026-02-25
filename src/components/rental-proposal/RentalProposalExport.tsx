@@ -25,7 +25,7 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines } from '@/lib/canvas-constants';
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 
@@ -380,24 +380,43 @@ export function RentalProposalExport() {
       </tr>`;
     };
     
-    // Découper les lignes en chunks avec logique de footer overflow
+    // Découper les lignes en chunks avec logique de footer overflow dynamique
+    const footerLinesLocal = computeFooterLines(getAllProposalsCalculations().length);
     const investChunksLocal: number[] = (() => {
       const totalLines = lignesData.length;
-      if (totalLines <= INVEST_SINGLE_PAGE_FOOTER_THRESHOLD) return [totalLines];
+      const singlePageThreshold = INVEST_LINES_PAGE1 - footerLinesLocal;
+
+      if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
       if (totalLines <= INVEST_LINES_PAGE1) {
-        // Le tableau tient sur une page mais pas assez de place pour le footer
         return [totalLines, 0];
       }
-      const TOTAL_RESERVED = 6;
-      const LAST_CHUNK_MAX = INVEST_LINES_CONTINUATION - TOTAL_RESERVED;
+
+      const lastChunkMax = Math.max(0, INVEST_LINES_CONTINUATION - footerLinesLocal);
       const chunks = [INVEST_LINES_PAGE1];
       let remaining = totalLines - INVEST_LINES_PAGE1;
-      while (remaining > 0) {
-        chunks.push(Math.min(remaining, LAST_CHUNK_MAX));
-        remaining -= LAST_CHUNK_MAX;
+
+      if (lastChunkMax > 0) {
+        while (remaining > lastChunkMax) {
+          const take = Math.min(remaining, INVEST_LINES_CONTINUATION);
+          if (remaining <= INVEST_LINES_CONTINUATION) {
+            chunks.push(remaining);
+            remaining = 0;
+            chunks.push(0);
+            break;
+          }
+          chunks.push(take);
+          remaining -= take;
+        }
+        if (remaining > 0) {
+          chunks.push(remaining);
+        }
+      } else {
+        while (remaining > 0) {
+          chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
+          remaining -= INVEST_LINES_CONTINUATION;
+        }
+        chunks.push(0);
       }
-      // Multi-page : toujours reporter le footer sur une page dédiée
-      chunks.push(0);
       return chunks;
     })();
     
