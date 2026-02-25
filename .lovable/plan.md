@@ -1,59 +1,37 @@
 
 
-## Deux modifications sur l'onglet Statistiques
+## Remplacement du graphique par un tableau detaille
 
-### 1. Bouton "Remettre a zero" (filtre par date, sans suppression)
+### Modification
 
-Le principe : stocker une date de remise a zero dans la base de donnees. Toutes les statistiques ne montrent que les propositions creees **apres** cette date. Les donnees historiques restent intactes dans `proposal_exports`.
+Remplacer le `BarChart` stacked "Propositions par jour et par commercial" (lignes 651-692 de `StatisticsDashboard.tsx`) par un tableau HTML :
 
-**Nouvelle table `admin_settings`** (migration) :
-- `key` (text, primary key) — ex: `stats_reset_date`
-- `value` (text) — la date ISO au format `2026-02-25T...`
-- `updated_at` (timestamptz)
-- RLS : lecture pour tous les authentifies, ecriture pour admins uniquement
+- **Colonnes** : Date (dd/MM/yyyy) | Commercial 1 | Commercial 2 | ... | Total
+- **Lignes** : un jour par ligne, les 30 derniers jours actifs, trie du plus recent au plus ancien
+- **Cellules** : nombre de propositions (0 affiche en gris, valeurs > 0 en gras)
+- **Derniere ligne** : totaux par commercial
 
-**Dans `StatisticsDashboard.tsx`** :
-- Au chargement, lire `admin_settings` ou `key = 'stats_reset_date'`
-- Si une date existe, filtrer `records` pour ne garder que `created_at >= stats_reset_date`
-- Bouton "Remettre a zero" dans le header (icone `RotateCcw`, variante `outline`) qui ouvre un `AlertDialog` de confirmation
-- Au clic confirmer : `upsert` dans `admin_settings` avec `key = 'stats_reset_date'` et `value = new Date().toISOString()`
-- Apres upsert : re-filtrer les donnees localement, toast de confirmation
-- Afficher sous le header un petit badge indiquant "Donnees depuis le dd/mm/yyyy" si une date de reset existe
+### Detail technique
 
-### 2. Nouveau graphique : Propositions par jour et par commercial
+Le calcul `dailyCommercialMap` et `uniqueCommercials` existants sont reutilises tel quel. Seul le rendu change : le `<ResponsiveContainer><BarChart>` est remplace par un `<Table>` avec `<ScrollArea>` horizontal pour gerer beaucoup de commerciaux.
 
-**Calcul** (dans `StatisticsDashboard.tsx`) :
-- Grouper `filteredRecords` par jour (`format(date, 'dd/MM')`) et par `commercial_name`
-- Limiter aux 30 derniers jours actifs pour lisibilite
-- Structure : `{ day: '24/02', 'Commercial A': 3, 'Commercial B': 1 }`
+### Structure du tableau
 
-**Rendu** :
-- Nouvelle `Card` placee apres "Montant total investi par mois"
-- `BarChart` stacked (`stackId="a"`) avec une `<Bar>` par commercial unique
-- Couleurs dynamiques depuis `CHART_COLORS`
-- Tooltip detaillant chaque commercial
-- Titre : "Propositions par jour et par commercial"
+```text
+┌──────────┬──────────┬──────────┬───────────┬───────┐
+│ Date     │ Comm. A  │ Comm. B  │ Comm. C   │ Total │
+├──────────┼──────────┼──────────┼───────────┼───────┤
+│ 25/02    │    2     │    0     │     1     │   3   │
+│ 24/02    │    5     │    3     │     0     │   8   │
+│ ...      │          │          │           │       │
+├──────────┼──────────┼──────────┼───────────┼───────┤
+│ Total    │    7     │    3     │     1     │  11   │
+└──────────┴──────────┴──────────┴───────────┴───────┘
+```
 
-### Resume des fichiers modifies
+### Fichier modifie
 
 | Fichier | Detail |
 |---|---|
-| **Migration SQL** | Creer table `admin_settings` avec RLS |
-| **`StatisticsDashboard.tsx`** | Charger `stats_reset_date`, filtrer, bouton reset avec AlertDialog, badge date, nouveau graphique journalier stacked |
-
-### Detail technique du filtre reset
-
-```text
-// Chargement
-const { data } = await supabase.from('admin_settings').select('value').eq('key', 'stats_reset_date').single();
-const resetDate = data?.value ? new Date(data.value) : null;
-
-// Filtrage (applique AVANT le filtre annee)
-const baseRecords = resetDate 
-  ? records.filter(r => new Date(r.created_at) >= resetDate)
-  : records;
-
-// Reset
-await supabase.from('admin_settings').upsert({ key: 'stats_reset_date', value: new Date().toISOString() });
-```
+| `StatisticsDashboard.tsx` | Remplacer le BarChart (lignes 651-692) par un composant Table avec ScrollArea, en reutilisant les donnees `dailyChartData` et `uniqueCommercials` existantes. Tri inverse (plus recent en haut). Ligne de totaux en bas. Cellules a 0 stylees en `text-muted-foreground`. |
 
