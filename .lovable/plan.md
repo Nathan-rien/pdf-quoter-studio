@@ -1,49 +1,44 @@
 
 
-## Charger une proposition depuis l'historique pour reprendre l'edition
+## Diagnostic
 
-### Probleme actuel
+Le probleme n'est pas un bug de code mais un probleme de donnees : la colonne `proposal_state` a ete ajoutee a la base, et le code d'export la remplit correctement, mais les 44 exports existants ont ete crees **avant** la migration et ont tous `proposal_state = null`. Le bouton Charger est present, mais au clic il recupere `null` et affiche "Chargement impossible".
 
-La table `proposal_exports` ne stocke que des metadonnees (nom, client, montant) et le HTML final. Les donnees editables (lignes produits, matrice, options, proposals) ne sont pas sauvegardees, ce qui rend impossible le rechargement d'une proposition pour modification.
+Deux corrections sont necessaires :
 
-### Modifications
+## Plan de correction
 
-| Element | Detail |
+### 1. Indicateur visuel sur les entrees non chargeables
+
+Dans `HistoryView.tsx`, le composant `renderEntry` affiche le bouton Charger pour toutes les entrees en succes. Il faut ajouter une information sur la disponibilite du `proposal_state` directement dans la requete de liste, afin de desactiver visuellement le bouton pour les anciens exports.
+
+| Fichier | Modification |
 |---|---|
-| **Migration DB** | Ajouter une colonne `proposal_state` (JSONB, nullable) a `proposal_exports` pour stocker l'etat complet du store au moment de l'export |
-| **`RentalProposalExport.tsx`** | Dans `saveToHistory`, serialiser et sauvegarder l'etat du store (clientData, commercialData, matriceData, proposals, lignesData, servicesInclus, optionsServices, nosOptions, proposalName, selectedTemplateId) dans `proposal_state` |
-| **`rentalProposalStore.ts`** | Ajouter une action `loadFromExport(state)` qui restaure l'ensemble des champs du store depuis un snapshot JSON, en marquant `isActive: true` et `currentStep: 'data'` |
-| **`HistoryView.tsx`** | Ajouter un bouton "Charger" (icone `RotateCcw`) sur chaque entree avec `status === 'success'`, a cote de Visualiser/Telecharger. Au clic, charger `proposal_state` depuis la DB et appeler un callback `onLoadProposal` |
-| **`Index.tsx`** | Passer un `onLoadProposal` a `HistoryView` qui charge l'etat dans le store puis navigue vers `rental-workflow` |
+| `HistoryView.tsx` - Interface `ProposalExportSummary` | Ajouter un champ `has_proposal_state: boolean` |
+| `HistoryView.tsx` - `fetchExports` | Ajouter `proposal_state` dans le select, puis mapper pour calculer `has_proposal_state` (sans charger le JSONB entier, on verifie juste `!= null`) |
+| `HistoryView.tsx` - `renderEntry` | Desactiver le bouton Charger et afficher un tooltip "Donnees non disponibles (ancien export)" quand `has_proposal_state === false` |
 
-### Detail technique : structure du snapshot
+**Note technique** : Supabase ne permet pas facilement un `SELECT proposal_state IS NOT NULL` directement. On peut soit :
+- Selectionner la colonne et verifier cote client (mais le JSONB peut etre volumineux)
+- Utiliser une fonction RPC
 
-```text
-proposal_state: {
-  clientData: { nom, adresse, codePostal, ville, telephone, email, logoUrl },
-  commercialData: { entity, commercialId },
-  matriceData: { montantInvestissement, duree, refinanceur, ... },
-  proposals: [{ id, montantInvestissement, duree, refinanceur, margeAppliquee, coefficientOverride }],
-  lignesData: [{ reference, designation, prixUnitaire, quantite, totalHT, isSeparator? }],
-  servicesInclus: { description },
-  optionsServices: [{ id, name, description, price, ... }],
-  nosOptions: [{ id, name, description, price, ... }],
-  proposalName: string,
-  selectedTemplateId: string | null,
-}
-```
+L'approche la plus simple : selectionner la colonne dans la requete en la castant en petit format. En realite, PostgREST ne supporte pas le cast. On va donc ajouter le champ dans le select et verifier `!= null` cote client, mais pour eviter de charger le JSONB complet on va creer une **colonne calculee** ou simplement accepter le cout.
 
-### Flux utilisateur
+Approche retenue : ajouter une requete SQL brute via RPC ou simplement selectionner `proposal_state` dans le fetch mais uniquement pour verifier la presence. Comme PostgREST charge le champ complet, on va plutot ajouter une **database function** qui retourne un boolean.
 
-1. L'utilisateur ouvre l'onglet Historique
-2. Il clique sur le bouton "Charger" d'une proposition
-3. Une confirmation s'affiche (la proposition en cours sera ecrasee)
-4. Le store est restaure avec les donnees sauvegardees
-5. La vue bascule automatiquement sur le workflow a l'etape "Donnees"
+**Approche finale simplifiee** : Ajouter `proposal_state` au select de `fetchExports`, puis mapper chaque entree pour extraire `has_proposal_state = !!data.proposal_state` avant de stocker. Le JSONB sera charge mais jete immediatement. C'est acceptable pour 200 entrees max.
 
-### Impact
+### 2. Navigation vers l'onglet Donnees apres chargement
 
-- Les exports existants auront `proposal_state = null` : le bouton "Charger" sera desactive pour eux
-- Les nouveaux exports sauvegarderont automatiquement l'etat complet
-- Aucun impact sur les performances de la liste (le JSONB est charge uniquement a la demande, comme le HTML)
+Le code dans `Index.tsx` fait deja `setCurrentView('rental-workflow')` apres `loadFromExport`. Le store met `currentStep: 'data'`. Le composant `RentalWorkflow` devrait donc afficher l'etape "data". Verifions que `RentalWorkflow` utilise bien `currentStep` du store.
+
+### Detail des modifications
+
+**`HistoryView.tsx`** :
+- Ajouter `proposal_state` au `.select()` de `fetchExports` (ligne ~102)
+- Mapper les resultats pour ajouter `has_proposal_state: !!item.proposal_state` et retirer le JSONB
+- Ajouter le champ `has_proposal_state` a l'interface `ProposalExportSummary`
+- Dans `renderEntry`, griser le bouton Charger quand `has_proposal_state === false` avec un `title` explicatif
+
+**Aucune autre modification necessaire** : le reste du flux (store, navigation, workflow step) est deja en place.
 
