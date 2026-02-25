@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -662,31 +663,55 @@ export function StatisticsDashboard() {
               Aucune donnée disponible
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={dailyChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="day" tick={{ fontSize: 9 }} interval={Math.max(0, Math.floor(dailyChartData.length / 15))} />
-                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ fontSize: 12, borderRadius: 6 }}
-                  formatter={(v: number, name: string) => [v + ' proposition(s)', name]}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 11 }}
-                  iconType="square"
-                  iconSize={10}
-                />
-                {uniqueCommercials.map((commercial, i) => (
-                  <Bar
-                    key={commercial}
-                    dataKey={commercial}
-                    stackId="a"
-                    fill={CHART_COLORS[i % CHART_COLORS.length]}
-                    radius={i === uniqueCommercials.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+            <ScrollArea className="w-full" type="auto">
+              <div className="min-w-[500px]">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Date</th>
+                      {uniqueCommercials.map((c) => (
+                        <th key={c} className="px-3 py-2 text-center font-semibold text-muted-foreground">{c}</th>
+                      ))}
+                      <th className="px-3 py-2 text-center font-semibold text-muted-foreground">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...dailyChartData].reverse().map((row, i) => {
+                      const total = uniqueCommercials.reduce((sum, c) => sum + ((row[c] as number) || 0), 0);
+                      return (
+                        <tr key={i} className="border-b hover:bg-muted/30 transition-colors">
+                          <td className="px-3 py-1.5 font-medium">{row.day}</td>
+                          {uniqueCommercials.map((c) => {
+                            const v = (row[c] as number) || 0;
+                            return (
+                              <td key={c} className={`px-3 py-1.5 text-center ${v === 0 ? 'text-muted-foreground' : 'font-bold'}`}>
+                                {v}
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-1.5 text-center font-bold">{total}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 bg-muted/50 font-semibold">
+                      <td className="px-3 py-2">Total</td>
+                      {uniqueCommercials.map((c) => {
+                        const colTotal = dailyChartData.reduce((sum, row) => sum + ((row[c] as number) || 0), 0);
+                        return (
+                          <td key={c} className="px-3 py-2 text-center">{colTotal}</td>
+                        );
+                      })}
+                      <td className="px-3 py-2 text-center">
+                        {dailyChartData.reduce((sum, row) => sum + uniqueCommercials.reduce((s, c) => s + ((row[c] as number) || 0), 0), 0)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           )}
         </CardContent>
       </Card>
