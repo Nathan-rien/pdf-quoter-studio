@@ -202,6 +202,9 @@ interface RentalProposalActions {
   updateClientLogoOverride: (override: ClientLogoOverride) => void;
   resetClientLogoOverride: () => void;
   
+  // Load from export snapshot
+  loadFromExport: (snapshot: Record<string, any>) => void;
+  
   // Reset
   resetAll: () => void;
   startNewProposal: () => void;
@@ -753,6 +756,29 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set({
           ...initialState,
           servicesInclus: currentServicesInclus,
+          isActive: true,
+        });
+      },
+
+      loadFromExport: (snapshot) => {
+        set({
+          clientData: snapshot.clientData ?? initialClientData,
+          commercialData: snapshot.commercialData ?? initialCommercialData,
+          matriceData: snapshot.matriceData ?? initialMatriceData,
+          proposals: Array.isArray(snapshot.proposals) && snapshot.proposals.length > 0
+            ? snapshot.proposals
+            : [createDefaultProposal()],
+          lignesData: Array.isArray(snapshot.lignesData) ? snapshot.lignesData : [],
+          servicesInclus: snapshot.servicesInclus ?? get().servicesInclus,
+          optionsServices: Array.isArray(snapshot.optionsServices) ? snapshot.optionsServices : [],
+          nosOptions: Array.isArray(snapshot.nosOptions) ? snapshot.nosOptions : [],
+          proposalName: snapshot.proposalName ?? '',
+          selectedTemplateId: snapshot.selectedTemplateId ?? null,
+          pdfImportStatus: { isImported: true, fileName: 'Chargé depuis historique', source: null, importDate: new Date().toISOString() },
+          clientLogoOverride: null,
+          dynamicContentOffsets: {},
+          currentStep: 'data',
+          hasUnsavedChanges: false,
           isActive: true,
         });
       },

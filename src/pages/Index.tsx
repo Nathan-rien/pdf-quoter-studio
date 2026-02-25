@@ -48,6 +48,10 @@ export default function Index() {
           <HistoryView
             isAdmin={isAdmin}
             highlightedIds={highlightedIds}
+            onLoadProposal={(proposalState) => {
+              useRentalProposalStore.getState().loadFromExport(proposalState);
+              setCurrentView('rental-workflow');
+            }}
           />
         );
       case 'template-editor':

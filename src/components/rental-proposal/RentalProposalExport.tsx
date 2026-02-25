@@ -100,6 +100,21 @@ export function RentalProposalExport() {
       // Calculer le montant d'investissement (depuis la première proposition ou le store)
       const montantInvest = matriceData.montantInvestissement;
       
+      // Construire le snapshot de l'état pour pouvoir recharger la proposition
+      const store = useRentalProposalStore.getState();
+      const proposalStateSnapshot = status === 'success' ? {
+        clientData: store.clientData,
+        commercialData: store.commercialData,
+        matriceData: store.matriceData,
+        proposals: store.proposals,
+        lignesData: store.lignesData,
+        servicesInclus: store.servicesInclus,
+        optionsServices: store.optionsServices,
+        nosOptions: store.nosOptions,
+        proposalName: store.proposalName,
+        selectedTemplateId: store.selectedTemplateId,
+      } : null;
+
       await supabase.from('proposal_exports').insert({
         proposal_name: displayName,
         file_name: generateFileName(),
@@ -116,6 +131,7 @@ export function RentalProposalExport() {
         montant_investissement: montantInvest || null,
         selected_options_names: selectedOptions.map(o => o.name).filter(Boolean),
         selected_nos_options_names: selectedNosOptions.map(o => o.name).filter(Boolean),
+        proposal_state: proposalStateSnapshot,
       } as any);
     } catch (err) {
       console.error('Failed to save to history:', err);

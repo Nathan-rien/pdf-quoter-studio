@@ -18,7 +18,18 @@ import {
   User,
   ChevronDown,
   ChevronRight,
+  RotateCcw,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +58,7 @@ interface ProposalExportSummary {
 
 interface HistoryViewProps {
   onSelectEntry?: (entry: ProposalExportSummary) => void;
+  onLoadProposal?: (proposalState: Record<string, any>) => void;
   isAdmin?: boolean;
   highlightedIds?: string[];
 }
@@ -56,7 +68,7 @@ const MONTHS_FR = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
-export function HistoryView({ onSelectEntry, isAdmin = false, highlightedIds = [] }: HistoryViewProps) {
+export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, highlightedIds = [] }: HistoryViewProps) {
   const [exports, setExports] = useState<ProposalExportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +88,8 @@ export function HistoryView({ onSelectEntry, isAdmin = false, highlightedIds = [
   const [previewingEntry, setPreviewingEntry] = useState<ProposalExportSummary | null>(null);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+  const [loadingLoadId, setLoadingLoadId] = useState<string | null>(null);
+  const [confirmLoadEntry, setConfirmLoadEntry] = useState<ProposalExportSummary | null>(null);
 
   // Charger le contenu HTML à la demande
   const fetchHtmlContent = async (id: string): Promise<string | null> => {
@@ -193,6 +207,28 @@ export function HistoryView({ onSelectEntry, isAdmin = false, highlightedIds = [
     setPreviewContent(null);
   };
 
+  const handleLoadProposal = async (entry: ProposalExportSummary) => {
+    setLoadingLoadId(entry.id);
+    try {
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('proposal_state')
+        .eq('id', entry.id)
+        .single();
+      
+      if (error || !data || !(data as any).proposal_state) {
+        toast({ title: "Chargement impossible", description: "Les données de cette proposition ne sont pas disponibles.", variant: "destructive" });
+        return;
+      }
+      onLoadProposal?.((data as any).proposal_state);
+    } catch (err) {
+      toast({ title: "Erreur", description: "Impossible de charger la proposition.", variant: "destructive" });
+    } finally {
+      setLoadingLoadId(null);
+      setConfirmLoadEntry(null);
+    }
+  };
+
   const handleDownload = async (entry: ProposalExportSummary) => {
     setDownloadingId(entry.id);
     try {
@@ -296,6 +332,16 @@ export function HistoryView({ onSelectEntry, isAdmin = false, highlightedIds = [
             <div className="flex items-center gap-1">
               {entry.status === 'success' && (
                 <>
+                  {onLoadProposal && (
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8"
+                      onClick={() => setConfirmLoadEntry(entry)}
+                      disabled={loadingLoadId === entry.id}
+                      title="Charger pour modifier"
+                    >
+                      {loadingLoadId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost" size="icon" className="h-8 w-8"
                     onClick={() => handlePreview(entry)}
@@ -523,6 +569,24 @@ export function HistoryView({ onSelectEntry, isAdmin = false, highlightedIds = [
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de confirmation de chargement */}
+      <AlertDialog open={!!confirmLoadEntry} onOpenChange={(open) => !open && setConfirmLoadEntry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Charger cette proposition ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La proposition en cours sera remplacée par « {confirmLoadEntry?.proposal_name} ». Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmLoadEntry && handleLoadProposal(confirmLoadEntry)}>
+              Charger
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
