@@ -2,75 +2,67 @@
 
 ## Probleme
 
-Le numero de telephone des commerciaux est lu depuis le fichier statique `src/data/commerciaux.ts` (tableau `COMMERCIAUX` code en dur). Quand l'admin modifie le telephone dans l'onglet Acces (table `pre_registered_commercials`), le workflow continue d'afficher l'ancien numero car il ne consulte jamais la base de donnees.
+La pagination actuelle ne prend en compte que le nombre de lignes produit (`lignesData.length`) pour decider du decoupage en pages. Le bloc "Votre offre" (propositions financieres) + les elements en flux (Avantages, Conditions) + le commentaire sont toujours places sur le dernier chunk, sans verifier s'ils tiennent dans l'espace restant.
 
-Deux endroits critiques :
-1. **`getCommerciauxByEntity()`** dans `RentalDataEditor.tsx` — liste les commerciaux depuis le statique
-2. **`getSelectedCommercial()`** dans `rentalProposalStore.ts` — recupere le commercial selectionne depuis le statique
+Avec 4 propositions comme dans la capture, ce bloc fait environ 20-24 "lignes equivalentes" alors que `INVEST_FOOTER_RESERVED_LINES = 9` n'en reserve que 9. Le contenu deborde de la page.
 
-## Plan de correction
+## Approche
 
-### Approche
+Calculer dynamiquement le nombre de lignes equivalentes que le footer occupe en fonction du nombre de propositions, puis ajuster la capacite du dernier chunk de donnees pour que le footer ait assez de place. Si le footer seul depasse la capacite d'une page, il faut le decouper sur plusieurs pages.
 
-Enrichir les fonctions `getCommercialById` et `getCommerciauxByEntity` avec les donnees dynamiques de la base. Concretement, creer un hook `useCommerciaux` qui charge les `pre_registered_commercials` et fusionne le telephone de la base avec les donnees statiques.
+## Modifications
 
-### Modifications
+### 1. `src/lib/canvas-constants.ts`
 
-| Fichier | Detail |
-|---|---|
-| **Nouveau hook `src/hooks/useCommerciaux.ts`** | Hook React Query qui charge tous les `pre_registered_commercials` et retourne deux fonctions : `getCommerciauxByEntity(entity)` et `getCommercialById(id)` qui fusionnent le telephone de la base avec les donnees statiques. Le telephone de la base a priorite sur le statique. |
-| **`RentalDataEditor.tsx`** | Remplacer l'import de `getCommerciauxByEntity` depuis `commerciaux.ts` par le hook `useCommerciaux`. Utiliser les fonctions dynamiques pour la liste et l'apercu du commercial selectionne. |
-| **`rentalProposalStore.ts`** | La fonction `getSelectedCommercial()` du store ne peut pas utiliser un hook. Deux options : (a) la supprimer et deplacer la logique dans le composant, ou (b) la garder comme fallback statique. Approche retenue : dans `RentalDataEditor`, utiliser le hook pour l'affichage et ignorer `getSelectedCommercial()` du store pour l'apercu. |
+Ajouter une constante pour le nombre de lignes equivalentes par proposition :
 
-### Detail du hook `useCommerciaux`
-
-```typescript
-// src/hooks/useCommerciaux.ts
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { COMMERCIAUX, CommercialEntity, Commercial } from '@/data/commerciaux';
-
-export function useCommerciaux() {
-  const { data: dbCommerciaux } = useQuery({
-    queryKey: ['pre-registered-commercials'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('pre_registered_commercials')
-        .select('commercial_id, telephone');
-      return data || [];
-    },
-    staleTime: 30_000,
-  });
-
-  // Fusionne : telephone DB prioritaire sur statique
-  const merged = COMMERCIAUX.map(c => {
-    const dbEntry = dbCommerciaux?.find(d => d.commercial_id === c.id);
-    return dbEntry ? { ...c, telephone: dbEntry.telephone ?? c.telephone } : c;
-  });
-
-  const getByEntity = (entity: CommercialEntity) => 
-    merged.filter(c => c.entity === entity);
-
-  const getById = (id: string) => 
-    merged.find(c => c.id === id) ?? null;
-
-  return { getCommerciauxByEntity: getByEntity, getCommercialById: getById };
-}
+```
+// Lignes équivalentes par proposition dans "Votre offre" (titre + lignes de détail + marges)
+export const INVEST_LINES_PER_PROPOSAL = 4;
+// Lignes de base du footer (titre "Votre offre" + éléments flow + commentaire + marges)
+export const INVEST_FOOTER_BASE_LINES = 5;
 ```
 
-### Modifications dans `RentalDataEditor.tsx`
+Remplacer `INVEST_FOOTER_RESERVED_LINES = 9` par un calcul dynamique base sur ces constantes.
 
-- Importer `useCommerciaux` au lieu de `getCommerciauxByEntity`
-- Appeler le hook : `const { getCommerciauxByEntity, getCommercialById } = useCommerciaux()`
-- Remplacer `getSelectedCommercial()` du store par `getCommercialById(commercialData.commercialId)` pour l'apercu
-- La liste des commerciaux dans le `Select` utilisera la version dynamique
+### 2. `src/components/rental-proposal/RentalProposalPreview.tsx`
 
-### Impact sur les autres consommateurs
+Dans le calcul de `investChunks` (lignes 191-207) :
 
-- `useCommercialIdentity.ts` : utilise aussi `getCommercialById` statique pour l'onglet "Mes infos". Meme correction a appliquer en utilisant le hook `useCommerciaux`.
-- `rentalProposalStore.ts` : `getSelectedCommercial()` reste en fallback statique pour les usages hors composant (export PDF, etc.). Le telephone dans l'export sera corrige dans un second temps si necessaire.
+- Calculer le nombre de lignes necessaires pour le footer : `footerLines = INVEST_FOOTER_BASE_LINES + proposals.length * INVEST_LINES_PER_PROPOSAL`
+- Utiliser `footerLines` au lieu de `INVEST_FOOTER_RESERVED_LINES` pour determiner la capacite du dernier chunk
+- Si `footerLines > INVEST_LINES_CONTINUATION` (le footer seul depasse une page), generer des chunks footer supplementaires (rare mais possible avec 8+ propositions)
+- Ajuster `INVEST_SINGLE_PAGE_FOOTER_THRESHOLD` pour tenir compte du nombre de propositions : le seuil doit etre `INVEST_LINES_PAGE1 - footerLines`
 
-### Aucune migration DB necessaire
+Le chunk `0` (page footer-only) existant accueille deja le contenu "Votre offre". Il suffit de s'assurer que la capacite du dernier chunk de donnees laisse assez de place, et que le chunk `0` est ajoute des que le footer ne tient pas avec les donnees.
 
-Les donnees sont deja dans `pre_registered_commercials`. Il s'agit uniquement d'un changement cote client.
+### 3. `src/components/rental-proposal/RentalProposalExport.tsx`
+
+Meme logique dans `investChunksLocal` (lignes 384-401) :
+
+- Calculer `footerLines` de la meme maniere
+- Ajuster le seuil et les capacites en consequence
+- Le HTML de `offreAndProposalsHTML` est deja correctement rendu sur le dernier chunk, donc pas de changement de structure
+
+### Detail du calcul
+
+```text
+proposalCount = nombre de propositions (ex: 4)
+footerLines = INVEST_FOOTER_BASE_LINES + proposalCount * INVEST_LINES_PER_PROPOSAL
+            = 5 + 4 * 4 = 21
+
+Cas single-page :
+  seuil = INVEST_LINES_PAGE1 - footerLines = 22 - 21 = 1
+  → Avec 6 lignes produit et 4 propositions, 6 > 1, donc on cree une page footer dediee
+
+Cas multi-page :
+  LAST_CHUNK_MAX = INVEST_LINES_CONTINUATION - footerLines
+  Si footerLines > INVEST_LINES_CONTINUATION → chunk footer seul (0 lignes data)
+```
+
+### Impact
+
+- Le rendu `isLastChunk` qui affiche "Votre offre" reste inchange (il continue a afficher les propositions sur le dernier chunk)
+- Le nombre de pages supplementaires (`extraInvestPages`) augmente automatiquement quand le footer deborde
+- Compatible avec 1 a N propositions sans risque de debordement
 
