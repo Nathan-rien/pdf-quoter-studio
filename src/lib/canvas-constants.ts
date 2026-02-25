@@ -54,5 +54,11 @@ export function computeFooterLines(proposalCount: number): number {
 // le footer (Votre offre + Avantages + Conditions) est déporté sur une page dédiée
 export const INVEST_SINGLE_PAGE_FOOTER_THRESHOLD = 6;
 
+// Pagination des services/options (Page 5)
+// Chaque bloc = 1 service inclus, 1 option, ou 1 titre "Nos options"
+// Le bloc "Services location" permanent compte pour 1 bloc
+export const SERVICES_ITEMS_PAGE1 = 8;       // blocs max sur page 1 (avec titre + Services location)
+export const SERVICES_ITEMS_CONTINUATION = 12; // blocs max sur pages de continuation
+
 // Largeur maximale d'affichage du canvas (identique Éditeur/Aperçu)
 export const CANVAS_DISPLAY_MAX_WIDTH = 580;
