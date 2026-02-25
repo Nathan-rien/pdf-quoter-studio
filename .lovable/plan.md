@@ -1,84 +1,59 @@
 
 
-## Probleme
+## Deux modifications sur l'onglet Statistiques
 
-La page 5 (Services inclus + Nos Options) a un `maxHeight: 82%` avec `overflow: hidden`. Quand il y a beaucoup de services et d'options, le contenu est tronque sans aucun mecanisme de pagination. Le meme probleme existe dans l'export PDF.
+### 1. Bouton "Remettre a zero" (filtre par date, sans suppression)
 
-## Approche
+Le principe : stocker une date de remise a zero dans la base de donnees. Toutes les statistiques ne montrent que les propositions creees **apres** cette date. Les donnees historiques restent intactes dans `proposal_exports`.
 
-Implementer une pagination automatique pour le contenu services/options, identique a celle du tableau investissements :
-- Mesurer le contenu total en "blocs equivalents"
-- Si le contenu depasse la capacite d'une page, creer des pages de continuation automatiques
-- Les pages supplementaires sont inserees apres la page 5 du template
+**Nouvelle table `admin_settings`** (migration) :
+- `key` (text, primary key) — ex: `stats_reset_date`
+- `value` (text) — la date ISO au format `2026-02-25T...`
+- `updated_at` (timestamptz)
+- RLS : lecture pour tous les authentifies, ecriture pour admins uniquement
 
-## Constantes de dimensionnement
+**Dans `StatisticsDashboard.tsx`** :
+- Au chargement, lire `admin_settings` ou `key = 'stats_reset_date'`
+- Si une date existe, filtrer `records` pour ne garder que `created_at >= stats_reset_date`
+- Bouton "Remettre a zero" dans le header (icone `RotateCcw`, variante `outline`) qui ouvre un `AlertDialog` de confirmation
+- Au clic confirmer : `upsert` dans `admin_settings` avec `key = 'stats_reset_date'` et `value = new Date().toISOString()`
+- Apres upsert : re-filtrer les donnees localement, toast de confirmation
+- Afficher sous le header un petit badge indiquant "Donnees depuis le dd/mm/yyyy" si une date de reset existe
 
-Ajouter dans `canvas-constants.ts` :
+### 2. Nouveau graphique : Propositions par jour et par commercial
 
-```
-// Pagination des services/options (Page 5)
-export const SERVICES_ITEMS_PAGE1 = 8;      // blocs max sur page 1 (avec titre + Services location)  
-export const SERVICES_ITEMS_CONTINUATION = 12; // blocs max sur pages de continuation
-```
+**Calcul** (dans `StatisticsDashboard.tsx`) :
+- Grouper `filteredRecords` par jour (`format(date, 'dd/MM')`) et par `commercial_name`
+- Limiter aux 30 derniers jours actifs pour lisibilite
+- Structure : `{ day: '24/02', 'Commercial A': 3, 'Commercial B': 1 }`
 
-Chaque bloc = 1 service inclus ou 1 option. Le bloc "Services location" permanent compte pour 1 bloc. Le titre "Nos options" compte pour 1 bloc.
+**Rendu** :
+- Nouvelle `Card` placee apres "Montant total investi par mois"
+- `BarChart` stacked (`stackId="a"`) avec une `<Bar>` par commercial unique
+- Couleurs dynamiques depuis `CHART_COLORS`
+- Tooltip detaillant chaque commercial
+- Titre : "Propositions par jour et par commercial"
 
-## Modifications
+### Resume des fichiers modifies
 
-### 1. `src/lib/canvas-constants.ts`
-- Ajouter `SERVICES_ITEMS_PAGE1 = 8` et `SERVICES_ITEMS_CONTINUATION = 12`
+| Fichier | Detail |
+|---|---|
+| **Migration SQL** | Creer table `admin_settings` avec RLS |
+| **`StatisticsDashboard.tsx`** | Charger `stats_reset_date`, filtrer, bouton reset avec AlertDialog, badge date, nouveau graphique journalier stacked |
 
-### 2. `src/components/rental-proposal/RentalProposalPreview.tsx`
-
-**Calcul des chunks services** (a cote du calcul `investChunks`) :
-- Construire une liste lineaire de tous les "blocs" a afficher : [servicesLocation, ...selectedOptions, titreNosOptions?, ...selectedNosOptions]
-- Decouper en chunks : premier chunk = `SERVICES_ITEMS_PAGE1`, suivants = `SERVICES_ITEMS_CONTINUATION`
-- `extraServicesPages = max(0, servicesChunks.length - 1)`
-- `totalPages = templatePages + extraInvestPages + extraServicesPages`
-
-**Rendu `renderServicesInclusPage`** :
-- Accepter un parametre `chunkIndex` pour savoir quelle tranche de blocs afficher
-- Page 0 : titre + Services location + premiers blocs
-- Pages suivantes : blocs de continuation sans le titre principal
-- Retirer `maxHeight` et `overflow: hidden`
-
-**`renderCurrentPage`** :
-- Ajouter une plage de pages services apres la page 5 du template (decalee par extraInvestPages)
-- Decaler les pages suivantes (6, 7, 8...) par `extraServicesPages` en plus de `extraInvestPages`
-
-### 3. `src/components/rental-proposal/RentalProposalExport.tsx`
-
-**`generateDynamicContentByPage`** :
-- Meme logique de chunking pour le contenu HTML de la page 5
-- Si multi-page : le premier chunk va dans `dynamicContent[5]`, les chunks suivants dans `extraPagesAfter[5]`
-- Retirer `max-height` et `overflow: hidden` du wrapper
-
-### Detail du chunking
+### Detail technique du filtre reset
 
 ```text
-allBlocs = [
-  { type: 'services-location' },           // toujours present
-  ...selectedOptions.map(o => ({ type: 'option', data: o })),
-  ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' }] : []),
-  ...selectedNosOptions.map(o => ({ type: 'nos-option', data: o })),
-]
+// Chargement
+const { data } = await supabase.from('admin_settings').select('value').eq('key', 'stats_reset_date').single();
+const resetDate = data?.value ? new Date(data.value) : null;
 
-chunk 0 : blocs[0..SERVICES_ITEMS_PAGE1-1]    (page 5 du template)
-chunk 1 : blocs[PAGE1..PAGE1+CONTINUATION-1]   (page supplementaire)
-chunk N : ...
+// Filtrage (applique AVANT le filtre annee)
+const baseRecords = resetDate 
+  ? records.filter(r => new Date(r.created_at) >= resetDate)
+  : records;
+
+// Reset
+await supabase.from('admin_settings').upsert({ key: 'stats_reset_date', value: new Date().toISOString() });
 ```
-
-### Impact sur la navigation
-
-Le calcul de `totalPages` et `renderCurrentPage` gere deja les pages invest supplementaires via un systeme de decalage. Le meme pattern sera applique pour les pages services :
-
-```text
-Pages template : 1, 2, 3, [4, 4+extra_invest...], [5, 5+extra_services...], 6, 7, 8
-```
-
-La logique dans `renderCurrentPage` :
-1. Pages avant investPage → rendu normal
-2. Pages dans la plage invest → `renderProductPage(chunkIndex)`
-3. Pages dans la plage services → `renderServicesInclusPage(chunkIndex)`
-4. Pages apres → decalage par `extraInvestPages + extraServicesPages`
 
