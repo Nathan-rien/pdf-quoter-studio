@@ -138,6 +138,7 @@ export type Database = {
           options_count: number | null
           pdf_html_content: string | null
           proposal_name: string
+          proposal_state: Json | null
           row_count: number | null
           selected_nos_options_names: Json | null
           selected_options_names: Json | null
@@ -157,6 +158,7 @@ export type Database = {
           options_count?: number | null
           pdf_html_content?: string | null
           proposal_name: string
+          proposal_state?: Json | null
           row_count?: number | null
           selected_nos_options_names?: Json | null
           selected_options_names?: Json | null
@@ -176,6 +178,7 @@ export type Database = {
           options_count?: number | null
           pdf_html_content?: string | null
           proposal_name?: string
+          proposal_state?: Json | null
           row_count?: number | null
           selected_nos_options_names?: Json | null
           selected_options_names?: Json | null
