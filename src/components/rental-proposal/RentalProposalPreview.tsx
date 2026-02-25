@@ -35,7 +35,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, INVEST_FOOTER_RESERVED_LINES, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -187,22 +187,55 @@ export function RentalProposalPreview() {
   const templatePages = currentVersion?.pages.length || DEFAULT_CONTRACT_PAGES;
   
   // Calcul des pages supplémentaires pour le tableau investissements
-  // Découper les lignes en chunks, puis vérifier si le dernier chunk nécessite une page footer dédiée
+  // Le footer (Votre offre + Avantages + Conditions + Commentaire) est dimensionné
+  // dynamiquement en fonction du nombre de propositions financières.
+  const allProposalsForPagination = getAllProposalsCalculations();
+  const footerLines = computeFooterLines(allProposalsForPagination.length);
+
   const investChunks = (() => {
     const totalLines = lignesData.length;
-    if (totalLines <= INVEST_SINGLE_PAGE_FOOTER_THRESHOLD) return [totalLines];
+    const singlePageThreshold = INVEST_LINES_PAGE1 - footerLines;
+
+    // Cas 1 : tout tient sur une seule page (données + footer)
+    if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
+
+    // Cas 2 : données tiennent sur page 1 mais pas le footer → page footer dédiée
     if (totalLines <= INVEST_LINES_PAGE1) {
-      // Le tableau tient sur une page mais pas assez de place pour le footer
       return [totalLines, 0];
     }
+
+    // Cas 3 : multi-page
+    const lastChunkMax = Math.max(0, INVEST_LINES_CONTINUATION - footerLines);
     const chunks = [INVEST_LINES_PAGE1];
     let remaining = totalLines - INVEST_LINES_PAGE1;
-    while (remaining > 0) {
-      chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
-      remaining -= INVEST_LINES_CONTINUATION;
+
+    if (lastChunkMax > 0) {
+      // Pages intermédiaires pleines, dernière page réduite pour le footer
+      while (remaining > lastChunkMax) {
+        const take = Math.min(remaining, INVEST_LINES_CONTINUATION);
+        // Si ce chunk serait le dernier mais ne laisse pas de place au footer, on le fait plein et on ajoute une page footer
+        if (remaining <= INVEST_LINES_CONTINUATION) {
+          // remaining > lastChunkMax, donc on prend tout et on ajoute page footer
+          chunks.push(remaining);
+          remaining = 0;
+          chunks.push(0); // page footer dédiée
+          break;
+        }
+        chunks.push(take);
+        remaining -= take;
+      }
+      if (remaining > 0) {
+        // Le dernier chunk tient avec le footer
+        chunks.push(remaining);
+      }
+    } else {
+      // Footer seul dépasse une page continuation → toutes les pages data sont pleines + page footer dédiée
+      while (remaining > 0) {
+        chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
+        remaining -= INVEST_LINES_CONTINUATION;
+      }
+      chunks.push(0);
     }
-    // Multi-page : toujours reporter le footer sur une page dédiée
-    chunks.push(0);
     return chunks;
   })();
   const investChunkCount = investChunks.length;
