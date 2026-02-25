@@ -17,7 +17,8 @@ import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStor
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { BASE_TAUX_DATA } from '@/data/base-taux';
 import { getConditionFinContrat } from '@/data/frais-dossier';
-import { ENTITIES, getCommerciauxByEntity, CommercialEntity } from '@/data/commerciaux';
+import { ENTITIES, CommercialEntity } from '@/data/commerciaux';
+import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { ProposalCard } from './ProposalCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommercialIdentity } from '@/hooks/useCommercialIdentity';
@@ -31,6 +32,7 @@ export function RentalDataEditor() {
 
   const { isAdmin, isCommercial } = useAuth();
   const { commercial, commercialId } = useCommercialIdentity();
+  const { getCommerciauxByEntity, getCommercialById } = useCommerciaux();
   const lockCommercialFields = isCommercial && !isAdmin;
 
   const {
@@ -388,16 +390,19 @@ export function RentalDataEditor() {
               </div>
               
               {/* Aperçu du commercial sélectionné */}
-              {getSelectedCommercial() && (
-                <div className="p-3 bg-muted/50 rounded-lg text-sm">
-                  <p className="font-medium">{getSelectedCommercial()!.nom}</p>
-                  {getSelectedCommercial()!.telephone && (
-                    <p className="text-muted-foreground">{getSelectedCommercial()!.telephone}</p>
-                  )}
-                  <p className="text-muted-foreground">{getSelectedCommercial()!.email}</p>
-                  <p className="text-muted-foreground text-xs mt-1">{getSelectedCommercial()!.adresse}</p>
-                </div>
-              )}
+              {commercialData.commercialId && getCommercialById(commercialData.commercialId) && (() => {
+                const sel = getCommercialById(commercialData.commercialId)!;
+                return (
+                  <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                    <p className="font-medium">{sel.nom}</p>
+                    {sel.telephone && (
+                      <p className="text-muted-foreground">{sel.telephone}</p>
+                    )}
+                    <p className="text-muted-foreground">{sel.email}</p>
+                    <p className="text-muted-foreground text-xs mt-1">{sel.adresse}</p>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

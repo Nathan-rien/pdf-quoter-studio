@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { getCommercialById, Commercial } from '@/data/commerciaux';
+import { useCommerciaux } from '@/hooks/useCommerciaux';
+import { Commercial } from '@/data/commerciaux';
 
 interface UseCommercialIdentityReturn {
   commercial: Commercial | null;
@@ -13,6 +14,7 @@ export function useCommercialIdentity(): UseCommercialIdentityReturn {
   const { user, isCommercial } = useAuth();
   const [commercialId, setCommercialId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { getCommercialById } = useCommerciaux();
 
   useEffect(() => {
     if (!user?.email) {
