@@ -63,7 +63,7 @@ export default function Index() {
       case 'access-management':
         return <AccessManagement />;
       case 'statistics':
-        return <StatisticsDashboard />;
+        return <StatisticsDashboard onNavigateToHistory={handleNavigateToHistory} />;
       case 'mes-infos':
         return <MesInfosView />;
       default:

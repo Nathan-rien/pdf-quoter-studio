@@ -3,7 +3,12 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { COMMERCIAUX, CommercialEntity } from "@/data/commerciaux";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +39,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Users,
-  Calendar,
+  Calendar as CalendarIcon,
   RefreshCw,
   Loader2,
   Building2,
@@ -54,6 +59,7 @@ interface ExportRecord {
   id: string;
   proposal_name: string;
   client_name: string | null;
+  commercial_id: string | null;
   commercial_name: string | null;
   montant_investissement: number | null;
   options_count: number;
@@ -62,6 +68,10 @@ interface ExportRecord {
   template_name: string;
   selected_options_names: string[] | null;
   selected_nos_options_names: string[] | null;
+}
+
+interface StatisticsDashboardProps {
+  onNavigateToHistory?: (ids: string[]) => void;
 }
 
 const CHART_COLORS = [
@@ -158,7 +168,7 @@ function ServiceDetailTable({
   );
 }
 
-export function StatisticsDashboard() {
+export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboardProps) {
   const [records, setRecords] = useState<ExportRecord[]>([]);
   const [allServiceOptions, setAllServiceOptions] = useState<{ id: string; title: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -167,6 +177,8 @@ export function StatisticsDashboard() {
   const [expandedNosOption, setExpandedNosOption] = useState<string | null>(null);
   const [resetDate, setResetDate] = useState<Date | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+  const [filterEntity, setFilterEntity] = useState<CommercialEntity | null>(null);
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -174,7 +186,7 @@ export function StatisticsDashboard() {
       const [exportRes, optionsRes, settingsRes] = await Promise.all([
         supabase
           .from('proposal_exports')
-          .select('id, proposal_name, client_name, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
+          .select('id, proposal_name, client_name, commercial_id, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
           .eq('status', 'success')
           .order('created_at', { ascending: true }),
         supabase
@@ -320,23 +332,41 @@ export function StatisticsDashboard() {
     .sort((a, b) => b.count - a.count);
 
   // === Propositions par jour et par commercial (30 derniers jours actifs) ===
-  const dailyCommercialMap: Record<string, Record<string, number>> = {};
-  filteredRecords.forEach(r => {
-    const day = format(new Date(r.created_at), 'dd/MM');
-    const dayKey = format(new Date(r.created_at), 'yyyy-MM-dd'); // for sorting
+  // Filter by entity for the daily table
+  const entityFilteredRecords = filterEntity
+    ? filteredRecords.filter(r => {
+        if (!r.commercial_id) return false;
+        const comm = COMMERCIAUX.find(c => c.id === r.commercial_id);
+        return comm?.entity === filterEntity;
+      })
+    : filteredRecords;
+
+  const dailyCommercialMap: Record<string, Record<string, { count: number; ids: string[] }>> = {};
+  entityFilteredRecords.forEach(r => {
+    const dayKey = format(new Date(r.created_at), 'yyyy-MM-dd');
     const commercial = r.commercial_name || 'Non renseigné';
     if (!dailyCommercialMap[dayKey]) dailyCommercialMap[dayKey] = {};
-    dailyCommercialMap[dayKey][commercial] = (dailyCommercialMap[dayKey][commercial] || 0) + 1;
+    if (!dailyCommercialMap[dayKey][commercial]) dailyCommercialMap[dayKey][commercial] = { count: 0, ids: [] };
+    dailyCommercialMap[dayKey][commercial].count += 1;
+    dailyCommercialMap[dayKey][commercial].ids.push(r.id);
   });
 
-  const uniqueCommercials = [...new Set(filteredRecords.map(r => r.commercial_name || 'Non renseigné'))];
+  const uniqueCommercials = [...new Set(entityFilteredRecords.map(r => r.commercial_name || 'Non renseigné'))];
   
-  const sortedDays = Object.keys(dailyCommercialMap).sort().slice(-30);
+  let sortedDays = Object.keys(dailyCommercialMap).sort().slice(-30);
+  
+  // Filter by specific date
+  if (filterDate) {
+    const targetKey = format(filterDate, 'yyyy-MM-dd');
+    sortedDays = sortedDays.filter(d => d === targetKey);
+  }
+
   const dailyChartData = sortedDays.map(dayKey => {
-    const dayLabel = format(new Date(dayKey), 'dd/MM');
-    const entry: Record<string, any> = { day: dayLabel };
+    const dayLabel = format(new Date(dayKey), 'dd/MM/yyyy');
+    const entry: Record<string, any> = { day: dayLabel, _dayKey: dayKey };
     uniqueCommercials.forEach(c => {
-      entry[c] = dailyCommercialMap[dayKey]?.[c] || 0;
+      entry[c] = dailyCommercialMap[dayKey]?.[c]?.count || 0;
+      entry[`_ids_${c}`] = dailyCommercialMap[dayKey]?.[c]?.ids || [];
     });
     return entry;
   });
@@ -554,7 +584,7 @@ export function StatisticsDashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
+              <CalendarIcon className="h-4 w-4 text-primary" />
               Propositions par mois
             </CardTitle>
           </CardHeader>
@@ -656,6 +686,60 @@ export function StatisticsDashboard() {
             <Users className="h-4 w-4 text-primary" />
             Propositions par jour et par commercial
           </CardTitle>
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            {/* Date filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-8 text-xs gap-1.5 w-[180px] justify-start",
+                    !filterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {filterDate ? format(filterDate, 'dd/MM/yyyy') : "Filtrer par date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filterDate}
+                  onSelect={setFilterDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            {filterDate && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs px-2" onClick={() => setFilterDate(undefined)}>
+                ✕ Effacer
+              </Button>
+            )}
+            {/* Entity switch */}
+            <div className="flex items-center gap-2 ml-auto">
+              <span className={cn("text-xs font-medium", filterEntity !== 'grosbill-pro' ? "text-foreground" : "text-muted-foreground")}>Cybertek Pro</span>
+              <Switch
+                checked={filterEntity === 'grosbill-pro'}
+                onCheckedChange={(checked) => {
+                  if (checked && filterEntity === 'grosbill-pro') {
+                    setFilterEntity(null);
+                  } else if (!checked && filterEntity === 'cybertek-pro') {
+                    setFilterEntity(null);
+                  } else {
+                    setFilterEntity(checked ? 'grosbill-pro' : 'cybertek-pro');
+                  }
+                }}
+              />
+              <span className={cn("text-xs font-medium", filterEntity === 'grosbill-pro' ? "text-foreground" : "text-muted-foreground")}>Grosbill Pro</span>
+            </div>
+            {filterEntity && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs px-2" onClick={() => setFilterEntity(null)}>
+                Tous
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {dailyChartData.length === 0 ? (
@@ -683,9 +767,19 @@ export function StatisticsDashboard() {
                           <td className="px-3 py-1.5 font-medium">{row.day}</td>
                           {uniqueCommercials.map((c) => {
                             const v = (row[c] as number) || 0;
+                            const ids = (row[`_ids_${c}`] as string[]) || [];
                             return (
-                              <td key={c} className={`px-3 py-1.5 text-center ${v === 0 ? 'text-muted-foreground' : 'font-bold'}`}>
-                                {v}
+                              <td key={c} className="px-3 py-1.5 text-center">
+                                {v > 0 && onNavigateToHistory ? (
+                                  <button
+                                    className="text-primary font-bold hover:underline cursor-pointer"
+                                    onClick={() => onNavigateToHistory(ids)}
+                                  >
+                                    {v}
+                                  </button>
+                                ) : (
+                                  <span className={v === 0 ? 'text-muted-foreground' : 'font-bold'}>{v}</span>
+                                )}
                               </td>
                             );
                           })}
@@ -803,35 +897,6 @@ export function StatisticsDashboard() {
         </Card>
       </div>
 
-      {/* Tableau des commerciaux */}
-      {commercialData.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Détail par commercial</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {commercialData.map((item, i) => {
-                const commercialRecords = filteredRecords.filter(r => (r.commercial_name || 'Non renseigné') === item.name);
-                const commercialAmounts = commercialRecords.filter(r => r.montant_investissement).map(r => r.montant_investissement as number);
-                const avg = commercialAmounts.length > 0 ? commercialAmounts.reduce((a, b) => a + b, 0) / commercialAmounts.length : null;
-                const maxPct = Math.round((item.count / totalProposals) * 100);
-                return (
-                  <div key={item.name} className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                    <span className="text-sm w-40 truncate">{item.name}</span>
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${maxPct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                    </div>
-                    <span className="text-xs text-muted-foreground w-20 text-right">{item.count} prop.</span>
-                    <span className="text-xs font-medium w-28 text-right">{formatAmount(avg)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Options et Services les plus proposés */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
