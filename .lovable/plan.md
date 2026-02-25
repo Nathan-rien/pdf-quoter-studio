@@ -1,44 +1,76 @@
 
 
-## Diagnostic
+## Probleme
 
-Le probleme n'est pas un bug de code mais un probleme de donnees : la colonne `proposal_state` a ete ajoutee a la base, et le code d'export la remplit correctement, mais les 44 exports existants ont ete crees **avant** la migration et ont tous `proposal_state = null`. Le bouton Charger est present, mais au clic il recupere `null` et affiche "Chargement impossible".
+Le numero de telephone des commerciaux est lu depuis le fichier statique `src/data/commerciaux.ts` (tableau `COMMERCIAUX` code en dur). Quand l'admin modifie le telephone dans l'onglet Acces (table `pre_registered_commercials`), le workflow continue d'afficher l'ancien numero car il ne consulte jamais la base de donnees.
 
-Deux corrections sont necessaires :
+Deux endroits critiques :
+1. **`getCommerciauxByEntity()`** dans `RentalDataEditor.tsx` — liste les commerciaux depuis le statique
+2. **`getSelectedCommercial()`** dans `rentalProposalStore.ts` — recupere le commercial selectionne depuis le statique
 
 ## Plan de correction
 
-### 1. Indicateur visuel sur les entrees non chargeables
+### Approche
 
-Dans `HistoryView.tsx`, le composant `renderEntry` affiche le bouton Charger pour toutes les entrees en succes. Il faut ajouter une information sur la disponibilite du `proposal_state` directement dans la requete de liste, afin de desactiver visuellement le bouton pour les anciens exports.
+Enrichir les fonctions `getCommercialById` et `getCommerciauxByEntity` avec les donnees dynamiques de la base. Concretement, creer un hook `useCommerciaux` qui charge les `pre_registered_commercials` et fusionne le telephone de la base avec les donnees statiques.
 
-| Fichier | Modification |
+### Modifications
+
+| Fichier | Detail |
 |---|---|
-| `HistoryView.tsx` - Interface `ProposalExportSummary` | Ajouter un champ `has_proposal_state: boolean` |
-| `HistoryView.tsx` - `fetchExports` | Ajouter `proposal_state` dans le select, puis mapper pour calculer `has_proposal_state` (sans charger le JSONB entier, on verifie juste `!= null`) |
-| `HistoryView.tsx` - `renderEntry` | Desactiver le bouton Charger et afficher un tooltip "Donnees non disponibles (ancien export)" quand `has_proposal_state === false` |
+| **Nouveau hook `src/hooks/useCommerciaux.ts`** | Hook React Query qui charge tous les `pre_registered_commercials` et retourne deux fonctions : `getCommerciauxByEntity(entity)` et `getCommercialById(id)` qui fusionnent le telephone de la base avec les donnees statiques. Le telephone de la base a priorite sur le statique. |
+| **`RentalDataEditor.tsx`** | Remplacer l'import de `getCommerciauxByEntity` depuis `commerciaux.ts` par le hook `useCommerciaux`. Utiliser les fonctions dynamiques pour la liste et l'apercu du commercial selectionne. |
+| **`rentalProposalStore.ts`** | La fonction `getSelectedCommercial()` du store ne peut pas utiliser un hook. Deux options : (a) la supprimer et deplacer la logique dans le composant, ou (b) la garder comme fallback statique. Approche retenue : dans `RentalDataEditor`, utiliser le hook pour l'affichage et ignorer `getSelectedCommercial()` du store pour l'apercu. |
 
-**Note technique** : Supabase ne permet pas facilement un `SELECT proposal_state IS NOT NULL` directement. On peut soit :
-- Selectionner la colonne et verifier cote client (mais le JSONB peut etre volumineux)
-- Utiliser une fonction RPC
+### Detail du hook `useCommerciaux`
 
-L'approche la plus simple : selectionner la colonne dans la requete en la castant en petit format. En realite, PostgREST ne supporte pas le cast. On va donc ajouter le champ dans le select et verifier `!= null` cote client, mais pour eviter de charger le JSONB complet on va creer une **colonne calculee** ou simplement accepter le cout.
+```typescript
+// src/hooks/useCommerciaux.ts
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { COMMERCIAUX, CommercialEntity, Commercial } from '@/data/commerciaux';
 
-Approche retenue : ajouter une requete SQL brute via RPC ou simplement selectionner `proposal_state` dans le fetch mais uniquement pour verifier la presence. Comme PostgREST charge le champ complet, on va plutot ajouter une **database function** qui retourne un boolean.
+export function useCommerciaux() {
+  const { data: dbCommerciaux } = useQuery({
+    queryKey: ['pre-registered-commercials'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pre_registered_commercials')
+        .select('commercial_id, telephone');
+      return data || [];
+    },
+    staleTime: 30_000,
+  });
 
-**Approche finale simplifiee** : Ajouter `proposal_state` au select de `fetchExports`, puis mapper chaque entree pour extraire `has_proposal_state = !!data.proposal_state` avant de stocker. Le JSONB sera charge mais jete immediatement. C'est acceptable pour 200 entrees max.
+  // Fusionne : telephone DB prioritaire sur statique
+  const merged = COMMERCIAUX.map(c => {
+    const dbEntry = dbCommerciaux?.find(d => d.commercial_id === c.id);
+    return dbEntry ? { ...c, telephone: dbEntry.telephone ?? c.telephone } : c;
+  });
 
-### 2. Navigation vers l'onglet Donnees apres chargement
+  const getByEntity = (entity: CommercialEntity) => 
+    merged.filter(c => c.entity === entity);
 
-Le code dans `Index.tsx` fait deja `setCurrentView('rental-workflow')` apres `loadFromExport`. Le store met `currentStep: 'data'`. Le composant `RentalWorkflow` devrait donc afficher l'etape "data". Verifions que `RentalWorkflow` utilise bien `currentStep` du store.
+  const getById = (id: string) => 
+    merged.find(c => c.id === id) ?? null;
 
-### Detail des modifications
+  return { getCommerciauxByEntity: getByEntity, getCommercialById: getById };
+}
+```
 
-**`HistoryView.tsx`** :
-- Ajouter `proposal_state` au `.select()` de `fetchExports` (ligne ~102)
-- Mapper les resultats pour ajouter `has_proposal_state: !!item.proposal_state` et retirer le JSONB
-- Ajouter le champ `has_proposal_state` a l'interface `ProposalExportSummary`
-- Dans `renderEntry`, griser le bouton Charger quand `has_proposal_state === false` avec un `title` explicatif
+### Modifications dans `RentalDataEditor.tsx`
 
-**Aucune autre modification necessaire** : le reste du flux (store, navigation, workflow step) est deja en place.
+- Importer `useCommerciaux` au lieu de `getCommerciauxByEntity`
+- Appeler le hook : `const { getCommerciauxByEntity, getCommercialById } = useCommerciaux()`
+- Remplacer `getSelectedCommercial()` du store par `getCommercialById(commercialData.commercialId)` pour l'apercu
+- La liste des commerciaux dans le `Select` utilisera la version dynamique
+
+### Impact sur les autres consommateurs
+
+- `useCommercialIdentity.ts` : utilise aussi `getCommercialById` statique pour l'onglet "Mes infos". Meme correction a appliquer en utilisant le hook `useCommerciaux`.
+- `rentalProposalStore.ts` : `getSelectedCommercial()` reste en fallback statique pour les usages hors composant (export PDF, etc.). Le telephone dans l'export sera corrige dans un second temps si necessaire.
+
+### Aucune migration DB necessaire
+
+Les donnees sont deja dans `pre_registered_commercials`. Il s'agit uniquement d'un changement cote client.
 
