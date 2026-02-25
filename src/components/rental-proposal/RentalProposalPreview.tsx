@@ -35,7 +35,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -240,7 +240,34 @@ export function RentalProposalPreview() {
   })();
   const investChunkCount = investChunks.length;
   const extraInvestPages = Math.max(0, investChunkCount - 1);
-  const totalPages = templatePages + extraInvestPages;
+
+  // Calcul des chunks services/options (pagination Page 5)
+  type ServiceBloc = 
+    | { type: 'services-location' }
+    | { type: 'option'; data: typeof selectedOptions[0] }
+    | { type: 'nos-options-title' }
+    | { type: 'nos-option'; data: typeof selectedNosOptions[0] };
+
+  const servicesBlocs: ServiceBloc[] = [
+    { type: 'services-location' },
+    ...selectedOptions.map(o => ({ type: 'option' as const, data: o })),
+    ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' as const }] : []),
+    ...selectedNosOptions.map(o => ({ type: 'nos-option' as const, data: o })),
+  ];
+
+  const servicesChunks: ServiceBloc[][] = (() => {
+    if (servicesBlocs.length <= SERVICES_ITEMS_PAGE1) return [servicesBlocs];
+    const chunks: ServiceBloc[][] = [servicesBlocs.slice(0, SERVICES_ITEMS_PAGE1)];
+    let offset = SERVICES_ITEMS_PAGE1;
+    while (offset < servicesBlocs.length) {
+      chunks.push(servicesBlocs.slice(offset, offset + SERVICES_ITEMS_CONTINUATION));
+      offset += SERVICES_ITEMS_CONTINUATION;
+    }
+    return chunks;
+  })();
+  const extraServicesPages = Math.max(0, servicesChunks.length - 1);
+
+  const totalPages = templatePages + extraInvestPages + extraServicesPages;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
@@ -1094,129 +1121,137 @@ export function RentalProposalPreview() {
   };
 
   // Page 5 - Services inclus (bloc permanent + options additionnelles + Nos Options fusionnées)
-  const renderServicesInclusPage = () => {
+  // chunkIndex: 0 = première page (titre + premiers blocs), 1+ = pages de continuation
+  const renderServicesInclusPage = (chunkIndex: number = 0) => {
     const staticElements = getStaticPageElements(5 as PDFPageNumber);
-    const pageOptions = selectedOptions.slice(0, OPTIONS_PER_PAGE);
+    const chunk = servicesChunks[chunkIndex] || [];
+    const isFirstPage = chunkIndex === 0;
+    
+    // Helper pour rendre un bloc service/option
+    const renderServiceBloc = (bloc: ServiceBloc, idx: number) => {
+      if (bloc.type === 'services-location') {
+        return (
+          <div key="services-location" className="mb-2 border rounded overflow-hidden">
+            <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+              <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
+              <span className="font-semibold text-[11px]">Services location</span>
+            </div>
+            <div className="px-3 py-1.5 bg-background">
+              <div className="text-[9px] text-muted-foreground space-y-0.5">
+                {servicesInclus.description.split('\n').map((item, i) => {
+                  const trimmed = item.trim();
+                  if (!trimmed) return null;
+                  const isSubItem = trimmed.startsWith('- ');
+                  return (
+                    <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                      {isSubItem ? trimmed : `• ${trimmed}`}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      }
+      if (bloc.type === 'option') {
+        const option = bloc.data;
+        return (
+          <div key={option.id} className="border rounded overflow-hidden">
+            <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+              <CheckCircle className="h-3 w-3 text-foreground/70" />
+              <span className="font-semibold text-[11px]">{option.name}</span>
+            </div>
+            {option.description && (
+              <div className="px-3 py-1.5 bg-background">
+                <div className="text-[9px] text-muted-foreground space-y-0.5">
+                  {option.description.split('\n').map((item, i) => {
+                    const trimmed = item.trim();
+                    if (!trimmed) return null;
+                    const isSubItem = trimmed.startsWith('- ');
+                    return (
+                      <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                        {isSubItem ? trimmed : `• ${trimmed}`}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      if (bloc.type === 'nos-options-title') {
+        return (
+          <div key="nos-options-title" className="mt-6 mb-1.5 flex items-center gap-2">
+            <Settings className="h-3 w-3 text-foreground/70" />
+            <span className="font-semibold text-[12px]">Nos options</span>
+          </div>
+        );
+      }
+      if (bloc.type === 'nos-option') {
+        const option = bloc.data;
+        return (
+          <div key={option.id} className="border border-primary/20 rounded overflow-hidden bg-primary/5">
+            <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">
+              <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
+              <span className="font-semibold text-[11px]">{option.name}</span>
+              {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
+                <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
+                  {formatNumber(option.price)} €/mois
+                </span>
+              )}
+              {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
+                <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
+                  {formatNumber(option.priceTotal!)} €
+                </span>
+              )}
+            </div>
+            {option.description && (
+              <div className="px-3 py-1.5 bg-background">
+                <div className="text-[9px] text-muted-foreground space-y-0.5">
+                  {option.description.split('\n').map((item, i) => {
+                    const trimmed = item.trim();
+                    if (!trimmed) return null;
+                    const isSubItem = trimmed.startsWith('- ');
+                    return (
+                      <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                        {isSubItem ? trimmed : `• ${trimmed}`}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      return null;
+    };
     
     const renderServicesContent = () => (
       <div 
         className="absolute z-40"
         style={{
           left: '3%',
-          top: '8%',
+          top: isFirstPage ? '8%' : '3%',
           width: '94%',
-          maxHeight: '82%',
-          overflow: 'hidden',
         }}
       >
-        {/* Titre de page avec icône FileCheck */}
-        <div className="mb-3 flex items-center gap-2">
-          <FileCheck className="h-5 w-5 text-primary" />
-          <h2 className="font-bold text-[14px] text-foreground">Les services inclus dans votre offre</h2>
-        </div>
-
-        {/* Bloc permanent "Services location" - style header gris + puces */}
-        <div className="mb-2 border rounded overflow-hidden">
-          <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-            <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
-            <span className="font-semibold text-[11px]">Services location</span>
+        {/* Titre de page - seulement sur la première page */}
+        {isFirstPage && (
+          <div className="mb-3 flex items-center gap-2">
+            <FileCheck className="h-5 w-5 text-primary" />
+            <h2 className="font-bold text-[14px] text-foreground">Les services inclus dans votre offre</h2>
           </div>
-          <div className="px-3 py-1.5 bg-background">
-            <div className="text-[9px] text-muted-foreground space-y-0.5">
-              {servicesInclus.description.split('\n').map((item, i) => {
-                const trimmed = item.trim();
-                if (!trimmed) return null;
-                const isSubItem = trimmed.startsWith('- ');
-                return (
-                  <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
-                    {isSubItem ? trimmed : `• ${trimmed}`}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Options additionnelles sélectionnées (depuis optionsServices) */}
-        {pageOptions.length > 0 && (
-          <div className="space-y-1.5">
-            {pageOptions.map((option) => (
-              <div key={option.id} className="border rounded overflow-hidden">
-                <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-foreground/70" />
-                  <span className="font-semibold text-[11px]">{option.name}</span>
-                 </div>
-                 {option.description && (
-                   <div className="px-3 py-1.5 bg-background">
-                     <div className="text-[9px] text-muted-foreground space-y-0.5">
-                       {option.description.split('\n').map((item, i) => {
-                         const trimmed = item.trim();
-                         if (!trimmed) return null;
-                         const isSubItem = trimmed.startsWith('- ');
-                         return (
-                           <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
-                             {isSubItem ? trimmed : `• ${trimmed}`}
-                           </div>
-                         );
-                       })}
-                     </div>
-                   </div>
-                 )}
-               </div>
-             ))}
-           </div>
-         )}
- 
-         {/* Nos Options - fusionnées depuis l'onglet "Nos Options" (anciennement Page 6) */}
-        {selectedNosOptions.length > 0 && (
-          <>
-            <div className="mt-6 mb-1.5 flex items-center gap-2">
-              <Settings className="h-3 w-3 text-foreground/70" />
-              <span className="font-semibold text-[12px]">Nos options</span>
-            </div>
-            <div className="space-y-1.5">
-              {selectedNosOptions.map((option) => (
-                <div key={option.id} className="border border-primary/20 rounded overflow-hidden bg-primary/5">
-                   <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">
-                     {/* Case vide pour signature client */}
-                     <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
-                      <span className="font-semibold text-[11px]">{option.name}</span>
-                      {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
-                        <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
-                          {formatNumber(option.price)} €/mois
-                        </span>
-                      )}
-                      {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
-                        <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
-                          {formatNumber(option.priceTotal!)} €
-                        </span>
-                      )}
-                    </div>
-                  {option.description && (
-                    <div className="px-3 py-1.5 bg-background">
-                      <div className="text-[9px] text-muted-foreground space-y-0.5">
-                        {option.description.split('\n').map((item, i) => {
-                          const trimmed = item.trim();
-                          if (!trimmed) return null;
-                          const isSubItem = trimmed.startsWith('- ');
-                          return (
-                            <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
-                              {isSubItem ? trimmed : `• ${trimmed}`}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
         )}
+
+        <div className="space-y-1.5">
+          {chunk.map((bloc, idx) => renderServiceBloc(bloc, idx))}
+        </div>
       </div>
     );
     
-    return renderPageWithEditMode(5 as PDFPageNumber, staticElements, renderServicesContent);
+    return renderPageWithEditMode(5 as PDFPageNumber, isFirstPage ? staticElements : staticElements.filter(el => el.type === 'image'), renderServicesContent);
   };
 
   // Page 6 - Nos Options (options sélectionnables)
@@ -1363,7 +1398,7 @@ export function RentalProposalPreview() {
   };
 
   // Rendu de la page courante - Structure dynamique avec réaffectation automatique
-  // Gère les pages supplémentaires insérées pour le tableau investissements
+  // Gère les pages supplémentaires insérées pour le tableau investissements et les services
   const renderCurrentPage = () => {
     // Trouver les pages d'injection pour chaque type de zone
     const investPage = getInjectionPageForZoneType('invest_table') || 4;
@@ -1387,7 +1422,18 @@ export function RentalProposalPreview() {
     }
     
     // Pages après la zone invest : décaler pour retrouver le numéro de page du template
-    const realPageNum = currentPreviewPage - extraInvestPages;
+    // mais d'abord vérifier la plage services (page 5 du template + extras)
+    const servicesPageTemplate = 5;
+    const servicesPageStart = servicesPageTemplate + extraInvestPages; // page réelle de début services
+    const servicesPageEnd = servicesPageStart + extraServicesPages; // dernière page services (incluse)
+    
+    if (currentPreviewPage >= servicesPageStart && currentPreviewPage <= servicesPageEnd) {
+      const chunkIndex = currentPreviewPage - servicesPageStart;
+      return renderServicesInclusPage(chunkIndex);
+    }
+    
+    // Pages après la zone services : décaler par extraInvestPages + extraServicesPages
+    const realPageNum = currentPreviewPage - extraInvestPages - extraServicesPages;
     
     // Vérifier si la page réelle existe dans la version
     const version = getCurrentVersion();
@@ -1402,11 +1448,6 @@ export function RentalProposalPreview() {
           <p className="text-muted-foreground text-sm">Page {currentPreviewPage} n'existe pas dans ce template</p>
         </div>
       );
-    }
-    
-    // Page 5 du template : Services inclus
-    if (realPageNum === 5) {
-      return renderServicesInclusPage();
     }
     
     // Page 6 du template : statique (Nos Options fusionnées sur Page 5)

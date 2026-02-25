@@ -25,7 +25,7 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 
@@ -544,8 +544,27 @@ export function RentalProposalExport() {
       extraPagesAfter[4] = extraPages;
     }
     
-    // Page 5 : Services inclus + Options additionnelles + Nos Options (fusionnées)
-    const optionsHTML = selectedOptions.slice(0, OPTIONS_PER_PAGE).map(opt => `
+    // Page 5 : Services inclus + Options additionnelles + Nos Options (avec pagination)
+    // Construire la liste linéaire de blocs
+    type ServiceBlocExport = 
+      | { type: 'services-location' }
+      | { type: 'option'; html: string }
+      | { type: 'nos-options-title' }
+      | { type: 'nos-option'; html: string };
+
+    const servicesLocationHTML = `
+      <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+        <div style="background: #f3f4f6; padding: 6px 12px; display: flex; align-items: center; gap: 8px;">
+          <div style="width: 8px; height: 16px; background: #374151; border-radius: 2px;"></div>
+          <span style="font-weight: 600; font-size: 11px;">Services location</span>
+        </div>
+        <div style="padding: 6px 12px; background: white;">
+          <p style="margin: 0; color: #4b5563; font-size: 9px; white-space: pre-wrap;">${servicesInclus.description}</p>
+        </div>
+      </div>
+    `;
+
+    const makeOptionHTML = (opt: typeof selectedOptions[0]) => `
       <div class="option-card" style="margin-bottom: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
@@ -557,54 +576,93 @@ export function RentalProposalExport() {
           </div>
         </div>
       </div>
-    `).join('');
-    
-    // Générer le HTML des "Nos Options" (fusionnées depuis Page 6)
-    const nosOptionsHTML = selectedNosOptions.length > 0 ? `
+    `;
+
+    const makeNosOptionHTML = (opt: typeof selectedNosOptions[0]) => `
+      <div style="margin-bottom: 6px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+        <div style="padding: 6px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
+              <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
+            </div>
+            ${(opt.showPriceMode ?? 'mensuel') === 'mensuel' && opt.price !== null && opt.price !== undefined ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.price)} € / mois</span>` : (opt.showPriceMode === 'total' && (opt.priceTotal ?? null) !== null) ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.priceTotal!)} €</span>` : ''}
+          </div>
+          ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
+        </div>
+      </div>
+    `;
+
+    const nosOptionsTitleHTML = `
       <div style="margin-top: 24px;">
         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           <span style="font-weight: 600; font-size: 10px;">Nos options</span>
         </div>
-        ${selectedNosOptions.map(opt => `
-          <div style="margin-bottom: 6px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
-            <div style="padding: 6px;">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
-                  <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
-                </div>
-                ${(opt.showPriceMode ?? 'mensuel') === 'mensuel' && opt.price !== null && opt.price !== undefined ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.price)} € / mois</span>` : (opt.showPriceMode === 'total' && (opt.priceTotal ?? null) !== null) ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.priceTotal!)} €</span>` : ''}
-              </div>
-              ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    ` : '';
-    
-    dynamicContent[5] = `
-      <div class="dynamic-content" style="position: absolute; left: 5%; top: 8%; width: 90%; max-height: 82%; overflow: hidden; z-index: 40;">
-        <!-- Titre de page avec icône FileCheck -->
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
-          <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Les services inclus dans votre offre</h2>
-        </div>
-        
-        <!-- Bloc Services location -->
-        <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
-          <div style="background: #f3f4f6; padding: 6px 12px; display: flex; align-items: center; gap: 8px;">
-            <div style="width: 8px; height: 16px; background: #374151; border-radius: 2px;"></div>
-            <span style="font-weight: 600; font-size: 11px;">Services location</span>
-          </div>
-          <div style="padding: 6px 12px; background: white;">
-            <p style="margin: 0; color: #4b5563; font-size: 9px; white-space: pre-wrap;">${servicesInclus.description}</p>
-          </div>
-        </div>
-        ${selectedOptions.length > 0 ? optionsHTML : ''}
-        ${nosOptionsHTML}
-      </div>
     `;
+
+    const allServiceBlocs: ServiceBlocExport[] = [
+      { type: 'services-location' },
+      ...selectedOptions.map(o => ({ type: 'option' as const, html: makeOptionHTML(o) })),
+      ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' as const }] : []),
+      ...selectedNosOptions.map(o => ({ type: 'nos-option' as const, html: makeNosOptionHTML(o) })),
+    ];
+
+    // Chunk les blocs services
+    const servicesChunksExport: ServiceBlocExport[][] = (() => {
+      if (allServiceBlocs.length <= SERVICES_ITEMS_PAGE1) return [allServiceBlocs];
+      const chunks: ServiceBlocExport[][] = [allServiceBlocs.slice(0, SERVICES_ITEMS_PAGE1)];
+      let off = SERVICES_ITEMS_PAGE1;
+      while (off < allServiceBlocs.length) {
+        chunks.push(allServiceBlocs.slice(off, off + SERVICES_ITEMS_CONTINUATION));
+        off += SERVICES_ITEMS_CONTINUATION;
+      }
+      return chunks;
+    })();
+
+    const renderChunkHTML = (chunk: ServiceBlocExport[], isFirst: boolean) => {
+      let inNosOptions = false;
+      let html = '';
+      for (const bloc of chunk) {
+        if (bloc.type === 'services-location') {
+          html += servicesLocationHTML;
+        } else if (bloc.type === 'option') {
+          html += bloc.html;
+        } else if (bloc.type === 'nos-options-title') {
+          html += nosOptionsTitleHTML;
+          inNosOptions = true;
+        } else if (bloc.type === 'nos-option') {
+          html += bloc.html;
+        }
+      }
+      // Fermer le div "Nos options" si on a ouvert le titre dans ce chunk
+      if (inNosOptions) {
+        html += '</div>';
+      }
+      return `
+        <div class="dynamic-content" style="position: absolute; left: 5%; top: ${isFirst ? '8%' : '3%'}; width: 90%; z-index: 40;">
+          ${isFirst ? `
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
+              <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Les services inclus dans votre offre</h2>
+            </div>
+          ` : ''}
+          ${html}
+        </div>
+      `;
+    };
+
+    // Premier chunk → page 5
+    dynamicContent[5] = renderChunkHTML(servicesChunksExport[0], true);
+    
+    // Chunks suivants → pages supplémentaires après page 5
+    if (servicesChunksExport.length > 1) {
+      const extraServicesPages: string[] = [];
+      for (let ci = 1; ci < servicesChunksExport.length; ci++) {
+        extraServicesPages.push(renderChunkHTML(servicesChunksExport[ci], false));
+      }
+      extraPagesAfter[5] = extraServicesPages;
+    }
     
     if (page4FlowElementIds.length > 0) {
       excludeElementIds[4] = page4FlowElementIds;
