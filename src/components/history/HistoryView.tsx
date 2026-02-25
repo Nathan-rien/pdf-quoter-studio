@@ -54,6 +54,7 @@ interface ProposalExportSummary {
   commercial_id: string | null;
   commercial_name: string | null;
   montant_investissement: number | null;
+  has_proposal_state: boolean;
 }
 
 interface HistoryViewProps {
@@ -110,12 +111,27 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     try {
       const { data, error: fetchError } = await supabase
         .from('proposal_exports')
-        .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement')
+        .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, proposal_state')
         .order('created_at', { ascending: false })
         .limit(200);
 
       if (fetchError) throw fetchError;
-      setExports((data as any) || []);
+      const mapped = (data || []).map((item: any) => ({
+        id: item.id,
+        proposal_name: item.proposal_name,
+        file_name: item.file_name,
+        client_name: item.client_name,
+        template_name: item.template_name,
+        status: item.status,
+        row_count: item.row_count,
+        options_count: item.options_count,
+        created_at: item.created_at,
+        commercial_id: item.commercial_id,
+        commercial_name: item.commercial_name,
+        montant_investissement: item.montant_investissement,
+        has_proposal_state: !!item.proposal_state,
+      }));
+      setExports(mapped);
     } catch (err) {
       console.error('Error fetching exports:', err);
       setError("Impossible de charger l'historique");
@@ -336,10 +352,10 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                     <Button
                       variant="ghost" size="icon" className="h-8 w-8"
                       onClick={() => setConfirmLoadEntry(entry)}
-                      disabled={loadingLoadId === entry.id}
-                      title="Charger pour modifier"
+                      disabled={loadingLoadId === entry.id || !entry.has_proposal_state}
+                      title={entry.has_proposal_state ? "Charger pour modifier" : "Données non disponibles (ancien export)"}
                     >
-                      {loadingLoadId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                      {loadingLoadId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className={cn("h-3.5 w-3.5", !entry.has_proposal_state && "opacity-40")} />}
                     </Button>
                   )}
                   <Button
