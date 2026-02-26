@@ -371,7 +371,7 @@ export function RentalProposalExport() {
       }
       return `
       <tr>
-        <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb;">${ligne.designation || '-'}</td>
+        <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; word-wrap: break-word; max-width: 60%;">${ligne.designation || '-'}</td>
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: center;">${ligne.quantite}</td>
         ${investShowPrices ? `
         <td style="padding: ${cellPadding}; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(ligne.prixUnitaire)} €</td>
