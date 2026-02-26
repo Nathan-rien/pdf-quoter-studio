@@ -1029,7 +1029,7 @@ export function RentalProposalPreview() {
                     key={idx} 
                     className={`grid ${investShowPrices ? 'grid-cols-12' : 'grid-cols-8'} gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20`}
                   >
-                    <div className="col-span-6 break-words whitespace-normal leading-tight py-0.5 line-clamp-2">{ligne.designation || '-'}</div>
+                    <div className="col-span-6 break-words whitespace-normal leading-tight py-0.5">{ligne.designation || '-'}</div>
                     <div className="col-span-2 text-center">{ligne.quantite}</div>
                     {investShowPrices && (
                       <>
