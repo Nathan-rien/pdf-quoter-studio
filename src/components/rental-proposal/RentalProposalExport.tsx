@@ -610,11 +610,15 @@ export function RentalProposalExport() {
 
     // Chunk les blocs services
     const servicesChunksExport: ServiceBlocExport[][] = (() => {
+      // Si tout tient sur une page → un seul chunk
       if (allServiceBlocs.length <= SERVICES_ITEMS_PAGE1) return [allServiceBlocs];
-      const chunks: ServiceBlocExport[][] = [allServiceBlocs.slice(0, SERVICES_ITEMS_PAGE1)];
-      let off = SERVICES_ITEMS_PAGE1;
-      while (off < allServiceBlocs.length) {
-        chunks.push(allServiceBlocs.slice(off, off + SERVICES_ITEMS_CONTINUATION));
+      // Sinon : page 1 = services uniquement, pages suivantes = "Nos options"
+      const serviceOnlyBlocs = allServiceBlocs.filter(b => b.type === 'services-location' || b.type === 'option');
+      const optionBlocs = allServiceBlocs.filter(b => b.type === 'nos-options-title' || b.type === 'nos-option');
+      const chunks: ServiceBlocExport[][] = [serviceOnlyBlocs];
+      let off = 0;
+      while (off < optionBlocs.length) {
+        chunks.push(optionBlocs.slice(off, off + SERVICES_ITEMS_CONTINUATION));
         off += SERVICES_ITEMS_CONTINUATION;
       }
       return chunks;

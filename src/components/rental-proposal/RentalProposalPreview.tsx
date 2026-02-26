@@ -256,11 +256,15 @@ export function RentalProposalPreview() {
   ];
 
   const servicesChunks: ServiceBloc[][] = (() => {
+    // Si tout tient sur une page → un seul chunk
     if (servicesBlocs.length <= SERVICES_ITEMS_PAGE1) return [servicesBlocs];
-    const chunks: ServiceBloc[][] = [servicesBlocs.slice(0, SERVICES_ITEMS_PAGE1)];
-    let offset = SERVICES_ITEMS_PAGE1;
-    while (offset < servicesBlocs.length) {
-      chunks.push(servicesBlocs.slice(offset, offset + SERVICES_ITEMS_CONTINUATION));
+    // Sinon : page 1 = services uniquement, pages suivantes = "Nos options"
+    const serviceOnlyBlocs = servicesBlocs.filter(b => b.type === 'services-location' || b.type === 'option');
+    const optionBlocs = servicesBlocs.filter(b => b.type === 'nos-options-title' || b.type === 'nos-option');
+    const chunks: ServiceBloc[][] = [serviceOnlyBlocs];
+    let offset = 0;
+    while (offset < optionBlocs.length) {
+      chunks.push(optionBlocs.slice(offset, offset + SERVICES_ITEMS_CONTINUATION));
       offset += SERVICES_ITEMS_CONTINUATION;
     }
     return chunks;
