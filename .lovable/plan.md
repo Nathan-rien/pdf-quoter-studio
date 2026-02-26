@@ -1,58 +1,20 @@
 
 
-## Modifications de la carte "Propositions par jour et par commercial"
+## Correction de la troncature des désignations longues
 
-### 1. Filtres a ajouter dans le header de la carte
+### Problème identifié
 
-**Filtre par date** : Un input date (ou date picker) permettant de filtrer sur une date specifique. Si aucune date n'est selectionnee, toutes les dates sont affichees (comportement actuel).
+1. **Aperçu** (`RentalProposalPreview.tsx`, ligne 1032) : la classe `line-clamp-2` tronque le texte de la désignation à 2 lignes maximum. Le texte supplémentaire est coupé.
+2. **Export PDF** (`RentalProposalExport.tsx`, ligne 374) : la cellule `<td>` de la désignation n'a pas de `word-wrap: break-word` ni de `max-width`, ce qui peut empêcher le retour à la ligne sur les textes longs.
 
-**Switch entite** : Un composant Switch avec deux labels "Cybertek Pro" / "Grosbill Pro" permettant de n'afficher que les commerciaux de l'entite selectionnee. Par defaut, aucun filtre (tous les commerciaux). Le switch utilise le referentiel `COMMERCIAUX` de `src/data/commerciaux.ts` pour mapper `commercial_id` (stocke dans `proposal_exports`) vers l'entite correspondante.
+### Corrections
 
-### 2. Liens vers les propositions
+| Fichier | Ligne | Modification |
+|---|---|---|
+| `RentalProposalPreview.tsx` | 1032 | Retirer `line-clamp-2` de la cellule désignation pour afficher tout le texte |
+| `RentalProposalExport.tsx` | 374 | Ajouter `word-wrap: break-word; max-width: 60%;` sur le `<td>` désignation |
 
-Chaque cellule avec une valeur > 0 dans le tableau deviendra cliquable. Au clic, le dashboard naviguera vers la vue Historique (`history`) avec les IDs des propositions correspondantes en surbrillance, en utilisant le mecanisme `handleNavigateToHistory` deja existant dans `Index.tsx`.
+### Impact
 
-Pour cela, il faut :
-- Passer une callback `onNavigateToHistory` en prop a `StatisticsDashboard`
-- Stocker les IDs des propositions dans les donnees du tableau (pas seulement les compteurs)
-- Rendre les cellules > 0 cliquables avec un style de lien
-
-### 3. Suppression de la carte "Detail par commercial"
-
-La carte "Detail par commercial" (lignes 806-834) sera supprimee.
-
-### Detail technique
-
-**Donnees enrichies du tableau** : Au lieu de stocker uniquement le compteur par jour/commercial, stocker aussi les IDs des propositions :
-
-```text
-dailyCommercialMap[dayKey][commercial] = { count: number, ids: string[] }
-```
-
-**Filtre entite** : Utiliser `COMMERCIAUX` pour determiner l'entite d'un `commercial_id`. Les records sans `commercial_id` ou avec un ID inconnu seront affiches dans les deux entites (ou dans "tous").
-
-**Filtre date** : Filtrer `dailyChartData` pour ne montrer que la date selectionnee.
-
-### Fichiers modifies
-
-| Fichier | Detail |
-|---|---|
-| `StatisticsDashboard.tsx` | Ajouter import `COMMERCIAUX`, `CommercialEntity` depuis `@/data/commerciaux`. Ajouter etats `filterEntity` et `filterDate`. Ajouter filtres dans le CardHeader. Enrichir `dailyCommercialMap` avec les IDs. Rendre cellules cliquables. Supprimer carte "Detail par commercial". Ajouter prop `onNavigateToHistory`. |
-| `Index.tsx` | Passer `onNavigateToHistory={handleNavigateToHistory}` a `<StatisticsDashboard />` |
-
-### Structure du header de la carte
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 👥 Propositions par jour et par commercial                     │
-│                                                                 │
-│  [📅 Date: __/__/____] [× effacer]   ○ Cybertek Pro ● Grosbill │
-├─────────────────────────────────────────────────────────────────┤
-│  Date  │ Commercial A │ Commercial B │ ... │ Total             │
-│  25/02 │      2 🔗     │      0       │     │   3               │
-│  ...                                                            │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-Les cellules > 0 sont stylees en bleu/lien et au clic naviguent vers l'historique avec les propositions correspondantes en surbrillance.
+Le texte complet de chaque désignation sera visible dans l'aperçu et l'export PDF. Les lignes du tableau s'adapteront en hauteur automatiquement. La pagination existante (nombre de lignes par page) continuera à fonctionner normalement car elle se base sur le nombre de lignes de données, pas sur la hauteur visuelle.
 
