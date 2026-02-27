@@ -1,38 +1,23 @@
 
 
-## Ajout du mode de tarification "par machine" / "pour le parc"
+## Renommer le fichier PDF exporté
 
-### Modifications
+### Modification
 
-**1. Store (`src/stores/rentalProposalStore.ts`)**
-- Ajouter un champ `pricingScope: 'par_machine' | 'pour_le_parc'` à l'interface `OptionService` (défaut : `'par_machine'`).
-- Assurer la migration des données existantes (valeur par défaut dans le `migrate`).
-
-**2. Editeur (`src/components/rental-proposal/RentalDataEditor.tsx`)**
-- Ajouter un toggle similaire au toggle "Afficher : /mois | total" existant, avec deux boutons : "par machine" et "pour le parc".
-- Placement : sous le toggle d'affichage du prix existant.
-
-**3. Aperçu (`src/components/rental-proposal/RentalProposalPreview.tsx`)**
-- Dans le rendu du bloc `nos-option` (lignes 1195-1231), afficher le suffixe "/machine" ou "/parc" après le prix.
-
-**4. Export PDF (`src/components/rental-proposal/RentalProposalExport.tsx`)**
-- Dans `makeNosOptionHTML` (lignes 581-594), ajouter le même suffixe "/machine" ou "/parc" dans le HTML du prix.
-
-### Détail du suffixe affiché
-
-| Mode prix | Scope | Texte affiché |
+| Fichier | Ligne | Changement |
 |---|---|---|
-| mensuel | par_machine | `X €/mois /machine` |
-| mensuel | pour_le_parc | `X €/mois /parc` |
-| total | par_machine | `X € /machine` |
-| total | pour_le_parc | `X € /parc` |
+| `RentalProposalExport.tsx` | 78-83 | Modifier `generateFileName()` pour produire `Proposition_commerciale_{nom_client}_{date}.pdf` en utilisant `clientData.nom` |
 
-### Fichiers modifiés
+### Nouvelle logique
 
-| Fichier | Modification |
-|---|---|
-| `rentalProposalStore.ts` | Ajouter `pricingScope` à `OptionService`, défaut `'par_machine'`, migration |
-| `RentalDataEditor.tsx` | Ajouter toggle "par machine" / "pour le parc" sous le toggle prix |
-| `RentalProposalPreview.tsx` | Afficher suffixe scope dans le prix de l'option |
-| `RentalProposalExport.tsx` | Afficher suffixe scope dans le HTML du prix |
+```typescript
+const generateFileName = () => {
+  const clientName = clientData.nom || 'Client';
+  const safeName = clientName.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
+  const date = new Date().toISOString().split('T')[0];
+  return `Proposition_commerciale_${safeName}_${date}.pdf`;
+};
+```
+
+Le nom du fichier sera par exemple : `Proposition_commerciale_Dupont_SAS_2026-02-27.pdf`
 
