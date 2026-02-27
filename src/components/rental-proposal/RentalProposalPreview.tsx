@@ -252,8 +252,6 @@ export function RentalProposalPreview() {
   const servicesBlocs: ServiceBloc[] = [
     { type: 'services-location' },
     ...selectedOptions.map(o => ({ type: 'option' as const, data: o })),
-    ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' as const }] : []),
-    ...selectedNosOptions.map(o => ({ type: 'nos-option' as const, data: o })),
   ];
 
   const servicesChunks: ServiceBloc[][] = (() => {
@@ -1200,16 +1198,19 @@ export function RentalProposalPreview() {
             <div className="bg-primary/15 px-3 py-1.5 flex items-center gap-2">
               <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
               <span className="font-semibold text-[11px]">{option.name}</span>
-              {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
-                <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
-                  {formatNumber(option.price)} €/mois {(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
-                </span>
-              )}
-              {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
-                <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
-                  {formatNumber(option.priceTotal!)} € {(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
-                </span>
-              )}
+              {(() => {
+                const priceLabel = getOptionPriceLabel({
+                  price: option.price,
+                  priceTotal: option.priceTotal,
+                  showPriceMode: option.showPriceMode ?? 'mensuel',
+                  pricingScope: option.pricingScope ?? 'par_machine',
+                });
+                return priceLabel ? (
+                  <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
+                    {priceLabel}
+                  </span>
+                ) : null;
+              })()}
             </div>
             {option.description && (
               <div className="px-3 py-1.5 bg-background">
@@ -1293,9 +1294,7 @@ export function RentalProposalPreview() {
               return (
                 <div key={option.id} className="border rounded overflow-hidden">
                    <div className="bg-muted px-4 py-2 flex items-center gap-2">
-                     <div className={`h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0 flex items-center justify-center ${option.selected ? 'bg-primary border-primary' : ''}`}>
-                       {option.selected && <Check className="h-3 w-3 text-primary-foreground" />}
-                     </div>
+                     <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
                      <span className="font-semibold text-[14px]">{option.name}</span>
                      {priceLabel && (
                        <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
