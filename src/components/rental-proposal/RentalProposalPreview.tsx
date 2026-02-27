@@ -1201,12 +1201,12 @@ export function RentalProposalPreview() {
               <span className="font-semibold text-[11px]">{option.name}</span>
               {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
                 <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
-                  {formatNumber(option.price)} €/mois
+                  {formatNumber(option.price)} €/mois {(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
                 </span>
               )}
               {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
                 <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
-                  {formatNumber(option.priceTotal!)} €
+                  {formatNumber(option.priceTotal!)} € {(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
                 </span>
               )}
             </div>

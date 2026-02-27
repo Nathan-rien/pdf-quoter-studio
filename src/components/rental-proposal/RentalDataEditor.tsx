@@ -782,6 +782,24 @@ export function RentalDataEditor() {
                               total
                             </button>
                           </div>
+                          {/* Toggle scope */}
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="text-[10px] text-muted-foreground">Scope :</span>
+                            <button
+                              type="button"
+                              onClick={() => updateNosOption(opt.id, { pricingScope: 'par_machine' })}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${(opt.pricingScope ?? 'par_machine') === 'par_machine' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                            >
+                              /machine
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateNosOption(opt.id, { pricingScope: 'pour_le_parc' })}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${opt.pricingScope === 'pour_le_parc' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                            >
+                              /parc
+                            </button>
+                          </div>
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => deleteNosOption(opt.id)} className="mt-1">
                           <Trash2 className="h-4 w-4 text-destructive" />
