@@ -1,22 +1,53 @@
 
+Objectif: corriger définitivement le positionnement de la zone de signature sur la dernière page, à la fois dans l’aperçu et dans le PDF, sans chevauchement avec “Important”.
 
-## Correction du positionnement de la zone de signature dans le PDF exporté
+1) Centraliser le calcul de position (source unique)
+- Fichier: `src/lib/template-render-utils.ts`
+- Ajouter une fonction utilitaire dédiée (ex: `computeSignatureBoxLayout`) qui calcule la position verticale depuis les éléments statiques de la dernière page:
+  - repérer `Signature et cachet` (id ou texte),
+  - repérer `Important : ...` (id ou texte),
+  - optionnellement repérer `signature_zone` si présent.
+- La fonction renverra un layout prêt à l’emploi pour les deux moteurs:
+  - `leftPercent` = `8`
+  - `widthPercent` = `84`
+  - `topPercent` calculé depuis le repère “Signature et cachet”
+  - `heightPx` ajustée pour rester strictement au-dessus du bloc “Important” (avec marge de sécurité).
 
-### Problème
-La zone de signature injectée dans le PDF est ajoutée en fin de flux dans le conteneur `.page` (positionné en absolu). Elle n'a pas de coordonnées explicites, ce qui la place par défaut en haut à gauche ou en fin de flux, chevauchant les mentions légales.
+2) Corriger l’aperçu (éviter les décalages de transform)
+- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx`
+- Dans `renderBonPourAccordPage`:
+  - utiliser le layout calculé par l’utilitaire commun,
+  - rendre la zone via `renderOverlayContent` (et non `renderDynamicContent`) pour qu’elle ne subisse plus `dynamicContentOffsets`/scale.
+- Garder uniquement la zone de signature (pas de cases options).
 
-### Solution
-Positionner la zone de signature en absolu avec des coordonnées `top`/`left`/`width` cohérentes avec le template — sous le texte "Signature et cachet" et au-dessus du bloc "Important".
+3) Corriger l’export PDF (même calcul que l’aperçu)
+- Fichier: `src/components/rental-proposal/RentalProposalExport.tsx`
+- Dans `generateDynamicContentByPage`:
+  - récupérer les éléments statiques de la dernière page (`latestVersion.pages[...]`),
+  - utiliser le même utilitaire `computeSignatureBoxLayout`,
+  - injecter le `<div>` signature avec:
+    - `position:absolute`
+    - `left/top/width` issus du layout
+    - `height` fixe calculée (pas `min-height`)
+    - bordure pointillée conservée.
+- Supprimer toute valeur hardcodée `top: 28%` / `min-height: 120px`.
 
-### Modifications
+4) Garde-fous de fallback
+- Si les repères texte ne sont pas trouvés, fallback sûr:
+  - `topPercent: 22`
+  - `heightPx: 100`
+- Toujours borner la hauteur pour ne jamais dépasser le début du bloc “Important”.
 
-| Fichier | Changement |
-|---|---|
-| `src/components/rental-proposal/RentalProposalExport.tsx` (lignes 675-687) | Remplacer le `div` de signature par un bloc positionné en absolu (`position: absolute; top: 28%; left: 8%; width: 84%`) pour s'insérer entre "Signature et cachet" et les mentions légales |
-| `src/components/rental-proposal/RentalProposalPreview.tsx` (lignes ~1410-1430) | Ajuster le `top` de la zone de signature dans l'aperçu pour correspondre au positionnement PDF (passer de `42%` à `28%` environ, selon l'emplacement réel du texte "Signature et cachet" dans le template) |
+5) Vérification après implémentation
+- Aperçu:
+  - la zone commence sous “Signature et cachet”,
+  - ne recouvre ni le titre ni “Le / /”,
+  - ne touche pas le bloc “Important”.
+- Export PDF:
+  - même alignement visuel que l’aperçu sur la dernière page,
+  - aucun chevauchement constaté, y compris quand la proposition comporte des pages supplémentaires (ex: 9/9).
 
-### Détail
-- La zone de signature utilise `position: absolute` avec `top: 28%` pour se caler juste sous "Signature et cachet" (qui se trouve dans le premier tiers de la page)
-- Le `width: 84%` et `left: 8%` centrent la zone horizontalement avec des marges symétriques
-- Le style reste : `border: 2px dashed #9ca3af; border-radius: 8px; min-height: 120px`
-
+Section technique (détails)
+- Problème actuel: position hardcodée + rendu preview dans le wrapper dynamique transformable.
+- Correctif structurel: calcul unique piloté par les éléments statiques réels du template + rendu overlay en preview.
+- Bénéfice: cohérence WYSIWYG preview/export et robustesse si le template bouge.
