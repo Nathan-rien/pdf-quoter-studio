@@ -510,6 +510,7 @@ export function RentalProposalExport() {
 
     // Chunk 0 : page 4 du template
     const chunk0RowsHTML = chunk0Lines.map(makeRowHTML).join('');
+    const isChunk0LastDataChunk = investChunksLocal[0] > 0 && (investChunkCount === 1 || investChunksLocal[1] === 0);
     dynamicContent[4] = `
       <div class="dynamic-content" style="position: absolute; left: 5%; top: 5%; width: 90%; z-index: 40;">
         <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Vos investissements</div>
@@ -517,7 +518,8 @@ export function RentalProposalExport() {
           ${tableHeaderHTML}
           <tbody>${chunk0RowsHTML}</tbody>
         </table>
-        ${!isMultiPage ? totalHTML + offreAndProposalsHTML : ''}
+        ${isChunk0LastDataChunk ? totalHTML : ''}
+        ${!isMultiPage ? offreAndProposalsHTML : ''}
       </div>
     `;
     
