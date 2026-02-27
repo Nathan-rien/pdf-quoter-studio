@@ -465,7 +465,8 @@ export async function generatePDFDocumentHTML(
   dynamicContentByPage: Record<number, string>,
   context?: SubstitutionContext,
   excludeElementIdsByPage?: Record<number, string[]>,
-  extraPagesAfter?: Record<number, string[]>
+  extraPagesAfter?: Record<number, string[]>,
+  documentTitle?: string
 ): Promise<string> {
   // Set module-level context for the duration of this generation
   _pdfSubstitutionContext = context;
@@ -532,7 +533,7 @@ export async function generatePDFDocumentHTML(
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Proposition de Location</title>
+      <title>${documentTitle || 'Proposition de Location'}</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
