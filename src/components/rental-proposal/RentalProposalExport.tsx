@@ -76,10 +76,10 @@ export function RentalProposalExport() {
   };
 
   const generateFileName = () => {
-    const name = proposalName || clientData.nom || 'Proposition';
-    const safeName = name.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
+    const clientName = clientData.nom || 'Client';
+    const safeName = clientName.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
     const date = new Date().toISOString().split('T')[0];
-    return `${safeName}_${date}.pdf`;
+    return `Proposition_commerciale_${safeName}_${date}.pdf`;
   };
 
   const saveToHistory = async (htmlContent: string, status: 'success' | 'error') => {
