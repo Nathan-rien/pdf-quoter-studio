@@ -1261,7 +1261,20 @@ export function RentalProposalPreview() {
   };
 
   // Page "Nos Options" (options sélectionnables) - ciblage dynamique par zone
-  const optionsPageNum = getInjectionPageForZoneType('options_block') ?? 6;
+  // Résolution de conflit : si la zone options_block est sur la page 5 (services),
+  // basculer vers la première page > 5 existante dans le template (fallback: 6)
+  const optionsPageNum = (() => {
+    const rawPage = getInjectionPageForZoneType('options_block') ?? 6;
+    if (rawPage <= 5) {
+      const version = getCurrentVersion();
+      const firstPageAfter5 = version?.pages
+        .map(p => p.pageNumber)
+        .filter(n => n > 5)
+        .sort((a, b) => a - b)[0];
+      return firstPageAfter5 ?? 6;
+    }
+    return rawPage;
+  })();
   
   const renderNosOptionsPage = (pageNum: number) => {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
