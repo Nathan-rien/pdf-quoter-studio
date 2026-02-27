@@ -615,8 +615,6 @@ export function RentalProposalExport() {
     const allServiceBlocs: ServiceBlocExport[] = [
       { type: 'services-location' },
       ...selectedOptions.map(o => ({ type: 'option' as const, html: makeOptionHTML(o) })),
-      ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' as const }] : []),
-      ...selectedNosOptions.map(o => ({ type: 'nos-option' as const, html: makeNosOptionHTML(o) })),
     ];
 
     // Chunk les blocs services
