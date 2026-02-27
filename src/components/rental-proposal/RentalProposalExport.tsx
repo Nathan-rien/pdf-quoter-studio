@@ -731,12 +731,14 @@ export function RentalProposalExport() {
     const { content: dynamicContentByPage, excludeIds, extraPagesAfter } = generateDynamicContentByPage();
     
     // Générer le document HTML complet
+    const docTitle = generateFileName().replace(/\.pdf$/i, '');
     return generatePDFDocumentHTML(
       latestVersion,
       dynamicContentByPage,
       substitutionContext,
       excludeIds,
-      extraPagesAfter
+      extraPagesAfter,
+      docTitle
     );
   }, [latestVersion, activeTemplate, generateDynamicContentByPage, calculatedValues, selectedCommercial]);
   
