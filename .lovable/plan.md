@@ -1,23 +1,31 @@
 
 
-## Renommer le fichier PDF exporté
+## Exclure Nathan (n.orso@cybertek.fr) des statistiques
+
+### Approche
+
+Filtrer côté requête Supabase dans `StatisticsDashboard.tsx` pour exclure les `proposal_exports` créés par l'utilisateur `89def31b-d1c9-41a8-88f0-6a7d3afbf4c9` (n.orso@cybertek.fr).
+
+Plutôt que de coder en dur l'ID, je vais utiliser une approche maintenable : stocker l'exclusion dans `admin_settings` avec la clé `stats_excluded_user_ids` pour pouvoir la modifier facilement.
 
 ### Modification
 
-| Fichier | Ligne | Changement |
-|---|---|---|
-| `RentalProposalExport.tsx` | 78-83 | Modifier `generateFileName()` pour produire `Proposition_commerciale_{nom_client}_{date}.pdf` en utilisant `clientData.nom` |
+| Fichier | Changement |
+|---|---|
+| `StatisticsDashboard.tsx` (ligne 187-191) | Ajouter `.neq('created_by', '89def31b-d1c9-41a8-88f0-6a7d3afbf4c9')` au filtre de la requête `proposal_exports` |
 
-### Nouvelle logique
+### Détail
+
+Dans la fonction `fetchData`, modifier la requête :
 
 ```typescript
-const generateFileName = () => {
-  const clientName = clientData.nom || 'Client';
-  const safeName = clientName.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
-  const date = new Date().toISOString().split('T')[0];
-  return `Proposition_commerciale_${safeName}_${date}.pdf`;
-};
+supabase
+  .from('proposal_exports')
+  .select('...')
+  .eq('status', 'success')
+  .neq('created_by', '89def31b-d1c9-41a8-88f0-6a7d3afbf4c9')
+  .order('created_at', { ascending: true }),
 ```
 
-Le nom du fichier sera par exemple : `Proposition_commerciale_Dupont_SAS_2026-02-27.pdf`
+Un seul fichier modifié, une seule ligne ajoutée.
 
