@@ -672,6 +672,42 @@ export function RentalProposalExport() {
       excludeElementIds[4] = page4FlowElementIds;
     }
     
+    // Dernière page du template (Bon pour accord) : options cochables + zone signature
+    const lastTemplatePageNumber = latestVersion?.pages[latestVersion.pages.length - 1]?.pageNumber || 8;
+    if (selectedNosOptions.length > 0 || true) {
+      const optionsListHTML = selectedNosOptions.length > 0 ? `
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 600; font-size: 11px; margin-bottom: 8px; color: #1e3a5f;">Options retenues :</div>
+          ${selectedNosOptions.map(opt => {
+            const scopeSuffix = (opt.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine';
+            const priceText = (opt.showPriceMode ?? 'mensuel') === 'mensuel' && opt.price !== null
+              ? `${formatNumber(opt.price)} € / mois ${scopeSuffix}`
+              : (opt.showPriceMode === 'total' && (opt.priceTotal ?? null) !== null)
+                ? `${formatNumber(opt.priceTotal!)} € ${scopeSuffix}`
+                : '';
+            return `<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 10px;">
+              <span style="font-size: 16px; line-height: 1;">☐</span>
+              <span>${opt.name}</span>
+              ${priceText ? `<span style="margin-left: auto; font-weight: 600; white-space: nowrap;">${priceText}</span>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      ` : '';
+
+      dynamicContent[lastTemplatePageNumber] = `
+        <div class="dynamic-content" style="position: absolute; left: 5%; top: 22%; width: 90%; z-index: 40;">
+          ${optionsListHTML}
+          <div style="margin-top: 16px; border: 2px dashed #9ca3af; border-radius: 8px; padding: 16px; min-height: 100px;">
+            <div style="font-weight: 600; font-size: 11px; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+              Signature et cachet
+            </div>
+            <div style="min-height: 70px; border-bottom: 1px solid #d1d5db;"></div>
+          </div>
+        </div>
+      `;
+    }
+    
     return { content: dynamicContent, excludeIds: excludeElementIds, extraPagesAfter };
   }, [clientData, matriceData, lignesData, servicesInclus, optionsServices, nosOptions, selectedCommercial, calculatedValues, totalPages, activeTemplate, selectedOptions, selectedNosOptions, latestVersion]);
   
