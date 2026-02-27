@@ -25,7 +25,12 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
+
+// Export canvas is shorter than preview (820px vs 919px) — scale pagination thresholds
+const EXPORT_HEIGHT_RATIO = (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) / CANVAS_SCALE.height; // ≈ 0.892
+const EXPORT_LINES_PAGE1 = Math.floor(INVEST_LINES_PAGE1 * EXPORT_HEIGHT_RATIO);           // ≈ 19
+const EXPORT_LINES_CONTINUATION = Math.floor(INVEST_LINES_CONTINUATION * EXPORT_HEIGHT_RATIO); // ≈ 28
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 import { computeSignatureBoxLayout } from '@/lib/template-render-utils';
@@ -350,7 +355,7 @@ export function RentalProposalExport() {
     
     // Page 4 : Tableau des produits (avec pagination multi-pages si nécessaire)
     // Tailles compactes pour les tableaux multi-pages
-    const isCompact = lignesData.length > INVEST_LINES_PAGE1;
+    const isCompact = lignesData.length > EXPORT_LINES_PAGE1;
     const tableFontSize = isCompact ? '8px' : '9px';
     const cellPadding = isCompact ? '4px 6px' : '6px 8px';
     const headerPadding = isCompact ? '5px 6px' : '8px';
@@ -387,21 +392,21 @@ export function RentalProposalExport() {
     const footerLinesLocal = computeFooterLines(getAllProposalsCalculations().length);
     const investChunksLocal: number[] = (() => {
       const totalLines = lignesData.length;
-      const singlePageThreshold = INVEST_LINES_PAGE1 - footerLinesLocal;
+      const singlePageThreshold = EXPORT_LINES_PAGE1 - footerLinesLocal;
 
       if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
-      if (totalLines <= INVEST_LINES_PAGE1) {
+      if (totalLines <= EXPORT_LINES_PAGE1) {
         return [totalLines, 0];
       }
 
-      const lastChunkMax = Math.max(0, INVEST_LINES_CONTINUATION - footerLinesLocal);
-      const chunks = [INVEST_LINES_PAGE1];
-      let remaining = totalLines - INVEST_LINES_PAGE1;
+      const lastChunkMax = Math.max(0, EXPORT_LINES_CONTINUATION - footerLinesLocal);
+      const chunks = [EXPORT_LINES_PAGE1];
+      let remaining = totalLines - EXPORT_LINES_PAGE1;
 
       if (lastChunkMax > 0) {
         while (remaining > lastChunkMax) {
-          const take = Math.min(remaining, INVEST_LINES_CONTINUATION);
-          if (remaining <= INVEST_LINES_CONTINUATION) {
+          const take = Math.min(remaining, EXPORT_LINES_CONTINUATION);
+          if (remaining <= EXPORT_LINES_CONTINUATION) {
             chunks.push(remaining);
             remaining = 0;
             chunks.push(0);
@@ -415,8 +420,8 @@ export function RentalProposalExport() {
         }
       } else {
         while (remaining > 0) {
-          chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
-          remaining -= INVEST_LINES_CONTINUATION;
+          chunks.push(Math.min(remaining, EXPORT_LINES_CONTINUATION));
+          remaining -= EXPORT_LINES_CONTINUATION;
         }
         chunks.push(0);
       }
