@@ -1273,26 +1273,28 @@ export function RentalProposalPreview() {
           overflow: 'hidden',
         }}
       >
-        {selectedNosOptions.length === 0 ? (
+        {nosOptions.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Aucune option sélectionnée</p>
+            <p className="text-sm">Aucune option disponible</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {selectedNosOptions.map((option) => (
+            {nosOptions.map((option) => (
               <div key={option.id} className="border rounded overflow-hidden">
                  <div className="bg-muted px-4 py-2 flex items-center gap-2">
-                   <div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
+                   <div className={`h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0 flex items-center justify-center ${option.selected ? 'bg-primary border-primary' : ''}`}>
+                     {option.selected && <Check className="h-3 w-3 text-primary-foreground" />}
+                   </div>
                    <span className="font-semibold text-[14px]">{option.name}</span>
                    {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
                      <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
-                       {formatNumber(option.price)} €/mois
+                       {formatNumber(option.price)} €/mois{(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
                      </span>
                    )}
                    {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
                      <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
-                       {formatNumber(option.priceTotal!)} €
+                       {formatNumber(option.priceTotal!)} €{(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
                      </span>
                    )}
                  </div>
@@ -1486,9 +1488,9 @@ export function RentalProposalPreview() {
       );
     }
     
-    // Page 6 du template : statique (Nos Options fusionnées sur Page 5)
+    // Page 6 du template : Nos Options (rendu dynamique)
     if (realPageNum === 6) {
-      return renderGenericStaticPage(6);
+      return renderNosOptionsPage();
     }
     
     // Dernière page du template (Bon pour accord) : avec zone de signature
