@@ -1,61 +1,41 @@
 
-## Diagnostic
 
-### Problème 1 : Prix "Pro-déploiement" absent
-Dans `renderServicesInclusPage` (lignes 1196-1212), le rendu des blocs `nos-option` utilise une logique manuelle sans fallback au lieu du helper partagé `getOptionPriceLabel`. Si le mode est "mensuel" mais que `price` est null (ex: "Au mois" texte), aucun prix ne s'affiche — alors que `getOptionPriceLabel` ferait automatiquement le fallback sur `priceTotal`.
+## Diagnostic des options qui n'apparaissent plus
 
-### Problème 2 : Options en double
-Les `selectedNosOptions` sont ajoutées à la fois :
-- Dans `servicesBlocs` (ligne 256) → rendues sur la page 5 (services)
-- ET via `renderNosOptionsPage` (ligne 1498) → rendues sur la page 6 (options)
+### Analyse du code preview (RentalProposalPreview.tsx)
 
-### Problème 3 : Services inclus absents
-Si les `nosOptions` sélectionnées remplissent `servicesBlocs` au-delà de `SERVICES_ITEMS_PAGE1`, la pagination déplace les services vers des pages dédiées et perturbe l'affichage.
+Le routing de la page 6 est correct :
+- `currentPreviewPage = 6` → pas dans la plage invest → pas dans la plage services → `realPageNum = 6` → vérifie `pageExists` (oui, 36 éléments) → `realPageNum === optionsPageNum` (6 === 6) → appelle `renderNosOptionsPage(6)` → itère `nosOptions.map(...)`.
 
----
+Le code preview **devrait** fonctionner. Le problème pourrait être un rafraîchissement incomplet du HMR après les modifications.
 
-## Corrections
+### Problème confirmé dans l'export (RentalProposalExport.tsx)
 
-### 1. Retirer les `nosOptions` de la pagination services (lignes 252-257)
-**Fichier** : `RentalProposalPreview.tsx`
+L'export a exactement le même bug de **duplication** que j'ai corrigé dans le preview : les `selectedNosOptions` sont incluses dans les `servicesBlocs` de l'export (ligne 618-619) ET rendues sur la page "Nos Options" dédiée (ligne 693-702).
 
-Les `nosOptions` ont leur propre page dédiée (page 6 / `options_block`). Il ne faut pas les inclure dans les blocs services (page 5).
+### Corrections
+
+#### 1. Export : retirer les nosOptions des servicesBlocs (RentalProposalExport.tsx, lignes 616-619)
 
 ```typescript
-// Avant (lignes 252-257) :
-const servicesBlocs: ServiceBloc[] = [
+// Avant :
+const servicesBlocs = [
   { type: 'services-location' },
-  ...selectedOptions.map(...),
+  ...selectedOptions.map(o => ({ type: 'option', html: makeOptionHTML(o) })),
   ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' }] : []),
-  ...selectedNosOptions.map(...),
+  ...selectedNosOptions.map(o => ({ type: 'nos-option', html: makeNosOptionHTML(o) })),
 ];
 
 // Après :
-const servicesBlocs: ServiceBloc[] = [
+const servicesBlocs = [
   { type: 'services-location' },
-  ...selectedOptions.map(o => ({ type: 'option' as const, data: o })),
+  ...selectedOptions.map(o => ({ type: 'option', html: makeOptionHTML(o) })),
 ];
 ```
 
-### 2. Utiliser `getOptionPriceLabel` dans `renderServicesInclusPage` (lignes 1196-1212)
-Pour le cas où des `nos-option` blocs resteraient dans d'autres contextes, remplacer la logique manuelle par le helper avec fallback :
+#### 2. Preview : vérifier que la page 6 se charge correctement
 
-```typescript
-// Remplacer les deux conditions manuelles (lignes 1203-1212) par :
-const priceLabel = getOptionPriceLabel({
-  price: option.price,
-  priceTotal: option.priceTotal,
-  showPriceMode: option.showPriceMode ?? 'mensuel',
-  pricingScope: option.pricingScope ?? 'par_machine',
-});
-// puis afficher {priceLabel && <span>...</span>}
-```
+Ajouter un `console.log` temporaire dans `renderNosOptionsPage` pour confirmer que le rendu est bien appelé et que `nosOptions` contient des données, puis le retirer une fois le bug vérifié.
 
-### 3. Même correction dans la page "Nos Options" dédiée (lignes 1296-1297)
-Remplacer le rendu checkbox coché/décoché dans `renderNosOptionsPage` : les cases doivent être **vides** (cohérence avec le PDF).
+Si le problème persiste dans l'aperçu après un rafraîchissement complet du navigateur, il faudra investiguer plus en profondeur (ex: `nosOptions` vidé par une action utilisateur, ou zone `options_block` non définie dans le template).
 
-```typescript
-// Ligne 1296 : retirer le conditionnel selected sur le style
-<div className="h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0" />
-// (sans le Check icon, sans bg-primary)
-```
