@@ -1321,7 +1321,7 @@ export function RentalProposalPreview() {
       </div>
     );
     
-    return renderPageWithEditMode(6 as PDFPageNumber, staticElements, renderNosOptionsContent);
+    return renderPageWithEditMode(6 as PDFPageNumber, staticElements.filter(el => el.type === 'image'), renderNosOptionsContent);
   };
 
   // Page Options Services - ancien rendu (conservé pour rétrocompatibilité)
