@@ -252,6 +252,8 @@ export function RentalProposalPreview() {
   const servicesBlocs: ServiceBloc[] = [
     { type: 'services-location' },
     ...selectedOptions.map(o => ({ type: 'option' as const, data: o })),
+    ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' as const }] : []),
+    ...selectedNosOptions.map(o => ({ type: 'nos-option' as const, data: o })),
   ];
 
   const servicesChunks: ServiceBloc[][] = (() => {
@@ -1260,21 +1262,6 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(5 as PDFPageNumber, isFirstPage ? staticElements : staticElements.filter(el => el.type === 'image'), renderServicesContent);
   };
 
-  // Page "Nos Options" (options sélectionnables) - ciblage dynamique par zone
-  // Résolution de conflit : si la zone options_block est sur la page 5 (services),
-  // basculer vers la première page > 5 existante dans le template (fallback: 6)
-  const optionsPageNum = (() => {
-    const rawPage = getInjectionPageForZoneType('options_block') ?? 6;
-    if (rawPage <= 5) {
-      const version = getCurrentVersion();
-      const firstPageAfter5 = version?.pages
-        .map(p => p.pageNumber)
-        .filter(n => n > 5)
-        .sort((a, b) => a - b)[0];
-      return firstPageAfter5 ?? 6;
-    }
-    return rawPage;
-  })();
   
   const renderNosOptionsPage = (pageNum: number) => {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
@@ -1506,10 +1493,6 @@ export function RentalProposalPreview() {
       );
     }
     
-    // Page "Nos Options" (rendu dynamique basé sur la zone options_block)
-    if (realPageNum === optionsPageNum) {
-      return renderNosOptionsPage(optionsPageNum);
-    }
     
     // Dernière page du template (Bon pour accord) : avec zone de signature
     const lastTemplatePageNum = currentVersion?.pages[currentVersion.pages.length - 1]?.pageNumber;

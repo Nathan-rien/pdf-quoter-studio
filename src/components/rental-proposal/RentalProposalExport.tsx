@@ -615,6 +615,8 @@ export function RentalProposalExport() {
     const allServiceBlocs: ServiceBlocExport[] = [
       { type: 'services-location' },
       ...selectedOptions.map(o => ({ type: 'option' as const, html: makeOptionHTML(o) })),
+      ...(nosOptions.filter(o => o.selected).length > 0 ? [{ type: 'nos-options-title' as const }] : []),
+      ...nosOptions.filter(o => o.selected).map(o => ({ type: 'nos-option' as const, html: makeNosOptionHTML(o, false) })),
     ];
 
     // Chunk les blocs services
@@ -681,47 +683,6 @@ export function RentalProposalExport() {
       excludeElementIds[4] = page4FlowElementIds;
     }
     
-    // Page "Nos Options" dédiée (zone options_block, fallback page 6)
-    // Affiche TOUTES les nosOptions avec état checkbox, prix et scope
-    const optionsPageNum = (() => {
-      const zone = findZoneByTypeInVersion(latestVersion ?? null, 'options_block');
-      const rawPage = zone?.pageNumber ?? 6;
-      // Résolution de conflit : si la zone est sur la page 5 (services), basculer vers page 6+
-      if (rawPage <= 5) {
-        const firstPageAfter5 = latestVersion?.pages
-          .map(p => p.pageNumber)
-          .filter(n => n > 5)
-          .sort((a, b) => a - b)[0];
-        return firstPageAfter5 ?? 6;
-      }
-      return rawPage;
-    })();
-    
-    if (nosOptions.length > 0) {
-      const nosOptionsHTML = nosOptions.map(o => makeNosOptionHTML(o, true)).join('');
-      dynamicContent[optionsPageNum] = `
-        <div class="dynamic-content" style="position: absolute; left: 5%; top: 8%; width: 90%; z-index: 40;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-            <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Nos options</h2>
-          </div>
-          ${nosOptionsHTML}
-        </div>
-      `;
-      // Exclure les éléments statiques de la page options qui masquent le contenu dynamique
-      const optionsPage = latestVersion?.pages.find(p => p.pageNumber === optionsPageNum);
-      if (optionsPage) {
-        const staticTextAndShapeIds = optionsPage.elements
-          .filter(el => el.type !== 'image')
-          .map(el => el.id);
-        if (staticTextAndShapeIds.length > 0) {
-          excludeElementIds[optionsPageNum] = [
-            ...(excludeElementIds[optionsPageNum] || []),
-            ...staticTextAndShapeIds,
-          ];
-        }
-      }
-    }
     
     // Dernière page du template (Bon pour accord) : zone de signature uniquement
     const lastPage = latestVersion?.pages[latestVersion.pages.length - 1];
