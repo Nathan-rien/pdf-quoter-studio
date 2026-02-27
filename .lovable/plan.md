@@ -1,38 +1,22 @@
 
 
-## Ajouter une zone de signature visible sur la page "Bon pour accord"
+## Correction du positionnement de la zone de signature dans le PDF exporté
 
 ### Problème
-La page "Bon pour accord" est 100% statique — elle affiche uniquement les éléments du template (titre, "Le / /", "Signature et cachet" en texte, mentions légales). Il n'y a aucune zone visuellement délimitée pour la signature (rectangle en pointillés).
+La zone de signature injectée dans le PDF est ajoutée en fin de flux dans le conteneur `.page` (positionné en absolu). Elle n'a pas de coordonnées explicites, ce qui la place par défaut en haut à gauche ou en fin de flux, chevauchant les mentions légales.
 
 ### Solution
-Injecter dynamiquement **uniquement** une zone de signature (rectangle en pointillés avec label) sous le titre "Signature et cachet", sans cases à cocher d'options. Cette zone sera reconnue par Adobe Acrobat pour la fonctionnalité "Remplir et signer".
+Positionner la zone de signature en absolu avec des coordonnées `top`/`left`/`width` cohérentes avec le template — sous le texte "Signature et cachet" et au-dessus du bloc "Important".
 
 ### Modifications
 
 | Fichier | Changement |
 |---|---|
-| `RentalProposalPreview.tsx` | Remplacer `renderGenericStaticPage` pour la dernière page par une fonction dédiée qui ajoute un rectangle en pointillés sous les éléments statiques |
-| `RentalProposalExport.tsx` | Injecter sur la dernière page un bloc HTML contenant uniquement la zone de signature (rectangle `border: 2px dashed`, ~120px de hauteur) |
+| `src/components/rental-proposal/RentalProposalExport.tsx` (lignes 675-687) | Remplacer le `div` de signature par un bloc positionné en absolu (`position: absolute; top: 28%; left: 8%; width: 84%`) pour s'insérer entre "Signature et cachet" et les mentions légales |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` (lignes ~1410-1430) | Ajuster le `top` de la zone de signature dans l'aperçu pour correspondre au positionnement PDF (passer de `42%` à `28%` environ, selon l'emplacement réel du texte "Signature et cachet" dans le template) |
 
-### Rendu visuel attendu
-
-```text
-Bon pour accord
-Le  /  /
-Signature et cachet
-
-┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-│                                   │
-│    (zone signature vide)          │
-│                                   │
-└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-
-Important : La présente proposition...
-```
-
-### Détail technique
-- Le rectangle est positionné via une zone dynamique sous le titre "Signature et cachet" existant dans le template
-- Style : `border: 2px dashed #9ca3af; border-radius: 8px; min-height: 120px;`
-- Pas de cases à cocher d'options (celles-ci restent sur la page "Nos Options")
+### Détail
+- La zone de signature utilise `position: absolute` avec `top: 28%` pour se caler juste sous "Signature et cachet" (qui se trouve dans le premier tiers de la page)
+- Le `width: 84%` et `left: 8%` centrent la zone horizontalement avec des marges symétriques
+- Le style reste : `border: 2px dashed #9ca3af; border-radius: 8px; min-height: 120px`
 
