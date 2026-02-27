@@ -672,7 +672,19 @@ export function RentalProposalExport() {
       excludeElementIds[4] = page4FlowElementIds;
     }
     
-    // Dernière page du template (Bon pour accord) : 100% statique, aucune injection dynamique
+    // Dernière page du template (Bon pour accord) : zone de signature uniquement
+    const lastPageNum = latestVersion?.pages[latestVersion.pages.length - 1]?.pageNumber;
+    if (lastPageNum) {
+      dynamicContent[lastPageNum] = `
+        <div style="
+          border: 2px dashed #9ca3af;
+          border-radius: 8px;
+          min-height: 120px;
+          margin: 20px auto;
+          width: 90%;
+        "></div>
+      `;
+    }
     
     return { content: dynamicContent, excludeIds: excludeElementIds, extraPagesAfter };
   }, [clientData, matriceData, lignesData, servicesInclus, optionsServices, nosOptions, selectedCommercial, calculatedValues, totalPages, activeTemplate, selectedOptions, selectedNosOptions, latestVersion]);

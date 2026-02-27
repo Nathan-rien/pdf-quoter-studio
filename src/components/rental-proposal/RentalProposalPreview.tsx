@@ -1395,12 +1395,39 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(pageNumber, staticElements, renderOptionsContent);
   };
 
-  // La dernière page "Bon pour accord" est désormais 100% statique (renderGenericStaticPage)
-
   // Rendu page statique générique pour les pages > 4 sans zone dynamique
   const renderGenericStaticPage = (pageNum: number) => {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
     return renderPageWithEditMode(pageNum as PDFPageNumber, staticElements);
+  };
+
+  // Rendu de la dernière page "Bon pour accord" avec zone de signature en pointillés
+  const renderBonPourAccordPage = (pageNum: number) => {
+    const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
+    
+    const renderSignatureZone = () => (
+      <div 
+        className="absolute z-40"
+        style={{
+          left: '8%',
+          top: '42%',
+          width: '84%',
+        }}
+      >
+        <div 
+          className="rounded-lg flex items-center justify-center"
+          style={{
+            border: '2px dashed #9ca3af',
+            minHeight: '100px',
+            borderRadius: '8px',
+          }}
+        >
+          <span className="text-muted-foreground/50 text-xs italic">Zone de signature</span>
+        </div>
+      </div>
+    );
+    
+    return renderPageWithEditMode(pageNum as PDFPageNumber, staticElements, renderSignatureZone);
   };
 
   // Rendu de la page courante - Structure dynamique avec réaffectation automatique
@@ -1461,10 +1488,10 @@ export function RentalProposalPreview() {
       return renderGenericStaticPage(6);
     }
     
-    // Dernière page du template (Bon pour accord) : 100% statique
+    // Dernière page du template (Bon pour accord) : avec zone de signature
     const lastTemplatePageNum = currentVersion?.pages[currentVersion.pages.length - 1]?.pageNumber;
     if (realPageNum === lastTemplatePageNum) {
-      return renderGenericStaticPage(realPageNum);
+      return renderBonPourAccordPage(realPageNum);
     }
     
     // Pages génériques (7, 8 ou autres) - rendu statique basé sur les éléments du template
