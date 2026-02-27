@@ -1395,6 +1395,59 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(pageNumber, staticElements, renderOptionsContent);
   };
 
+  // Rendu de la dernière page "Bon pour accord" avec options cochables + zone signature
+  const renderBonPourAccordPage = (pageNum: number) => {
+    const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
+    
+    const renderBonPourAccordContent = () => (
+      <div 
+        className="absolute z-40"
+        style={{
+          left: '5%',
+          top: '22%',
+          width: '90%',
+        }}
+      >
+        {/* Liste des options cochables */}
+        {selectedNosOptions.length > 0 && (
+          <div className="mb-4">
+            <p className="font-semibold text-[11px] mb-2" style={{ color: '#1e3a5f' }}>Options retenues :</p>
+            <div className="space-y-1.5">
+              {selectedNosOptions.map((opt) => {
+                const scopeSuffix = (opt.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine';
+                const priceText = (opt.showPriceMode ?? 'mensuel') === 'mensuel' && opt.price !== null
+                  ? `${formatNumber(opt.price)} € / mois ${scopeSuffix}`
+                  : (opt.showPriceMode === 'total' && (opt.priceTotal ?? null) !== null)
+                    ? `${formatNumber(opt.priceTotal!)} € ${scopeSuffix}`
+                    : '';
+                return (
+                  <div key={opt.id} className="flex items-center gap-2 text-[10px]">
+                    <span className="text-[16px] leading-none">☐</span>
+                    <span>{opt.name}</span>
+                    {priceText && (
+                      <span className="ml-auto font-semibold whitespace-nowrap">{priceText}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Zone signature */}
+        <div className="mt-4 border-2 border-dashed border-muted-foreground/40 rounded-lg p-4" style={{ minHeight: '100px' }}>
+          <div className="font-semibold text-[11px] text-foreground/80 mb-2 flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            Signature et cachet
+          </div>
+          <div className="border-b border-muted-foreground/30" style={{ minHeight: '70px' }} />
+        </div>
+      </div>
+    );
+    
+    return renderPageWithEditMode(pageNum as PDFPageNumber, staticElements, renderBonPourAccordContent);
+  };
+
   // Rendu page statique générique pour les pages > 4 sans zone dynamique
   const renderGenericStaticPage = (pageNum: number) => {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
@@ -1457,6 +1510,12 @@ export function RentalProposalPreview() {
     // Page 6 du template : statique (Nos Options fusionnées sur Page 5)
     if (realPageNum === 6) {
       return renderGenericStaticPage(6);
+    }
+    
+    // Dernière page du template (Bon pour accord) : injection options cochables + signature
+    const lastTemplatePageNum = currentVersion?.pages[currentVersion.pages.length - 1]?.pageNumber;
+    if (realPageNum === lastTemplatePageNum) {
+      return renderBonPourAccordPage(realPageNum);
     }
     
     // Pages génériques (7, 8 ou autres) - rendu statique basé sur les éléments du template
