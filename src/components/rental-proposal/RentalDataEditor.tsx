@@ -33,7 +33,7 @@ export function RentalDataEditor() {
   const { isAdmin, isCommercial } = useAuth();
   const { commercial, commercialId } = useCommercialIdentity();
   const { getCommerciauxByEntity, getCommercialById } = useCommerciaux();
-  const lockCommercialFields = isCommercial && !isAdmin;
+  const lockCommercialFields = !isAdmin && !!commercialId;
 
   const {
     clientData,

@@ -49,7 +49,7 @@ export function RentalWorkflow() {
     selectTemplateForProposal,
   } = useRentalProposalStore();
 
-  const skipTemplateStep = isCommercial && !isAdmin;
+  const skipTemplateStep = !isAdmin && !!commercial?.entity;
 
   // Auto-select template based on commercial entity
   useEffect(() => {
