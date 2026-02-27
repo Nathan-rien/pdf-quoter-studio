@@ -1,23 +1,24 @@
 
 
-## Restaurer l'affichage dynamique des options sur la Page 6
+## Problème identifié
 
-### Problème
-La Page 6 ("Nos Options") est rendue en mode **statique** (`renderGenericStaticPage(6)` à la ligne 1490), ce qui affiche uniquement les éléments texte du template (cercles, pas de prix). Le rendu dynamique `renderNosOptionsPage()` — qui contient les cases à cocher, les prix et les descriptions — n'est plus appelé.
+Dans `renderNosOptionsPage()` (ligne 1324), les éléments **statiques** du template de la page 6 (textes avec noms d'options, cercles décoratifs) sont rendus EN PLUS du contenu dynamique. Le contenu dynamique (cases à cocher, prix, descriptions formatées) est caché derrière les éléments statiques du template.
 
-### Corrections (1 fichier)
+C'est le même pattern que `renderServicesInclusPage` qui filtre les éléments statiques pour ne garder que les images de fond sur les pages de continuation (ligne 1258).
 
-**`src/components/rental-proposal/RentalProposalPreview.tsx`**
+## Correction (1 fichier, 1 ligne)
 
-| Ligne | Changement |
-|---|---|
-| 1490-1492 | Remplacer `renderGenericStaticPage(6)` par `renderNosOptionsPage()` |
-| 1276-1283 | Afficher **tous** les `nosOptions` (pas seulement `selectedNosOptions`) avec une case à cocher reflétant l'état `selected` |
-| 1290 | Ajouter le suffixe `/machine` ou `/parc` selon `pricingScope` (comme sur Page 5, ligne 1204) |
-| 1295 | Idem pour le mode prix total |
+**`src/components/rental-proposal/RentalProposalPreview.tsx`** — ligne 1324 :
 
-### Détail technique
-- Ligne 1490 : `renderGenericStaticPage(6)` → `renderNosOptionsPage()`
-- Ligne 1283 : `selectedNosOptions.map(...)` → `nosOptions.map(...)` avec une case visuellement cochée/décochée selon `option.selected`
-- Lignes 1290/1295 : ajouter `{(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}` après le prix
+Filtrer les éléments statiques pour ne garder que les images (fonds de page), exactement comme pour les pages services :
+
+```typescript
+// Avant :
+return renderPageWithEditMode(6 as PDFPageNumber, staticElements, renderNosOptionsContent);
+
+// Après :
+return renderPageWithEditMode(6 as PDFPageNumber, staticElements.filter(el => el.type === 'image'), renderNosOptionsContent);
+```
+
+Cela supprime les textes et formes statiques du template qui masquent le rendu dynamique avec les cases à cocher et les prix.
 
