@@ -36,7 +36,7 @@ import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
-import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders } from '@/lib/template-render-utils';
+import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders, computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
@@ -1405,20 +1405,23 @@ export function RentalProposalPreview() {
   const renderBonPourAccordPage = (pageNum: number) => {
     const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
     
+    // Calculer le layout depuis les éléments statiques réels du template
+    const layout = computeSignatureBoxLayout(staticElements);
+    
     const renderSignatureZone = () => (
       <div 
         className="absolute z-40"
         style={{
-          left: '8%',
-          top: '28%',
-          width: '84%',
+          left: `${layout.leftPercent}%`,
+          top: `${layout.topPercent}%`,
+          width: `${layout.widthPercent}%`,
+          height: `${layout.heightPercent}%`,
         }}
       >
         <div 
-          className="rounded-lg flex items-center justify-center"
+          className="rounded-lg flex items-center justify-center h-full"
           style={{
             border: '2px dashed #9ca3af',
-            minHeight: '100px',
             borderRadius: '8px',
           }}
         >
