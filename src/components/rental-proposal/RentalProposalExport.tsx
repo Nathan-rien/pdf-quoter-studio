@@ -28,6 +28,7 @@ import { toast } from '@/hooks/use-toast';
 import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
+import { computeSignatureBoxLayout } from '@/lib/template-render-utils';
 
 export function RentalProposalExport() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -673,17 +674,19 @@ export function RentalProposalExport() {
     }
     
     // Dernière page du template (Bon pour accord) : zone de signature uniquement
-    const lastPageNum = latestVersion?.pages[latestVersion.pages.length - 1]?.pageNumber;
-    if (lastPageNum) {
+    const lastPage = latestVersion?.pages[latestVersion.pages.length - 1];
+    const lastPageNum = lastPage?.pageNumber;
+    if (lastPageNum && lastPage) {
+      const layout = computeSignatureBoxLayout(lastPage.elements);
       dynamicContent[lastPageNum] = `
         <div style="
           position: absolute;
-          top: 28%;
-          left: 8%;
-          width: 84%;
+          top: ${layout.topPercent}%;
+          left: ${layout.leftPercent}%;
+          width: ${layout.widthPercent}%;
+          height: ${layout.heightPercent}%;
           border: 2px dashed #9ca3af;
           border-radius: 8px;
-          min-height: 120px;
         "></div>
       `;
     }

@@ -5,7 +5,7 @@
 
 import { CANVAS_SCALE } from './canvas-constants';
 import { getLogoById } from './template-logos';
-import type { EditableElement, ShapeContent, ImageContent } from '@/types/template-editor';
+import type { EditableElement, ShapeContent, ImageContent, TextContent } from '@/types/template-editor';
 
 /**
  * Noms des mois en français pour la substitution de date
@@ -134,6 +134,84 @@ export const getSharedElementStyle = ({ element, canvasWidth = CANVAS_SCALE.widt
     zIndex: element.zIndex || 1,
     transform: rotation ? `rotate(${rotation}deg)` : undefined,
     transformOrigin: 'top left',
+  };
+};
+
+/**
+ * Layout calculé pour la zone de signature sur la dernière page "Bon pour accord"
+ */
+export interface SignatureBoxLayout {
+  leftPercent: number;
+  topPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+}
+
+/**
+ * Calcule le positionnement de la zone de signature en fonction des éléments statiques
+ * de la dernière page du template. Cherche les repères "Signature et cachet" et "Important"
+ * pour placer la zone entre les deux sans chevauchement.
+ */
+export const computeSignatureBoxLayout = (
+  lastPageElements: EditableElement[],
+  canvasHeight: number = CANVAS_SCALE.height,
+): SignatureBoxLayout => {
+  const FALLBACK: SignatureBoxLayout = { leftPercent: 8, topPercent: 22, widthPercent: 84, heightPercent: 12 };
+
+  if (!lastPageElements || lastPageElements.length === 0) return FALLBACK;
+
+  // Chercher le repère "Signature et cachet"
+  const signatureLabel = lastPageElements.find(el => {
+    if (el.type !== 'text') return false;
+    const text = (el.content as TextContent).text || '';
+    return text.toLowerCase().includes('signature et cachet');
+  });
+
+  // Chercher la zone signature (image placeholder)
+  const signatureZone = lastPageElements.find(el =>
+    el.id.includes('signature_zone')
+  );
+
+  // Chercher le repère "Important"
+  const importantLabel = lastPageElements.find(el => {
+    if (el.type !== 'text') return false;
+    const text = (el.content as TextContent).text || '';
+    const html = (el.content as TextContent).htmlContent || '';
+    return text.toLowerCase().includes('important') || html.toLowerCase().includes('important');
+  });
+
+  // Calculer le top : juste après "Signature et cachet" (+ sa hauteur + marge)
+  let topY: number;
+  if (signatureLabel) {
+    topY = signatureLabel.position.y + signatureLabel.size.height + 5;
+  } else if (signatureZone) {
+    topY = signatureZone.position.y;
+  } else {
+    return FALLBACK;
+  }
+
+  // Calculer la limite basse : début du bloc "Important" - marge de sécurité
+  let bottomY: number;
+  if (importantLabel) {
+    bottomY = importantLabel.position.y - 10;
+  } else {
+    // Fallback : ne pas dépasser 70% de la page
+    bottomY = canvasHeight * 0.7;
+  }
+
+  // S'assurer qu'il y a assez de place (minimum 50px)
+  if (bottomY - topY < 50) {
+    bottomY = topY + 50;
+  }
+
+  const topPercent = (topY / canvasHeight) * 100;
+  const heightPercent = ((bottomY - topY) / canvasHeight) * 100;
+
+  return {
+    leftPercent: 8,
+    topPercent: Math.round(topPercent * 10) / 10,
+    widthPercent: 84,
+    heightPercent: Math.round(heightPercent * 10) / 10,
   };
 };
 
