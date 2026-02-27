@@ -593,7 +593,7 @@ export function RentalProposalExport() {
         <div style="padding: 6px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
             <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid ${opt.selected ? '#2563eb' : '#6b7280'}; border-radius: 2px; background: ${opt.selected ? '#2563eb' : 'transparent'}; color: white; text-align: center; line-height: 10px; font-size: 8px;">${opt.selected ? '✓' : ''}</span>
+              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px; background: transparent; color: white; text-align: center; line-height: 10px; font-size: 8px;"></span>
               <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
             </div>
             ${priceLabel ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${priceLabel}</span>` : ''}
