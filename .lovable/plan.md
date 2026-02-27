@@ -1,41 +1,40 @@
 
+Objectif: réafficher les “Nos Options” dans l’aperçu après la page 5, sans réintroduire les doublons ni casser l’export.
 
-## Diagnostic des options qui n'apparaissent plus
+1) Corriger la résolution de la page cible “Nos Options” dans l’aperçu
+- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx`
+- Ajouter un resolver dédié pour la page options (au lieu d’utiliser directement le premier `options_block`):
+  - Lire la page retournée par `getInjectionPageForZoneType('options_block')`
+  - Si cette page est `<= 5` (conflit avec la page services), basculer vers la première page existante `> 5` dans la version (fallback attendu: page 6)
+  - Sinon garder la page de zone
+- Remplacer l’usage actuel de `optionsPageNum` dans `renderCurrentPage()` par cette page résolue.
+- Conserver le rendu dynamique existant de `renderNosOptionsPage()` (filtrage statique en images uniquement) pour éviter que le texte du template masque le bloc options.
 
-### Analyse du code preview (RentalProposalPreview.tsx)
+2) Aligner l’export avec la même logique de résolution
+- Fichier: `src/components/rental-proposal/RentalProposalExport.tsx`
+- Appliquer le même resolver de page options avant `dynamicContent[optionsPageNum] = ...`
+- Empêcher l’écrasement de la page 5 services quand la zone `options_block` est sur page 5 (cas actuel du template v124).
+- Garder la séparation: page 5 = services inclus, page options dédiée = nos options.
 
-Le routing de la page 6 est correct :
-- `currentPreviewPage = 6` → pas dans la plage invest → pas dans la plage services → `realPageNum = 6` → vérifie `pageExists` (oui, 36 éléments) → `realPageNum === optionsPageNum` (6 === 6) → appelle `renderNosOptionsPage(6)` → itère `nosOptions.map(...)`.
+3) Vérifier la cohérence des données affichées
+- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx`
+- Vérifier que la liste utilisée pour la page options reste cohérente avec le comportement voulu (actuellement `nosOptions`).
+- Ne pas réinjecter `selectedNosOptions` dans `servicesBlocs` (déjà corrigé).
 
-Le code preview **devrait** fonctionner. Le problème pourrait être un rafraîchissement incomplet du HMR après les modifications.
+4) Ajuster les libellés UI trompeurs (optionnel mais recommandé)
+- Fichier: `src/components/rental-proposal/RentalDataEditor.tsx`
+- Mettre à jour les textes “Page 5 / fusionnées sur Page 5” dans l’onglet “Nos Options” pour refléter la page dédiée options (évite confusion utilisateur).
 
-### Problème confirmé dans l'export (RentalProposalExport.tsx)
+Détails techniques constatés (cause racine)
+- La version active du template (`da7a0c69...`, v124) a les zones `options_block` sur la page 5.
+- Le routing preview traite déjà la page 5 comme page services; du coup le test `realPageNum === optionsPageNum` ne peut jamais afficher les options si `optionsPageNum = 5`.
+- Résultat visible: on passe de la page 5 à la page 6 statique (“juste du texte”), sans bloc options.
 
-L'export a exactement le même bug de **duplication** que j'ai corrigé dans le preview : les `selectedNosOptions` sont incluses dans les `servicesBlocs` de l'export (ligne 618-619) ET rendues sur la page "Nos Options" dédiée (ligne 693-702).
-
-### Corrections
-
-#### 1. Export : retirer les nosOptions des servicesBlocs (RentalProposalExport.tsx, lignes 616-619)
-
-```typescript
-// Avant :
-const servicesBlocs = [
-  { type: 'services-location' },
-  ...selectedOptions.map(o => ({ type: 'option', html: makeOptionHTML(o) })),
-  ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' }] : []),
-  ...selectedNosOptions.map(o => ({ type: 'nos-option', html: makeNosOptionHTML(o) })),
-];
-
-// Après :
-const servicesBlocs = [
-  { type: 'services-location' },
-  ...selectedOptions.map(o => ({ type: 'option', html: makeOptionHTML(o) })),
-];
-```
-
-#### 2. Preview : vérifier que la page 6 se charge correctement
-
-Ajouter un `console.log` temporaire dans `renderNosOptionsPage` pour confirmer que le rendu est bien appelé et que `nosOptions` contient des données, puis le retirer une fois le bug vérifié.
-
-Si le problème persiste dans l'aperçu après un rafraîchissement complet du navigateur, il faudra investiguer plus en profondeur (ex: `nosOptions` vidé par une action utilisateur, ou zone `options_block` non définie dans le template).
-
+Validation après implémentation
+- Aperçu:
+  - Page 5: services inclus présents, pas de nos options en double.
+  - Page 6: bloc “Nos Options” visible avec prix (incluant Pro-déploiement).
+- Export PDF:
+  - Page services intacte.
+  - Page options dédiée affichée, sans écraser la page services.
+  - Cases “Nos Options” restent vides comme demandé précédemment.
