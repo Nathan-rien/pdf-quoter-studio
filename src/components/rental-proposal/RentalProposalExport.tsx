@@ -29,6 +29,8 @@ import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE,
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
 import type { TextContent } from '@/types/template-editor';
 import { computeSignatureBoxLayout } from '@/lib/template-render-utils';
+import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
+import { getOptionPriceLabel } from '@/lib/options-price-utils';
 
 export function RentalProposalExport() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -579,20 +581,28 @@ export function RentalProposalExport() {
       </div>
     `;
 
-    const makeNosOptionHTML = (opt: typeof selectedNosOptions[0]) => `
+    const makeNosOptionHTML = (opt: typeof nosOptions[0], forceAllOptions = false) => {
+      const priceLabel = getOptionPriceLabel({
+        price: opt.price,
+        priceTotal: opt.priceTotal,
+        showPriceMode: opt.showPriceMode ?? 'mensuel',
+        pricingScope: opt.pricingScope ?? 'par_machine',
+      });
+      return `
       <div style="margin-bottom: 6px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
         <div style="padding: 6px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
             <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #6b7280; border-radius: 2px;"></span>
+              <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid ${opt.selected ? '#2563eb' : '#6b7280'}; border-radius: 2px; background: ${opt.selected ? '#2563eb' : 'transparent'}; color: white; text-align: center; line-height: 10px; font-size: 8px;">${opt.selected ? '✓' : ''}</span>
               <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
             </div>
-            ${(() => { const scopeSuffix = (opt.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'; return (opt.showPriceMode ?? 'mensuel') === 'mensuel' && opt.price !== null && opt.price !== undefined ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.price)} € / mois ${scopeSuffix}</span>` : (opt.showPriceMode === 'total' && (opt.priceTotal ?? null) !== null) ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${formatNumber(opt.priceTotal!)} € ${scopeSuffix}</span>` : ''; })()}
+            ${priceLabel ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${priceLabel}</span>` : ''}
           </div>
           ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
         </div>
       </div>
-    `;
+    `};
+
 
     const nosOptionsTitleHTML = `
       <div style="margin-top: 24px;">
@@ -671,6 +681,39 @@ export function RentalProposalExport() {
     
     if (page4FlowElementIds.length > 0) {
       excludeElementIds[4] = page4FlowElementIds;
+    }
+    
+    // Page "Nos Options" dédiée (zone options_block, fallback page 6)
+    // Affiche TOUTES les nosOptions avec état checkbox, prix et scope
+    const optionsPageNum = (() => {
+      const zone = findZoneByTypeInVersion(latestVersion ?? null, 'options_block');
+      return zone?.pageNumber ?? 6;
+    })();
+    
+    if (nosOptions.length > 0) {
+      const nosOptionsHTML = nosOptions.map(o => makeNosOptionHTML(o, true)).join('');
+      dynamicContent[optionsPageNum] = `
+        <div class="dynamic-content" style="position: absolute; left: 5%; top: 8%; width: 90%; z-index: 40;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <h2 style="font-weight: 700; font-size: 12px; color: #1f2937; margin: 0;">Nos options</h2>
+          </div>
+          ${nosOptionsHTML}
+        </div>
+      `;
+      // Exclure les éléments statiques de la page options qui masquent le contenu dynamique
+      const optionsPage = latestVersion?.pages.find(p => p.pageNumber === optionsPageNum);
+      if (optionsPage) {
+        const staticTextAndShapeIds = optionsPage.elements
+          .filter(el => el.type !== 'image')
+          .map(el => el.id);
+        if (staticTextAndShapeIds.length > 0) {
+          excludeElementIds[optionsPageNum] = [
+            ...(excludeElementIds[optionsPageNum] || []),
+            ...staticTextAndShapeIds,
+          ];
+        }
+      }
     }
     
     // Dernière page du template (Bon pour accord) : zone de signature uniquement

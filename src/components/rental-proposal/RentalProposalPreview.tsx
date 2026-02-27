@@ -35,6 +35,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
+import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders, computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
@@ -1258,9 +1259,11 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(5 as PDFPageNumber, isFirstPage ? staticElements : staticElements.filter(el => el.type === 'image'), renderServicesContent);
   };
 
-  // Page 6 - Nos Options (options sélectionnables)
-  const renderNosOptionsPage = () => {
-    const staticElements = getStaticPageElements(6 as PDFPageNumber);
+  // Page "Nos Options" (options sélectionnables) - ciblage dynamique par zone
+  const optionsPageNum = getInjectionPageForZoneType('options_block') ?? 6;
+  
+  const renderNosOptionsPage = (pageNum: number) => {
+    const staticElements = getStaticPageElements(pageNum as PDFPageNumber);
     
     const renderNosOptionsContent = () => (
       <div 
@@ -1280,48 +1283,51 @@ export function RentalProposalPreview() {
           </div>
         ) : (
           <div className="space-y-3">
-            {nosOptions.map((option) => (
-              <div key={option.id} className="border rounded overflow-hidden">
-                 <div className="bg-muted px-4 py-2 flex items-center gap-2">
-                   <div className={`h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0 flex items-center justify-center ${option.selected ? 'bg-primary border-primary' : ''}`}>
-                     {option.selected && <Check className="h-3 w-3 text-primary-foreground" />}
+            {nosOptions.map((option) => {
+              const priceLabel = getOptionPriceLabel({
+                price: option.price,
+                priceTotal: option.priceTotal,
+                showPriceMode: option.showPriceMode ?? 'mensuel',
+                pricingScope: option.pricingScope ?? 'par_machine',
+              });
+              return (
+                <div key={option.id} className="border rounded overflow-hidden">
+                   <div className="bg-muted px-4 py-2 flex items-center gap-2">
+                     <div className={`h-4 w-4 border border-foreground/70 rounded-sm flex-shrink-0 flex items-center justify-center ${option.selected ? 'bg-primary border-primary' : ''}`}>
+                       {option.selected && <Check className="h-3 w-3 text-primary-foreground" />}
+                     </div>
+                     <span className="font-semibold text-[14px]">{option.name}</span>
+                     {priceLabel && (
+                       <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
+                         {priceLabel}
+                       </span>
+                     )}
                    </div>
-                   <span className="font-semibold text-[14px]">{option.name}</span>
-                   {(option.showPriceMode ?? 'mensuel') === 'mensuel' && option.price !== null && option.price !== undefined && (
-                     <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
-                       {formatNumber(option.price)} €/mois{(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
-                     </span>
-                   )}
-                   {(option.showPriceMode ?? 'mensuel') === 'total' && (option.priceTotal ?? null) !== null && (
-                     <span className="ml-auto text-[11px] text-primary font-medium whitespace-nowrap">
-                       {formatNumber(option.priceTotal!)} €{(option.pricingScope ?? 'par_machine') === 'pour_le_parc' ? '/parc' : '/machine'}
-                     </span>
-                   )}
-                 </div>
-                {option.description && (
-                  <div className="px-4 py-3 bg-background">
-                    <div className="text-[10px] text-muted-foreground space-y-1">
-                      {option.description.split('\n').map((item, i) => {
-                        const trimmed = item.trim();
-                        if (!trimmed) return null;
-                        const isSubItem = trimmed.startsWith('- ');
-                        return (
-                          <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
-                            {isSubItem ? trimmed : `• ${trimmed}`}
-                          </div>
-                        );
-                      })}
+                  {option.description && (
+                    <div className="px-4 py-3 bg-background">
+                      <div className="text-[10px] text-muted-foreground space-y-1">
+                        {option.description.split('\n').map((item, i) => {
+                          const trimmed = item.trim();
+                          if (!trimmed) return null;
+                          const isSubItem = trimmed.startsWith('- ');
+                          return (
+                            <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                              {isSubItem ? trimmed : `• ${trimmed}`}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
     );
     
-    return renderPageWithEditMode(6 as PDFPageNumber, staticElements.filter(el => el.type === 'image'), renderNosOptionsContent);
+    return renderPageWithEditMode(pageNum as PDFPageNumber, staticElements.filter(el => el.type === 'image'), renderNosOptionsContent);
   };
 
   // Page Options Services - ancien rendu (conservé pour rétrocompatibilité)
@@ -1488,9 +1494,9 @@ export function RentalProposalPreview() {
       );
     }
     
-    // Page 6 du template : Nos Options (rendu dynamique)
-    if (realPageNum === 6) {
-      return renderNosOptionsPage();
+    // Page "Nos Options" (rendu dynamique basé sur la zone options_block)
+    if (realPageNum === optionsPageNum) {
+      return renderNosOptionsPage(optionsPageNum);
     }
     
     // Dernière page du template (Bon pour accord) : avec zone de signature
