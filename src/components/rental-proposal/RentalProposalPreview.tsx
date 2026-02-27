@@ -1410,7 +1410,7 @@ export function RentalProposalPreview() {
         className="absolute z-40"
         style={{
           left: '8%',
-          top: '42%',
+          top: '28%',
           width: '84%',
         }}
       >

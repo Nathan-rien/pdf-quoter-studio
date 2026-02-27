@@ -677,11 +677,13 @@ export function RentalProposalExport() {
     if (lastPageNum) {
       dynamicContent[lastPageNum] = `
         <div style="
+          position: absolute;
+          top: 28%;
+          left: 8%;
+          width: 84%;
           border: 2px dashed #9ca3af;
           border-radius: 8px;
           min-height: 120px;
-          margin: 20px auto;
-          width: 90%;
         "></div>
       `;
     }
