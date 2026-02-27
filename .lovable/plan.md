@@ -1,40 +1,43 @@
 
-Objectif: réafficher les “Nos Options” dans l’aperçu après la page 5, sans réintroduire les doublons ni casser l’export.
 
-1) Corriger la résolution de la page cible “Nos Options” dans l’aperçu
-- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx`
-- Ajouter un resolver dédié pour la page options (au lieu d’utiliser directement le premier `options_block`):
-  - Lire la page retournée par `getInjectionPageForZoneType('options_block')`
-  - Si cette page est `<= 5` (conflit avec la page services), basculer vers la première page existante `> 5` dans la version (fallback attendu: page 6)
-  - Sinon garder la page de zone
-- Remplacer l’usage actuel de `optionsPageNum` dans `renderCurrentPage()` par cette page résolue.
-- Conserver le rendu dynamique existant de `renderNosOptionsPage()` (filtrage statique en images uniquement) pour éviter que le texte du template masque le bloc options.
+## Problem
 
-2) Aligner l’export avec la même logique de résolution
-- Fichier: `src/components/rental-proposal/RentalProposalExport.tsx`
-- Appliquer le même resolver de page options avant `dynamicContent[optionsPageNum] = ...`
-- Empêcher l’écrasement de la page 5 services quand la zone `options_block` est sur page 5 (cas actuel du template v124).
-- Garder la séparation: page 5 = services inclus, page options dédiée = nos options.
+The previous fix incorrectly:
+1. Removed `nosOptions` from `servicesBlocs` (page 5 pagination)
+2. Created a separate `optionsPageNum` resolver that forced options onto page 6, overwriting the static "Offre de services" template page
 
-3) Vérifier la cohérence des données affichées
-- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx`
-- Vérifier que la liste utilisée pour la page options reste cohérente avec le comportement voulu (actuellement `nosOptions`).
-- Ne pas réinjecter `selectedNosOptions` dans `servicesBlocs` (déjà corrigé).
+## Correct Behavior (restore original)
 
-4) Ajuster les libellés UI trompeurs (optionnel mais recommandé)
-- Fichier: `src/components/rental-proposal/RentalDataEditor.tsx`
-- Mettre à jour les textes “Page 5 / fusionnées sur Page 5” dans l’onglet “Nos Options” pour refléter la page dédiée options (évite confusion utilisateur).
+- Page 5 = Services Inclus + Nos Options together (if they fit)
+- If too many items, services stay on page 5, options overflow to **auto-generated continuation pages** (inserted between page 5 and page 6)
+- Page 6 = Static "Offre de services" (never overwritten)
 
-Détails techniques constatés (cause racine)
-- La version active du template (`da7a0c69...`, v124) a les zones `options_block` sur la page 5.
-- Le routing preview traite déjà la page 5 comme page services; du coup le test `realPageNum === optionsPageNum` ne peut jamais afficher les options si `optionsPageNum = 5`.
-- Résultat visible: on passe de la page 5 à la page 6 statique (“juste du texte”), sans bloc options.
+## Changes
 
-Validation après implémentation
-- Aperçu:
-  - Page 5: services inclus présents, pas de nos options en double.
-  - Page 6: bloc “Nos Options” visible avec prix (incluant Pro-déploiement).
-- Export PDF:
-  - Page services intacte.
-  - Page options dédiée affichée, sans écraser la page services.
-  - Cases “Nos Options” restent vides comme demandé précédemment.
+### 1. `RentalProposalPreview.tsx` — Restore `nosOptions` in `servicesBlocs` (lines 252-255)
+
+```typescript
+const servicesBlocs: ServiceBloc[] = [
+  { type: 'services-location' },
+  ...selectedOptions.map(o => ({ type: 'option' as const, data: o })),
+  ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' as const }] : []),
+  ...selectedNosOptions.map(o => ({ type: 'nos-option' as const, data: o })),
+];
+```
+
+### 2. `RentalProposalPreview.tsx` — Remove `optionsPageNum` resolver (lines 1263-1277)
+
+Delete the entire `optionsPageNum` IIFE block. It's no longer needed since options are part of the services pagination.
+
+### 3. `RentalProposalPreview.tsx` — Remove options routing in `renderCurrentPage` (lines 1509-1512)
+
+Remove the `if (realPageNum === optionsPageNum)` check so page 6 renders as a normal static/template page.
+
+### 4. `RentalProposalPreview.tsx` — Fix price display in `renderServicesInclusPage`
+
+Keep the `getOptionPriceLabel` helper usage for `nos-option` blocs (already done) to ensure Pro-déploiement prices display correctly.
+
+### 5. `RentalProposalExport.tsx` — Restore `nosOptions` in export `servicesBlocs`
+
+Same restoration: add back `nosOptions` into the services blocs array and remove the `optionsPageNum` resolver that overwrites page 6.
+
