@@ -1,43 +1,24 @@
 
 
-## Problem
+## Diagnostic
 
-The previous fix incorrectly:
-1. Removed `nosOptions` from `servicesBlocs` (page 5 pagination)
-2. Created a separate `optionsPageNum` resolver that forced options onto page 6, overwriting the static "Offre de services" template page
+Le "Total investissement" EST bien généré dans le HTML (la logique `!isMultiPage ? totalHTML + offreAndProposalsHTML` fonctionne), mais il est **tronqué visuellement** par `overflow: hidden` sur le conteneur `.page` de l'export.
 
-## Correct Behavior (restore original)
+**Cause racine** : Le canvas export est plus court que le canvas aperçu (820px vs 919px), mais la pagination utilise le même seuil `INVEST_LINES_PAGE1 = 22`. Avec des lignes à texte long (ex: "Mémoire PC Corsair..." qui s'enroule sur 6 lignes visuelles), le contenu dépasse la hauteur du canvas export et est coupé.
 
-- Page 5 = Services Inclus + Nos Options together (if they fit)
-- If too many items, services stay on page 5, options overflow to **auto-generated continuation pages** (inserted between page 5 and page 6)
-- Page 6 = Static "Offre de services" (never overwritten)
+## Correction
 
-## Changes
+### Fichier : `src/components/rental-proposal/RentalProposalExport.tsx`
 
-### 1. `RentalProposalPreview.tsx` — Restore `nosOptions` in `servicesBlocs` (lines 252-255)
+Réduire le seuil de lignes pour la première page dans le contexte export, en appliquant un ratio proportionnel à la différence de hauteur entre export et aperçu :
 
-```typescript
-const servicesBlocs: ServiceBloc[] = [
-  { type: 'services-location' },
-  ...selectedOptions.map(o => ({ type: 'option' as const, data: o })),
-  ...(selectedNosOptions.length > 0 ? [{ type: 'nos-options-title' as const }] : []),
-  ...selectedNosOptions.map(o => ({ type: 'nos-option' as const, data: o })),
-];
-```
+- Introduire une constante locale `EXPORT_LINES_PAGE1` calculée comme `Math.floor(INVEST_LINES_PAGE1 * (PDF_BASE_HEIGHT / CANVAS_SCALE.height))` ≈ `Math.floor(22 * 820/919)` = **19 lignes**
+- Idem pour `EXPORT_LINES_CONTINUATION` = `Math.floor(INVEST_LINES_CONTINUATION * ratio)` ≈ **28 lignes**
+- Utiliser ces constantes dans `investChunksLocal` à la place de `INVEST_LINES_PAGE1` et `INVEST_LINES_CONTINUATION`
 
-### 2. `RentalProposalPreview.tsx` — Remove `optionsPageNum` resolver (lines 1263-1277)
+Cela garantit que le contenu (tableau + total + offre) ne dépasse jamais la hauteur du canvas export, et déclenche la pagination multi-pages plus tôt si nécessaire.
 
-Delete the entire `optionsPageNum` IIFE block. It's no longer needed since options are part of the services pagination.
+### Fichier : `src/lib/canvas-constants.ts`
 
-### 3. `RentalProposalPreview.tsx` — Remove options routing in `renderCurrentPage` (lines 1509-1512)
-
-Remove the `if (realPageNum === optionsPageNum)` check so page 6 renders as a normal static/template page.
-
-### 4. `RentalProposalPreview.tsx` — Fix price display in `renderServicesInclusPage`
-
-Keep the `getOptionPriceLabel` helper usage for `nos-option` blocs (already done) to ensure Pro-déploiement prices display correctly.
-
-### 5. `RentalProposalExport.tsx` — Restore `nosOptions` in export `servicesBlocs`
-
-Same restoration: add back `nosOptions` into the services blocs array and remove the `optionsPageNum` resolver that overwrites page 6.
+Aucune modification — les constantes existantes restent la référence pour l'aperçu. Les valeurs export-spécifiques sont calculées localement dans l'export.
 
