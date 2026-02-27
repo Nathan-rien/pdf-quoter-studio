@@ -188,6 +188,7 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
           .from('proposal_exports')
           .select('id, proposal_name, client_name, commercial_id, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
           .eq('status', 'success')
+          .neq('created_by', '89def31b-d1c9-41a8-88f0-6a7d3afbf4c9')
           .order('created_at', { ascending: true }),
         supabase
           .from('options_services')
