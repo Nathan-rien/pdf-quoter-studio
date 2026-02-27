@@ -685,7 +685,16 @@ export function RentalProposalExport() {
     // Affiche TOUTES les nosOptions avec état checkbox, prix et scope
     const optionsPageNum = (() => {
       const zone = findZoneByTypeInVersion(latestVersion ?? null, 'options_block');
-      return zone?.pageNumber ?? 6;
+      const rawPage = zone?.pageNumber ?? 6;
+      // Résolution de conflit : si la zone est sur la page 5 (services), basculer vers page 6+
+      if (rawPage <= 5) {
+        const firstPageAfter5 = latestVersion?.pages
+          .map(p => p.pageNumber)
+          .filter(n => n > 5)
+          .sort((a, b) => a - b)[0];
+        return firstPageAfter5 ?? 6;
+      }
+      return rawPage;
     })();
     
     if (nosOptions.length > 0) {
