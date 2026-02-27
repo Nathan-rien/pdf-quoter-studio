@@ -1,22 +1,38 @@
 
 
-## Correction de la page "Bon pour accord"
+## Ajouter une zone de signature visible sur la page "Bon pour accord"
 
 ### Problème
-Le contenu dynamique injecté (liste d'options cochables + zone signature) se superpose aux éléments statiques du template (titre "Signature et cachet", mentions légales). Les cases à cocher sont en doublon avec celles déjà présentes sur la page "Nos Options".
+La page "Bon pour accord" est 100% statique — elle affiche uniquement les éléments du template (titre, "Le / /", "Signature et cachet" en texte, mentions légales). Il n'y a aucune zone visuellement délimitée pour la signature (rectangle en pointillés).
 
 ### Solution
-Supprimer l'injection dynamique sur la dernière page et la rendre 100% statique (comme elle l'était avant). Les cases à cocher restent uniquement sur la page "Nos Options".
+Injecter dynamiquement **uniquement** une zone de signature (rectangle en pointillés avec label) sous le titre "Signature et cachet", sans cases à cocher d'options. Cette zone sera reconnue par Adobe Acrobat pour la fonctionnalité "Remplir et signer".
 
 ### Modifications
 
 | Fichier | Changement |
 |---|---|
-| `RentalProposalPreview.tsx` (lignes 1398-1449) | Supprimer `renderBonPourAccordPage` et utiliser `renderGenericStaticPage` pour la dernière page |
-| `RentalProposalPreview.tsx` (ligne ~1517) | Remplacer l'appel à `renderBonPourAccordPage` par `renderGenericStaticPage` |
-| `RentalProposalExport.tsx` (lignes 675-708) | Supprimer l'injection de contenu dynamique sur la dernière page du template |
+| `RentalProposalPreview.tsx` | Remplacer `renderGenericStaticPage` pour la dernière page par une fonction dédiée qui ajoute un rectangle en pointillés sous les éléments statiques |
+| `RentalProposalExport.tsx` | Injecter sur la dernière page un bloc HTML contenant uniquement la zone de signature (rectangle `border: 2px dashed`, ~120px de hauteur) |
 
-### Résultat
-- La page "Bon pour accord" affiche uniquement les éléments du template (titre, zones de date, signature et cachet, mentions légales) sans superposition
-- Les cases à cocher restent sur la page "Nos Options" (Page 6) où elles sont déjà fonctionnelles
+### Rendu visuel attendu
+
+```text
+Bon pour accord
+Le  /  /
+Signature et cachet
+
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+│                                   │
+│    (zone signature vide)          │
+│                                   │
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+
+Important : La présente proposition...
+```
+
+### Détail technique
+- Le rectangle est positionné via une zone dynamique sous le titre "Signature et cachet" existant dans le template
+- Style : `border: 2px dashed #9ca3af; border-radius: 8px; min-height: 120px;`
+- Pas de cases à cocher d'options (celles-ci restent sur la page "Nos Options")
 
