@@ -1,24 +1,43 @@
 
+Objectif: rétablir l’affichage des options avec prix (mois/total) + scope (/machine|/parc) de manière cohérente dans l’aperçu et dans le PDF.
 
-## Problème identifié
+1) Corriger le ciblage de la page “Nos options” dans l’aperçu
+- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx`
+- Remplacer le hardcode `realPageNum === 6` par un ciblage basé sur la zone dynamique:
+  - `const optionsPageNum = getInjectionPageForZoneType('options_block') ?? 6`
+  - rendre `renderNosOptionsPage(optionsPageNum)`
+- Adapter `renderNosOptionsPage` pour recevoir `pageNum` et charger ses `staticElements` sur cette page.
 
-Dans `renderNosOptionsPage()` (ligne 1324), les éléments **statiques** du template de la page 6 (textes avec noms d'options, cercles décoratifs) sont rendus EN PLUS du contenu dynamique. Le contenu dynamique (cases à cocher, prix, descriptions formatées) est caché derrière les éléments statiques du template.
+2) Forcer un rendu dynamique visible (sans recouvrement template)
+- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx`
+- Sur la page options, exclure les éléments statiques parasites (textes/formes/icônes) qui masquent le contenu:
+  - conserver uniquement les images de fond autorisées (ou image-only + exclusion ciblée).
+- Rendre le bloc options en overlay stable (même approche que la signature) pour éviter les décalages liés aux offsets/scales de session.
 
-C'est le même pattern que `renderServicesInclusPage` qui filtre les éléments statiques pour ne garder que les images de fond sur les pages de continuation (ligne 1258).
+3) Uniformiser la logique d’affichage du prix + scope
+- Fichier: `src/components/rental-proposal/RentalProposalPreview.tsx` et `src/components/rental-proposal/RentalProposalExport.tsx`
+- Extraire une logique commune de libellé prix:
+  - mode `mensuel` => `xx,xx € / mois /machine|/parc`
+  - mode `total` => `xx,xx € /machine|/parc`
+  - fallback sûr si la valeur du mode choisi est vide (utiliser l’autre valeur disponible au lieu d’afficher vide).
 
-## Correction (1 fichier, 1 ligne)
+4) Ajouter le rendu “Nos options” dédié dans le PDF
+- Fichier: `src/components/rental-proposal/RentalProposalExport.tsx`
+- Dans `generateDynamicContentByPage`, injecter un bloc dynamique sur `optionsPageNum` (zone `options_block` ou fallback 6) avec:
+  - toutes les `nosOptions` (pas uniquement les sélectionnées),
+  - état checkbox selon `option.selected`,
+  - description formatée,
+  - prix + scope selon la logique commune.
+- Exclure les éléments statiques de cette page qui doublonnent/masquent la liste (via `excludeElementIds`).
 
-**`src/components/rental-proposal/RentalProposalPreview.tsx`** — ligne 1324 :
+5) Vérification fonctionnelle
+- Aperçu:
+  - la page options affiche bien les cases, le prix selon mode (mois/total) et le scope.
+  - plus de rendu “ancien template” en recouvrement.
+- Export PDF:
+  - même rendu que l’aperçu sur la page options (WYSIWYG),
+  - prix/scope identiques aux choix faits dans “Données > Nos Options”.
 
-Filtrer les éléments statiques pour ne garder que les images (fonds de page), exactement comme pour les pages services :
-
-```typescript
-// Avant :
-return renderPageWithEditMode(6 as PDFPageNumber, staticElements, renderNosOptionsContent);
-
-// Après :
-return renderPageWithEditMode(6 as PDFPageNumber, staticElements.filter(el => el.type === 'image'), renderNosOptionsContent);
-```
-
-Cela supprime les textes et formes statiques du template qui masquent le rendu dynamique avec les cases à cocher et les prix.
-
+Section technique
+- Cause observée: le PDF n’injecte pas de page options dédiée, et l’aperçu peut retomber sur/être recouvert par des éléments statiques de template.
+- Fix structurel: page options pilotée par la zone `options_block` + rendu dynamique dédié dans les deux moteurs (preview/export) + exclusion explicite des statiques concurrents.
