@@ -1,61 +1,49 @@
 
-Objectif: corriger l’extraction Dental pour que la désignation Invest reflète le devis (sans adresse vendeur, sans texte SAV/garantie, sans doublons, sans ligne réduite à `[OP]`).
 
-1) Constats précis (à partir du code + captures)
-- Le parser multiline (`parseDentalProductsWithMultilineDescriptions`) reste trop heuristique:
-  - il peut encore concaténer des blocs non-produit (adresse/page header) via le scan arrière,
-  - il casse trop tôt en scan avant (et peut perdre le vrai libellé produit),
-  - la déduplication actuelle est trop stricte (égalité texte brute), donc “Scanner Intra Oral” / “Assistance Premium” peuvent rester en double.
-- Le nettoyage final actuel supprime “du premier motif adresse jusqu’à la fin”, ce qui explique des cas comme `[OP]` seul.
+## Problem
 
-2) Plan de correction (implémentation ciblée dans `src/lib/pdf-import-parser.ts`)
-- A. Introduire un nettoyage “ligne par ligne” (au lieu du `replace(...).*$/is` global):
-  - filtrer les lignes bruitées individuellement (adresse vendeur, mentions SAV, légales, IBAN/SIRET, bullet specs),
-  - garder les lignes produit valides même si du bruit apparaît avant.
-- B. Rendre le scan arrière plus robuste:
-  - `continue` sur lignes “bruit” (adresse, HT/TTC, metadata) au lieu de `break` immédiat,
-  - ajouter une limite de lookback (ex: 6–8 lignes utiles) pour éviter de remonter dans des blocs page/header.
-- C. Rendre la déduplication tolérante:
-  - normaliser (minuscule, espaces, ponctuation légère, accents) avant comparaison,
-  - supprimer les répétitions de préfixe/sous-chaîne (ex: “Scanner Intra Oral Scanner Intra Oral …”).
-- D. Ajouter une garde qualité de désignation:
-  - si résultat final ≈ référence seule (`[OP]`, `[SVIP-IO]`) ou trop court, tenter une récupération depuis les lignes candidates voisines déjà collectées (titre utile le plus proche),
-  - ne pas accepter de désignation contenant des patterns adresse/support.
+The `isDentalNoiseLine` function and the forward scan cap (4 lines) are too aggressive. They remove useful product content:
 
-3) Validation fonctionnelle (régression ciblée)
-- Rejouer import sur devis Dental problématique et vérifier:
-  - `[i900M 3YW fidelite]` sans duplication ni paragraphe SAV,
-  - `[OP]` avec libellé produit réel (pas adresse, pas vide),
-  - `[SVIP-IO]` sans doublon “Assistance Premium Assistance Premium”.
-- Vérifier non-régression sur:
-  - Dental FR standard,
-  - Dental Quotation EN (“Unit(s)”),
-  - parsers Cybertek/Grosbill inchangés.
+- Lines starting with "Un ", "Le ", "La ", "Garantie" → **should be kept** (product specs/notes)
+- Lines starting with `- ` (bullet specs) → **should be kept**
+- Forward scan capped at 4 lines → **too short** for multi-paragraph product descriptions
 
-Section technique (détails d’implémentation)
-- Fonctions utilitaires à ajouter dans le même fichier:
-  - `normalizeForDedup(text)` pour comparaison souple,
-  - `isDentalNoiseLine(line)` pour classifier: adresses, boilerplate SAV, légales, headers HT/TTC, metadata banque.
-- Remplacement du cleanup final:
-  - passer de regex globale destructive à pipeline:
-    1) split lignes
-    2) trim + drop noise
-    3) dedup normalisée
-    4) join final
-- Flux visé:
-```text
-Raw product block
-  -> backward candidates (skip noise, bounded)
-  -> main line extraction
-  -> forward candidates (bounded, stop on true section/product markers)
-  -> line-level filter + normalized dedup
-  -> quality guard (anti "[REF]" only)
-  -> final designation
+**Expected**: Full product description blocks (specs, support details, guarantees) minus only addresses, SIRET/IBAN, seller email, legal mentions.
+
+## Fix — `src/lib/pdf-import-parser.ts`
+
+### 1. Slim down `isDentalNoiseLine` (lines 1502-1521)
+
+Remove these overly aggressive patterns that kill useful content:
+```
+// REMOVE: these filter real product descriptions
+/^(Le |La |Les |L'|Un |Une |Des |Ce |Cette |Cet |Équipement|Garantie|Validité)/i
+/^[-•]\s/
 ```
 
-Résultat attendu
-- Désignations Invest plus fidèles au devis Dental, compactes et exploitables:
-  - pas d’adresse vendeur,
-  - pas de texte support/garantie long,
-  - pas de doublons de section,
-  - pas de ligne référence seule sans libellé.
+Keep only true administrative noise:
+- Address patterns (street, postal code, "France")
+- Legal/banking (SIRET, IBAN, RCS, Capital, TVA)
+- Seller name ("3D DENTAL STORE")
+- Column headers (HT, TTC, Montant, Rem%)
+- Support email line (`support@3ddentalstore.fr`)
+- Page markers
+
+### 2. Increase forward scan limit (line 1640)
+
+Change `continuationCount > 4` to `continuationCount > 30` to allow full multi-paragraph product descriptions. The stop markers (next product line, "Sous-total", section headers) will still correctly terminate the scan.
+
+### 3. Remove redundant boilerplate stop conditions (lines 1650-1651)
+
+Remove the explicit `if (/^(Un ordinateur|Mises à jour|Merci de|...)/)` stop — these are valid product description lines that should be kept.
+
+### 4. Keep the noise stop on seller email
+
+Add `support@3ddentalstore.fr` to `isDentalNoiseLine` (already there) and keep forwarding stopping only on true section/product boundaries.
+
+### Result
+
+Designations will contain the full product description block (specs, guarantees, support details) without addresses, seller info, or legal mentions. Example for `[OP]`:
+
+> `[OP] Station de travail 3D portable - Ordinateur portable comprenant : écran 16 pouces ; carte graphique Nvidia RTX 5060 (8Go) ; processeur Ryzen 7 AI ; disque dur 1To ; RAM 32GB ; Wifi ; Souris - Garantie constructeur 2 ans - Ordinateur portable neuf...`
+
