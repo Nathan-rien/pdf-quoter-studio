@@ -2,43 +2,59 @@
 
 ## Problem
 
-The dental PDF multi-line parser (`parseDentalProductsWithMultilineDescriptions`) has three issues when extracting product designations:
+The forward scan in `parseDentalProductsWithMultilineDescriptions` is still too greedy. After capturing the core product description, it continues appending:
+- The seller address ("75 route de Lyons la Forêt / 76000 ROUEN / France") when it appears mid-text (not at line start matching the hardcoded pattern)
+- Warranty/usage notes ("Un ordinateur adapté…", "Mises à jour…")  
+- Detailed spec lists starting with `-` ("- Ordinateur portable comprenant : …")
+- Service condition paragraphs ("MERCI DE CONSERVER L'EMBALLAGE…")
 
-1. **Backwards scan picks up column headers**: Fragments like "HT", "TTC", "Montant" from the table header row are included in the product name (e.g., `[i900M 3YW fidelite] HT TTC MEDIT i-Series...`)
+The backwards scan deduplication also still lets section titles through in some cases.
 
-2. **Forward scan is too greedy**: All notes, warranty text, support info, and even the seller address block from subsequent pages are appended to the designation (e.g., "Un ordinateur adapté doit être utilisé...", "Service support disponible...", "75 route de Lyons la Forêt...")
+## Fix — `src/lib/pdf-import-parser.ts`, function `parseDentalProductsWithMultilineDescriptions`
 
-3. **Section titles and categories are duplicated**: The backwards scan picks up section headers like "Scanner Intra Oral" or "Assistance Premium" that also appear in the product description, causing duplication
+### 1. Limit forward scan aggressively
 
-## Fix — `src/lib/pdf-import-parser.ts`
+Add these stop conditions to the forward scan (lines 1567-1595):
 
-### 1. Backwards scan (lines 1542-1553) — Add filters for column header noise
-
-Add a regex to skip lines that are column header fragments:
 ```typescript
-// Skip column header fragments
-if (/^(Montant|HT|TTC|Rem\.?%?|Prix\s*unitaire|Excl|Incl|Tax)/i.test(prevLine)) break;
+// Stop on list items (spec details)
+if (/^-\s/.test(nextLine)) break;
+
+// Stop on address-like patterns (number + street keyword)
+if (/^\d+\s+(rue|route|avenue|boulevard|place|chemin|cours|impasse|allée)/i.test(nextLine)) break;
+
+// Stop on postal code lines
+if (/^\d{5}\s+[A-Z]/.test(nextLine)) break;
+
+// Stop on long sentence-like lines (notes, not product names) — lines with verbs/articles suggesting prose
+if (/^(Le |La |Les |L'|Un |Une |Des |Ce |Cette |Cet |Équipement|Garantie|Validité)/i.test(nextLine)) break;
 ```
 
-Also deduplicate: if the backwards-scanned title is already contained in `descriptionLine`, skip it.
+### 2. Add a maximum forward continuation limit
 
-### 2. Forward scan (lines 1558-1580) — Add stop patterns for notes/boilerplate
+Cap the forward scan at **4 lines** maximum after the product line. Product descriptions rarely span more than that; anything beyond is notes/boilerplate.
 
-Add a "noise stop" regex to detect lines that are clearly boilerplate notes rather than product description:
 ```typescript
-const noisePatterns = /^(Un ordinateur|Mises à jour|Merci de|Service support|MERCI DE|support@|•\s*(Le|La)\s)/i;
+let continuationCount = 0;
+// inside the for loop:
+continuationCount++;
+if (continuationCount > 4) break;
 ```
 
-Also add stop for:
-- Seller address: `/^(3D\s*DENTAL\s*STORE|75\s*route|76000|France$)/i`
-- Lines starting with `•` bullet points (service plan details)
-- Lines matching address patterns (number + street name)
+### 3. Clean up the designation after assembly
 
-### 3. Deduplication of section titles
+After joining `descriptionParts`, strip any trailing address or boilerplate that slipped through:
 
-After building `descriptionParts`, check if the first entry (from backwards scan) is a substring of the second entry (the main description line) and remove the duplicate.
+```typescript
+// Remove trailing address/boilerplate from assembled description
+fullDescription = fullDescription
+  .replace(/\n?\d+\s+(rue|route|avenue|boulevard).*$/is, '')
+  .replace(/\n?\d{5}\s+[A-Z].*$/is, '')
+  .replace(/\n?France\s*$/i, '')
+  .trim();
+```
 
 ### Summary
 
-Single file change (`src/lib/pdf-import-parser.ts`), approximately 15-20 lines of edits in the `parseDentalProductsWithMultilineDescriptions` function. The result: only the core product name and reference are kept as designation, without column headers, notes, addresses, or duplicated section titles.
+Single file change, ~15 lines of additions in the forward scan section. The result: product designations contain only the reference + core product name (e.g., `[OP] Station de travail 3D portable`), without addresses, spec lists, or warranty notes.
 
