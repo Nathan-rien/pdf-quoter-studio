@@ -155,7 +155,7 @@ export function EditableTable<T>({
                         ) : (
                           <div 
                             className={cn(
-                              "px-3 py-2 min-h-[36px] cursor-text hover:bg-muted/50 transition-colors",
+                              "px-3 py-2 min-h-[36px] cursor-text hover:bg-muted/50 transition-colors whitespace-pre-wrap",
                               !displayValue && "text-muted-foreground italic"
                             )}
                           >
