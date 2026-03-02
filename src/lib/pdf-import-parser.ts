@@ -1546,12 +1546,20 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       if (stopMarkers.test(prevLine)) break;
       if (productLinePattern.test(prevLine)) break;
       if (/^(Description|Quantit[eé]|Prix|Amount|Quantity|Unit\s*Price|Taxes|3D\s*DENTAL|Sous-total|Subtotal)/i.test(prevLine)) break;
+      // Skip column header fragments
+      if (/^(Montant|HT|TTC|Rem\.?%?|Prix\s*unitaire|Excl|Incl|Tax)/i.test(prevLine)) break;
       // Stop if line is mostly amounts (multiple euro values)
       const amountMatches = prevLine.match(euroAmountPattern);
       if (amountMatches && amountMatches.length > 1) break;
+      // Skip if this title is already contained in the main description line (dedup)
+      if (descriptionLine.toLowerCase().includes(prevLine.toLowerCase())) continue;
       titleLines.unshift(prevLine);
     }
 
+    // Deduplicate: if first title entry is substring of second, remove it
+    if (titleLines.length > 0 && descriptionLine.toLowerCase().includes(titleLines[titleLines.length - 1].toLowerCase())) {
+      titleLines.pop();
+    }
     const descriptionParts = [...titleLines, descriptionLine];
     
     // Scan following lines until stop marker
@@ -1574,6 +1582,13 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       
       // Skip metadata/footer lines
       if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(nextLine)) break;
+      
+      // Stop on boilerplate notes, warranty text, service details
+      if (/^(Un ordinateur|Mises à jour|Merci de|Service support|MERCI DE|support@)/i.test(nextLine)) break;
+      // Stop on seller address block
+      if (/^(3D\s*DENTAL\s*STORE|75\s*route|76000|France$)/i.test(nextLine)) break;
+      // Stop on bullet point service details
+      if (/^•/.test(nextLine)) break;
       
       // Add to description
       descriptionParts.push(nextLine);
