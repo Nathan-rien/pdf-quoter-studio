@@ -1690,8 +1690,22 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
   // Fallback: client name not found with CABINET pattern — look for a name block
   // typically between the 3D DENTAL STORE address block and "Customer"/"Reference" lines
   if (!result.client!.nom) {
+    let skipUntilFrance = false;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+
+      // Detect seller header — skip its entire address block
+      if (/3D\s*DENTAL\s*STORE/i.test(line)) {
+        skipUntilFrance = true;
+        continue;
+      }
+      if (skipUntilFrance) {
+        if (/^France$/i.test(line.trim())) {
+          skipUntilFrance = false;
+        }
+        continue;
+      }
+
       // Skip known headers, metadata, product lines, amounts
       if (/3D\s*DENTAL|Devis|Date|Vendeur|Salesperson|Customer\s+Reference|Your\s+Reference|Reference|Description|Quantit[eé]|Quantity|Unit\s*Price|Montant|Amount|Taxes|Total|Untaxed|Expiration|Quotation|Unit[eé]|^\d+[,.]?\d*\s*€|^\[/i.test(line)) continue;
       if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) continue; // date-only lines
