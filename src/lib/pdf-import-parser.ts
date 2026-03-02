@@ -1682,7 +1682,7 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
     }
     
     // Join and remove repeated substring patterns
-    let fullDescription = removeRepeatedSubstrings(dedupedParts.join(' ').replace(/\s+/g, ' ').trim());
+    let fullDescription = removeRepeatedSubstrings(dedupedParts.join('\n').trim());
     
     // === QUALITY GUARD: don't accept ref-only designations ===
     if (!fullDescription || fullDescription.length < 3) {
