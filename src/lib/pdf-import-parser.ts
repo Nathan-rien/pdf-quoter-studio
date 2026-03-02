@@ -1463,8 +1463,7 @@ function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
     
     // 7. Clean up designation
     const designation = descriptionParts
-      .join(' ')
-      .replace(/\s+/g, ' ')
+      .join('\n')
       .replace(/\d+[,.]?\d*\s*$/, '') // Remove trailing quantity numbers
       .trim();
     
@@ -1518,20 +1517,35 @@ function isDentalNoiseLine(line: string): boolean {
   return false;
 }
 
-/** Remove repeated sub-string patterns in a designation (e.g. "Scanner Intra Oral Scanner Intra Oral ...") */
+/** Remove repeated sub-string patterns in a designation (e.g. "Scanner Intra Oral Scanner Intra Oral ...") 
+ *  Works line-by-line to preserve original newlines.
+ */
 function removeRepeatedSubstrings(text: string): string {
-  const words = text.split(/\s+/);
-  if (words.length < 4) return text;
-  // Try to detect a repeated prefix: split in half and compare
-  for (let halfLen = 2; halfLen <= Math.floor(words.length / 2); halfLen++) {
-    const firstHalf = words.slice(0, halfLen).join(' ');
-    const secondHalf = words.slice(halfLen, halfLen * 2).join(' ');
-    if (normalizeForDedup(firstHalf) === normalizeForDedup(secondHalf)) {
-      // Remove the duplicate prefix, keep remainder
-      return words.slice(0, halfLen).concat(words.slice(halfLen * 2)).join(' ');
+  // Split into lines, dedup repeated line groups while preserving structure
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    // Single-line fallback: word-level dedup (original behaviour)
+    const words = text.split(/\s+/);
+    if (words.length < 4) return text;
+    for (let halfLen = 2; halfLen <= Math.floor(words.length / 2); halfLen++) {
+      const firstHalf = words.slice(0, halfLen).join(' ');
+      const secondHalf = words.slice(halfLen, halfLen * 2).join(' ');
+      if (normalizeForDedup(firstHalf) === normalizeForDedup(secondHalf)) {
+        return words.slice(0, halfLen).concat(words.slice(halfLen * 2)).join(' ');
+      }
+    }
+    return text;
+  }
+  // Multi-line: detect repeated line-group prefix
+  for (let halfLen = 1; halfLen <= Math.floor(lines.length / 2); halfLen++) {
+    const firstHalf = lines.slice(0, halfLen).map(normalizeForDedup).join('|');
+    const secondHalf = lines.slice(halfLen, halfLen * 2).map(normalizeForDedup).join('|');
+    if (firstHalf === secondHalf) {
+      // Remove duplicate block, keep remainder with newlines
+      return lines.slice(0, halfLen).concat(lines.slice(halfLen * 2)).join('\n');
     }
   }
-  return text;
+  return lines.join('\n');
 }
 
 // ========== DENTAL MULTI-LINE PRODUCT EXTRACTION ==========
@@ -1940,7 +1954,8 @@ async function extractTextWithPdfJs(file: File): Promise<ExtractedTextResult> {
       let currentLine: string[] = [];
 
       const flush = () => {
-        const joined = currentLine.join(' ').replace(/\s+/g, ' ').trim();
+      // Normalize only spaces/tabs (not \n) to preserve line breaks from PDF items
+      const joined = currentLine.join(' ').replace(/[^\S\n]+/g, ' ').trim();
         if (joined) lines.push(joined);
         currentLine = [];
       };
