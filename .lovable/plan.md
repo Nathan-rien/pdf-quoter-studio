@@ -2,23 +2,43 @@
 
 ## Problem
 
-The dental PDF parser fails to extract **any** product lines from English "Quotation" format PDFs because the regex pattern `Unit[eé]` requires "e" or "é" after "Unit". The English format uses **"Unit(s)"** (no "e"), so the pattern never matches and zero products are extracted into the Invest tab.
+The dental PDF multi-line parser (`parseDentalProductsWithMultilineDescriptions`) has three issues when extracting product designations:
 
-## Root Cause
+1. **Backwards scan picks up column headers**: Fragments like "HT", "TTC", "Montant" from the table header row are included in the product name (e.g., `[i900M 3YW fidelite] HT TTC MEDIT i-Series...`)
 
-Six regex occurrences use `Unit[eé]` which matches "Unité(s)" and "Unite(s)" but **not** "Unit(s)":
-- Line 1394: column-based row filter
-- Line 1397: column boundary finder  
-- Line 1498: `productLinePattern` in multi-line parser
-- Line 1573: new-product stop condition
-- Line 1710: client fallback skip pattern
-- Line 1390: header skip (needs English variants: `Subtotal`, `Quantity`, `Unit Price`, `Amount`)
+2. **Forward scan is too greedy**: All notes, warranty text, support info, and even the seller address block from subsequent pages are appended to the designation (e.g., "Un ordinateur adapté doit être utilisé...", "Service support disponible...", "75 route de Lyons la Forêt...")
+
+3. **Section titles and categories are duplicated**: The backwards scan picks up section headers like "Scanner Intra Oral" or "Assistance Premium" that also appear in the product description, causing duplication
 
 ## Fix — `src/lib/pdf-import-parser.ts`
 
-Change `Unit[eé]` → `Unit[eé]?` (make the e/é **optional**) in all 6 locations. This way "Unit(s)", "Unité(s)", and "Unite(s)" all match.
+### 1. Backwards scan (lines 1542-1553) — Add filters for column header noise
 
-Also update the column-based header skip (line 1390) to include English headers: `Subtotal`, `Quantity`, `Unit\s*Price`, `Amount`, `Untaxed`.
+Add a regex to skip lines that are column header fragments:
+```typescript
+// Skip column header fragments
+if (/^(Montant|HT|TTC|Rem\.?%?|Prix\s*unitaire|Excl|Incl|Tax)/i.test(prevLine)) break;
+```
 
-Single file change, ~6 line edits.
+Also deduplicate: if the backwards-scanned title is already contained in `descriptionLine`, skip it.
+
+### 2. Forward scan (lines 1558-1580) — Add stop patterns for notes/boilerplate
+
+Add a "noise stop" regex to detect lines that are clearly boilerplate notes rather than product description:
+```typescript
+const noisePatterns = /^(Un ordinateur|Mises à jour|Merci de|Service support|MERCI DE|support@|•\s*(Le|La)\s)/i;
+```
+
+Also add stop for:
+- Seller address: `/^(3D\s*DENTAL\s*STORE|75\s*route|76000|France$)/i`
+- Lines starting with `•` bullet points (service plan details)
+- Lines matching address patterns (number + street name)
+
+### 3. Deduplication of section titles
+
+After building `descriptionParts`, check if the first entry (from backwards scan) is a substring of the second entry (the main description line) and remove the duplicate.
+
+### Summary
+
+Single file change (`src/lib/pdf-import-parser.ts`), approximately 15-20 lines of edits in the `parseDentalProductsWithMultilineDescriptions` function. The result: only the core product name and reference are kept as designation, without column headers, notes, addresses, or duplicated section titles.
 
