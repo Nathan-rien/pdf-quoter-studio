@@ -2,70 +2,63 @@
 
 ## Problem
 
-Two issues with the 3D Dental "Quotation" English format:
+The client data model currently has a single `nom` field ("Nom / Raison sociale"). The user wants two separate fields: **Prénom** (first name) and **Nom** (last name), both populated from PDF import.
 
-1. **Product description is incomplete**: The title line "Caméra intra orale medit I700W garantie 3 ans" appears on a line BEFORE the product quantity line `[i700w 3YW]...1.000 Unit(s)...`. The current parser only captures text on the same line (before the qty marker) and lines AFTER. It never looks backwards, so the title is lost.
-
-2. **Client extraction fragile**: The fallback client block works for `Jérôme Turpin` → `116 rue des Nouettes` → `85180 CHATEAU D OLONNE`, but:
-   - The English `Customer Reference : 55177` pattern is not explicitly matched (only `Reference\s*:\s*(\d+)` catches it, but `Customer Reference` should also be added to the skip list in the fallback to avoid false matches)
-   - `Subtotal` (English) is missing from stop markers, so product description accumulation may bleed into section boundaries
-
-3. **Stop markers missing English variants**: `Subtotal`, `Untaxed Amount`, `Amount Excl.`, `Amount Incl.` are not in the stop markers for multi-line description accumulation.
+From the screenshot, the current `nom` field contains an address ("75 route de Lyons la Forêt") instead of the client name — confirming the extraction is wrong and splitting into prénom/nom will also help with validation.
 
 ## Changes
 
-### 1. `src/lib/pdf-import-parser.ts` — `parseDentalProductsWithMultilineDescriptions` (~line 1476)
+### 1. `src/lib/pdf-import-parser.ts` — Add `prenom` to `PDFParseResult.client`
 
-Add English stop markers to the `stopMarkers` regex:
+Add `prenom: string | null` to the client interface (line 15) and all initialization sites (lines 127, 1142, 1588, 1835).
 
+### 2. `src/lib/pdf-import-parser.ts` — Split name in all parsers
+
+- **Cybertek** (`parseCybertekText`): The client name line is already extracted as `nom`. Split on first space: first word → `prenom`, rest → `nom`.
+- **Grosbill** (`parseGrosbillText`): Same split logic on the extracted name.
+- **Dental** (`parseDentalText`): The name "Jérôme Turpin" is extracted — split into `prenom: "Jérôme"`, `nom: "Turpin"`.
+- **Unknown** fallback: Same split logic.
+
+Split helper function:
 ```typescript
-const stopMarkers = /^(Sous-total|Subtotal|Informatique|Livraison|Formation|Compte\s+bancaire|Page\s+\d+|Montant\s+hors\s+taxes|Untaxed\s+Amount|Taxes|Total\s+[\d])/i;
-```
-
-### 2. `src/lib/pdf-import-parser.ts` — `parseDentalProductsWithMultilineDescriptions` (~lines 1507-1520)
-
-After extracting `descriptionLine` from the product line, scan BACKWARDS to collect preceding title/header lines. Walk from `i-1` upwards, collecting lines that are not:
-- empty / too short
-- stop markers / headers (`Description`, `Quantity`, `Amount`, etc.)
-- another product line (matching `productLinePattern`)
-- known skip patterns (3D DENTAL, amounts-only, dates, metadata)
-
-Prepend collected lines (in order) to `descriptionParts` before the product line text:
-
-```typescript
-// Scan backwards for title lines preceding this product
-const titleLines: string[] = [];
-for (let k = i - 1; k >= 0; k--) {
-  const prevLine = lines[k];
-  if (!prevLine || prevLine.length < 3) break;
-  if (stopMarkers.test(prevLine)) break;
-  if (productLinePattern.test(prevLine)) break;
-  if (/^(Description|Quantit|Prix|Amount|Quantity|Unit\s*Price|Taxes|3D\s*DENTAL|Sous-total|Subtotal)/i.test(prevLine)) break;
-  if (euroAmountPattern.test(prevLine) && prevLine.match(euroAmountPattern)!.length > 1) break;
-  titleLines.unshift(prevLine);
+function splitName(fullName: string): { prenom: string; nom: string } {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 1) return { prenom: '', nom: fullName.trim() };
+  return { prenom: parts[0], nom: parts.slice(1).join(' ') };
 }
-
-const descriptionParts = [...titleLines, descriptionLine];
 ```
 
-### 3. `src/lib/pdf-import-parser.ts` — `parseDentalText` client fallback (~line 1626)
+For "raison sociale" (company names like "CABINET DENTAIRE..."), put everything in `nom` and leave `prenom` empty.
 
-Add `Subtotal|Customer\s+Reference|Your\s+Reference|Quantity|Unit\s+Price|Amount\s+Excl|Amount\s+Incl` to the skip regex on line 1626 and line 1660 so these English headers don't interfere with client/name detection.
+### 3. `src/stores/rentalProposalStore.ts` — Add `prenom` to `ClientData`
 
-### 4. `src/lib/pdf-import-parser.ts` — `parseDentalText` client number (~line 1610)
+- Add `prenom: string` to the `ClientData` interface (line 22)
+- Add `prenom: ''` to `initialClientData` (line 215)
+- Map `result.client.prenom` in `importFromPDF` (line 306)
 
-Add explicit `Customer\s+Reference` pattern:
+### 4. `src/components/rental-proposal/RentalDataEditor.tsx` — Add Prénom field
 
-```typescript
-const clientNumMatch = text.match(/R[eé]f[eé]rence\s+Client\s*:?\s*(\d+)/i)
-    || text.match(/Customer\s+Reference\s*:?\s*(\d+)/i)
-    || text.match(/Reference\s*:\s*(\d+)/i);
-```
+Replace the single "Nom / Raison sociale" field with two fields side by side:
+- **Prénom** (left)
+- **Nom** (right)
 
-## Summary
+Keep Email on its own row or alongside.
 
-These changes ensure:
-- The full multi-line product description (title + ref line + trailing notes) is captured into the Invest tab designation
-- The English client address block is reliably extracted
-- English section boundaries (`Subtotal`, `Untaxed Amount`) properly delimit product descriptions
+### 5. `src/components/rental-proposal/RentalProposalPreview.tsx` — Display prénom + nom
+
+Update the client name display (lines 776, 827) to show `${clientData.prenom} ${clientData.nom}`.
+
+### 6. `src/components/rental-proposal/RentalProposalExport.tsx` — Display prénom + nom
+
+Update the export client name display (lines 329, 761) and filename generation (line 87) to use `${clientData.prenom} ${clientData.nom}`.
+
+### 7. Persistence migration
+
+In the `merge` function of the persist middleware (~line 816), ensure `prenom` defaults to `''` if missing from persisted state.
+
+## Technical details
+
+- The `splitName` helper detects company names (starting with "CABINET", "SAS", "SARL", etc. or all-uppercase multi-word) and keeps them entirely in `nom` with empty `prenom`.
+- The `proposalName` generation uses the full name `${prenom} ${nom}`.
+- All existing references to `clientData.nom` that display the client name need to be updated to `${clientData.prenom} ${clientData.nom}`.trim().
 
