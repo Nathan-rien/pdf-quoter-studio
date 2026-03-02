@@ -74,7 +74,7 @@ function detectSourceFromFilename(filename: string): 'cybertek' | 'grosbill' | '
     return 'grosbill';
   }
   // FIXED: Support "Devis - SO74920.pdf" (spaces+dashes) and "Devis_-_SO74920.pdf" (underscores)
-  if (lowerName.includes('dental') || /devis[\s_-]+so\d+/i.test(lowerName)) {
+  if (lowerName.includes('dental') || /(?:devis|quotation)[\s_-]+so\d+/i.test(lowerName)) {
     return 'dental';
   }
   return 'unknown';
@@ -1596,20 +1596,24 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
   const refMatch = text.match(/(?:Devis\s*#?\s*)?(SO\d+)/i);
   if (refMatch) result.devis!.reference = refMatch[1];
   
-  // Date : "Date du devis : 10/12/2025" or "Date du devis 10/12/2025"
-  const dateMatch = text.match(/Date\s+du\s+devis\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  // Date : "Date du devis : 10/12/2025" or English "Quotation Date 02/25/2026"
+  const dateMatch = text.match(/Date\s+du\s+devis\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i)
+    || text.match(/Quotation\s+Date\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
   if (dateMatch) result.devis!.date = dateMatch[1];
   
-  // Échéance : "Echéance : 19/12/2025"
-  const echeanceMatch = text.match(/[EÉ]ch[eé]ance\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  // Échéance : "Echéance : 19/12/2025" or English "Expiration 03/27/2026"
+  const echeanceMatch = text.match(/[EÉ]ch[eé]ance\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i)
+    || text.match(/Expiration\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
   if (echeanceMatch) result.devis!.validite = echeanceMatch[1];
   
-  // Référence client : "Référence Client : 6500"
-  const clientNumMatch = text.match(/R[eé]f[eé]rence\s+Client\s*:?\s*(\d+)/i);
+  // Référence client : "Référence Client : 6500" or English "Reference : 55177"
+  const clientNumMatch = text.match(/R[eé]f[eé]rence\s+Client\s*:?\s*(\d+)/i)
+    || text.match(/Reference\s*:\s*(\d+)/i);
   if (clientNumMatch) result.devis!.numeroClient = clientNumMatch[1];
   
-  // Commercial : "Vendeur : Ambre-Lise SAVOÏA"
-  const vendeurMatch = text.match(/Vendeur\s*:?\s*([A-Za-zÀ-ÿ\s\-']+?)(?=\s*(?:Référence|Date|Devis|$|\n))/i);
+  // Commercial : "Vendeur : Ambre-Lise SAVOÏA" or English "Salesperson Ambre-Lise SAVOÏA"
+  const vendeurMatch = text.match(/Vendeur\s*:?\s*([A-Za-zÀ-ÿ\s\-']+?)(?=\s*(?:Référence|Date|Devis|$|\n))/i)
+    || text.match(/Salesperson\s*:?\s*([A-Za-zÀ-ÿ\s\-']+?)(?=\s*(?:Reference|Quotation|Expiration|Customer|$|\n))/i);
   if (vendeurMatch) result.commercial!.nom = vendeurMatch[1].trim();
 
   // === INFORMATIONS CLIENT ===
@@ -1619,7 +1623,7 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
     const line = lines[i];
     
     // Skip 3D DENTAL STORE header and metadata lines
-    if (/3D\s*DENTAL\s*STORE|Devis\s*#|Date\s+du\s+devis|Vendeur|Description|Quantité|Montant/i.test(line)) continue;
+    if (/3D\s*DENTAL\s*STORE|Devis\s*#|Date\s+du\s+devis|Vendeur|Description|Quantité|Montant|Quotation\s+Date|Salesperson|Customer|Expiration|Untaxed/i.test(line)) continue;
     
     // Client name pattern: all uppercase, contains typical client keywords
     if (!result.client!.nom && /^(CABINET|DR\b|DOCTEUR|CLINIQUE|CENTRE|SELARL|SCP|SCM)/i.test(line)) {
@@ -1630,7 +1634,7 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
         const nextLine = lines[j];
         
         // Address line (starts with number or contains street keywords)
-        if (!result.client!.adresse && /^\d+\s+|RUE|AVENUE|BOULEVARD|PLACE|CHEMIN|COURS/i.test(nextLine)) {
+        if (!result.client!.adresse && /^\d+\s+|rue|avenue|boulevard|place|chemin|cours/i.test(nextLine)) {
           result.client!.adresse = nextLine.trim();
           continue;
         }
@@ -1647,6 +1651,37 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
     }
   }
 
+  // Fallback: client name not found with CABINET pattern — look for a name block
+  // typically between the 3D DENTAL STORE address block and "Customer"/"Reference" lines
+  if (!result.client!.nom) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Skip known headers, metadata, product lines, amounts
+      if (/3D\s*DENTAL|Devis|Date|Vendeur|Salesperson|Customer|Reference|Description|Quantité|Quantity|Montant|Amount|Taxes|Total|Untaxed|Expiration|Quotation|Unit[eé]|^\d+[,.]?\d*\s*€|^\[/i.test(line)) continue;
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) continue; // date-only lines
+      if (/^\d+$/.test(line)) continue; // number-only lines
+      if (line.length < 3 || line.length > 80) continue;
+      
+      // Candidate: a name-like line (contains letters, not all digits) followed by an address
+      const nextIdx = i + 1;
+      if (nextIdx < lines.length && /^\d+\s+|rue|avenue|boulevard|place|chemin|cours/i.test(lines[nextIdx])) {
+        result.client!.nom = line.trim();
+        result.client!.adresse = lines[nextIdx].trim();
+        
+        // Look for postal code + city after address
+        for (let j = nextIdx + 1; j < Math.min(nextIdx + 4, lines.length); j++) {
+          const cpMatch = lines[j].match(/^(\d{5})\s+(.+?)(?:\s+France)?$/i);
+          if (cpMatch) {
+            result.client!.codePostal = cpMatch[1];
+            result.client!.ville = cleanCityName(cpMatch[2]);
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
+
   // === TOTAUX ===
   
   // Look for total amounts at the end of the document
@@ -1654,7 +1689,8 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
   // "Taxes 2 533,20 €"
   // "Total 15 199,20 €"
   
-  const totalHTMatch = text.match(/Montant\s+hors\s+taxes[\s\n]*([\d\s]+[,.][\d]{2})\s*€/i);
+  const totalHTMatch = text.match(/Montant\s+hors\s+taxes[\s\n]*([\d\s]+[,.][\d]{2})\s*€/i)
+    || text.match(/Untaxed\s+Amount[\s\n]*([\d\s]+[,.][\d]{2})\s*€/i);
   if (totalHTMatch) {
     result.totaux!.totalHT = parseNumber(totalHTMatch[1]);
   }

@@ -33,6 +33,10 @@ const ENTITY_TEMPLATE_MAP: Record<CommercialEntity, string> = {
   'grosbill-pro': 'f153bcea-1770-4021-8446-177002144623',
 };
 
+const SOURCE_TEMPLATE_MAP: Record<string, string> = {
+  'dental': '1bc823c7-1771-4939-8179-177193917944',
+};
+
 export function RentalWorkflow() {
   const { isAdmin, isCommercial } = useAuth();
   const { commercial } = useCommercialIdentity();
@@ -47,19 +51,23 @@ export function RentalWorkflow() {
     importFromPDF,
     markAsSaved,
     selectTemplateForProposal,
+    selectedTemplateId,
   } = useRentalProposalStore();
 
-  const skipTemplateStep = !isAdmin && !!commercial?.entity;
-
   // Auto-select template based on commercial entity
+  const entityTemplateId = commercial?.entity ? ENTITY_TEMPLATE_MAP[commercial.entity] : null;
+  // Auto-select template based on PDF source (e.g. dental)
+  const sourceTemplateId = pdfImportStatus.source ? SOURCE_TEMPLATE_MAP[pdfImportStatus.source] ?? null : null;
+  // Resolved auto template: entity takes priority, then source
+  const autoTemplateId = entityTemplateId || sourceTemplateId;
+
+  const skipTemplateStep = !isAdmin && !!autoTemplateId;
+
   useEffect(() => {
-    if (skipTemplateStep && commercial?.entity) {
-      const templateId = ENTITY_TEMPLATE_MAP[commercial.entity];
-      if (templateId) {
-        selectTemplateForProposal(templateId);
-      }
+    if (skipTemplateStep && autoTemplateId) {
+      selectTemplateForProposal(autoTemplateId);
     }
-  }, [skipTemplateStep, commercial?.entity, selectTemplateForProposal]);
+  }, [skipTemplateStep, autoTemplateId, selectTemplateForProposal]);
 
   const WORKFLOW_STEPS = useMemo(
     () => skipTemplateStep ? ALL_WORKFLOW_STEPS.filter(s => s.id !== 'template') : ALL_WORKFLOW_STEPS,
