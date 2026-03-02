@@ -1387,14 +1387,14 @@ function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
     const rowText = row.map(i => i.str).join(' ');
     
     // Skip headers, totals, section labels
-    if (/^(Description|Sous-total|Montant\s+hors|Taxes|Total|Quantité|Prix|Informatique|Livraison|Formation)/i.test(rowText)) continue;
+    if (/^(Description|Sous-total|Subtotal|Montant\s+hors|Untaxed|Taxes|Total|Quantit[eé]|Quantity|Prix|Unit\s*Price|Amount|Informatique|Livraison|Formation)/i.test(rowText)) continue;
     if (/Incluse|Inclus/i.test(rowText) && /0[,.]00/i.test(rowText)) continue;
     
     // Must contain quantity pattern "X,XXX Unité(s)"
-    if (!/\d+[,.]?\d*\s*Unit[eé]\(?s?\)?/i.test(rowText)) continue;
+    if (!/\d+[,.]?\d*\s*Unit[eé]?\(?s?\)?/i.test(rowText)) continue;
     
     // 4. Find the "Unité(s)" item to use as column boundary
-    const uniteIndex = row.findIndex(item => /unit[eé]\(?s?\)?/i.test(item.str));
+    const uniteIndex = row.findIndex(item => /unit[eé]?\(?s?\)?/i.test(item.str));
     if (uniteIndex === -1) continue;
     
     console.log('[Dental Row]', row.map(i => `[${Math.round(i.x)}] "${i.str}"`).join(' | '));
@@ -1495,7 +1495,7 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
   
   // Stop markers that end a product description
   const stopMarkers = /^(Sous-total|Subtotal|Informatique|Livraison|Formation|Compte\s+bancaire|Page\s+\d+|Montant\s+hors\s+taxes|Untaxed\s+Amount|Amount\s+Excl|Amount\s+Incl|Taxes|Total\s+[\d])/i;
-  const productLinePattern = /(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i;
+  const productLinePattern = /(\d+[,.]?\d*)\s*Unit[eé]?\(?s?\)?/i;
   const euroAmountPattern = /([\d\s]+[,.][\d]{2,3})\s*€/g;
   
   console.log('[Dental Multi-line Parser] Processing', lines.length, 'lines');
@@ -1570,7 +1570,7 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       // Stop conditions
       if (stopMarkers.test(nextLine)) break;
       if (productLinePattern.test(nextLine)) break; // New product
-      if (/^\[.*?\].*Unit[eé]/i.test(nextLine)) break; // New product with ref
+      if (/^\[.*?\].*Unit[eé]?/i.test(nextLine)) break; // New product with ref
       
       // Skip metadata/footer lines
       if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(nextLine)) break;
@@ -1707,7 +1707,7 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
       }
 
       // Skip known headers, metadata, product lines, amounts
-      if (/3D\s*DENTAL|Devis|Date|Vendeur|Salesperson|Customer\s+Reference|Your\s+Reference|Reference|Description|Quantit[eé]|Quantity|Unit\s*Price|Montant|Amount|Taxes|Total|Untaxed|Expiration|Quotation|Unit[eé]|^\d+[,.]?\d*\s*€|^\[/i.test(line)) continue;
+      if (/3D\s*DENTAL|Devis|Date|Vendeur|Salesperson|Customer\s+Reference|Your\s+Reference|Reference|Description|Quantit[eé]|Quantity|Unit\s*Price|Montant|Amount|Taxes|Total|Untaxed|Expiration|Quotation|Unit[eé]?|^\d+[,.]?\d*\s*€|^\[/i.test(line)) continue;
       if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) continue; // date-only lines
       if (/^\d+$/.test(line)) continue; // number-only lines
       if (line.length < 3 || line.length > 80) continue;
