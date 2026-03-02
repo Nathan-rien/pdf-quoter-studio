@@ -1509,11 +1509,8 @@ function isDentalNoiseLine(line: string): boolean {
   if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(line)) return true;
   // HT/TTC column headers
   if (/^(Montant|HT|TTC|Rem\.?%?|Prix\s*unitaire|Excl|Incl|Tax\b)/i.test(line)) return true;
-  // SAV / warranty / boilerplate
-  if (/^(Un ordinateur|Mises à jour|Merci de|Service support|MERCI DE|support@)/i.test(line)) return true;
-  if (/^(Le |La |Les |L'|Un |Une |Des |Ce |Cette |Cet |Équipement|Garantie|Validité)/i.test(line)) return true;
-  // Bullet / list items (spec details)
-  if (/^[-•]\s/.test(line)) return true;
+  // Seller email
+  if (/support@3ddentalstore/i.test(line)) return true;
   // Page headers
   if (/^Page\s+\d+/i.test(line)) return true;
   // Postal code only line
@@ -1637,18 +1634,15 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       
       // Cap forward scan
       continuationCount++;
-      if (continuationCount > 4) break;
+      if (continuationCount > 30) break;
       
       // Stop conditions
       if (stopMarkers.test(nextLine)) break;
       if (productLinePattern.test(nextLine)) break;
       if (/^\[.*?\].*Unit[eé]?/i.test(nextLine)) break;
       
-      // Stop on any noise line
-      if (isDentalNoiseLine(nextLine)) break;
-      
-      // Stop on boilerplate notes, warranty text, service details
-      if (/^(Un ordinateur|Mises à jour|Merci de|Service support|MERCI DE|support@)/i.test(nextLine)) break;
+      // Skip noise lines (don't break, just exclude them)
+      if (isDentalNoiseLine(nextLine)) continue;
       
       // Add to description
       descriptionParts.push(nextLine);
