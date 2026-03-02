@@ -1473,7 +1473,7 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
   const lines = text.split(/\r?\n/).map(l => l.trim());
   
   // Stop markers that end a product description
-  const stopMarkers = /^(Sous-total|Informatique|Livraison|Formation|Compte\s+bancaire|Page\s+\d+|Montant\s+hors\s+taxes|Taxes|Total\s+[\d])/i;
+  const stopMarkers = /^(Sous-total|Subtotal|Informatique|Livraison|Formation|Compte\s+bancaire|Page\s+\d+|Montant\s+hors\s+taxes|Untaxed\s+Amount|Amount\s+Excl|Amount\s+Incl|Taxes|Total\s+[\d])/i;
   const productLinePattern = /(\d+[,.]?\d*)\s*Unit[eé]\(?s?\)?/i;
   const euroAmountPattern = /([\d\s]+[,.][\d]{2,3})\s*€/g;
   
@@ -1483,7 +1483,7 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
     const line = lines[i];
     
     // Skip headers, totals, empty lines
-    if (/^(Description|Quantité|Prix|Sous-total|Montant|Taxes|Total|3D\s*DENTAL)/i.test(line)) continue;
+    if (/^(Description|Quantit[eé]|Prix|Sous-total|Subtotal|Montant|Taxes|Total|Amount|Quantity|Unit\s*Price|3D\s*DENTAL)/i.test(line)) continue;
     if (!line || line.length < 5) continue;
     
     // Check if this is a product line (has quantity pattern "X,XXX Unité(s)")
@@ -1517,7 +1517,21 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
     }
     
     // Collect multi-line description
-    const descriptionParts = [descriptionLine];
+    // Scan backwards for title lines preceding this product
+    const titleLines: string[] = [];
+    for (let k = i - 1; k >= 0; k--) {
+      const prevLine = lines[k];
+      if (!prevLine || prevLine.length < 3) break;
+      if (stopMarkers.test(prevLine)) break;
+      if (productLinePattern.test(prevLine)) break;
+      if (/^(Description|Quantit[eé]|Prix|Amount|Quantity|Unit\s*Price|Taxes|3D\s*DENTAL|Sous-total|Subtotal)/i.test(prevLine)) break;
+      // Stop if line is mostly amounts (multiple euro values)
+      const amountMatches = prevLine.match(euroAmountPattern);
+      if (amountMatches && amountMatches.length > 1) break;
+      titleLines.unshift(prevLine);
+    }
+
+    const descriptionParts = [...titleLines, descriptionLine];
     
     // Scan following lines until stop marker
     let emptyLineCount = 0;
@@ -1608,6 +1622,7 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
   
   // Référence client : "Référence Client : 6500" or English "Reference : 55177"
   const clientNumMatch = text.match(/R[eé]f[eé]rence\s+Client\s*:?\s*(\d+)/i)
+    || text.match(/Customer\s+Reference\s*:?\s*(\d+)/i)
     || text.match(/Reference\s*:\s*(\d+)/i);
   if (clientNumMatch) result.devis!.numeroClient = clientNumMatch[1];
   
@@ -1657,7 +1672,7 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       // Skip known headers, metadata, product lines, amounts
-      if (/3D\s*DENTAL|Devis|Date|Vendeur|Salesperson|Customer|Reference|Description|Quantité|Quantity|Montant|Amount|Taxes|Total|Untaxed|Expiration|Quotation|Unit[eé]|^\d+[,.]?\d*\s*€|^\[/i.test(line)) continue;
+      if (/3D\s*DENTAL|Devis|Date|Vendeur|Salesperson|Customer\s+Reference|Your\s+Reference|Reference|Description|Quantit[eé]|Quantity|Unit\s*Price|Montant|Amount|Taxes|Total|Untaxed|Expiration|Quotation|Unit[eé]|^\d+[,.]?\d*\s*€|^\[/i.test(line)) continue;
       if (/^\d{2}\/\d{2}\/\d{4}$/.test(line)) continue; // date-only lines
       if (/^\d+$/.test(line)) continue; // number-only lines
       if (line.length < 3 || line.length > 80) continue;
