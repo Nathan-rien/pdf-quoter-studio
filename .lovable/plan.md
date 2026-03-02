@@ -2,31 +2,25 @@
 
 ## Problem
 
-Currently, only users with the 'commercial' role get auto-selected entity/commercial and skipped template step. The 'user' role is excluded from this automation.
+The designation text in the Invest product table doesn't preserve line breaks in the preview or PDF export. Line 1037 of `RentalProposalPreview.tsx` uses `whitespace-normal` which collapses `\n` characters into spaces. The export (`RentalProposalExport.tsx` line 382) also lacks `white-space: pre-wrap`.
 
 ## Changes
 
-### 1. `src/components/rental-proposal/RentalDataEditor.tsx` (line 36)
+### 1. `src/components/rental-proposal/RentalProposalPreview.tsx` (line 1037)
 
-Change the lock condition from `isCommercial && !isAdmin` to `!isAdmin && !!commercialId`:
+Replace `whitespace-normal` with `whitespace-pre-wrap` on the designation cell:
 
-```typescript
-const lockCommercialFields = !isAdmin && !!commercialId;
+```tsx
+<div className="col-span-6 break-words whitespace-pre-wrap leading-tight py-0.5">
 ```
 
-This locks entity/commercial fields for both 'commercial' and 'user' roles, but only when they have a matching commercial identity in the database.
+### 2. `src/components/rental-proposal/RentalProposalExport.tsx` (line 382)
 
-### 2. `src/components/rental-proposal/RentalWorkflow.tsx` (line 52)
+Add `white-space: pre-wrap;` to the designation `<td>` inline style:
 
-Change the template skip condition from `isCommercial && !isAdmin` to `!isAdmin && !!commercial?.entity`:
-
-```typescript
-const skipTemplateStep = !isAdmin && !!commercial?.entity;
+```html
+<td style="padding: ...; border-bottom: ...; word-wrap: break-word; white-space: pre-wrap; max-width: 60%;">
 ```
 
-This auto-selects the template and hides the template step for both 'commercial' and 'user' roles when they have a known entity.
-
-### 3. No other changes needed
-
-The `useCommercialIdentity` hook already resolves identity by email from `pre_registered_commercials`. The existing `useEffect` guards (`commercial && commercialId`) prevent issues for users without a matching entry. The `ENTITY_TEMPLATE_MAP` mapping remains the same.
+These two changes ensure newline characters entered in the Invest tab are rendered as visible line breaks in both the preview and the exported PDF.
 
