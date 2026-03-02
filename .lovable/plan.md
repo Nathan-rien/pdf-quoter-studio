@@ -2,50 +2,23 @@
 
 ## Problem
 
-The dental PDF parser's fallback client extraction captures the **seller's address block** (3D DENTAL STORE, 75 route de Lyons la Forêt, 76000 ROUEN) as the client instead of the actual client (Jérôme Turpin, 116 rue des Nouettes, 85180 CHATEAU D OLONNE).
+The dental PDF parser fails to extract **any** product lines from English "Quotation" format PDFs because the regex pattern `Unit[eé]` requires "e" or "é" after "Unit". The English format uses **"Unit(s)"** (no "e"), so the pattern never matches and zero products are extracted into the Invest tab.
 
-This happens because the fallback loop (line 1692) skips "3D DENTAL STORE" via the regex but does NOT skip the subsequent seller address lines. "75 route de Lyons la Forêt" is treated as a candidate name since the next line "76000 ROUEN" matches the address pattern `^\d+\s+`.
+## Root Cause
 
-## Fix
+Six regex occurrences use `Unit[eé]` which matches "Unité(s)" and "Unite(s)" but **not** "Unit(s)":
+- Line 1394: column-based row filter
+- Line 1397: column boundary finder  
+- Line 1498: `productLinePattern` in multi-line parser
+- Line 1573: new-product stop condition
+- Line 1710: client fallback skip pattern
+- Line 1390: header skip (needs English variants: `Subtotal`, `Quantity`, `Unit Price`, `Amount`)
 
-### `src/lib/pdf-import-parser.ts` — Fallback client extraction (~lines 1692-1718)
+## Fix — `src/lib/pdf-import-parser.ts`
 
-Add logic to skip the seller's address block. When iterating lines in the fallback:
+Change `Unit[eé]` → `Unit[eé]?` (make the e/é **optional**) in all 6 locations. This way "Unit(s)", "Unité(s)", and "Unite(s)" all match.
 
-1. Track a `pastSellerBlock` state. When we encounter a "3D DENTAL STORE" line, skip forward past the seller address block (skip until we pass a "France" line or exhaust ~4 lines).
-2. Only start looking for client candidates after the seller block is passed.
+Also update the column-based header skip (line 1390) to include English headers: `Subtotal`, `Quantity`, `Unit\s*Price`, `Amount`, `Untaxed`.
 
-```typescript
-// Fallback: skip seller address block
-if (!result.client!.nom) {
-  let pastSellerBlock = false;
-  let skipUntilFrance = false;
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    // Detect seller header — skip its address block
-    if (/3D\s*DENTAL\s*STORE/i.test(line)) {
-      skipUntilFrance = true;
-      continue;
-    }
-    if (skipUntilFrance) {
-      if (/^France$/i.test(line)) {
-        skipUntilFrance = false;
-        pastSellerBlock = true;
-      }
-      continue;  // skip seller address lines
-    }
-    
-    // Skip known headers/metadata (existing regex)
-    if (/Devis|Date|Vendeur|Salesperson|Customer\s+Reference|...|Quotation/i.test(line)) continue;
-    
-    // ... rest of candidate matching logic unchanged
-  }
-}
-```
-
-This ensures the parser jumps past "75 route de Lyons la Forêt / 76000 ROUEN / France" and correctly lands on "Jérôme Turpin" as the first client candidate, with "116 rue des Nouettes" as the address and "85180 CHATEAU D OLONNE" as postal+city.
-
-No other files need changes — the issue is purely in the dental text parser's client fallback logic.
+Single file change, ~6 line edits.
 
