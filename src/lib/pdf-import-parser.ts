@@ -2035,12 +2035,7 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
     
     console.log('PDF Parser - Parsed data:', parsedData);
     
-    // Split client name into prenom/nom if not already done
-    if (parsedData.client && parsedData.client.nom && !parsedData.client.prenom) {
-      const { prenom, nom } = splitClientName(parsedData.client.nom);
-      parsedData.client.prenom = prenom;
-      parsedData.client.nom = nom;
-    }
+    // No longer splitting client name — keep full name as-is in client.nom
     
     return {
       ...baseResult,

@@ -19,8 +19,8 @@ const initialCommercialData: CommercialData = {
 };
 
 interface ClientData {
-  prenom: string;
   nom: string;
+  raisonSociale: string;
   adresse: string;
   codePostal: string;
   ville: string;
@@ -213,8 +213,8 @@ interface RentalProposalActions {
 }
 
 const initialClientData: ClientData = {
-  prenom: '',
   nom: '',
+  raisonSociale: '',
   adresse: '',
   codePostal: '',
   ville: '',
@@ -292,7 +292,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         const montantInvestissement = lignesTotal ?? result.totaux.totalHT;
         
         // Générer un nom de proposition par défaut basé sur le client et la date
-        const clientName = [result.client.prenom, result.client.nom].filter(Boolean).join(' ') || 'Client';
+        const clientName = [result.client.prenom, result.client.nom].filter(Boolean).join(' ').trim() || 'Client';
         const now = new Date();
         const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
         const defaultProposalName = `Proposition ${clientName} - ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
@@ -305,8 +305,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             importDate: new Date().toISOString(),
           },
           clientData: {
-            prenom: result.client.prenom || '',
-            nom: result.client.nom || '',
+            nom: [result.client.prenom, result.client.nom].filter(Boolean).join(' ').trim() || '',
+            raisonSociale: '',
             adresse: result.client.adresse || '',
             codePostal: result.client.codePostal || '',
             ville: result.client.ville || '',
