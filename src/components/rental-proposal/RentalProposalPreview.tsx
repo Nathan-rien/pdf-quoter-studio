@@ -773,7 +773,7 @@ export function RentalProposalPreview() {
             {/* Colonne gauche : Client */}
             <div>
               <div className="text-[9px] space-y-0.5">
-                <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+                <p className="font-semibold">{[clientData.prenom, clientData.nom].filter(Boolean).join(' ') || 'Nom du client'}</p>
                 <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
                 <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
                 {clientData.email && (
@@ -824,7 +824,7 @@ export function RentalProposalPreview() {
           
           <div className="bg-background rounded-lg p-4 shadow-sm max-w-xs mx-auto">
             <div className="text-left space-y-1 text-xs">
-              <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+              <p className="font-semibold">{[clientData.prenom, clientData.nom].filter(Boolean).join(' ') || 'Nom du client'}</p>
               <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
               <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
             </div>
