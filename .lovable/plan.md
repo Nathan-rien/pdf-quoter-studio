@@ -2,52 +2,69 @@
 
 ## Problème
 
-La duplication visible ("Camera medit I700 garantie 1 an. Camera medit I700 garantie 1 an.") se produit **à l'intérieur d'une même ligne**. Or la fonction `removeRepeatedSubstrings` en mode multi-ligne ne traite que les doublons de **groupes de lignes** — elle ne détecte pas les répétitions de mots au sein d'une seule ligne.
+Le parseur PDF tente de séparer prénom/nom via `splitClientName`, mais l'ordre dans les PDF Dental (et parfois Cybertek/GrosBill) est imprévisible — "Guédon Jonathan" vs "Jonathan Guédon". La séparation automatique échoue souvent.
 
-Le texte dupliqué arrive probablement concaténé dans un seul "part" (backward scan + forward scan capturent la même phrase), donc le dedup par parts (lignes 1670-1696) ne l'attrape pas non plus.
+## Solution : fusionner prénom+nom en un seul champ `nom`
 
-## Correction — `src/lib/pdf-import-parser.ts`
+### 1. Store — `src/stores/rentalProposalStore.ts`
 
-### Appliquer le dedup mot-par-mot sur chaque ligne individuellement
+- Supprimer le champ `prenom` de l'interface `ClientData`
+- Mettre à jour `initialClientData` (plus de `prenom`)
+- Dans `importFromPDF` : concaténer `result.client.prenom` + `result.client.nom` dans le seul champ `nom`
+- Partout où `[clientData.prenom, clientData.nom].filter(Boolean).join(' ')` est utilisé, remplacer par `clientData.nom`
 
-Dans `removeRepeatedSubstrings`, après le dedup de groupes de lignes, appliquer aussi le dedup mot-par-mot à chaque ligne individuelle :
+### 2. Parseur PDF — `src/lib/pdf-import-parser.ts`
 
+- Supprimer la fonction `splitClientName` (plus besoin de séparer)
+- Supprimer l'appel à `splitClientName` dans `parsePDFContent` (lignes 2038-2042)
+- Le champ `client.nom` du résultat contiendra le nom complet tel qu'extrait du PDF
+- Le champ `client.prenom` reste dans le type `PDFParseResult` mais sera toujours `null` (le store le fusionne)
+
+### 3. Formulaire — `src/components/rental-proposal/RentalDataEditor.tsx`
+
+- Remplacer les 2 champs "Prénom" + "Nom / Raison sociale" par :
+  - **"Prénom Nom"** (champ texte, largeur 1/2) — lié à `clientData.nom`
+  - **"Raison sociale"** (champ texte, largeur 1/4) — nouveau champ optionnel ou réutilisé
+- Garder le champ Email en 3ème colonne
+
+Réflexion : pour l'instant il n'y a pas de champ `raisonSociale` séparé dans le modèle. Deux options :
+- Option A : ajouter un champ `raisonSociale` au `ClientData` (propre, mais nécessite mise à jour store + preview + export)
+- Option B : garder un seul champ `nom` qui contient soit le nom de la personne soit la raison sociale (plus simple, moins de changements)
+
+Je recommande **Option A** — ajouter `raisonSociale` — car l'utilisateur demande explicitement 2 champs distincts.
+
+### 4. Détail Option A — ajout `raisonSociale`
+
+**Store** (`ClientData`) :
 ```typescript
-function removeRepeatedSubstrings(text: string): string {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  
-  // Helper: word-level dedup on a single line
-  function dedupLine(line: string): string {
-    const words = line.split(/\s+/);
-    if (words.length < 4) return line;
-    for (let halfLen = 2; halfLen <= Math.floor(words.length / 2); halfLen++) {
-      const first = words.slice(0, halfLen).join(' ');
-      const second = words.slice(halfLen, halfLen * 2).join(' ');
-      if (normalizeForDedup(first) === normalizeForDedup(second)) {
-        return words.slice(0, halfLen).concat(words.slice(halfLen * 2)).join(' ');
-      }
-    }
-    return line;
-  }
-
-  if (lines.length < 2) {
-    return dedupLine(text);
-  }
-
-  // Multi-line: detect repeated line-group prefix
-  for (let halfLen = 1; halfLen <= Math.floor(lines.length / 2); halfLen++) {
-    const firstHalf = lines.slice(0, halfLen).map(normalizeForDedup).join('|');
-    const secondHalf = lines.slice(halfLen, halfLen * 2).map(normalizeForDedup).join('|');
-    if (firstHalf === secondHalf) {
-      const kept = lines.slice(0, halfLen).concat(lines.slice(halfLen * 2));
-      return kept.map(dedupLine).join('\n');
-    }
-  }
-
-  // No line-group duplication, but still dedup within each line
-  return lines.map(dedupLine).join('\n');
+interface ClientData {
+  nom: string;           // "Prénom Nom" (ex: "Jonathan Guédon")
+  raisonSociale: string; // Raison sociale (ex: "CABINET DENTAIRE DU FALAISE")
+  adresse: string;
+  codePostal: string;
+  ville: string;
+  telephone: string;
+  email: string;
+  logoUrl: string;
 }
 ```
 
-Cela corrige le cas "Camera medit I700 garantie 1 an. Camera medit I700 garantie 1 an." en une seule occurrence, tout en conservant les retours à la ligne entre lignes distinctes.
+**Formulaire** (grille 3 colonnes) :
+- Col 1 : "Prénom Nom" → `clientData.nom`
+- Col 2 : "Raison sociale" → `clientData.raisonSociale`
+- Col 3 : "Email" → `clientData.email`
+
+**Parseur** : les raisons sociales détectées (CABINET, SAS…) iront dans `raisonSociale`, le nom de la personne dans `nom`.
+
+**Aperçu + Export** : afficher `raisonSociale` si renseigné (en gras au-dessus du nom), sinon seulement le nom.
+
+### 5. Fichiers impactés
+
+| Fichier | Modification |
+|---|---|
+| `src/stores/rentalProposalStore.ts` | Remplacer `prenom` par `raisonSociale`, fusionner dans `importFromPDF` |
+| `src/lib/pdf-import-parser.ts` | Supprimer `splitClientName`, ne plus séparer prénom/nom |
+| `src/components/rental-proposal/RentalDataEditor.tsx` | Champs "Prénom Nom" + "Raison sociale" |
+| `src/components/rental-proposal/RentalProposalPreview.tsx` | Afficher `raisonSociale` + `nom` |
+| `src/components/rental-proposal/RentalProposalExport.tsx` | Idem pour l'export HTML/PDF |
 
