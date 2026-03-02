@@ -1485,6 +1485,58 @@ function extractDentalProducts(items: TextItemWithCoords[]): PDFProductLine[] {
   return products;
 }
 
+// ========== DENTAL MULTI-LINE UTILITIES ==========
+
+/** Normalize text for fuzzy deduplication: lowercase, strip accents, collapse whitespace, remove punctuation */
+function normalizeForDedup(text: string): string {
+  return text
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+    .toLowerCase()
+    .replace(/[''""«»]/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Classify a line as dental "noise" (address, boilerplate, legal, metadata) */
+function isDentalNoiseLine(line: string): boolean {
+  // Address patterns
+  if (/^\d+\s+(rue|route|avenue|boulevard|place|chemin|cours|impasse|allée)/i.test(line)) return true;
+  if (/^\d{5}\s+[A-Z]/i.test(line)) return true;
+  if (/^France$/i.test(line)) return true;
+  if (/^(3D\s*DENTAL\s*STORE)/i.test(line)) return true;
+  // Legal / banking metadata
+  if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(line)) return true;
+  // HT/TTC column headers
+  if (/^(Montant|HT|TTC|Rem\.?%?|Prix\s*unitaire|Excl|Incl|Tax\b)/i.test(line)) return true;
+  // SAV / warranty / boilerplate
+  if (/^(Un ordinateur|Mises à jour|Merci de|Service support|MERCI DE|support@)/i.test(line)) return true;
+  if (/^(Le |La |Les |L'|Un |Une |Des |Ce |Cette |Cet |Équipement|Garantie|Validité)/i.test(line)) return true;
+  // Bullet / list items (spec details)
+  if (/^[-•]\s/.test(line)) return true;
+  // Page headers
+  if (/^Page\s+\d+/i.test(line)) return true;
+  // Postal code only line
+  if (/^\d{5}$/.test(line)) return true;
+  return false;
+}
+
+/** Remove repeated sub-string patterns in a designation (e.g. "Scanner Intra Oral Scanner Intra Oral ...") */
+function removeRepeatedSubstrings(text: string): string {
+  const words = text.split(/\s+/);
+  if (words.length < 4) return text;
+  // Try to detect a repeated prefix: split in half and compare
+  for (let halfLen = 2; halfLen <= Math.floor(words.length / 2); halfLen++) {
+    const firstHalf = words.slice(0, halfLen).join(' ');
+    const secondHalf = words.slice(halfLen, halfLen * 2).join(' ');
+    if (normalizeForDedup(firstHalf) === normalizeForDedup(secondHalf)) {
+      // Remove the duplicate prefix, keep remainder
+      return words.slice(0, halfLen).concat(words.slice(halfLen * 2)).join(' ');
+    }
+  }
+  return text;
+}
+
 // ========== DENTAL MULTI-LINE PRODUCT EXTRACTION ==========
 // Dental PDFs have multi-line descriptions that continue AFTER the main product line
 // until we hit a stop marker (Sous-total, new section, new product, footer)
@@ -1537,38 +1589,45 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       descriptionLine = descriptionLine.substring(refMatch[0].length).trim();
     }
     
-    // Collect multi-line description
-    // Scan backwards for title lines preceding this product
+    // === BACKWARD SCAN: collect title lines (bounded, skip noise) ===
     const titleLines: string[] = [];
+    const MAX_LOOKBACK = 6;
+    let usefulLookback = 0;
     for (let k = i - 1; k >= 0; k--) {
       const prevLine = lines[k];
       if (!prevLine || prevLine.length < 3) break;
       if (stopMarkers.test(prevLine)) break;
       if (productLinePattern.test(prevLine)) break;
       if (/^(Description|Quantit[eé]|Prix|Amount|Quantity|Unit\s*Price|Taxes|3D\s*DENTAL|Sous-total|Subtotal)/i.test(prevLine)) break;
-      // Skip column header fragments
-      if (/^(Montant|HT|TTC|Rem\.?%?|Prix\s*unitaire|Excl|Incl|Tax)/i.test(prevLine)) break;
+      
+      // Skip noise lines instead of breaking
+      if (isDentalNoiseLine(prevLine)) continue;
+      
       // Stop if line is mostly amounts (multiple euro values)
       const amountMatches = prevLine.match(euroAmountPattern);
       if (amountMatches && amountMatches.length > 1) break;
-      // Skip if this title is already contained in the main description line (dedup)
-      if (descriptionLine.toLowerCase().includes(prevLine.toLowerCase())) continue;
+      
+      // Dedup: skip if already contained in description (normalized)
+      if (normalizeForDedup(descriptionLine).includes(normalizeForDedup(prevLine))) continue;
+      
       titleLines.unshift(prevLine);
+      usefulLookback++;
+      if (usefulLookback >= MAX_LOOKBACK) break;
     }
 
-    // Deduplicate: if first title entry is substring of second, remove it
-    if (titleLines.length > 0 && descriptionLine.toLowerCase().includes(titleLines[titleLines.length - 1].toLowerCase())) {
+    // Deduplicate: if last title entry is substring of description, remove it
+    if (titleLines.length > 0 && normalizeForDedup(descriptionLine).includes(normalizeForDedup(titleLines[titleLines.length - 1]))) {
       titleLines.pop();
     }
     const descriptionParts = [...titleLines, descriptionLine];
     
-    // Scan following lines until stop marker (max 4 continuation lines)
+    // === FORWARD SCAN: max 4 continuation lines, strict stop ===
     let emptyLineCount = 0;
     let continuationCount = 0;
     for (let j = i + 1; j < lines.length; j++) {
       const nextLine = lines[j];
       
-      // Handle empty lines - allow a few but stop at consecutive empties
+      // Handle empty lines
       if (!nextLine || nextLine.length < 2) {
         emptyLineCount++;
         if (emptyLineCount >= 2) break;
@@ -1576,7 +1635,7 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       }
       emptyLineCount = 0;
       
-      // Cap forward scan at 4 lines max
+      // Cap forward scan
       continuationCount++;
       if (continuationCount > 4) break;
       
@@ -1585,39 +1644,70 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       if (productLinePattern.test(nextLine)) break;
       if (/^\[.*?\].*Unit[eé]?/i.test(nextLine)) break;
       
-      // Skip metadata/footer lines
-      if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(nextLine)) break;
+      // Stop on any noise line
+      if (isDentalNoiseLine(nextLine)) break;
       
       // Stop on boilerplate notes, warranty text, service details
       if (/^(Un ordinateur|Mises à jour|Merci de|Service support|MERCI DE|support@)/i.test(nextLine)) break;
-      // Stop on seller address block
-      if (/^(3D\s*DENTAL\s*STORE|75\s*route|76000|France$)/i.test(nextLine)) break;
-      // Stop on bullet point service details
-      if (/^•/.test(nextLine)) break;
-      // Stop on list items (spec details)
-      if (/^-\s/.test(nextLine)) break;
-      // Stop on address-like patterns (number + street keyword)
-      if (/^\d+\s+(rue|route|avenue|boulevard|place|chemin|cours|impasse|allée)/i.test(nextLine)) break;
-      // Stop on postal code lines
-      if (/^\d{5}\s+[A-Z]/.test(nextLine)) break;
-      // Stop on prose-like lines (notes, not product names)
-      if (/^(Le |La |Les |L'|Un |Une |Des |Ce |Cette |Cet |Équipement|Garantie|Validité)/i.test(nextLine)) break;
       
       // Add to description
       descriptionParts.push(nextLine);
     }
     
-    // Build final designation with reference prefix
-    let fullDescription = descriptionParts.join('\n').trim();
-    // Remove trailing address/boilerplate that slipped through
-    fullDescription = fullDescription
-      .replace(/\n?\d+\s+(rue|route|avenue|boulevard|place|chemin|cours|impasse|allée).*$/is, '')
-      .replace(/\n?\d{5}\s+[A-Z].*$/is, '')
-      .replace(/\n?France\s*$/i, '')
-      .trim();
+    // === LINE-LEVEL CLEANUP PIPELINE ===
+    const cleanedParts = descriptionParts
+      .filter(part => part && part.length >= 2)
+      .filter(part => !isDentalNoiseLine(part));
+    
+    // Normalized deduplication
+    const dedupedParts: string[] = [];
+    const seenNormalized = new Set<string>();
+    for (const part of cleanedParts) {
+      const norm = normalizeForDedup(part);
+      if (norm.length < 2) continue;
+      // Check if this normalized form is already seen or is a substring of an existing entry
+      let isDup = false;
+      for (const seen of seenNormalized) {
+        if (seen.includes(norm) || norm.includes(seen)) {
+          // Keep the longer one
+          if (norm.length > seen.length) {
+            seenNormalized.delete(seen);
+            // Remove the shorter from dedupedParts
+            const idx = dedupedParts.findIndex(p => normalizeForDedup(p) === seen);
+            if (idx >= 0) dedupedParts.splice(idx, 1);
+          } else {
+            isDup = true;
+          }
+          break;
+        }
+      }
+      if (!isDup) {
+        seenNormalized.add(norm);
+        dedupedParts.push(part);
+      }
+    }
+    
+    // Join and remove repeated substring patterns
+    let fullDescription = removeRepeatedSubstrings(dedupedParts.join(' ').replace(/\s+/g, ' ').trim());
+    
+    // === QUALITY GUARD: don't accept ref-only designations ===
+    if (!fullDescription || fullDescription.length < 3) {
+      // Try to recover from nearby collected parts
+      if (cleanedParts.length > 0) {
+        fullDescription = cleanedParts[0];
+      }
+    }
+    
     const designation = reference 
       ? `[${reference}] ${fullDescription}` 
       : fullDescription;
+    
+    // Final quality check: reject if designation is only the reference bracket
+    const designationContent = reference ? fullDescription : designation;
+    if (!designationContent || designationContent.length < 2) {
+      console.log('[Dental Parser] Skipping empty designation for ref:', reference);
+      continue;
+    }
     
     console.log('[Dental Parser] Product:', designation.substring(0, 80), '| Qty:', qty, '| HT:', totalHT);
     
