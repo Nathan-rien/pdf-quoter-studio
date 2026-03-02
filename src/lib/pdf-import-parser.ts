@@ -1521,31 +1521,38 @@ function isDentalNoiseLine(line: string): boolean {
  *  Works line-by-line to preserve original newlines.
  */
 function removeRepeatedSubstrings(text: string): string {
-  // Split into lines, dedup repeated line groups while preserving structure
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2) {
-    // Single-line fallback: word-level dedup (original behaviour)
-    const words = text.split(/\s+/);
-    if (words.length < 4) return text;
+
+  // Helper: word-level dedup on a single line
+  function dedupLine(line: string): string {
+    const words = line.split(/\s+/);
+    if (words.length < 4) return line;
     for (let halfLen = 2; halfLen <= Math.floor(words.length / 2); halfLen++) {
-      const firstHalf = words.slice(0, halfLen).join(' ');
-      const secondHalf = words.slice(halfLen, halfLen * 2).join(' ');
-      if (normalizeForDedup(firstHalf) === normalizeForDedup(secondHalf)) {
+      const first = words.slice(0, halfLen).join(' ');
+      const second = words.slice(halfLen, halfLen * 2).join(' ');
+      if (normalizeForDedup(first) === normalizeForDedup(second)) {
         return words.slice(0, halfLen).concat(words.slice(halfLen * 2)).join(' ');
       }
     }
-    return text;
+    return line;
   }
+
+  if (lines.length < 2) {
+    return dedupLine(text);
+  }
+
   // Multi-line: detect repeated line-group prefix
   for (let halfLen = 1; halfLen <= Math.floor(lines.length / 2); halfLen++) {
     const firstHalf = lines.slice(0, halfLen).map(normalizeForDedup).join('|');
     const secondHalf = lines.slice(halfLen, halfLen * 2).map(normalizeForDedup).join('|');
     if (firstHalf === secondHalf) {
-      // Remove duplicate block, keep remainder with newlines
-      return lines.slice(0, halfLen).concat(lines.slice(halfLen * 2)).join('\n');
+      const kept = lines.slice(0, halfLen).concat(lines.slice(halfLen * 2));
+      return kept.map(dedupLine).join('\n');
     }
   }
-  return lines.join('\n');
+
+  // No line-group duplication, but still dedup within each line
+  return lines.map(dedupLine).join('\n');
 }
 
 // ========== DENTAL MULTI-LINE PRODUCT EXTRACTION ==========
