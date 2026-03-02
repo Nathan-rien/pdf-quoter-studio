@@ -1,40 +1,46 @@
 
+Objectif: faire en sorte que les désignations Dental conservent réellement les retours à la ligne/espaces du PDF (et pas un bloc “aplati”).
 
-## Problème
+1) Constat précis (code actuel)
+- Le rendu UI est déjà prêt:
+  - `RentalDataEditor` utilise `AutoResizeTextarea` (les `\n` s’affichent),
+  - aperçu/export utilisent déjà `whitespace-pre-wrap`.
+- Le problème est côté parsing/normalisation texte, avec 3 points qui aplatissent encore:
+  - `extractDentalProducts` (fallback) fait encore `join(' ').replace(/\s+/g, ' ')`.
+  - `removeRepeatedSubstrings` découpe avec `split(/\s+/)` puis reconstruit avec espaces (perd les `\n` si déduplication déclenchée).
+  - `extractTextWithPdfJs` normalise chaque ligne avec `replace(/\s+/g, ' ')`, ce qui peut aussi écraser des sauts de ligne embarqués dans certains blocs PDF.
 
-Les parties de description des produits Dental sont jointes avec un **espace** (`dedupedParts.join(' ')`) au lieu d'un **retour à la ligne** (`\n`). Le texte apparaît donc en un seul bloc continu dans la colonne Désignation, alors que sur le PDF source chaque élément (nom produit, specs, garantie, notes) est sur une ligne séparée.
+2) Plan d’implémentation
+- A. Préserver les retours à la ligne dès l’extraction PDF (`src/lib/pdf-import-parser.ts`)
+  - Dans `extractTextWithPdfJs.flush()`, remplacer la normalisation globale `\s+` par une normalisation “espaces/tabs uniquement”.
+  - Conserver explicitement les `\n` présents dans les items texte.
+- B. Uniformiser la désignation Dental en multi-ligne partout
+  - Dans `extractDentalProducts`, passer la désignation en `join('\n')` (au lieu de `join(' ')`) pour cohérence avec le parser multi-ligne.
+- C. Corriger la déduplication sans casser le format
+  - Refactor `removeRepeatedSubstrings` pour dédupliquer sans reconstruire en “single line”.
+  - Approche: travailler par lignes (normalisation pour comparaison), conserver la chaîne originale avec ses `\n`.
+- D. Fallback lisibilité si le PDF fournit un bloc mono-ligne
+  - Ajouter une étape légère de “soft split” (phrases/puces connues Dental) uniquement quand une désignation est très longue et sans `\n`, afin de retrouver une structure proche du PDF sans toucher aux autres sources.
 
-## Correction — `src/lib/pdf-import-parser.ts`
+3) Validation (ciblée + non-régression)
+- Rejouer l’import du PDF Dental problématique et vérifier:
+  - `[i900M 3YW fidelite]` avec paragraphes visibles (pas un bloc unique),
+  - `[OP]` garde ses puces/retours à la ligne,
+  - `[SVIP-IO]` garde ses éléments sur lignes distinctes.
+- Vérifier aussi:
+  - affichage dans onglet Invest (édition),
+  - aperçu contrat (page investissements),
+  - export PDF final.
+- Non-régression:
+  - imports Dental EN/FR,
+  - Cybertek/Grosbill inchangés.
 
-### 1. Joindre avec `\n` au lieu de `' '`
-
-**Ligne 1685** — dans `parseDentalProductsWithMultilineDescriptions` :
-```typescript
-// AVANT
-let fullDescription = removeRepeatedSubstrings(dedupedParts.join(' ').replace(/\s+/g, ' ').trim());
-
-// APRÈS  
-let fullDescription = removeRepeatedSubstrings(dedupedParts.join('\n').trim());
+Section technique (détails)
+```text
+PDF text items
+  -> line assembly (preserve \n, normalize only spaces/tabs)
+  -> Dental multiline parser
+  -> line-level noise filter + dedup that keeps original line breaks
+  -> designation persisted with \n
+  -> Invest editor / Preview / Export render with pre-wrap
 ```
-
-Le `\n` préserve la structure en lignes séparées. On supprime le `.replace(/\s+/g, ' ')` global qui écrasait les retours à la ligne en espaces.
-
-### 2. Idem pour le parser Dental simple (ligne 1466)
-
-```typescript
-// AVANT
-const designation = descriptionParts.join(' ').replace(/\s+/g, ' ')...
-
-// APRÈS
-const designation = descriptionParts.join('\n')
-  .replace(/\d+[,.]?\d*\s*$/, '').trim();
-```
-
-### Affichage
-
-L'onglet Invest utilise `EditableTable` avec `type: 'text'` pour la colonne désignation. La cellule en mode lecture utilise déjà un `<textarea>` ou un `<span>` — il faudra s'assurer que le CSS `whitespace-pre-wrap` est appliqué sur les cellules texte de l'`EditableTable` pour que les `\n` soient rendus visuellement. L'aperçu PDF applique déjà `whitespace-pre-wrap` sur la colonne Désignation.
-
-### Résultat attendu
-
-Chaque bloc de description sera affiché avec des retours à la ligne, fidèle à la mise en forme du devis PDF source.
-
