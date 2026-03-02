@@ -1562,8 +1562,9 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
     }
     const descriptionParts = [...titleLines, descriptionLine];
     
-    // Scan following lines until stop marker
+    // Scan following lines until stop marker (max 4 continuation lines)
     let emptyLineCount = 0;
+    let continuationCount = 0;
     for (let j = i + 1; j < lines.length; j++) {
       const nextLine = lines[j];
       
@@ -1575,10 +1576,14 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       }
       emptyLineCount = 0;
       
+      // Cap forward scan at 4 lines max
+      continuationCount++;
+      if (continuationCount > 4) break;
+      
       // Stop conditions
       if (stopMarkers.test(nextLine)) break;
-      if (productLinePattern.test(nextLine)) break; // New product
-      if (/^\[.*?\].*Unit[eé]?/i.test(nextLine)) break; // New product with ref
+      if (productLinePattern.test(nextLine)) break;
+      if (/^\[.*?\].*Unit[eé]?/i.test(nextLine)) break;
       
       // Skip metadata/footer lines
       if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(nextLine)) break;
@@ -1589,13 +1594,27 @@ function parseDentalProductsWithMultilineDescriptions(text: string): PDFProductL
       if (/^(3D\s*DENTAL\s*STORE|75\s*route|76000|France$)/i.test(nextLine)) break;
       // Stop on bullet point service details
       if (/^•/.test(nextLine)) break;
+      // Stop on list items (spec details)
+      if (/^-\s/.test(nextLine)) break;
+      // Stop on address-like patterns (number + street keyword)
+      if (/^\d+\s+(rue|route|avenue|boulevard|place|chemin|cours|impasse|allée)/i.test(nextLine)) break;
+      // Stop on postal code lines
+      if (/^\d{5}\s+[A-Z]/.test(nextLine)) break;
+      // Stop on prose-like lines (notes, not product names)
+      if (/^(Le |La |Les |L'|Un |Une |Des |Ce |Cette |Cet |Équipement|Garantie|Validité)/i.test(nextLine)) break;
       
       // Add to description
       descriptionParts.push(nextLine);
     }
     
     // Build final designation with reference prefix
-    const fullDescription = descriptionParts.join('\n').trim();
+    let fullDescription = descriptionParts.join('\n').trim();
+    // Remove trailing address/boilerplate that slipped through
+    fullDescription = fullDescription
+      .replace(/\n?\d+\s+(rue|route|avenue|boulevard|place|chemin|cours|impasse|allée).*$/is, '')
+      .replace(/\n?\d{5}\s+[A-Z].*$/is, '')
+      .replace(/\n?France\s*$/i, '')
+      .trim();
     const designation = reference 
       ? `[${reference}] ${fullDescription}` 
       : fullDescription;
