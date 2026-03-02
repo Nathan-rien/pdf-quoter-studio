@@ -232,19 +232,21 @@ export function RentalDataEditor() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="client-prenom">Prénom</Label>
-                  <Input
-                    id="client-prenom"
-                    value={clientData.prenom}
-                    onChange={(e) => updateClientField('prenom', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="client-nom">Nom / Raison sociale</Label>
+                  <Label htmlFor="client-nom">Prénom Nom</Label>
                   <Input
                     id="client-nom"
                     value={clientData.nom}
                     onChange={(e) => updateClientField('nom', e.target.value)}
+                    placeholder="ex: Jonathan Guédon"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="client-raison-sociale">Raison sociale</Label>
+                  <Input
+                    id="client-raison-sociale"
+                    value={clientData.raisonSociale}
+                    onChange={(e) => updateClientField('raisonSociale', e.target.value)}
+                    placeholder="ex: CABINET DENTAIRE DU FALAISE"
                   />
                 </div>
                 <div className="space-y-2">
