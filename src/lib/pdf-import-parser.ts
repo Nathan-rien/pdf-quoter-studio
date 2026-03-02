@@ -1508,8 +1508,7 @@ function isDentalNoiseLine(line: string): boolean {
   if (/^(SASU|IBAN|BIC|TVA|TEL|Capital|SIRET|RCS|Code\s*APE)/i.test(line)) return true;
   // HT/TTC column headers
   if (/^(Montant|HT|TTC|Rem\.?%?|Prix\s*unitaire|Excl|Incl|Tax\b)/i.test(line)) return true;
-  // Seller email
-  if (/support@3ddentalstore/i.test(line)) return true;
+  // (support@3ddentalstore filter removed — part of product description)
   // Page headers
   if (/^Page\s+\d+/i.test(line)) return true;
   // Postal code only line
