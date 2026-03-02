@@ -12,6 +12,7 @@ export interface PDFProductLine {
 export interface PDFParseResult {
   source: 'cybertek' | 'grosbill' | 'dental' | 'unknown';
   client: {
+    prenom: string | null;
     nom: string | null;
     adresse: string | null;
     codePostal: string | null;
@@ -120,11 +121,31 @@ function parseNumber(value: string | null | undefined): number | null {
   return isNaN(num) ? null : Math.round(num * 100) / 100;
 }
 
+// Split a full name into prenom (first name) and nom (last name).
+// Company names (CABINET, SAS, SARL, etc.) stay entirely in nom with empty prenom.
+function splitClientName(fullName: string | null): { prenom: string | null; nom: string | null } {
+  if (!fullName) return { prenom: null, nom: null };
+  const trimmed = fullName.trim();
+  if (!trimmed) return { prenom: null, nom: null };
+  // Company patterns — keep everything in nom
+  if (/^(CABINET|SAS|SARL|SCI|EURL|SELARL|SCP|SCM|SA\b|CLINIQUE|CENTRE|GROUPE|DR\b|DOCTEUR)/i.test(trimmed)) {
+    return { prenom: null, nom: trimmed };
+  }
+  // All-uppercase multi-word (likely a company name)
+  if (/^[A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]+$/.test(trimmed) && trimmed.split(/\s+/).length > 2) {
+    return { prenom: null, nom: trimmed };
+  }
+  const parts = trimmed.split(/\s+/);
+  if (parts.length <= 1) return { prenom: null, nom: trimmed };
+  return { prenom: parts[0], nom: parts.slice(1).join(' ') };
+}
+
+
 function parseCybertekText(text: string): Partial<PDFParseResult> {
   const result: Partial<PDFParseResult> = {
     source: 'cybertek',
     lignes: [],
-    client: { nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
+    client: { prenom: null, nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
     devis: { reference: null, date: null, validite: null, numeroClient: null },
     commercial: { nom: null, email: null },
     location: { duree: null, loyerMensuel: null, montantTotal: null },
@@ -1139,7 +1160,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   const result: Partial<PDFParseResult> = {
     source: 'grosbill',
     lignes: [],
-    client: { nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
+    client: { prenom: null, nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
     devis: { reference: null, date: null, validite: null, numeroClient: null },
     commercial: { nom: null, email: null },
     location: { duree: null, loyerMensuel: null, montantTotal: null },
@@ -1585,7 +1606,7 @@ function parseDentalText(text: string, items?: TextItemWithCoords[]): Partial<PD
   const result: Partial<PDFParseResult> = {
     source: 'dental',
     lignes: [],
-    client: { nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
+    client: { prenom: null, nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
     devis: { reference: null, date: null, validite: null, numeroClient: null },
     commercial: { nom: null, email: null },
     location: { duree: null, loyerMensuel: null, montantTotal: null },
@@ -1832,7 +1853,7 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
   // Create base result
   const baseResult: PDFParseResult = {
     source,
-    client: { nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
+    client: { prenom: null, nom: null, adresse: null, codePostal: null, ville: null, telephone: null, email: null },
     devis: { reference: null, date: null, validite: null, numeroClient: null },
     commercial: { nom: null, email: null },
     lignes: [],
@@ -1859,6 +1880,13 @@ export async function parsePDF(file: File): Promise<PDFParseResult> {
     }
     
     console.log('PDF Parser - Parsed data:', parsedData);
+    
+    // Split client name into prenom/nom if not already done
+    if (parsedData.client && parsedData.client.nom && !parsedData.client.prenom) {
+      const { prenom, nom } = splitClientName(parsedData.client.nom);
+      parsedData.client.prenom = prenom;
+      parsedData.client.nom = nom;
+    }
     
     return {
       ...baseResult,

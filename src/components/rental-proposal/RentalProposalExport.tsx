@@ -84,7 +84,7 @@ export function RentalProposalExport() {
   };
 
   const generateFileName = () => {
-    const clientName = clientData.nom || 'Client';
+    const clientName = [clientData.prenom, clientData.nom].filter(Boolean).join(' ') || 'Client';
     const safeName = clientName.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '').replace(/\s+/g, '_');
     const date = new Date().toISOString().split('T')[0];
     return `Proposition_commerciale_${safeName}_${date}.pdf`;
@@ -100,7 +100,7 @@ export function RentalProposalExport() {
         return;
       }
       
-      const displayName = proposalName || `Proposition ${clientData.nom}` || 'Proposition Commerciale';
+      const displayName = proposalName || `Proposition ${[clientData.prenom, clientData.nom].filter(Boolean).join(' ')}` || 'Proposition Commerciale';
 
       // Récupérer les infos du commercial sélectionné
       const commercial = selectedCommercial;
@@ -126,7 +126,7 @@ export function RentalProposalExport() {
       await supabase.from('proposal_exports').insert({
         proposal_name: displayName,
         file_name: generateFileName(),
-        client_name: clientData.nom || null,
+        client_name: [clientData.prenom, clientData.nom].filter(Boolean).join(' ') || null,
         template_id: activeTemplate?.id || null,
         template_name: activeTemplate?.name || 'Template par défaut',
         status,
@@ -326,7 +326,7 @@ export function RentalProposalExport() {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div>
             <div style="font-size: 9px;">
-              <p style="font-weight: 600; margin: 0;">${clientData.nom || 'Nom du client'}</p>
+              <p style="font-weight: 600; margin: 0;">${[clientData.prenom, clientData.nom].filter(Boolean).join(' ') || 'Nom du client'}</p>
               <p style="color: #6b7280; margin: 2px 0;">${clientData.adresse || ''}</p>
               <p style="color: #6b7280; margin: 2px 0;">${clientData.codePostal} ${clientData.ville}</p>
               ${clientData.email ? `<p style="color: #6b7280; margin: 2px 0;">${clientData.email}</p>` : ''}
@@ -758,7 +758,7 @@ export function RentalProposalExport() {
           <div className="p-4 bg-muted/30 rounded-lg text-center">
             <User className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Client</p>
-            <p className="font-medium truncate">{clientData.nom || '-'}</p>
+            <p className="font-medium truncate">{[clientData.prenom, clientData.nom].filter(Boolean).join(' ') || '-'}</p>
           </div>
           <div className="p-4 bg-muted/30 rounded-lg text-center">
             <Package className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
