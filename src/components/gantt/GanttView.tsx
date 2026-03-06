@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useGanttData } from '@/hooks/useGanttData';
+import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { GanttSidebar } from './GanttSidebar';
 import { GanttTimeline } from './GanttTimeline';
 import { GanttFilters } from './GanttFilters';
@@ -14,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 
 export function GanttView() {
   const data = useGanttData();
+  const { commerciaux, getCommercialById } = useCommerciaux();
   const [zoom, setZoom] = useState<ZoomLevel>('week');
   const [viewStart, setViewStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
@@ -31,6 +33,12 @@ export function GanttView() {
   const [depDialog, setDepDialog] = useState(false);
 
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  const getOwnerName = (ownerId: string | null | undefined): string => {
+    if (!ownerId) return '';
+    const c = getCommercialById(ownerId);
+    return c ? c.nom : ownerId;
+  };
 
   const toggleProject = (id: string) => {
     setExpandedProjects(prev => {
@@ -57,10 +65,16 @@ export function GanttView() {
       if (filterProject && filterProject !== 'all' && p.id !== filterProject) return false;
       if (filterOwner && filterOwner !== 'all' && p.owner !== filterOwner) return false;
       if (filterStatus && filterStatus !== 'all' && p.status !== filterStatus) return false;
-      if (lowerSearch && !p.title.toLowerCase().includes(lowerSearch) && !p.owner?.toLowerCase().includes(lowerSearch)) {
-        const projectTasks = data.tasks.filter(t => t.project_id === p.id);
-        const anyTaskMatch = projectTasks.some(t => t.title.toLowerCase().includes(lowerSearch) || t.owner?.toLowerCase().includes(lowerSearch));
-        if (!anyTaskMatch) return false;
+      if (lowerSearch) {
+        const ownerName = getOwnerName(p.owner).toLowerCase();
+        if (!p.title.toLowerCase().includes(lowerSearch) && !ownerName.includes(lowerSearch)) {
+          const projectTasks = data.tasks.filter(t => t.project_id === p.id);
+          const anyTaskMatch = projectTasks.some(t => {
+            const taskOwnerName = getOwnerName(t.owner).toLowerCase();
+            return t.title.toLowerCase().includes(lowerSearch) || taskOwnerName.includes(lowerSearch);
+          });
+          if (!anyTaskMatch) return false;
+        }
       }
       return true;
     });
@@ -95,15 +109,7 @@ export function GanttView() {
       }
     }
     return result;
-  }, [data.projects, data.tasks, data.subtasks, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority]);
-
-  // All unique owners
-  const allOwners = useMemo(() => {
-    const owners = new Set<string>();
-    data.projects.forEach(p => p.owner && owners.add(p.owner));
-    data.tasks.forEach(t => t.owner && owners.add(t.owner));
-    return Array.from(owners).sort();
-  }, [data.projects, data.tasks]);
+  }, [data.projects, data.tasks, data.subtasks, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority, commerciaux]);
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
     if (dir === 'today') {
@@ -131,7 +137,7 @@ export function GanttView() {
         projects={data.projects}
         filterProject={filterProject}
         onFilterProjectChange={setFilterProject}
-        owners={allOwners}
+        commerciaux={commerciaux}
         filterOwner={filterOwner}
         onFilterOwnerChange={setFilterOwner}
         filterStatus={filterStatus}
@@ -159,6 +165,7 @@ export function GanttView() {
           onDeleteProject={data.deleteProject}
           onDeleteTask={data.deleteTask}
           onDeleteSubtask={data.deleteSubtask}
+          getOwnerName={getOwnerName}
         />
         <GanttTimeline
           ref={timelineRef}
@@ -172,6 +179,7 @@ export function GanttView() {
           }}
           dependencies={data.dependencies}
           tasks={data.tasks}
+          getOwnerName={getOwnerName}
         />
       </div>
 
@@ -179,6 +187,7 @@ export function GanttView() {
         open={projectDialog.open}
         onOpenChange={(open) => setProjectDialog({ open })}
         project={projectDialog.project}
+        commerciaux={commerciaux}
         onSave={async (d): Promise<boolean> => {
           const ok = projectDialog.project
             ? await data.updateProject(projectDialog.project.id, d)
@@ -193,6 +202,7 @@ export function GanttView() {
         task={taskDialog.task}
         projectId={taskDialog.projectId}
         projects={data.projects}
+        commerciaux={commerciaux}
         onSave={async (d): Promise<boolean> => {
           const ok = taskDialog.task
             ? await data.updateTask(taskDialog.task.id, d)

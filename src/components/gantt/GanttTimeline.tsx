@@ -1,5 +1,5 @@
-import { forwardRef, useMemo, useRef, useCallback } from 'react';
-import { differenceInDays, addDays, format, startOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval } from 'date-fns';
+import { forwardRef, useMemo, useCallback } from 'react';
+import { differenceInDays, addDays, format, endOfMonth, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { GanttBar } from './GanttBar';
@@ -13,46 +13,76 @@ interface Props {
   onUpdateDates: (type: 'project' | 'task' | 'subtask', id: string, start: string, end: string) => void;
   dependencies: GanttDependency[];
   tasks: GanttTask[];
+  getOwnerName?: (id: string | null | undefined) => string;
 }
 
 const ROW_HEIGHT = 40;
+const END_DATE = new Date(2026, 11, 31);
 
 const getColWidth = (zoom: ZoomLevel) => {
   switch (zoom) {
-    case 'day': return 40;
-    case 'week': return 120;
-    case 'month': return 200;
+    case 'day': return 32;
+    case 'week': return 100;
+    case 'month': return 180;
   }
 };
 
-const getVisibleRange = (zoom: ZoomLevel, viewStart: Date): { start: Date; end: Date; columns: Date[] } => {
+const getVisibleRange = (zoom: ZoomLevel, viewStart: Date): { columns: Date[]; workDays?: Date[] } => {
+  const end = END_DATE;
   if (zoom === 'day') {
-    const days = eachDayOfInterval({ start: viewStart, end: addDays(viewStart, 30) });
-    return { start: days[0], end: days[days.length - 1], columns: days };
+    const allDays = eachDayOfInterval({ start: viewStart, end });
+    const workDays = allDays.filter(d => !isWeekend(d));
+    return { columns: workDays, workDays };
   }
   if (zoom === 'week') {
-    const weeks = eachWeekOfInterval({ start: viewStart, end: addDays(viewStart, 120) }, { weekStartsOn: 1 });
-    return { start: weeks[0], end: addDays(weeks[weeks.length - 1], 6), columns: weeks };
+    const weeks = eachWeekOfInterval({ start: viewStart, end }, { weekStartsOn: 1 });
+    return { columns: weeks };
   }
-  const months = eachMonthOfInterval({ start: viewStart, end: addDays(viewStart, 365) });
-  return { start: months[0], end: endOfMonth(months[months.length - 1]), columns: months };
+  const months = eachMonthOfInterval({ start: viewStart, end });
+  return { columns: months };
 };
 
-export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, viewStart, onUpdateDates, dependencies, tasks }, ref) => {
+export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, viewStart, onUpdateDates, dependencies, tasks, getOwnerName }, ref) => {
   const colWidth = getColWidth(zoom);
-  const { start: rangeStart, end: rangeEnd, columns } = useMemo(() => getVisibleRange(zoom, viewStart), [zoom, viewStart]);
-  const totalDays = differenceInDays(rangeEnd, rangeStart) + 1;
-  const totalWidth = zoom === 'day' ? columns.length * colWidth : zoom === 'week' ? columns.length * colWidth : columns.length * colWidth;
+  const { columns, workDays } = useMemo(() => getVisibleRange(zoom, viewStart), [zoom, viewStart]);
+  const totalWidth = columns.length * colWidth;
 
+  // For day view: map based on workday index; for week/month: map based on calendar days
   const dayToX = useCallback((date: Date) => {
+    if (zoom === 'day' && workDays) {
+      // Find the closest workday index
+      const t = date.getTime();
+      let closest = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < workDays.length; i++) {
+        const diff = Math.abs(workDays[i].getTime() - t);
+        if (diff < minDiff) { minDiff = diff; closest = i; }
+      }
+      return closest * colWidth;
+    }
+    const rangeStart = columns[0];
+    const rangeEnd = columns[columns.length - 1];
+    const totalDays = zoom === 'week'
+      ? differenceInDays(addDays(rangeEnd, 6), rangeStart) + 1
+      : differenceInDays(endOfMonth(rangeEnd), rangeStart) + 1;
     const days = differenceInDays(date, rangeStart);
     return (days / totalDays) * totalWidth;
-  }, [rangeStart, totalDays, totalWidth]);
+  }, [columns, workDays, zoom, colWidth, totalWidth]);
 
   const xToDate = useCallback((x: number) => {
+    if (zoom === 'day' && workDays) {
+      const idx = Math.round(x / colWidth);
+      const clampedIdx = Math.max(0, Math.min(idx, workDays.length - 1));
+      return workDays[clampedIdx];
+    }
+    const rangeStart = columns[0];
+    const rangeEnd = columns[columns.length - 1];
+    const totalDays = zoom === 'week'
+      ? differenceInDays(addDays(rangeEnd, 6), rangeStart) + 1
+      : differenceInDays(endOfMonth(rangeEnd), rangeStart) + 1;
     const days = Math.round((x / totalWidth) * totalDays);
     return addDays(rangeStart, days);
-  }, [rangeStart, totalDays, totalWidth]);
+  }, [columns, workDays, zoom, colWidth, totalWidth]);
 
   // Header labels
   const headerLabels = useMemo(() => {
@@ -104,7 +134,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
       <div style={{ width: totalWidth, minWidth: '100%' }}>
         {/* Month header */}
         {monthHeaders.length > 0 && (
-          <div className="h-6 border-b border-border flex bg-muted/30 sticky top-0 z-10">
+          <div className="h-6 border-b border-border flex bg-muted/30 sticky top-0 z-10" style={{ width: totalWidth }}>
             {monthHeaders.map((m, i) => (
               <div key={i} className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center justify-center border-r border-border/50" style={{ width: m.width, left: m.x, position: 'absolute' }}>
                 {m.label}
@@ -113,7 +143,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
           </div>
         )}
         {/* Column header */}
-        <div className={cn('border-b border-border flex sticky z-10 bg-card', monthHeaders.length > 0 ? 'top-6' : 'top-0')} style={{ height: monthHeaders.length > 0 ? 28 : 40 }}>
+        <div className={cn('border-b border-border flex sticky z-10 bg-card', monthHeaders.length > 0 ? 'top-6' : 'top-0')} style={{ height: monthHeaders.length > 0 ? 28 : 40, width: totalWidth }}>
           {headerLabels.map((h, i) => (
             <div key={i} className="flex flex-col items-center justify-center border-r border-border/30 flex-shrink-0" style={{ width: h.width }}>
               <span className="text-[11px] font-medium">{h.label}</span>
@@ -156,6 +186,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
                 width={Math.max(w, 8)}
                 y={i * ROW_HEIGHT}
                 height={ROW_HEIGHT}
+                getOwnerName={getOwnerName}
                 onDragEnd={(newX) => {
                   const newStart = xToDate(newX);
                   const duration = differenceInDays(endDate, startDate);
