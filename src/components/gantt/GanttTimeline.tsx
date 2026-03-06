@@ -16,14 +16,14 @@ interface Props {
   getOwnerName?: (id: string | null | undefined) => string;
 }
 
-const ROW_HEIGHT = 40;
+const ROW_HEIGHT = 48;
 const END_DATE = new Date(2026, 11, 31);
 
 const getColWidth = (zoom: ZoomLevel) => {
   switch (zoom) {
-    case 'day': return 32;
-    case 'week': return 18;
-    case 'month': return 8;
+    case 'day': return 40;
+    case 'week': return 24;
+    case 'month': return 12;
   }
 };
 
@@ -129,11 +129,11 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
     <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
       <div style={{ width: totalWidth, minWidth: '100%' }}>
         {/* Header Level 1 — Months */}
-        <div className="h-7 border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth }}>
+        <div className="h-8 border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth }}>
           {monthGroups.map((m, i) => (
             <div
               key={i}
-              className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center justify-center border-r border-border/50 truncate"
+              className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center justify-center border-r border-border/50 truncate"
               style={{ width: m.width, left: m.x, position: 'absolute' }}
             >
               {m.width > 60 ? m.label : ''}
@@ -142,12 +142,12 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
         </div>
 
         {/* Header Level 2 — Weeks */}
-        <div className="h-6 border-b border-border flex sticky top-7 z-20" style={{ width: totalWidth }}>
+        <div className="h-7 border-b border-border flex sticky top-8 z-20" style={{ width: totalWidth }}>
           {weekGroups.map((w, i) => (
             <div
               key={i}
               className={cn(
-                'text-[10px] font-medium flex items-center justify-center border-r border-border/40 truncate',
+                'text-[11px] font-medium flex items-center justify-center border-r border-border/40 truncate',
                 w.isCurrent ? 'bg-destructive/15 text-destructive font-bold' : 'bg-card text-muted-foreground'
               )}
               style={{ width: w.width, left: w.x, position: 'absolute' }}
@@ -158,7 +158,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
         </div>
 
         {/* Header Level 3 — Days */}
-        <div className={cn('border-b border-border flex sticky z-20', 'top-[52px]')} style={{ height: showDayLabels ? 22 : 10, width: totalWidth }}>
+        <div className={cn('border-b border-border flex sticky z-20', 'top-[60px]')} style={{ height: showDayLabels ? 24 : 12, width: totalWidth }}>
           {workDays.map((d, i) => (
             <div
               key={i}
@@ -166,7 +166,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
               style={{ width: colWidth }}
             >
               {showDayLabels && (
-                <span className="text-[8px] text-muted-foreground truncate">
+                <span className="text-[9px] text-muted-foreground truncate">
                   {format(d, 'd', { locale: fr })}
                 </span>
               )}

@@ -83,7 +83,7 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, get
     window.addEventListener('mouseup', handleMouseUp);
   }, [x, width, onDragEnd, onResizeEnd]);
 
-  const barHeight = row.type === 'project' ? 20 : row.type === 'task' ? 16 : 12;
+  const barHeight = row.type === 'project' ? 26 : row.type === 'task' ? 22 : 16;
   const barY = (height - barHeight) / 2;
   const ownerName = getOwnerName?.(row.owner) || '';
 
@@ -104,11 +104,11 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, get
           >
             {/* Resize handles */}
             <div
-              className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-l-sm"
+              className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-l-sm"
               onMouseDown={(e) => handleMouseDown(e, 'resize-left')}
             />
             <div
-              className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-r-sm"
+              className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-r-sm"
               onMouseDown={(e) => handleMouseDown(e, 'resize-right')}
             />
             {/* Done check */}
@@ -119,7 +119,7 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, get
             )}
             {/* Label on bar */}
             {width > 60 && barHeight >= 16 && (
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white font-medium truncate" style={{ maxWidth: width - 24 }}>
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-white font-medium truncate" style={{ maxWidth: width - 24 }}>
                 {row.title}
               </span>
             )}
