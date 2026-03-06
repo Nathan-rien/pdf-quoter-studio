@@ -12,7 +12,6 @@ interface Props {
 const zoomOptions: { value: ZoomLevel; label: string }[] = [
   { value: 'day', label: 'Jour' },
   { value: 'week', label: 'Semaine' },
-  { value: 'month', label: 'Mois' },
 ];
 
 export function GanttNavigation({ zoom, onZoomChange, onNavigate }: Props) {
