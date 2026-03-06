@@ -102,7 +102,7 @@ export default function Index() {
         )}
         <div className={cn(
           "mx-auto",
-          currentView === 'template-editor' ? "max-w-full" : "max-w-7xl"
+          (currentView === 'template-editor' || currentView === 'gantt') ? "max-w-full" : "max-w-7xl"
         )}>
           {renderContent()}
         </div>
