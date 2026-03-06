@@ -10,10 +10,11 @@ import {
   LogOut,
   BarChart3,
   UserCircle,
+  GanttChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -113,6 +114,14 @@ export function AppSidebar({
             {/* Admin-only: Statistics + Access Management */}
             {isAdmin && (
               <>
+                <Button
+                  variant={currentView === 'gantt' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('gantt')}
+                >
+                  <GanttChart className="h-3.5 w-3.5" />
+                  Planning Gantt
+                </Button>
                 <Button
                   variant={currentView === 'statistics' ? 'secondary' : 'ghost'}
                   className="w-full justify-start gap-2 h-8 text-sm"

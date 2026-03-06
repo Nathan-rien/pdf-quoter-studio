@@ -32,6 +32,163 @@ export type Database = {
         }
         Relationships: []
       }
+      gantt_dependencies: {
+        Row: {
+          dependency_type: Database["public"]["Enums"]["gantt_dependency_type"]
+          id: string
+          source_task_id: string
+          target_task_id: string
+        }
+        Insert: {
+          dependency_type?: Database["public"]["Enums"]["gantt_dependency_type"]
+          id?: string
+          source_task_id: string
+          target_task_id: string
+        }
+        Update: {
+          dependency_type?: Database["public"]["Enums"]["gantt_dependency_type"]
+          id?: string
+          source_task_id?: string
+          target_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gantt_dependencies_source_task_id_fkey"
+            columns: ["source_task_id"]
+            isOneToOne: false
+            referencedRelation: "gantt_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gantt_dependencies_target_task_id_fkey"
+            columns: ["target_task_id"]
+            isOneToOne: false
+            referencedRelation: "gantt_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gantt_projects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          owner: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["gantt_status"]
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          owner?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["gantt_status"]
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          owner?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["gantt_status"]
+          title?: string
+        }
+        Relationships: []
+      }
+      gantt_subtasks: {
+        Row: {
+          end_date: string
+          id: string
+          sort_order: number
+          start_date: string
+          status: Database["public"]["Enums"]["gantt_status"]
+          task_id: string
+          title: string
+        }
+        Insert: {
+          end_date: string
+          id?: string
+          sort_order?: number
+          start_date: string
+          status?: Database["public"]["Enums"]["gantt_status"]
+          task_id: string
+          title: string
+        }
+        Update: {
+          end_date?: string
+          id?: string
+          sort_order?: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["gantt_status"]
+          task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gantt_subtasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "gantt_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gantt_tasks: {
+        Row: {
+          description: string | null
+          end_date: string
+          id: string
+          owner: string | null
+          priority: Database["public"]["Enums"]["gantt_priority"]
+          project_id: string
+          sort_order: number
+          start_date: string
+          status: Database["public"]["Enums"]["gantt_status"]
+          title: string
+        }
+        Insert: {
+          description?: string | null
+          end_date: string
+          id?: string
+          owner?: string | null
+          priority?: Database["public"]["Enums"]["gantt_priority"]
+          project_id: string
+          sort_order?: number
+          start_date: string
+          status?: Database["public"]["Enums"]["gantt_status"]
+          title: string
+        }
+        Update: {
+          description?: string | null
+          end_date?: string
+          id?: string
+          owner?: string | null
+          priority?: Database["public"]["Enums"]["gantt_priority"]
+          project_id?: string
+          sort_order?: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["gantt_status"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gantt_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "gantt_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       options_services: {
         Row: {
           created_at: string
@@ -291,6 +448,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "commercial"
+      gantt_dependency_type: "finish_to_start" | "start_to_start"
+      gantt_priority: "low" | "medium" | "high" | "critical"
+      gantt_status: "not_started" | "in_progress" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -419,6 +579,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "commercial"],
+      gantt_dependency_type: ["finish_to_start", "start_to_start"],
+      gantt_priority: ["low", "medium", "high", "critical"],
+      gantt_status: ["not_started", "in_progress", "done"],
     },
   },
 } as const

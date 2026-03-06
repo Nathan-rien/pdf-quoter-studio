@@ -1,0 +1,90 @@
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Plus, Search, Link2 } from 'lucide-react';
+import { STATUS_LABELS, PRIORITY_LABELS } from '@/types/gantt';
+import type { GanttProject, GanttStatus, GanttPriority } from '@/types/gantt';
+
+interface Props {
+  search: string;
+  onSearchChange: (v: string) => void;
+  projects: GanttProject[];
+  filterProject: string;
+  onFilterProjectChange: (v: string) => void;
+  owners: string[];
+  filterOwner: string;
+  onFilterOwnerChange: (v: string) => void;
+  filterStatus: string;
+  onFilterStatusChange: (v: string) => void;
+  filterPriority: string;
+  onFilterPriorityChange: (v: string) => void;
+  onCreateProject: () => void;
+  onCreateDependency: () => void;
+}
+
+export function GanttFilters({
+  search, onSearchChange,
+  projects, filterProject, onFilterProjectChange,
+  owners, filterOwner, onFilterOwnerChange,
+  filterStatus, onFilterStatusChange,
+  filterPriority, onFilterPriorityChange,
+  onCreateProject, onCreateDependency,
+}: Props) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative flex-1 min-w-48">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Rechercher projet, tâche, responsable..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-9 h-9"
+        />
+      </div>
+
+      <Select value={filterProject} onValueChange={onFilterProjectChange}>
+        <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Projet" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tous les projets</SelectItem>
+          {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+        </SelectContent>
+      </Select>
+
+      <Select value={filterOwner} onValueChange={onFilterOwnerChange}>
+        <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Responsable" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tous</SelectItem>
+          {owners.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+        </SelectContent>
+      </Select>
+
+      <Select value={filterStatus} onValueChange={onFilterStatusChange}>
+        <SelectTrigger className="w-32 h-9"><SelectValue placeholder="Statut" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tous</SelectItem>
+          {(Object.entries(STATUS_LABELS) as [GanttStatus, string][]).map(([k, v]) => (
+            <SelectItem key={k} value={k}>{v}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filterPriority} onValueChange={onFilterPriorityChange}>
+        <SelectTrigger className="w-32 h-9"><SelectValue placeholder="Priorité" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Toutes</SelectItem>
+          {(Object.entries(PRIORITY_LABELS) as [GanttPriority, string][]).map(([k, v]) => (
+            <SelectItem key={k} value={k}>{v}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Button onClick={onCreateProject} size="sm" className="gap-1.5">
+        <Plus className="h-4 w-4" /> Créer un projet
+      </Button>
+
+      <Button onClick={onCreateDependency} variant="outline" size="sm" className="gap-1.5">
+        <Link2 className="h-4 w-4" /> Dépendance
+      </Button>
+    </div>
+  );
+}

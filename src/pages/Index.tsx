@@ -13,6 +13,7 @@ import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { MesInfosView } from "@/components/commercial/MesInfosView";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
+import { GanttView } from "@/components/gantt/GanttView";
 import { cn } from "@/lib/utils";
 
 export default function Index() {
@@ -64,6 +65,8 @@ export default function Index() {
         return <AccessManagement />;
       case 'statistics':
         return <StatisticsDashboard onNavigateToHistory={handleNavigateToHistory} />;
+      case 'gantt':
+        return <GanttView />;
       case 'mes-infos':
         return <MesInfosView />;
       default:
@@ -99,7 +102,7 @@ export default function Index() {
         )}
         <div className={cn(
           "mx-auto",
-          currentView === 'template-editor' ? "max-w-full" : "max-w-7xl"
+          (currentView === 'template-editor' || currentView === 'gantt') ? "max-w-full" : "max-w-7xl"
         )}>
           {renderContent()}
         </div>
