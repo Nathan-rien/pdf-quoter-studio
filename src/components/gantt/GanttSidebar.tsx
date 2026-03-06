@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { ChevronRight, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { STATUS_LABELS, PRIORITY_LABELS } from '@/types/gantt';
+import { STATUS_LABELS } from '@/types/gantt';
 import type { GanttRow } from '@/types/gantt';
 import { Badge } from '@/components/ui/badge';
 
@@ -19,6 +19,7 @@ interface GanttSidebarProps {
   onDeleteProject: (id: string) => void;
   onDeleteTask: (id: string) => void;
   onDeleteSubtask: (id: string) => void;
+  getOwnerName: (id: string | null | undefined) => string;
 }
 
 const ROW_HEIGHT = 40;
@@ -37,6 +38,7 @@ export function GanttSidebar({
   onEditProject, onEditTask, onEditSubtask,
   onAddTask, onAddSubtask,
   onDeleteProject, onDeleteTask, onDeleteSubtask,
+  getOwnerName,
 }: GanttSidebarProps) {
   return (
     <div className="w-72 min-w-72 border-r border-border flex-shrink-0 overflow-y-auto">
@@ -48,69 +50,77 @@ export function GanttSidebar({
           Aucun projet. Créez-en un pour commencer.
         </div>
       )}
-      {rows.map((row) => (
-        <div
-          key={`${row.type}-${row.id}`}
-          className={cn(
-            'flex items-center gap-1 px-2 border-b border-border/50 group hover:bg-accent/50 transition-colors',
-            row.type === 'project' && 'bg-muted/30 font-medium',
-          )}
-          style={{ height: ROW_HEIGHT, paddingLeft: 8 + row.depth * 20 }}
-        >
-          {/* Expand toggle */}
-          {(row.type === 'project' || row.type === 'task') ? (
-            <button
-              className="p-0.5 rounded hover:bg-accent"
-              onClick={() => row.type === 'project' ? onToggleProject(row.id) : onToggleTask(row.id)}
-            >
-              {(row.type === 'project' ? expandedProjects.has(row.id) : expandedTasks.has(row.id))
-                ? <ChevronDown className="h-3.5 w-3.5" />
-                : <ChevronRight className="h-3.5 w-3.5" />
-              }
-            </button>
-          ) : <span className="w-5" />}
-
-          {/* Color dot */}
-          <span className={cn(
-            'w-2 h-2 rounded-full flex-shrink-0',
-            row.type === 'project' ? 'bg-blue-500' : row.type === 'task' ? 'bg-violet-500' : 'bg-amber-500'
-          )} />
-
-          <span className="text-sm truncate flex-1">{row.title}</span>
-
-          <Badge variant="outline" className={cn('text-[10px] px-1 py-0 h-4 hidden group-hover:flex', statusColor(row.status))}>
-            {STATUS_LABELS[row.status]}
-          </Badge>
-
-          {/* Actions */}
-          <div className="hidden group-hover:flex items-center gap-0.5">
-            {row.type === 'project' && (
-              <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddTask(row.id)}>
-                <Plus className="h-3 w-3" />
-              </Button>
+      {rows.map((row) => {
+        const ownerName = getOwnerName(row.owner);
+        return (
+          <div
+            key={`${row.type}-${row.id}`}
+            className={cn(
+              'flex items-center gap-1 px-2 border-b border-border/50 group hover:bg-accent/50 transition-colors',
+              row.type === 'project' && 'bg-muted/30 font-medium',
             )}
-            {row.type === 'task' && (
-              <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddSubtask(row.id)}>
-                <Plus className="h-3 w-3" />
+            style={{ height: ROW_HEIGHT, paddingLeft: 8 + row.depth * 20 }}
+          >
+            {/* Expand toggle */}
+            {(row.type === 'project' || row.type === 'task') ? (
+              <button
+                className="p-0.5 rounded hover:bg-accent"
+                onClick={() => row.type === 'project' ? onToggleProject(row.id) : onToggleTask(row.id)}
+              >
+                {(row.type === 'project' ? expandedProjects.has(row.id) : expandedTasks.has(row.id))
+                  ? <ChevronDown className="h-3.5 w-3.5" />
+                  : <ChevronRight className="h-3.5 w-3.5" />
+                }
+              </button>
+            ) : <span className="w-5" />}
+
+            {/* Color dot */}
+            <span className={cn(
+              'w-2 h-2 rounded-full flex-shrink-0',
+              row.type === 'project' ? 'bg-blue-500' : row.type === 'task' ? 'bg-violet-500' : 'bg-amber-500'
+            )} />
+
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="text-sm truncate">{row.title}</span>
+              {ownerName && (
+                <span className="text-[10px] text-muted-foreground truncate">{ownerName}</span>
+              )}
+            </div>
+
+            <Badge variant="outline" className={cn('text-[10px] px-1 py-0 h-4 hidden group-hover:flex', statusColor(row.status))}>
+              {STATUS_LABELS[row.status]}
+            </Badge>
+
+            {/* Actions */}
+            <div className="hidden group-hover:flex items-center gap-0.5">
+              {row.type === 'project' && (
+                <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddTask(row.id)}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              )}
+              {row.type === 'task' && (
+                <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddSubtask(row.id)}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              )}
+              <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => {
+                if (row.type === 'project') onEditProject(row.id);
+                else if (row.type === 'task') onEditTask(row.id);
+                else onEditSubtask(row.id);
+              }}>
+                <Pencil className="h-3 w-3" />
               </Button>
-            )}
-            <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => {
-              if (row.type === 'project') onEditProject(row.id);
-              else if (row.type === 'task') onEditTask(row.id);
-              else onEditSubtask(row.id);
-            }}>
-              <Pencil className="h-3 w-3" />
-            </Button>
-            <Button variant="ghost" size="iconSm" className="h-5 w-5 text-destructive" onClick={() => {
-              if (row.type === 'project') onDeleteProject(row.id);
-              else if (row.type === 'task') onDeleteTask(row.id);
-              else onDeleteSubtask(row.id);
-            }}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
+              <Button variant="ghost" size="iconSm" className="h-5 w-5 text-destructive" onClick={() => {
+                if (row.type === 'project') onDeleteProject(row.id);
+                else if (row.type === 'task') onDeleteTask(row.id);
+                else onDeleteSubtask(row.id);
+              }}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -13,6 +13,7 @@ interface Props {
   height: number;
   onDragEnd: (newX: number) => void;
   onResizeEnd: (newX: number, newWidth: number) => void;
+  getOwnerName?: (id: string | null | undefined) => string;
 }
 
 const barColors = {
@@ -21,7 +22,7 @@ const barColors = {
   subtask: { base: 'bg-amber-500', done: 'bg-amber-600', notStarted: 'bg-amber-400' },
 };
 
-export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd }: Props) {
+export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, getOwnerName }: Props) {
   const barRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'left' | 'right' | false>(false);
@@ -84,6 +85,7 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd }: P
 
   const barHeight = row.type === 'project' ? 20 : row.type === 'task' ? 16 : 12;
   const barY = (height - barHeight) / 2;
+  const ownerName = getOwnerName?.(row.owner) || '';
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -126,7 +128,7 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd }: P
         <TooltipContent side="top" className="text-xs">
           <p className="font-medium">{row.title}</p>
           <p className="text-muted-foreground">{row.start_date} → {row.end_date}</p>
-          <p>{STATUS_LABELS[row.status]}{row.owner ? ` • ${row.owner}` : ''}</p>
+          <p>{STATUS_LABELS[row.status]}{ownerName ? ` • ${ownerName}` : ''}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

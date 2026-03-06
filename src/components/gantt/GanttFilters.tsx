@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Search, Link2 } from 'lucide-react';
 import { STATUS_LABELS, PRIORITY_LABELS } from '@/types/gantt';
 import type { GanttProject, GanttStatus, GanttPriority } from '@/types/gantt';
+import type { Commercial } from '@/data/commerciaux';
 
 interface Props {
   search: string;
@@ -11,7 +12,7 @@ interface Props {
   projects: GanttProject[];
   filterProject: string;
   onFilterProjectChange: (v: string) => void;
-  owners: string[];
+  commerciaux: Commercial[];
   filterOwner: string;
   onFilterOwnerChange: (v: string) => void;
   filterStatus: string;
@@ -25,7 +26,7 @@ interface Props {
 export function GanttFilters({
   search, onSearchChange,
   projects, filterProject, onFilterProjectChange,
-  owners, filterOwner, onFilterOwnerChange,
+  commerciaux, filterOwner, onFilterOwnerChange,
   filterStatus, onFilterStatusChange,
   filterPriority, onFilterPriorityChange,
   onCreateProject, onCreateDependency,
@@ -51,10 +52,10 @@ export function GanttFilters({
       </Select>
 
       <Select value={filterOwner} onValueChange={onFilterOwnerChange}>
-        <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Responsable" /></SelectTrigger>
+        <SelectTrigger className="w-44 h-9"><SelectValue placeholder="Responsable" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tous</SelectItem>
-          {owners.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          {commerciaux.map(c => <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>)}
         </SelectContent>
       </Select>
 

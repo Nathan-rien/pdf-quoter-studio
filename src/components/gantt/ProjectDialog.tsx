@@ -7,16 +7,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { STATUS_LABELS } from '@/types/gantt';
 import type { GanttProject, GanttStatus } from '@/types/gantt';
+import type { Commercial } from '@/data/commerciaux';
 import { format } from 'date-fns';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: GanttProject;
+  commerciaux: Commercial[];
   onSave: (data: Partial<GanttProject>) => Promise<boolean>;
 }
 
-export function ProjectDialog({ open, onOpenChange, project, onSave }: Props) {
+export function ProjectDialog({ open, onOpenChange, project, commerciaux, onSave }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -56,7 +58,16 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: Props) {
             <div><Label>Date début *</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required /></div>
             <div><Label>Date fin *</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required /></div>
           </div>
-          <div><Label>Responsable</Label><Input value={owner} onChange={e => setOwner(e.target.value)} /></div>
+          <div>
+            <Label>Responsable</Label>
+            <Select value={owner} onValueChange={setOwner}>
+              <SelectTrigger><SelectValue placeholder="Sélectionner un responsable" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun</SelectItem>
+                {commerciaux.map(c => <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           {project && (
             <div>
               <Label>Statut</Label>

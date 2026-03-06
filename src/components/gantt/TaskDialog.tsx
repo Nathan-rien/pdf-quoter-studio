@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { STATUS_LABELS, PRIORITY_LABELS } from '@/types/gantt';
 import type { GanttTask, GanttProject, GanttStatus, GanttPriority } from '@/types/gantt';
+import type { Commercial } from '@/data/commerciaux';
 import { format } from 'date-fns';
 
 interface Props {
@@ -15,10 +16,11 @@ interface Props {
   task?: GanttTask;
   projectId?: string;
   projects: GanttProject[];
+  commerciaux: Commercial[];
   onSave: (data: Partial<GanttTask>) => Promise<boolean>;
 }
 
-export function TaskDialog({ open, onOpenChange, task, projectId, projects, onSave }: Props) {
+export function TaskDialog({ open, onOpenChange, task, projectId, projects, commerciaux, onSave }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
@@ -85,7 +87,16 @@ export function TaskDialog({ open, onOpenChange, task, projectId, projects, onSa
               </Select>
             </div>
           </div>
-          <div><Label>Responsable</Label><Input value={owner} onChange={e => setOwner(e.target.value)} /></div>
+          <div>
+            <Label>Responsable</Label>
+            <Select value={owner} onValueChange={setOwner}>
+              <SelectTrigger><SelectValue placeholder="Sélectionner un responsable" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun</SelectItem>
+                {commerciaux.map(c => <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
             <Button type="submit" disabled={saving || !title || !selectedProject || !startDate || !endDate}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
