@@ -180,11 +180,12 @@ export function GanttView() {
         open={projectDialog.open}
         onOpenChange={(open) => setProjectDialog({ open })}
         project={projectDialog.project}
-        onSave={async (d) => {
+        onSave={async (d): Promise<boolean> => {
           const ok = projectDialog.project
             ? await data.updateProject(projectDialog.project.id, d)
             : await data.createProject(d as any);
           if (ok) setProjectDialog({ open: false });
+          return !!ok;
         }}
       />
       <TaskDialog
@@ -193,11 +194,12 @@ export function GanttView() {
         task={taskDialog.task}
         projectId={taskDialog.projectId}
         projects={data.projects}
-        onSave={async (d) => {
+        onSave={async (d): Promise<boolean> => {
           const ok = taskDialog.task
             ? await data.updateTask(taskDialog.task.id, d)
             : await data.createTask(d as any);
           if (ok) setTaskDialog({ open: false });
+          return !!ok;
         }}
       />
       <SubtaskDialog
@@ -205,11 +207,12 @@ export function GanttView() {
         onOpenChange={(open) => setSubtaskDialog({ open })}
         subtask={subtaskDialog.subtask}
         taskId={subtaskDialog.taskId}
-        onSave={async (d) => {
+        onSave={async (d): Promise<boolean> => {
           const ok = subtaskDialog.subtask
             ? await data.updateSubtask(subtaskDialog.subtask.id, d)
             : await data.createSubtask(d as any);
           if (ok) setSubtaskDialog({ open: false });
+          return !!ok;
         }}
       />
       <DependencyDialog
@@ -217,9 +220,10 @@ export function GanttView() {
         onOpenChange={setDepDialog}
         tasks={data.tasks}
         projects={data.projects}
-        onSave={async (d) => {
+        onSave={async (d): Promise<boolean> => {
           const ok = await data.createDependency(d);
           if (ok) setDepDialog(false);
+          return !!ok;
         }}
       />
     </div>
