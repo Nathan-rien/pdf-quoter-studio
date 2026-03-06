@@ -123,7 +123,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   const todayX = dayToX(new Date());
   const showToday = todayX >= 0 && todayX <= totalWidth;
 
-  const showDayLabels = zoom === 'day';
+  const showDayLabels = zoom === 'day' || zoom === 'week';
 
   return (
     <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
