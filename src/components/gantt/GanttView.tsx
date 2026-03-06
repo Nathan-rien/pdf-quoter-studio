@@ -54,11 +54,10 @@ export function GanttView() {
     const lowerSearch = search.toLowerCase();
 
     const filteredProjects = data.projects.filter(p => {
-      if (filterProject && p.id !== filterProject) return false;
-      if (filterOwner && p.owner !== filterOwner) return false;
-      if (filterStatus && p.status !== filterStatus) return false;
+      if (filterProject && filterProject !== 'all' && p.id !== filterProject) return false;
+      if (filterOwner && filterOwner !== 'all' && p.owner !== filterOwner) return false;
+      if (filterStatus && filterStatus !== 'all' && p.status !== filterStatus) return false;
       if (lowerSearch && !p.title.toLowerCase().includes(lowerSearch) && !p.owner?.toLowerCase().includes(lowerSearch)) {
-        // Check if any task matches
         const projectTasks = data.tasks.filter(t => t.project_id === p.id);
         const anyTaskMatch = projectTasks.some(t => t.title.toLowerCase().includes(lowerSearch) || t.owner?.toLowerCase().includes(lowerSearch));
         if (!anyTaskMatch) return false;
@@ -73,9 +72,9 @@ export function GanttView() {
         const projectTasks = data.tasks
           .filter(t => {
             if (t.project_id !== project.id) return false;
-            if (filterPriority && t.priority !== filterPriority) return false;
-            if (filterOwner && t.owner !== filterOwner) return false;
-            if (filterStatus && t.status !== filterStatus) return false;
+            if (filterPriority && filterPriority !== 'all' && t.priority !== filterPriority) return false;
+            if (filterOwner && filterOwner !== 'all' && t.owner !== filterOwner) return false;
+            if (filterStatus && filterStatus !== 'all' && t.status !== filterStatus) return false;
             return true;
           })
           .sort((a, b) => a.sort_order - b.sort_order);
