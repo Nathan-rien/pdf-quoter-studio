@@ -25,7 +25,7 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
 
 // Export canvas is shorter than preview (820px vs 919px) — scale pagination thresholds
 const EXPORT_HEIGHT_RATIO = (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) / CANVAS_SCALE.height; // ≈ 0.892
@@ -394,6 +394,12 @@ export function RentalProposalExport() {
     const investChunksLocal: number[] = (() => {
       const totalLines = lignesData.length;
       const singlePageThreshold = EXPORT_LINES_PAGE1 - footerLinesLocal;
+
+      // Cas 0 : données > 50% → footer sur page dédiée
+      const exportThreshold = Math.floor(EXPORT_LINES_PAGE1 / 2);
+      if (totalLines > exportThreshold && totalLines <= EXPORT_LINES_PAGE1) {
+        return [totalLines, 0];
+      }
 
       if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
       if (totalLines <= EXPORT_LINES_PAGE1) {

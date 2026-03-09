@@ -36,7 +36,7 @@ import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders, computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -196,6 +196,11 @@ export function RentalProposalPreview() {
   const investChunks = (() => {
     const totalLines = lignesData.length;
     const singlePageThreshold = INVEST_LINES_PAGE1 - footerLines;
+
+    // Cas 0 : données > 50% de la page → footer sur page dédiée même si ça tiendrait
+    if (totalLines > INVEST_SINGLE_PAGE_FOOTER_THRESHOLD && totalLines <= INVEST_LINES_PAGE1) {
+      return [totalLines, 0];
+    }
 
     // Cas 1 : tout tient sur une seule page (données + footer)
     if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
