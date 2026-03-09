@@ -395,6 +395,12 @@ export function RentalProposalExport() {
       const totalLines = lignesData.length;
       const singlePageThreshold = EXPORT_LINES_PAGE1 - footerLinesLocal;
 
+      // Cas 0 : données > 50% → footer sur page dédiée
+      const exportThreshold = Math.floor(EXPORT_LINES_PAGE1 / 2);
+      if (totalLines > exportThreshold && totalLines <= EXPORT_LINES_PAGE1) {
+        return [totalLines, 0];
+      }
+
       if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
       if (totalLines <= EXPORT_LINES_PAGE1) {
         return [totalLines, 0];

@@ -197,6 +197,11 @@ export function RentalProposalPreview() {
     const totalLines = lignesData.length;
     const singlePageThreshold = INVEST_LINES_PAGE1 - footerLines;
 
+    // Cas 0 : données > 50% de la page → footer sur page dédiée même si ça tiendrait
+    if (totalLines > INVEST_SINGLE_PAGE_FOOTER_THRESHOLD && totalLines <= INVEST_LINES_PAGE1) {
+      return [totalLines, 0];
+    }
+
     // Cas 1 : tout tient sur une seule page (données + footer)
     if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
 

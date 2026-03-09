@@ -52,7 +52,7 @@ export function computeFooterLines(proposalCount: number): number {
 
 // Seuil en single-page : au-delà de ce nombre de lignes,
 // le footer (Votre offre + Avantages + Conditions) est déporté sur une page dédiée
-export const INVEST_SINGLE_PAGE_FOOTER_THRESHOLD = 6;
+export const INVEST_SINGLE_PAGE_FOOTER_THRESHOLD = Math.floor(INVEST_LINES_PAGE1 / 2); // 11
 
 // Pagination des services/options (Page 5)
 // Chaque bloc = 1 service inclus, 1 option, ou 1 titre "Nos options"
