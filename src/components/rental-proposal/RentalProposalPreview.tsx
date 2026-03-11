@@ -1114,11 +1114,20 @@ export function RentalProposalPreview() {
                 {elementsBelow.map((el, idx) => renderFlowElement(el, idx))}
               </div>
             )}
-            {matriceData.commentaire && (
-              <div className="mt-2 whitespace-pre-wrap" style={{ fontSize: `${Math.max(28 * PREVIEW_FONT_SCALE, 8)}px`, lineHeight: 1.4, color: '#1f2937', fontFamily: 'Outfit, sans-serif' }}>
-                {matriceData.commentaire}
-              </div>
-            )}
+            {matriceData.commentaire && (() => {
+              // Extraire le style du premier élément flow non-bold (texte courant Avantages/Conditions)
+              const refEl = elementsBelow.find(el => el.type === 'text' && !(el.content as any)?.bold);
+              const refContent = refEl ? (refEl.content as TextContent) : null;
+              const refFontDef = refContent ? ALLOWED_FONTS.find(f => f.name === refContent.fontFamily) : null;
+              const commentFontFamily = refFontDef?.value || 'Outfit, sans-serif';
+              const commentFontSize = refContent ? Math.max(refContent.fontSize * PREVIEW_FONT_SCALE, 8) : Math.max(28 * PREVIEW_FONT_SCALE, 8);
+              const commentColor = refContent?.color || '#1f2937';
+              return (
+                <div className="mt-2 whitespace-pre-wrap" style={{ fontSize: `${commentFontSize}px`, lineHeight: 1.4, color: commentColor, fontFamily: commentFontFamily }}>
+                  {matriceData.commentaire}
+                </div>
+              );
+            })()}
           </>
         )}
       </div>
