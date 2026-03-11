@@ -591,38 +591,122 @@ export function RentalDataEditor() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Avertissement coefficient manquant */}
+              {!calculatedValues.coefficient && (
+                <div className="mb-3 flex items-start gap-2 p-3 bg-warning/10 border border-warning/30 rounded-lg text-xs text-warning-foreground">
+                  <span>⚠️</span>
+                  <span>Le coefficient n'est pas disponible (partenaire / durée / montant non renseigné). Le calcul croisé entre "Au total" et "Au mois" est désactivé.</span>
+                </div>
+              )}
               <div className="space-y-3">
                 {optionsServices.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">Aucune option additionnelle</p>
                 ) : (
-                  optionsServices.map((opt) => (
-                    <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                      <Switch checked={opt.selected} onCheckedChange={() => toggleOptionService(opt.id)} className="mt-2" />
-                      <Input
-                        placeholder="Nom"
-                        value={opt.name}
-                        onChange={(e) => updateOptionService(opt.id, { name: e.target.value })}
-                        className="w-40"
-                      />
-                      <AutoResizeTextarea
-                        placeholder="Description"
-                        value={opt.description}
-                        onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
-                        className="flex-1 text-sm"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Prix"
-                        value={opt.price ?? ''}
-                        onChange={(e) => updateOptionService(opt.id, { price: e.target.value ? parseFloat(e.target.value) : null })}
-                        className="w-24"
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)} className="mt-1">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))
+                  optionsServices.map((opt) => {
+                    const coefficient = calculatedValues.coefficient;
+
+                    const handlePriceMois = (moisValue: number | null) => {
+                      if (moisValue === null) {
+                        updateOptionService(opt.id, { price: null });
+                        return;
+                      }
+                      const total = coefficient ? Math.round(moisValue * 100 / coefficient * 100) / 100 : null;
+                      updateOptionService(opt.id, { price: moisValue, ...(total !== null ? { priceTotal: total } : {}) });
+                    };
+
+                    const handlePriceTotal = (totalValue: number | null) => {
+                      if (totalValue === null) {
+                        updateOptionService(opt.id, { priceTotal: null });
+                        return;
+                      }
+                      const mois = coefficient ? Math.round(totalValue * coefficient / 100 * 100) / 100 : null;
+                      updateOptionService(opt.id, { priceTotal: totalValue, ...(mois !== null ? { price: mois } : {}) });
+                    };
+
+                    const showPriceMode = opt.showPriceMode ?? 'mensuel';
+
+                    return (
+                      <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                        <Switch checked={opt.selected} onCheckedChange={() => toggleOptionService(opt.id)} className="mt-2" />
+                        <Input
+                          placeholder="Nom"
+                          value={opt.name}
+                          onChange={(e) => updateOptionService(opt.id, { name: e.target.value })}
+                          className="w-36"
+                        />
+                        <AutoResizeTextarea
+                          placeholder="Description"
+                          value={opt.description}
+                          onChange={(e) => updateOptionService(opt.id, { description: e.target.value })}
+                          className="flex-1 text-sm"
+                        />
+                        {/* Champs de prix + toggle */}
+                        <div className="flex flex-col gap-1.5 min-w-[170px]">
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Au total"
+                              value={opt.priceTotal ?? ''}
+                              onChange={(e) => handlePriceTotal(e.target.value ? parseFloat(e.target.value) : null)}
+                              className="w-24 text-sm h-8"
+                            />
+                            <span className="text-xs text-muted-foreground">€</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Au mois"
+                              value={opt.price ?? ''}
+                              onChange={(e) => handlePriceMois(e.target.value ? parseFloat(e.target.value) : null)}
+                              className="w-24 text-sm h-8"
+                            />
+                            <span className="text-xs text-muted-foreground">€/mois</span>
+                          </div>
+                          {/* Toggle affichage */}
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="text-[10px] text-muted-foreground">Afficher :</span>
+                            <button
+                              type="button"
+                              onClick={() => updateOptionService(opt.id, { showPriceMode: 'mensuel' })}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${showPriceMode === 'mensuel' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                            >
+                              /mois
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateOptionService(opt.id, { showPriceMode: 'total' })}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${showPriceMode === 'total' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                            >
+                              total
+                            </button>
+                          </div>
+                          {/* Toggle scope */}
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="text-[10px] text-muted-foreground">Scope :</span>
+                            <button
+                              type="button"
+                              onClick={() => updateOptionService(opt.id, { pricingScope: 'par_machine' })}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${(opt.pricingScope ?? 'par_machine') === 'par_machine' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                            >
+                              /machine
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateOptionService(opt.id, { pricingScope: 'pour_le_parc' })}
+                              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${opt.pricingScope === 'pour_le_parc' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                            >
+                              /parc
+                            </button>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)} className="mt-1">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </CardContent>
