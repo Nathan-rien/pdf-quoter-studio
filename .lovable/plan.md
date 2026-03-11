@@ -1,23 +1,25 @@
 
 
-## Problème identifié
+## Plan : Harmoniser le style du commentaire avec Avantages/Conditions
 
-La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
+Le commentaire utilise actuellement des valeurs hardcodées (`28 * PREVIEW_FONT_SCALE`, `Outfit`), tandis que les textes Avantages/Conditions héritent du style de chaque élément du template (police, taille, couleur). Pour garantir une cohérence visuelle, le commentaire doit adopter le style du texte courant (non-bold) des éléments flow.
 
-```typescript
-if (/support@3ddentalstore/i.test(line)) return true;
-```
+### Approche
 
-Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
-> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
+Extraire la police, taille et couleur du premier élément flow non-bold (texte courant des Avantages/Conditions), et appliquer ces mêmes valeurs au commentaire. Si aucun élément flow n'existe, conserver les valeurs actuelles comme fallback.
 
-Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
+### Modifications
 
-## Correction
+**`src/components/rental-proposal/RentalProposalPreview.tsx`** (ligne ~1117-1120) :
+- Avant le rendu du commentaire, chercher le premier élément non-bold dans `elementsBelow` pour en extraire `fontSize`, `fontFamily`, `color`
+- Appliquer ces valeurs au `<div>` du commentaire au lieu des valeurs hardcodées
 
-**Fichier** : `src/lib/pdf-import-parser.ts`
+**`src/components/rental-proposal/RentalProposalExport.tsx`** (ligne ~515) :
+- Même logique : extraire le style du premier flow element non-bold
+- Appliquer `font-size`, `font-family` et `color` au HTML du commentaire au lieu de `14px` / `Outfit` hardcodés
 
-Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
+**`src/lib/pdf-html-generator.ts`** : Aucune modification nécessaire.
 
-Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
+### Résultat
+Le commentaire Matrice aura exactement la même police, taille et couleur que le texte courant de la section Avantages/Conditions, quel que soit le template utilisé.
 
