@@ -470,6 +470,9 @@ export function RentalProposalExport() {
     // Éléments en flux relatif (sous la zone dynamique)
     let page4FlowElementIds: string[] = [];
     let flowElementsHTML = '';
+    let commentFont = 'Outfit';
+    let commentSize = '14px';
+    let commentColor = '#1f2937';
     
     if (latestVersion) {
       const page4 = latestVersion.pages.find(p => p.pageNumber === 4);
@@ -484,6 +487,15 @@ export function RentalProposalExport() {
           .sort((a, b) => a.position.y - b.position.y);
         
         page4FlowElementIds = elementsBelow.map(el => el.id);
+        
+        // Extraire le style du premier élément non-bold pour le commentaire
+        const refEl = elementsBelow.find(el => el.type === 'text' && !(el.content as any)?.bold);
+        if (refEl) {
+          const rc = refEl.content as any;
+          commentFont = rc.fontFamily || 'Outfit';
+          commentSize = `${Math.round(rc.fontSize / 2)}px`;
+          commentColor = rc.color || '#1f2937';
+        }
         
         if (elementsBelow.length > 0) {
           flowElementsHTML = `<div style="margin-top: 16px;">${elementsBelow.map((el, idx) => renderFlowTextElementToHTML(el, idx)).join('')}</div>`;
@@ -512,7 +524,7 @@ export function RentalProposalExport() {
         </div>
       ` : ''}
       ${flowElementsHTML}
-      ${matriceData.commentaire ? `<div style="margin-top: 8px; font-size: 14px; font-family: Outfit, sans-serif; white-space: pre-wrap; line-height: 1.4;">${matriceData.commentaire.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+      ${matriceData.commentaire ? `<div style="margin-top: 8px; font-size: ${commentSize}; font-family: ${commentFont}, sans-serif; color: ${commentColor}; white-space: pre-wrap; line-height: 1.4;">${matriceData.commentaire.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
     `;
 
     // Chunk 0 : page 4 du template
