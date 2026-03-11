@@ -524,14 +524,7 @@ export function RentalProposalExport() {
         </div>
       ` : ''}
       ${flowElementsHTML}
-      ${matriceData.commentaire ? (() => {
-        const refEl = elementsBelow.find(el => el.type === 'text' && !(el.content as any)?.bold);
-        const refContent = refEl ? (refEl.content as any) : null;
-        const cFont = refContent?.fontFamily || 'Outfit';
-        const cSize = refContent ? `${Math.round(refContent.fontSize / 2)}px` : '14px';
-        const cColor = refContent?.color || '#1f2937';
-        return `<div style="margin-top: 8px; font-size: ${cSize}; font-family: ${cFont}, sans-serif; color: ${cColor}; white-space: pre-wrap; line-height: 1.4;">${matriceData.commentaire.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
-      })() : ''}
+      ${matriceData.commentaire ? `<div style="margin-top: 8px; font-size: ${commentSize}; font-family: ${commentFont}, sans-serif; color: ${commentColor}; white-space: pre-wrap; line-height: 1.4;">${matriceData.commentaire.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
     `;
 
     // Chunk 0 : page 4 du template
