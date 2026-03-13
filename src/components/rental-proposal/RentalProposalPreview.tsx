@@ -194,7 +194,7 @@ export function RentalProposalPreview() {
   const footerLines = computeFooterLines(allProposalsForPagination.length);
 
   const investChunks = (() => {
-    const totalLines = lignesData.length;
+    const totalLines = estimateVisualLines(lignesData);
     const singlePageThreshold = INVEST_LINES_PAGE1 - footerLines;
 
     // Cas 0 : données > 50% de la page → footer sur page dédiée même si ça tiendrait

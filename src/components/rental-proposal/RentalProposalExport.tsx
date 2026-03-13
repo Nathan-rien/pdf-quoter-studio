@@ -392,7 +392,7 @@ export function RentalProposalExport() {
     // Découper les lignes en chunks avec logique de footer overflow dynamique
     const footerLinesLocal = computeFooterLines(getAllProposalsCalculations().length);
     const investChunksLocal: number[] = (() => {
-      const totalLines = lignesData.length;
+      const totalLines = estimateVisualLines(lignesData);
       const singlePageThreshold = EXPORT_LINES_PAGE1 - footerLinesLocal;
 
       // Cas 0 : données > 50% → footer sur page dédiée

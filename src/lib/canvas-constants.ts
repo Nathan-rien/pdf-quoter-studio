@@ -60,5 +60,23 @@ export const INVEST_SINGLE_PAGE_FOOTER_THRESHOLD = Math.floor(INVEST_LINES_PAGE1
 export const SERVICES_ITEMS_PAGE1 = 8;       // blocs max sur page 1 (avec titre + Services location)
 export const SERVICES_ITEMS_CONTINUATION = 12; // blocs max sur pages de continuation
 
+// Caractères par ligne visuelle dans la colonne Désignation (~60% de largeur)
+const CHARS_PER_VISUAL_LINE = 45;
+
+// Estime le nombre de lignes visuelles qu'occupe une liste de produits
+export function estimateVisualLines(
+  lignes: Array<{ designation?: string | null; isSeparator?: boolean }>
+): number {
+  return lignes.reduce((total, ligne) => {
+    if (ligne.isSeparator) return total + 1;
+    const text = ligne.designation || '';
+    const explicitLines = text.split('\n');
+    const visualLines = explicitLines.reduce((sum, line) => {
+      return sum + Math.max(1, Math.ceil(line.length / CHARS_PER_VISUAL_LINE));
+    }, 0);
+    return total + Math.max(1, visualLines);
+  }, 0);
+}
+
 // Largeur maximale d'affichage du canvas (identique Éditeur/Aperçu)
 export const CANVAS_DISPLAY_MAX_WIDTH = 580;
