@@ -25,7 +25,7 @@ import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION, estimateVisualLines } from '@/lib/canvas-constants';
+import { DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_SCALE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION, estimateVisualLines, chunkLinesByVisualHeight } from '@/lib/canvas-constants';
 
 // Export canvas is shorter than preview (820px vs 919px) — scale pagination thresholds
 const EXPORT_HEIGHT_RATIO = (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) / CANVAS_SCALE.height; // ≈ 0.892
