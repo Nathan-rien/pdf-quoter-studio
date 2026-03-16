@@ -167,7 +167,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
               className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center justify-center border-r border-border/50 truncate"
               style={{ width: m.width, left: m.x, position: 'absolute' }}
             >
-              {m.width > 60 ? m.label : m.width > 30 ? m.label.substring(0, 3) : ''}
+              {m.width > 40 ? m.label : m.width > 20 ? m.label.substring(0, 3) : ''}
             </div>
           ))}
         </div>
