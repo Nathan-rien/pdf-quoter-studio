@@ -10,7 +10,7 @@ import { TaskDialog } from './TaskDialog';
 import { SubtaskDialog } from './SubtaskDialog';
 import { DependencyDialog } from './DependencyDialog';
 import type { GanttRow, ZoomLevel } from '@/types/gantt';
-import { addDays, addWeeks, addMonths, startOfWeek, startOfMonth, subDays, subWeeks, subMonths } from 'date-fns';
+import { addDays, addWeeks, addMonths, startOfWeek, startOfMonth, startOfYear, subDays, subWeeks, subMonths } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
 export function GanttView() {
