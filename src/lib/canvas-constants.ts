@@ -63,19 +63,75 @@ export const SERVICES_ITEMS_CONTINUATION = 12; // blocs max sur pages de continu
 // Caractères par ligne visuelle dans la colonne Désignation (~60% de largeur)
 const CHARS_PER_VISUAL_LINE = 60;
 
+// Hauteur visuelle d'une seule ligne de produit
+function singleLineVisualHeight(ligne: { designation?: string | null; isSeparator?: boolean }): number {
+  if (ligne.isSeparator) return 1;
+  const text = ligne.designation || '';
+  const explicit = text.split('\n');
+  return Math.max(1, explicit.reduce((s, l) => s + Math.max(1, Math.ceil(l.length / CHARS_PER_VISUAL_LINE)), 0));
+}
+
 // Estime le nombre de lignes visuelles qu'occupe une liste de produits
 export function estimateVisualLines(
   lignes: Array<{ designation?: string | null; isSeparator?: boolean }>
 ): number {
-  return lignes.reduce((total, ligne) => {
-    if (ligne.isSeparator) return total + 1;
-    const text = ligne.designation || '';
-    const explicitLines = text.split('\n');
-    const visualLines = explicitLines.reduce((sum, line) => {
-      return sum + Math.max(1, Math.ceil(line.length / CHARS_PER_VISUAL_LINE));
-    }, 0);
-    return total + Math.max(1, visualLines);
-  }, 0);
+  return lignes.reduce((total, ligne) => total + singleLineVisualHeight(ligne), 0);
+}
+
+/**
+ * Découpe les lignes en chunks contenant le **nombre de lignes réelles** (pas visuelles)
+ * qui tiennent sur chaque page, en accumulant la hauteur visuelle estimée.
+ * 
+ * Retourne un tableau de nombres : chaque élément = nombre de lignes réelles pour cette page.
+ * Un élément à 0 signifie "page dédiée au footer uniquement".
+ */
+export function chunkLinesByVisualHeight(
+  lignes: Array<{ designation?: string | null; isSeparator?: boolean }>,
+  page1Capacity: number,
+  continuationCapacity: number,
+  footerLines: number
+): number[] {
+  if (lignes.length === 0) return [0];
+
+  const heights = lignes.map(singleLineVisualHeight);
+  const totalVisual = heights.reduce((a, b) => a + b, 0);
+
+  // Cas 1 : tout tient sur une page avec le footer
+  if (totalVisual + footerLines <= page1Capacity) return [lignes.length];
+
+  // Cas 2 : données tiennent sur page 1 mais pas le footer → page footer dédiée
+  if (totalVisual <= page1Capacity) return [lignes.length, 0];
+
+  // Cas 3 : multi-page — assigner les lignes réelles par accumulation de hauteur
+  const chunks: number[] = [];
+  let currentCapacity = page1Capacity;
+  let accumulated = 0;
+  let rowCount = 0;
+
+  for (let i = 0; i < lignes.length; i++) {
+    if (accumulated + heights[i] > currentCapacity && rowCount > 0) {
+      chunks.push(rowCount);
+      rowCount = 0;
+      accumulated = 0;
+      currentCapacity = continuationCapacity;
+    }
+    accumulated += heights[i];
+    rowCount++;
+  }
+  if (rowCount > 0) chunks.push(rowCount);
+
+  // Vérifier si le footer tient dans le dernier chunk
+  const lastChunkRows = chunks[chunks.length - 1];
+  const lastChunkVisual = heights
+    .slice(lignes.length - lastChunkRows)
+    .reduce((a, b) => a + b, 0);
+
+  const lastCap = chunks.length === 1 ? page1Capacity : continuationCapacity;
+  if (lastChunkVisual + footerLines > lastCap) {
+    chunks.push(0); // page footer dédiée
+  }
+
+  return chunks;
 }
 
 // Largeur maximale d'affichage du canvas (identique Éditeur/Aperçu)

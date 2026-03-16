@@ -391,44 +391,9 @@ export function RentalProposalExport() {
     
     // Découper les lignes en chunks avec logique de footer overflow dynamique
     const footerLinesLocal = computeFooterLines(getAllProposalsCalculations().length);
-    const investChunksLocal: number[] = (() => {
-      const totalLines = estimateVisualLines(lignesData);
-      const singlePageThreshold = EXPORT_LINES_PAGE1 - footerLinesLocal;
-
-      // Cas 1 : tout tient sur une seule page (données + footer)
-      if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
-      if (totalLines <= EXPORT_LINES_PAGE1) {
-        return [totalLines, 0];
-      }
-
-      const lastChunkMax = Math.max(0, EXPORT_LINES_CONTINUATION - footerLinesLocal);
-      const chunks = [EXPORT_LINES_PAGE1];
-      let remaining = totalLines - EXPORT_LINES_PAGE1;
-
-      if (lastChunkMax > 0) {
-        while (remaining > lastChunkMax) {
-          const take = Math.min(remaining, EXPORT_LINES_CONTINUATION);
-          if (remaining <= EXPORT_LINES_CONTINUATION) {
-            chunks.push(remaining);
-            remaining = 0;
-            chunks.push(0);
-            break;
-          }
-          chunks.push(take);
-          remaining -= take;
-        }
-        if (remaining > 0) {
-          chunks.push(remaining);
-        }
-      } else {
-        while (remaining > 0) {
-          chunks.push(Math.min(remaining, EXPORT_LINES_CONTINUATION));
-          remaining -= EXPORT_LINES_CONTINUATION;
-        }
-        chunks.push(0);
-      }
-      return chunks;
-    })();
+    const investChunksLocal = chunkLinesByVisualHeight(
+      lignesData, EXPORT_LINES_PAGE1, EXPORT_LINES_CONTINUATION, footerLinesLocal
+    );
     
     const chunk0Lines = lignesData.slice(0, investChunksLocal[0]);
     const investChunkCount = investChunksLocal.length;
