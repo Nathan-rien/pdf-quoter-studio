@@ -44,6 +44,27 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   const currentISOWeek = getISOWeek(now);
   const currentISOWeekYear = getISOWeekYear(now);
 
+  // Group days by year
+  const yearGroups = useMemo(() => {
+    const groups: { label: string; x: number; width: number }[] = [];
+    let currentYear = -1;
+    let startIdx = 0;
+    workDays.forEach((d, i) => {
+      const y = getYear(d);
+      if (y !== currentYear) {
+        if (currentYear !== -1) {
+          groups.push({ label: String(currentYear), x: startIdx * colWidth, width: (i - startIdx) * colWidth });
+        }
+        currentYear = y;
+        startIdx = i;
+      }
+    });
+    if (currentYear !== -1) {
+      groups.push({ label: String(currentYear), x: startIdx * colWidth, width: (workDays.length - startIdx) * colWidth });
+    }
+    return groups;
+  }, [workDays, colWidth]);
+
   // Group days by month
   const monthGroups = useMemo(() => {
     const groups: { label: string; x: number; width: number }[] = [];
