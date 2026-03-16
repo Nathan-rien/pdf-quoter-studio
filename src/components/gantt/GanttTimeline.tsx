@@ -126,13 +126,17 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   // dayToX based on workday index
   const dayToX = useCallback((date: Date) => {
     const t = date.getTime();
-    let closest = 0;
-    let minDiff = Infinity;
-    for (let i = 0; i < workDays.length; i++) {
-      const diff = Math.abs(workDays[i].getTime() - t);
-      if (diff < minDiff) { minDiff = diff; closest = i; }
+    let lo = 0, hi = workDays.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (workDays[mid].getTime() < t) lo = mid + 1;
+      else hi = mid;
     }
-    return closest * colWidth;
+    // Check if lo-1 is closer
+    if (lo > 0 && Math.abs(workDays[lo - 1].getTime() - t) < Math.abs(workDays[lo].getTime() - t)) {
+      lo = lo - 1;
+    }
+    return lo * colWidth;
   }, [workDays, colWidth]);
 
   const xToDate = useCallback((x: number) => {
