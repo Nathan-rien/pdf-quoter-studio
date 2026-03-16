@@ -24,7 +24,7 @@ const getColWidth = (zoom: ZoomLevel) => {
     case 'day': return 40;
     case 'week': return 24;
     case 'month': return 8;
-    case 'year': return 3;
+    case 'year': return 6;
   }
 };
 
