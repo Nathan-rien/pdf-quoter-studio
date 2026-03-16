@@ -36,7 +36,7 @@ import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import { ALLOWED_FONTS } from '@/lib/template-styles';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
-import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION, estimateVisualLines } from '@/lib/canvas-constants';
+import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION, estimateVisualLines, chunkLinesByVisualHeight } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders, computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -193,52 +193,9 @@ export function RentalProposalPreview() {
   const allProposalsForPagination = getAllProposalsCalculations();
   const footerLines = computeFooterLines(allProposalsForPagination.length);
 
-  const investChunks = (() => {
-    const totalLines = estimateVisualLines(lignesData);
-    const singlePageThreshold = INVEST_LINES_PAGE1 - footerLines;
-
-    // Cas 1 : tout tient sur une seule page (données + footer)
-    if (totalLines <= Math.max(0, singlePageThreshold)) return [totalLines];
-
-    // Cas 2 : données tiennent sur page 1 mais pas le footer → page footer dédiée
-    if (totalLines <= INVEST_LINES_PAGE1) {
-      return [totalLines, 0];
-    }
-
-    // Cas 3 : multi-page
-    const lastChunkMax = Math.max(0, INVEST_LINES_CONTINUATION - footerLines);
-    const chunks = [INVEST_LINES_PAGE1];
-    let remaining = totalLines - INVEST_LINES_PAGE1;
-
-    if (lastChunkMax > 0) {
-      // Pages intermédiaires pleines, dernière page réduite pour le footer
-      while (remaining > lastChunkMax) {
-        const take = Math.min(remaining, INVEST_LINES_CONTINUATION);
-        // Si ce chunk serait le dernier mais ne laisse pas de place au footer, on le fait plein et on ajoute une page footer
-        if (remaining <= INVEST_LINES_CONTINUATION) {
-          // remaining > lastChunkMax, donc on prend tout et on ajoute page footer
-          chunks.push(remaining);
-          remaining = 0;
-          chunks.push(0); // page footer dédiée
-          break;
-        }
-        chunks.push(take);
-        remaining -= take;
-      }
-      if (remaining > 0) {
-        // Le dernier chunk tient avec le footer
-        chunks.push(remaining);
-      }
-    } else {
-      // Footer seul dépasse une page continuation → toutes les pages data sont pleines + page footer dédiée
-      while (remaining > 0) {
-        chunks.push(Math.min(remaining, INVEST_LINES_CONTINUATION));
-        remaining -= INVEST_LINES_CONTINUATION;
-      }
-      chunks.push(0);
-    }
-    return chunks;
-  })();
+  const investChunks = chunkLinesByVisualHeight(
+    lignesData, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, footerLines
+  );
   const investChunkCount = investChunks.length;
   const extraInvestPages = Math.max(0, investChunkCount - 1);
 
