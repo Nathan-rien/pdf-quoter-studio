@@ -24,7 +24,7 @@ const getColWidth = (zoom: ZoomLevel) => {
     case 'day': return 40;
     case 'week': return 24;
     case 'month': return 8;
-    case 'year': return 2;
+    case 'year': return 3;
   }
 };
 
@@ -126,13 +126,17 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   // dayToX based on workday index
   const dayToX = useCallback((date: Date) => {
     const t = date.getTime();
-    let closest = 0;
-    let minDiff = Infinity;
-    for (let i = 0; i < workDays.length; i++) {
-      const diff = Math.abs(workDays[i].getTime() - t);
-      if (diff < minDiff) { minDiff = diff; closest = i; }
+    let lo = 0, hi = workDays.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (workDays[mid].getTime() < t) lo = mid + 1;
+      else hi = mid;
     }
-    return closest * colWidth;
+    // Check if lo-1 is closer
+    if (lo > 0 && Math.abs(workDays[lo - 1].getTime() - t) < Math.abs(workDays[lo].getTime() - t)) {
+      lo = lo - 1;
+    }
+    return lo * colWidth;
   }, [workDays, colWidth]);
 
   const xToDate = useCallback((x: number) => {
@@ -163,7 +167,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
               className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center justify-center border-r border-border/50 truncate"
               style={{ width: m.width, left: m.x, position: 'absolute' }}
             >
-              {m.width > 60 ? m.label : m.width > 30 ? m.label.substring(0, 3) : ''}
+              {m.width > 40 ? m.label : m.width > 20 ? m.label.substring(0, 3) : ''}
             </div>
           ))}
         </div>
@@ -179,7 +183,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
               )}
               style={{ width: w.width, left: w.x, position: 'absolute' }}
             >
-              {w.width > 20 ? w.label : ''}
+              {w.width > 15 ? w.label : ''}
             </div>
           ))}
         </div>
@@ -205,9 +209,9 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
 
         {/* Rows + bars */}
         <div className="relative" style={{ height: rows.length * ROW_HEIGHT }}>
-          {/* Grid lines — one per week group for lighter rendering */}
-          {weekGroups.map((w, i) => (
-            <div key={i} className="absolute top-0 bottom-0 border-r border-border/20" style={{ left: w.x + w.width }} />
+          {/* Grid lines — adapted to zoom level */}
+          {(isYearView || zoom === 'month' ? monthGroups : weekGroups).map((g, i) => (
+            <div key={i} className="absolute top-0 bottom-0 border-r border-border/20" style={{ left: g.x + g.width }} />
           ))}
 
           {/* Row backgrounds */}
