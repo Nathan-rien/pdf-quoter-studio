@@ -34,7 +34,7 @@ export function AppSidebar({
   onSignOut,
 }: AppSidebarProps) {
   return (
-    <aside className="w-44 bg-card border-r border-border flex flex-col h-screen sticky top-0">
+    <aside className="w-52 bg-card border-r border-border flex flex-col h-screen sticky top-0">
       {/* Logo */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-2">
