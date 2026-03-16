@@ -184,22 +184,24 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
           ))}
         </div>
 
-        {/* Header Level 3 — Days */}
-        <div className={cn('border-b border-border flex sticky z-20', 'top-[60px]')} style={{ height: showDayLabels ? 24 : 12, width: totalWidth }}>
-          {workDays.map((d, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-center border-r border-border/20 flex-shrink-0"
-              style={{ width: colWidth }}
-            >
-              {showDayLabels && (
-                <span className="text-[9px] text-muted-foreground truncate">
-                  {format(d, 'd', { locale: fr })}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* Header Level 3 — Days (hidden for month/year) */}
+        {(zoom === 'day' || zoom === 'week') && (
+          <div className={cn('border-b border-border flex sticky z-20', 'top-[60px]')} style={{ height: showDayLabels ? 24 : 12, width: totalWidth }}>
+            {workDays.map((d, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-center border-r border-border/20 flex-shrink-0"
+                style={{ width: colWidth }}
+              >
+                {showDayLabels && (
+                  <span className="text-[9px] text-muted-foreground truncate">
+                    {format(d, 'd', { locale: fr })}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Rows + bars */}
         <div className="relative" style={{ height: rows.length * ROW_HEIGHT }}>
