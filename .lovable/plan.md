@@ -1,22 +1,23 @@
 
 
-## Plan : Optimiser la vue Année du Gantt pour la lisibilité
+## Problème identifié
 
-### Problème
-
-Avec `colWidth = 3px` par jour ouvré, une année (~260 jours) ne fait que ~780px — bien en dessous de la largeur du viewport (~1700px). Les labels de mois sont tronqués et l'espace est gaspillé.
-
-### Correction (1 fichier)
-
-**`src/components/gantt/GanttTimeline.tsx`** — Augmenter la largeur par jour en vue année de `3` à `6` px :
+La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
 
 ```typescript
-case 'year': return 6;
+if (/support@3ddentalstore/i.test(line)) return true;
 ```
 
-Cela donne ~1560px pour une année complète, remplissant correctement le viewport. Les labels de mois (≈132px chacun) seront entièrement lisibles sans troncature.
+Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
+> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
 
-### Résultat
+Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
 
-La vue année remplit le viewport, les labels de mois sont lisibles, et la proportionnalité des barres de Gantt est préservée.
+## Correction
+
+**Fichier** : `src/lib/pdf-import-parser.ts`
+
+Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
+
+Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
 
