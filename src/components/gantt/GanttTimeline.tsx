@@ -17,7 +17,7 @@ interface Props {
 }
 
 const ROW_HEIGHT = 48;
-const END_DATE = new Date(2026, 11, 31);
+const END_DATE = new Date(2027, 11, 31);
 
 const getColWidth = (zoom: ZoomLevel) => {
   switch (zoom) {
