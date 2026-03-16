@@ -155,27 +155,27 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   return (
     <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
       <div style={{ width: totalWidth, minWidth: '100%' }}>
-        {/* Header Level 1 — Months */}
+        {/* Header Level 1 */}
         <div className="h-8 border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth }}>
-          {monthGroups.map((m, i) => (
+          {header1Groups.map((m, i) => (
             <div
               key={i}
               className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center justify-center border-r border-border/50 truncate"
               style={{ width: m.width, left: m.x, position: 'absolute' }}
             >
-              {m.width > 60 ? m.label : ''}
+              {m.width > 60 ? m.label : m.width > 30 ? m.label.substring(0, 3) : ''}
             </div>
           ))}
         </div>
 
-        {/* Header Level 2 — Weeks */}
+        {/* Header Level 2 */}
         <div className="h-7 border-b border-border flex sticky top-8 z-20" style={{ width: totalWidth }}>
-          {weekGroups.map((w, i) => (
+          {header2Groups.map((w, i) => (
             <div
               key={i}
               className={cn(
                 'text-[11px] font-medium flex items-center justify-center border-r border-border/40 truncate',
-                w.isCurrent ? 'bg-destructive/15 text-destructive font-bold' : 'bg-card text-muted-foreground'
+                'isCurrent' in w && w.isCurrent ? 'bg-destructive/15 text-destructive font-bold' : 'bg-card text-muted-foreground'
               )}
               style={{ width: w.width, left: w.x, position: 'absolute' }}
             >
