@@ -146,6 +146,11 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   const showToday = todayX >= 0 && todayX <= totalWidth;
 
   const showDayLabels = zoom === 'day' || zoom === 'week';
+  const isYearView = zoom === 'year';
+
+  // Determine header groups based on zoom
+  const header1Groups = isYearView ? yearGroups : monthGroups;
+  const header2Groups = isYearView ? monthGroups : weekGroups;
 
   return (
     <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
