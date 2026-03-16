@@ -1,5 +1,5 @@
 import { forwardRef, useMemo, useCallback } from 'react';
-import { differenceInDays, addDays, format, eachDayOfInterval, isWeekend, getISOWeek, getISOWeekYear } from 'date-fns';
+import { differenceInDays, addDays, format, eachDayOfInterval, isWeekend, getISOWeek, getISOWeekYear, getYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { GanttBar } from './GanttBar';
@@ -23,7 +23,8 @@ const getColWidth = (zoom: ZoomLevel) => {
   switch (zoom) {
     case 'day': return 40;
     case 'week': return 24;
-    case 'month': return 12;
+    case 'month': return 8;
+    case 'year': return 2;
   }
 };
 
@@ -42,6 +43,27 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   const now = new Date();
   const currentISOWeek = getISOWeek(now);
   const currentISOWeekYear = getISOWeekYear(now);
+
+  // Group days by year
+  const yearGroups = useMemo(() => {
+    const groups: { label: string; x: number; width: number }[] = [];
+    let currentYear = -1;
+    let startIdx = 0;
+    workDays.forEach((d, i) => {
+      const y = getYear(d);
+      if (y !== currentYear) {
+        if (currentYear !== -1) {
+          groups.push({ label: String(currentYear), x: startIdx * colWidth, width: (i - startIdx) * colWidth });
+        }
+        currentYear = y;
+        startIdx = i;
+      }
+    });
+    if (currentYear !== -1) {
+      groups.push({ label: String(currentYear), x: startIdx * colWidth, width: (workDays.length - startIdx) * colWidth });
+    }
+    return groups;
+  }, [workDays, colWidth]);
 
   // Group days by month
   const monthGroups = useMemo(() => {
@@ -124,31 +146,36 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   const showToday = todayX >= 0 && todayX <= totalWidth;
 
   const showDayLabels = zoom === 'day' || zoom === 'week';
+  const isYearView = zoom === 'year';
+
+  // Determine header groups based on zoom
+  const header1Groups = isYearView ? yearGroups : monthGroups;
+  const header2Groups = isYearView ? monthGroups : weekGroups;
 
   return (
     <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
       <div style={{ width: totalWidth, minWidth: '100%' }}>
-        {/* Header Level 1 — Months */}
+        {/* Header Level 1 */}
         <div className="h-8 border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth }}>
-          {monthGroups.map((m, i) => (
+          {header1Groups.map((m, i) => (
             <div
               key={i}
               className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center justify-center border-r border-border/50 truncate"
               style={{ width: m.width, left: m.x, position: 'absolute' }}
             >
-              {m.width > 60 ? m.label : ''}
+              {m.width > 60 ? m.label : m.width > 30 ? m.label.substring(0, 3) : ''}
             </div>
           ))}
         </div>
 
-        {/* Header Level 2 — Weeks */}
+        {/* Header Level 2 */}
         <div className="h-7 border-b border-border flex sticky top-8 z-20" style={{ width: totalWidth }}>
-          {weekGroups.map((w, i) => (
+          {header2Groups.map((w, i) => (
             <div
               key={i}
               className={cn(
                 'text-[11px] font-medium flex items-center justify-center border-r border-border/40 truncate',
-                w.isCurrent ? 'bg-destructive/15 text-destructive font-bold' : 'bg-card text-muted-foreground'
+                'isCurrent' in w && w.isCurrent ? 'bg-destructive/15 text-destructive font-bold' : 'bg-card text-muted-foreground'
               )}
               style={{ width: w.width, left: w.x, position: 'absolute' }}
             >
@@ -157,22 +184,24 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
           ))}
         </div>
 
-        {/* Header Level 3 — Days */}
-        <div className={cn('border-b border-border flex sticky z-20', 'top-[60px]')} style={{ height: showDayLabels ? 24 : 12, width: totalWidth }}>
-          {workDays.map((d, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-center border-r border-border/20 flex-shrink-0"
-              style={{ width: colWidth }}
-            >
-              {showDayLabels && (
-                <span className="text-[9px] text-muted-foreground truncate">
-                  {format(d, 'd', { locale: fr })}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* Header Level 3 — Days (hidden for month/year) */}
+        {(zoom === 'day' || zoom === 'week') && (
+          <div className={cn('border-b border-border flex sticky z-20', 'top-[60px]')} style={{ height: showDayLabels ? 24 : 12, width: totalWidth }}>
+            {workDays.map((d, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-center border-r border-border/20 flex-shrink-0"
+                style={{ width: colWidth }}
+              >
+                {showDayLabels && (
+                  <span className="text-[9px] text-muted-foreground truncate">
+                    {format(d, 'd', { locale: fr })}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Rows + bars */}
         <div className="relative" style={{ height: rows.length * ROW_HEIGHT }}>

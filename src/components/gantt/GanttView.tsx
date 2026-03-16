@@ -10,7 +10,7 @@ import { TaskDialog } from './TaskDialog';
 import { SubtaskDialog } from './SubtaskDialog';
 import { DependencyDialog } from './DependencyDialog';
 import type { GanttRow, ZoomLevel } from '@/types/gantt';
-import { addDays, addWeeks, addMonths, startOfWeek, startOfMonth, subDays, subWeeks, subMonths } from 'date-fns';
+import { addDays, addWeeks, addMonths, startOfWeek, startOfMonth, startOfYear, subDays, subWeeks, subMonths } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
 export function GanttView() {
@@ -113,11 +113,23 @@ export function GanttView() {
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
     if (dir === 'today') {
-      setViewStart(zoom === 'month' ? startOfMonth(new Date()) : startOfWeek(new Date(), { weekStartsOn: 1 }));
+      if (zoom === 'year') setViewStart(startOfYear(new Date()));
+      else if (zoom === 'month') setViewStart(startOfMonth(new Date()));
+      else setViewStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
     } else if (dir === 'prev') {
-      setViewStart(prev => zoom === 'day' ? subDays(prev, 7) : zoom === 'week' ? subWeeks(prev, 4) : subMonths(prev, 3));
+      setViewStart(prev =>
+        zoom === 'day' ? subDays(prev, 7) :
+        zoom === 'week' ? subWeeks(prev, 4) :
+        zoom === 'month' ? subMonths(prev, 3) :
+        subMonths(prev, 6)
+      );
     } else {
-      setViewStart(prev => zoom === 'day' ? addDays(prev, 7) : zoom === 'week' ? addWeeks(prev, 4) : addMonths(prev, 3));
+      setViewStart(prev =>
+        zoom === 'day' ? addDays(prev, 7) :
+        zoom === 'week' ? addWeeks(prev, 4) :
+        zoom === 'month' ? addMonths(prev, 3) :
+        addMonths(prev, 6)
+      );
     }
   };
 

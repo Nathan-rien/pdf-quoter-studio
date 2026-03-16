@@ -1,7 +1,7 @@
 export type GanttStatus = 'not_started' | 'in_progress' | 'done';
 export type GanttPriority = 'low' | 'medium' | 'high' | 'critical';
 export type GanttDependencyType = 'finish_to_start' | 'start_to_start';
-export type ZoomLevel = 'day' | 'week' | 'month';
+export type ZoomLevel = 'day' | 'week' | 'month' | 'year';
 
 export interface GanttProject {
   id: string;
