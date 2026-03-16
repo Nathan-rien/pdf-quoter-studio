@@ -183,7 +183,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
               )}
               style={{ width: w.width, left: w.x, position: 'absolute' }}
             >
-              {w.width > 20 ? w.label : ''}
+              {w.width > 15 ? w.label : ''}
             </div>
           ))}
         </div>
