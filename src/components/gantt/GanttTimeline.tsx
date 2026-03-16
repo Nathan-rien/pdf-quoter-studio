@@ -209,9 +209,9 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
 
         {/* Rows + bars */}
         <div className="relative" style={{ height: rows.length * ROW_HEIGHT }}>
-          {/* Grid lines — one per week group for lighter rendering */}
-          {weekGroups.map((w, i) => (
-            <div key={i} className="absolute top-0 bottom-0 border-r border-border/20" style={{ left: w.x + w.width }} />
+          {/* Grid lines — adapted to zoom level */}
+          {(isYearView || zoom === 'month' ? monthGroups : weekGroups).map((g, i) => (
+            <div key={i} className="absolute top-0 bottom-0 border-r border-border/20" style={{ left: g.x + g.width }} />
           ))}
 
           {/* Row backgrounds */}
