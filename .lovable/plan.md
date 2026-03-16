@@ -1,23 +1,18 @@
 
 
-## Problème identifié
+## Plan : Élargir la sidebar de navigation
 
-La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
+### Problème
+
+La sidebar a une largeur fixe de `w-44` (11rem / 176px), ce qui tronque les labels longs comme "Diagramme de Gantt".
+
+### Correction (1 fichier)
+
+**`src/components/layout/AppSidebar.tsx`** ligne 37 — Changer `w-44` en `w-52` (13rem / 208px) :
 
 ```typescript
-if (/support@3ddentalstore/i.test(line)) return true;
+<aside className="w-52 bg-card border-r border-border flex flex-col h-screen sticky top-0">
 ```
 
-Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
-> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
-
-Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
-
-## Correction
-
-**Fichier** : `src/lib/pdf-import-parser.ts`
-
-Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
-
-Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
+Cela donne ~32px supplémentaires, suffisant pour afficher "Diagramme de Gantt" et tous les autres labels sans troncature.
 
