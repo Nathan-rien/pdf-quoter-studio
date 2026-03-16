@@ -1,5 +1,5 @@
 import { forwardRef, useMemo, useCallback } from 'react';
-import { differenceInDays, addDays, format, eachDayOfInterval, isWeekend, getISOWeek, getISOWeekYear } from 'date-fns';
+import { differenceInDays, addDays, format, eachDayOfInterval, isWeekend, getISOWeek, getISOWeekYear, getYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { GanttBar } from './GanttBar';
