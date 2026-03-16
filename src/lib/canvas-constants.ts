@@ -61,7 +61,7 @@ export const SERVICES_ITEMS_PAGE1 = 8;       // blocs max sur page 1 (avec titre
 export const SERVICES_ITEMS_CONTINUATION = 12; // blocs max sur pages de continuation
 
 // Caractères par ligne visuelle dans la colonne Désignation (~60% de largeur)
-const CHARS_PER_VISUAL_LINE = 45;
+const CHARS_PER_VISUAL_LINE = 60;
 
 // Estime le nombre de lignes visuelles qu'occupe une liste de produits
 export function estimateVisualLines(
