@@ -34,16 +34,16 @@ export const LINES_PER_PAGE = 12;
 
 // Pagination du tableau investissements (multi-page)
 // Page 4 (première page) : moins de place car titre + en-têtes + logo en bas
-export const INVEST_LINES_PAGE1 = 22;
+export const INVEST_LINES_PAGE1 = 26;
 // Pages suivantes (continuation) : plus de place, juste le tableau
-export const INVEST_LINES_CONTINUATION = 32;
+export const INVEST_LINES_CONTINUATION = 36;
 // Nombre de lignes réservées pour le footer (DÉPRÉCIÉ : utiliser le calcul dynamique)
 export const INVEST_FOOTER_RESERVED_LINES = 9;
 
 // Lignes équivalentes par proposition dans "Votre offre" (titre + lignes de détail + marges)
 export const INVEST_LINES_PER_PROPOSAL = 4;
 // Lignes de base du footer (titre "Votre offre" + éléments flow + commentaire + marges)
-export const INVEST_FOOTER_BASE_LINES = 5;
+export const INVEST_FOOTER_BASE_LINES = 4;
 
 // Calcule dynamiquement le nombre de lignes nécessaires pour le footer
 export function computeFooterLines(proposalCount: number): number {
