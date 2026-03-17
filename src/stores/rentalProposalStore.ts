@@ -634,7 +634,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         const state = get();
         return state.optionsServices
           .filter(opt => opt.selected)
-          .map(opt => opt.price);
+          .map(opt => opt.priceTotal);
       },
 
       getCalculatedValues: () => {
