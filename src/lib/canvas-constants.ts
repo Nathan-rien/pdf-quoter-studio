@@ -34,9 +34,9 @@ export const LINES_PER_PAGE = 12;
 
 // Pagination du tableau investissements (multi-page)
 // Page 4 (première page) : moins de place car titre + en-têtes + logo en bas
-export const INVEST_LINES_PAGE1 = 26;
+export const INVEST_LINES_PAGE1 = 30;
 // Pages suivantes (continuation) : plus de place, juste le tableau
-export const INVEST_LINES_CONTINUATION = 36;
+export const INVEST_LINES_CONTINUATION = 40;
 // Nombre de lignes réservées pour le footer (DÉPRÉCIÉ : utiliser le calcul dynamique)
 export const INVEST_FOOTER_RESERVED_LINES = 9;
 
