@@ -1,23 +1,22 @@
 
 
-## Problème identifié
+## Plan : Garder "Votre offre" sur la même page quand il y a de la place
 
-La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
+### Problème
 
-```typescript
-if (/support@3ddentalstore/i.test(line)) return true;
-```
+La capacité estimée de la page 4 (`INVEST_LINES_PAGE1 = 22` lignes visuelles) est trop conservatrice. Le long texte de désignation occupe ~8-10 lignes visuelles, et avec le footer (~9 lignes), le total dépasse 22 alors que visuellement il y a largement la place sur la page.
 
-Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
-> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
+### Correction (1 fichier)
 
-Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
+**`src/lib/canvas-constants.ts`** — Augmenter la capacité de la première page et réduire légèrement la réserve du footer :
 
-## Correction
+1. `INVEST_LINES_PAGE1` : 22 → **26** (la page peut contenir plus de lignes que l'estimation actuelle)
+2. `INVEST_FOOTER_BASE_LINES` : 5 → **4** (le titre "Votre offre" + Avantages/Conditions prennent moins de place que estimé)
+3. `INVEST_LINES_CONTINUATION` : 32 → **36** (cohérent avec l'augmentation)
 
-**Fichier** : `src/lib/pdf-import-parser.ts`
+Cela permet au système de garder "Votre offre" sur la même page que le tableau produits quand il reste de la place, tout en déportant sur une page dédiée quand le tableau est réellement trop long.
 
-Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
+Le seuil `INVEST_SINGLE_PAGE_FOOTER_THRESHOLD` se recalculera automatiquement (`Math.floor(26/2) = 13`).
 
-Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
+L'export PDF sera aussi impacté via le ratio `EXPORT_HEIGHT_RATIO` appliqué dans `RentalProposalExport.tsx`.
 
