@@ -641,7 +641,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         const state = get();
         const optionsPrices = state.optionsServices
           .filter(opt => opt.selected)
-          .map(opt => opt.price);
+          .map(opt => opt.priceTotal);
         
         // Use first proposal for backward compatibility
         const firstProposal = state.proposals[0];
