@@ -419,7 +419,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         
         const optionsPrices = state.optionsServices
           .filter(opt => opt.selected)
-          .map(opt => opt.price);
+          .map(opt => opt.priceTotal);
         
         return calculateAllMatriceValues(
           proposal.montantInvestissement,
