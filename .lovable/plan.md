@@ -1,19 +1,23 @@
 
 
-## Plan : Augmenter la capacité de page pour garder "Votre offre" avec le tableau
+## Problème identifié
 
-### Diagnostic
+La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
 
-Avec les constantes actuelles (`INVEST_LINES_PAGE1 = 26`), les deux produits à longues désignations totalisent ~20-22 lignes visuelles. Le footer (8 lignes) porte le total à ~28-30, dépassant la capacité de 26. Le footer est donc repoussé sur une page dédiée alors que visuellement il y a de la place.
+```typescript
+if (/support@3ddentalstore/i.test(line)) return true;
+```
 
-### Correction (1 fichier)
+Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
+> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
 
-**`src/lib/canvas-constants.ts`** — Augmenter les capacités de page :
+Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
 
-- `INVEST_LINES_PAGE1` : 26 → **30** (la page A4 a plus d'espace vertical que l'estimation actuelle)
-- `INVEST_LINES_CONTINUATION` : 36 → **40** (cohérent)
+## Correction
 
-Le seuil `INVEST_SINGLE_PAGE_FOOTER_THRESHOLD` se recalculera automatiquement (`Math.floor(30/2) = 15`).
+**Fichier** : `src/lib/pdf-import-parser.ts`
 
-L'export PDF s'adaptera aussi via `EXPORT_HEIGHT_RATIO` dans `RentalProposalExport.tsx` (`Math.floor(30 * 0.892) ≈ 26`).
+Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
+
+Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
 
