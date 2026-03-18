@@ -14,6 +14,18 @@ import type { GanttRow, ZoomLevel } from '@/types/gantt';
 import type { DropResult } from '@hello-pangea/dnd';
 import { addDays, addWeeks, addMonths, startOfWeek, startOfMonth, startOfYear, subDays, subWeeks, subMonths } from 'date-fns';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+const reorderIds = (ids: string[], sourceIndex: number, destinationIndex: number): string[] => {
+  const next = [...ids];
+  const [moved] = next.splice(sourceIndex, 1);
+  if (!moved) return ids;
+  next.splice(destinationIndex, 0, moved);
+  return next;
+};
+
+const getMilestoneDroppableId = (value: string) => value.startsWith('projects-in-') ? value.replace('projects-in-', '') : null;
+const getProjectDroppableId = (value: string) => value.startsWith('tasks-in-') ? value.replace('tasks-in-', '') : null;
 
 export function GanttView() {
   const data = useGanttData();
@@ -86,18 +98,16 @@ export function GanttView() {
     const sortedMilestones = [...data.milestones].sort((a, b) => a.sort_order - b.sort_order);
 
     for (const milestone of sortedMilestones) {
-      // Filter by status
       if (filterStatus && filterStatus !== 'all' && milestone.status !== filterStatus) continue;
-      // Filter by search
+
       if (lowerSearch && !milestone.title.toLowerCase().includes(lowerSearch)) {
-        // Check if any child project/task matches
         const msProjects = data.projects.filter(p => p.milestone_id === milestone.id);
         const anyMatch = msProjects.some(p => {
           if (p.title.toLowerCase().includes(lowerSearch)) return true;
           const ownerName = getOwnerName(p.owner).toLowerCase();
           if (ownerName.includes(lowerSearch)) return true;
           return data.tasks.filter(t => t.project_id === p.id).some(t =>
-            t.title.toLowerCase().includes(lowerSearch) || getOwnerName(t.owner).toLowerCase().includes(lowerSearch)
+            t.title.toLowerCase().includes(lowerSearch) || getOwnerName(t.owner).toLowerCase().includes(lowerSearch),
           );
         });
         if (!anyMatch) continue;
@@ -111,7 +121,6 @@ export function GanttView() {
 
       if (!expandedMilestones.has(milestone.id)) continue;
 
-      // Projects inside this milestone
       const milestoneProjects = data.projects
         .filter(p => p.milestone_id === milestone.id)
         .filter(p => {
@@ -167,98 +176,93 @@ export function GanttView() {
       }
     }
 
-    // Projects without milestone ("Non rattachés")
-    const unattachedProjects = data.projects
-      .filter(p => !p.milestone_id)
-      .filter(p => {
-        if (filterProject && filterProject !== 'all' && p.id !== filterProject) return false;
-        if (filterOwner && filterOwner !== 'all' && p.owner !== filterOwner) return false;
-        if (filterStatus && filterStatus !== 'all' && p.status !== filterStatus) return false;
-        return true;
-      })
-      .sort((a, b) => a.sort_order - b.sort_order);
-
-    for (const project of unattachedProjects) {
-      result.push({
-        type: 'project', id: project.id, title: project.title,
-        start_date: project.start_date, end_date: project.end_date,
-        status: project.status, owner: project.owner, depth: 0,
-      });
-
-      if (!expandedProjects.has(project.id)) continue;
-
-      const projectTasks = data.tasks
-        .filter(t => {
-          if (t.project_id !== project.id) return false;
-          if (filterPriority && filterPriority !== 'all' && t.priority !== filterPriority) return false;
-          if (filterOwner && filterOwner !== 'all' && t.owner !== filterOwner) return false;
-          if (filterStatus && filterStatus !== 'all' && t.status !== filterStatus) return false;
-          return true;
-        })
-        .sort((a, b) => a.sort_order - b.sort_order);
-
-      for (const task of projectTasks) {
-        result.push({
-          type: 'task', id: task.id, title: task.title,
-          start_date: task.start_date, end_date: task.end_date,
-          status: task.status, priority: task.priority, owner: task.owner,
-          projectId: task.project_id, depth: 1,
-        });
-
-        if (!expandedTasks.has(task.id)) continue;
-
-        const taskSubtasks = data.subtasks
-          .filter(s => s.task_id === task.id)
-          .sort((a, b) => a.sort_order - b.sort_order);
-
-        for (const sub of taskSubtasks) {
-          result.push({
-            type: 'subtask', id: sub.id, title: sub.title,
-            start_date: sub.start_date, end_date: sub.end_date,
-            status: sub.status, taskId: sub.task_id, depth: 2,
-          });
-        }
-      }
-    }
-
     return result;
-  }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedMilestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority, commerciaux]);
+  }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedMilestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority]);
 
-  // Drag & Drop handler
   const handleDragEnd = useCallback((result: DropResult) => {
-    if (!result.destination || result.source.index === result.destination.index) return;
-
-    const draggableRows = rows.filter(r => r.type === 'milestone' || r.type === 'project' || r.type === 'task');
-    const srcGlobal = result.source.index;
-    const dstGlobal = result.destination.index;
-    const sourceRow = draggableRows[srcGlobal];
-    if (!sourceRow) return;
-
-    const reordered = [...draggableRows];
-    const [moved] = reordered.splice(srcGlobal, 1);
-    reordered.splice(dstGlobal, 0, moved);
-
-    if (sourceRow.type === 'milestone') {
-      const newIds = reordered.filter(r => r.type === 'milestone').map(r => r.id);
-      void data.reorderMilestones(newIds);
-      return;
-    }
-
-    if (sourceRow.type === 'project') {
-      const milestoneId = sourceRow.milestoneId;
-      if (milestoneId) {
-        const newIds = reordered.filter(r => r.type === 'project' && r.milestoneId === milestoneId).map(r => r.id);
-        void data.reorderMilestoneChildren(newIds);
+    void (async () => {
+      if (!result.destination) {
+        toast.info('Déplacement invalide');
+        return;
       }
-      return;
-    }
 
-    if (sourceRow.type === 'task') {
-      const projectId = sourceRow.projectId;
-      if (!projectId) return;
-      const newIds = reordered.filter(r => r.type === 'task' && r.projectId === projectId).map(r => r.id);
-      void data.reorderTasks(newIds);
-    }
+      if (result.source.droppableId === result.destination.droppableId && result.source.index === result.destination.index) {
+        toast.info('Aucun changement de position');
+        return;
+      }
+
+      const sourceDroppable = result.source.droppableId;
+      const destinationDroppable = result.destination.droppableId;
+
+      if (sourceDroppable === 'milestones-root' && destinationDroppable === 'milestones-root') {
+        const milestoneIds = rows.filter((row) => row.type === 'milestone').map((row) => row.id);
+        const nextOrder = reorderIds(milestoneIds, result.source.index, result.destination.index);
+        await data.reorderMilestones(nextOrder);
+        return;
+      }
+
+      const sourceMilestoneId = getMilestoneDroppableId(sourceDroppable);
+      const destinationMilestoneId = getMilestoneDroppableId(destinationDroppable);
+
+      if (sourceMilestoneId && destinationMilestoneId) {
+        const sourceProjectIds = rows
+          .filter((row) => row.type === 'project' && row.milestoneId === sourceMilestoneId)
+          .map((row) => row.id);
+
+        if (sourceMilestoneId === destinationMilestoneId) {
+          const nextOrder = reorderIds(sourceProjectIds, result.source.index, result.destination.index);
+          await data.reorderMilestoneChildren(nextOrder);
+          return;
+        }
+
+        const destinationProjectIds = rows
+          .filter((row) => row.type === 'project' && row.milestoneId === destinationMilestoneId)
+          .map((row) => row.id);
+
+        const movedProjectId = sourceProjectIds[result.source.index];
+        if (!movedProjectId) {
+          toast.error('Projet introuvable pour ce déplacement');
+          return;
+        }
+
+        const sourceAfter = sourceProjectIds.filter((id) => id !== movedProjectId);
+        const destinationAfter = [...destinationProjectIds];
+        destinationAfter.splice(result.destination.index, 0, movedProjectId);
+
+        const moved = await data.moveProjectToMilestone(movedProjectId, destinationMilestoneId);
+        if (!moved) return;
+
+        const reorderResults = await Promise.all([
+          sourceAfter.length ? data.reorderMilestoneChildren(sourceAfter) : Promise.resolve(true),
+          destinationAfter.length ? data.reorderMilestoneChildren(destinationAfter) : Promise.resolve(true),
+        ]);
+
+        if (reorderResults.some((value) => !value)) {
+          toast.error('Le déplacement du projet a échoué');
+        }
+        return;
+      }
+
+      const sourceProjectId = getProjectDroppableId(sourceDroppable);
+      const destinationProjectId = getProjectDroppableId(destinationDroppable);
+
+      if (sourceProjectId && destinationProjectId) {
+        if (sourceProjectId !== destinationProjectId) {
+          toast.info('Le déplacement de tâche entre projets n\'est pas disponible pour le moment');
+          return;
+        }
+
+        const taskIds = rows
+          .filter((row) => row.type === 'task' && row.projectId === sourceProjectId)
+          .map((row) => row.id);
+
+        const nextOrder = reorderIds(taskIds, result.source.index, result.destination.index);
+        await data.reorderTasks(nextOrder);
+        return;
+      }
+
+      toast.info('Type de déplacement non supporté');
+    })();
   }, [data, rows]);
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
@@ -271,14 +275,14 @@ export function GanttView() {
         zoom === 'day' ? subDays(prev, 7) :
         zoom === 'week' ? subWeeks(prev, 4) :
         zoom === 'month' ? subMonths(prev, 3) :
-        subMonths(prev, 6)
+        subMonths(prev, 6),
       );
     } else {
       setViewStart(prev =>
         zoom === 'day' ? addDays(prev, 7) :
         zoom === 'week' ? addWeeks(prev, 4) :
         zoom === 'month' ? addMonths(prev, 3) :
-        addMonths(prev, 6)
+        addMonths(prev, 6),
       );
     }
   };

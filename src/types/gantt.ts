@@ -14,7 +14,7 @@ export interface GanttProject {
   sort_order: number;
   created_by: string | null;
   created_at: string;
-  milestone_id: string | null;
+  milestone_id: string;
 }
 
 export interface GanttTask {
@@ -42,7 +42,6 @@ export interface GanttSubtask {
 
 export interface GanttMilestone {
   id: string;
-  project_id: string | null;
   title: string;
   date: string;
   description: string | null;
