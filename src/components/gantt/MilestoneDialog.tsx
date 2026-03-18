@@ -13,11 +13,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   milestone?: GanttMilestone;
-  projectId?: string;
   onSave: (data: Partial<GanttMilestone>) => Promise<boolean>;
 }
 
-export function MilestoneDialog({ open, onOpenChange, milestone, projectId, onSave }: Props) {
+export function MilestoneDialog({ open, onOpenChange, milestone, onSave }: Props) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
@@ -37,7 +36,6 @@ export function MilestoneDialog({ open, onOpenChange, milestone, projectId, onSa
     e.preventDefault();
     setSaving(true);
     const data: any = { title, date, description: description || null, status };
-    if (!milestone && projectId) data.project_id = projectId;
     await onSave(data);
     setSaving(false);
   };
@@ -46,7 +44,7 @@ export function MilestoneDialog({ open, onOpenChange, milestone, projectId, onSa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{milestone ? 'Modifier le jalon' : 'Ajouter un jalon'}</DialogTitle>
+          <DialogTitle>{milestone ? 'Modifier le jalon' : 'Créer un jalon'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div><Label>Titre *</Label><Input value={title} onChange={e => setTitle(e.target.value)} required /></div>

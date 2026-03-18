@@ -74,7 +74,7 @@ export type Database = {
           date: string
           description: string | null
           id: string
-          project_id: string
+          project_id: string | null
           sort_order: number
           status: Database["public"]["Enums"]["gantt_status"]
           title: string
@@ -84,7 +84,7 @@ export type Database = {
           date: string
           description?: string | null
           id?: string
-          project_id: string
+          project_id?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["gantt_status"]
           title: string
@@ -94,7 +94,7 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
-          project_id?: string
+          project_id?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["gantt_status"]
           title?: string
@@ -116,6 +116,7 @@ export type Database = {
           description: string | null
           end_date: string
           id: string
+          milestone_id: string | null
           owner: string | null
           sort_order: number
           start_date: string
@@ -128,6 +129,7 @@ export type Database = {
           description?: string | null
           end_date: string
           id?: string
+          milestone_id?: string | null
           owner?: string | null
           sort_order?: number
           start_date: string
@@ -140,13 +142,22 @@ export type Database = {
           description?: string | null
           end_date?: string
           id?: string
+          milestone_id?: string | null
           owner?: string | null
           sort_order?: number
           start_date?: string
           status?: Database["public"]["Enums"]["gantt_status"]
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "gantt_projects_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "gantt_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gantt_subtasks: {
         Row: {

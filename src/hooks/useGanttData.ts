@@ -45,8 +45,30 @@ export function useGanttData() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchAll]);
 
-  // CRUD Projects
-  const createProject = async (data: { title: string; description?: string; start_date: string; end_date: string; owner?: string }) => {
+  // CRUD Milestones (now root-level)
+  const createMilestone = async (data: { title: string; date: string; description?: string; status?: GanttStatus }) => {
+    const maxOrder = milestones.reduce((max, m) => Math.max(max, m.sort_order), 0);
+    const { error } = await supabase.from('gantt_milestones').insert({ ...data, sort_order: maxOrder + 10 } as any);
+    if (error) { toast.error('Erreur création jalon'); console.error(error); return false; }
+    toast.success('Jalon créé');
+    return true;
+  };
+
+  const updateMilestone = async (id: string, data: Partial<{ title: string; date: string; description: string | null; status: GanttStatus; sort_order: number }>) => {
+    const { error } = await supabase.from('gantt_milestones').update(data as any).eq('id', id);
+    if (error) { toast.error('Erreur mise à jour jalon'); return false; }
+    return true;
+  };
+
+  const deleteMilestone = async (id: string) => {
+    const { error } = await supabase.from('gantt_milestones').delete().eq('id', id);
+    if (error) { toast.error('Erreur suppression jalon'); return false; }
+    toast.success('Jalon supprimé');
+    return true;
+  };
+
+  // CRUD Projects (now belong to a milestone)
+  const createProject = async (data: { title: string; description?: string; start_date: string; end_date: string; owner?: string; milestone_id?: string }) => {
     const user = (await supabase.auth.getUser()).data.user;
     const maxOrder = projects.reduce((max, p) => Math.max(max, p.sort_order), 0);
     const { error } = await supabase.from('gantt_projects').insert({ ...data, created_by: user?.id, sort_order: maxOrder + 10 } as any);
@@ -55,7 +77,7 @@ export function useGanttData() {
     return true;
   };
 
-  const updateProject = async (id: string, data: Partial<{ title: string; description: string | null; start_date: string; end_date: string; owner: string | null; status: GanttStatus; sort_order: number }>) => {
+  const updateProject = async (id: string, data: Partial<{ title: string; description: string | null; start_date: string; end_date: string; owner: string | null; status: GanttStatus; sort_order: number; milestone_id: string | null }>) => {
     const { error } = await supabase.from('gantt_projects').update(data as any).eq('id', id);
     if (error) { toast.error('Erreur mise à jour projet'); return false; }
     return true;
@@ -110,38 +132,16 @@ export function useGanttData() {
     return true;
   };
 
-  // CRUD Milestones
-  const createMilestone = async (data: { project_id: string; title: string; date: string; description?: string; status?: GanttStatus }) => {
-    const projectMilestones = milestones.filter(m => m.project_id === data.project_id);
-    const maxOrder = projectMilestones.reduce((max, m) => Math.max(max, m.sort_order), 0);
-    const { error } = await supabase.from('gantt_milestones').insert({ ...data, sort_order: maxOrder + 10 } as any);
-    if (error) { toast.error('Erreur création jalon'); console.error(error); return false; }
-    toast.success('Jalon créé');
-    return true;
-  };
-
-  const updateMilestone = async (id: string, data: Partial<{ title: string; date: string; description: string | null; status: GanttStatus; sort_order: number }>) => {
-    const { error } = await supabase.from('gantt_milestones').update(data as any).eq('id', id);
-    if (error) { toast.error('Erreur mise à jour jalon'); return false; }
-    return true;
-  };
-
-  const deleteMilestone = async (id: string) => {
-    const { error } = await supabase.from('gantt_milestones').delete().eq('id', id);
-    if (error) { toast.error('Erreur suppression jalon'); return false; }
-    toast.success('Jalon supprimé');
-    return true;
-  };
-
-  const moveMilestoneToProject = async (id: string, projectId: string) => {
-    const previous = [...milestones];
+  // Move project to a different milestone
+  const moveProjectToMilestone = async (projectId: string, milestoneId: string | null) => {
+    const previous = [...projects];
     reorderingRef.current = true;
     try {
-      setMilestones(prev => prev.map(m => m.id === id ? { ...m, project_id: projectId } : m));
-      const { error } = await supabase.from('gantt_milestones').update({ project_id: projectId } as any).eq('id', id);
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, milestone_id: milestoneId } : p));
+      const { error } = await supabase.from('gantt_projects').update({ milestone_id: milestoneId } as any).eq('id', projectId);
       if (error) {
-        setMilestones(previous);
-        toast.error('Erreur déplacement jalon');
+        setProjects(previous);
+        toast.error('Erreur déplacement projet');
         return false;
       }
       return true;
@@ -164,43 +164,7 @@ export function useGanttData() {
     return true;
   };
 
-  // Batch reorder with try/finally to always reset reorderingRef
-  const reorderProjects = async (orderedIds: string[]) => {
-    reorderingRef.current = true;
-    const previous = [...projects];
-    try {
-      setProjects(prev => {
-        const map = new Map(prev.map(p => [p.id, p]));
-        const reordered = orderedIds
-          .map((id, i) => { const p = map.get(id); return p ? { ...p, sort_order: (i + 1) * 10 } : null; })
-          .filter(Boolean) as GanttProject[];
-        return [...reordered, ...prev.filter(p => !orderedIds.includes(p.id))];
-      });
-      const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_projects').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
-      if (results.some(r => r.error)) { setProjects(previous); toast.error('Erreur réordonnancement'); }
-    } finally {
-      reorderingRef.current = false;
-    }
-  };
-
-  const reorderTasks = async (orderedIds: string[]) => {
-    reorderingRef.current = true;
-    const previous = [...tasks];
-    try {
-      setTasks(prev => {
-        const map = new Map(prev.map(t => [t.id, t]));
-        const reordered = orderedIds
-          .map((id, i) => { const t = map.get(id); return t ? { ...t, sort_order: (i + 1) * 10 } : null; })
-          .filter(Boolean) as GanttTask[];
-        return [...reordered, ...prev.filter(t => !orderedIds.includes(t.id))];
-      });
-      const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_tasks').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
-      if (results.some(r => r.error)) { setTasks(previous); toast.error('Erreur réordonnancement'); }
-    } finally {
-      reorderingRef.current = false;
-    }
-  };
-
+  // Batch reorder milestones (root level)
   const reorderMilestones = async (orderedIds: string[]) => {
     reorderingRef.current = true;
     const previous = [...milestones];
@@ -219,37 +183,39 @@ export function useGanttData() {
     }
   };
 
-  // Reorder mixed children (milestones + tasks) within a project
-  const reorderProjectChildren = async (children: { type: 'task' | 'milestone'; id: string }[]) => {
+  // Reorder projects within a milestone
+  const reorderMilestoneChildren = async (orderedProjectIds: string[]) => {
     reorderingRef.current = true;
-    const previousTasks = [...tasks];
-    const previousMilestones = [...milestones];
-
+    const previous = [...projects];
     try {
-      // Optimistic local update
-      setTasks(prev => {
-        const updated = new Map<string, number>();
-        children.forEach((c, i) => { if (c.type === 'task') updated.set(c.id, (i + 1) * 10); });
-        return prev.map(t => updated.has(t.id) ? { ...t, sort_order: updated.get(t.id)! } : t);
+      setProjects(prev => {
+        const map = new Map(prev.map(p => [p.id, p]));
+        const reordered = orderedProjectIds
+          .map((id, i) => { const p = map.get(id); return p ? { ...p, sort_order: (i + 1) * 10 } : null; })
+          .filter(Boolean) as GanttProject[];
+        return [...reordered, ...prev.filter(p => !orderedProjectIds.includes(p.id))];
       });
-      setMilestones(prev => {
-        const updated = new Map<string, number>();
-        children.forEach((c, i) => { if (c.type === 'milestone') updated.set(c.id, (i + 1) * 10); });
-        return prev.map(m => updated.has(m.id) ? { ...m, sort_order: updated.get(m.id)! } : m);
-      });
+      const results = await Promise.all(orderedProjectIds.map((id, i) => supabase.from('gantt_projects').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
+      if (results.some(r => r.error)) { setProjects(previous); toast.error('Erreur réordonnancement'); }
+    } finally {
+      reorderingRef.current = false;
+    }
+  };
 
-      // Server updates
-      const updates = children.map((c, i) => {
-        const sortOrder = (i + 1) * 10;
-        if (c.type === 'task') return supabase.from('gantt_tasks').update({ sort_order: sortOrder } as any).eq('id', c.id);
-        return supabase.from('gantt_milestones').update({ sort_order: sortOrder } as any).eq('id', c.id);
+  // Reorder tasks within a project
+  const reorderTasks = async (orderedIds: string[]) => {
+    reorderingRef.current = true;
+    const previous = [...tasks];
+    try {
+      setTasks(prev => {
+        const map = new Map(prev.map(t => [t.id, t]));
+        const reordered = orderedIds
+          .map((id, i) => { const t = map.get(id); return t ? { ...t, sort_order: (i + 1) * 10 } : null; })
+          .filter(Boolean) as GanttTask[];
+        return [...reordered, ...prev.filter(t => !orderedIds.includes(t.id))];
       });
-      const results = await Promise.all(updates);
-      if (results.some(r => r.error)) {
-        setTasks(previousTasks);
-        setMilestones(previousMilestones);
-        toast.error('Erreur réordonnancement');
-      }
+      const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_tasks').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
+      if (results.some(r => r.error)) { setTasks(previous); toast.error('Erreur réordonnancement'); }
     } finally {
       reorderingRef.current = false;
     }
@@ -260,9 +226,10 @@ export function useGanttData() {
     createProject, updateProject, deleteProject,
     createTask, updateTask, deleteTask,
     createSubtask, updateSubtask, deleteSubtask,
-    createMilestone, updateMilestone, deleteMilestone, moveMilestoneToProject,
+    createMilestone, updateMilestone, deleteMilestone,
+    moveProjectToMilestone,
     createDependency, deleteDependency,
-    reorderProjects, reorderTasks, reorderMilestones, reorderProjectChildren,
+    reorderMilestones, reorderMilestoneChildren, reorderTasks,
     refresh: fetchAll,
   };
 }
