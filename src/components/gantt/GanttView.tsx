@@ -95,27 +95,28 @@ export function GanttView() {
       result.push({ type: 'project', id: project.id, title: project.title, start_date: project.start_date, end_date: project.end_date, status: project.status, owner: project.owner, depth: 0 });
 
       if (expandedProjects.has(project.id)) {
-        // Milestones first
-        const projectMilestones = data.milestones
-          .filter(m => m.project_id === project.id)
-          .sort((a, b) => a.sort_order - b.sort_order);
+        const projectMilestones = data.milestones.filter(m => m.project_id === project.id);
+        const projectTasks = data.tasks.filter(t => {
+          if (t.project_id !== project.id) return false;
+          if (filterPriority && filterPriority !== 'all' && t.priority !== filterPriority) return false;
+          if (filterOwner && filterOwner !== 'all' && t.owner !== filterOwner) return false;
+          if (filterStatus && filterStatus !== 'all' && t.status !== filterStatus) return false;
+          return true;
+        });
 
-        for (const ms of projectMilestones) {
-          result.push({ type: 'milestone', id: ms.id, title: ms.title, start_date: ms.date, end_date: ms.date, status: ms.status, projectId: ms.project_id, depth: 1, date: ms.date });
-        }
+        const projectChildren = [
+          ...projectMilestones.map(ms => ({ kind: 'milestone' as const, sort_order: ms.sort_order, milestone: ms })),
+          ...projectTasks.map(task => ({ kind: 'task' as const, sort_order: task.sort_order, task })),
+        ].sort((a, b) => a.sort_order - b.sort_order);
 
-        // Then tasks
-        const projectTasks = data.tasks
-          .filter(t => {
-            if (t.project_id !== project.id) return false;
-            if (filterPriority && filterPriority !== 'all' && t.priority !== filterPriority) return false;
-            if (filterOwner && filterOwner !== 'all' && t.owner !== filterOwner) return false;
-            if (filterStatus && filterStatus !== 'all' && t.status !== filterStatus) return false;
-            return true;
-          })
-          .sort((a, b) => a.sort_order - b.sort_order);
+        for (const child of projectChildren) {
+          if (child.kind === 'milestone') {
+            const ms = child.milestone;
+            result.push({ type: 'milestone', id: ms.id, title: ms.title, start_date: ms.date, end_date: ms.date, status: ms.status, projectId: ms.project_id, depth: 1, date: ms.date });
+            continue;
+          }
 
-        for (const task of projectTasks) {
+          const task = child.task;
           result.push({ type: 'task', id: task.id, title: task.title, start_date: task.start_date, end_date: task.end_date, status: task.status, priority: task.priority, owner: task.owner, projectId: task.project_id, depth: 1 });
 
           if (expandedTasks.has(task.id)) {
