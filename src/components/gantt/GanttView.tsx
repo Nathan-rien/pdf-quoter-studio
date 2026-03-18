@@ -95,27 +95,28 @@ export function GanttView() {
       result.push({ type: 'project', id: project.id, title: project.title, start_date: project.start_date, end_date: project.end_date, status: project.status, owner: project.owner, depth: 0 });
 
       if (expandedProjects.has(project.id)) {
-        // Milestones first
-        const projectMilestones = data.milestones
-          .filter(m => m.project_id === project.id)
-          .sort((a, b) => a.sort_order - b.sort_order);
+        const projectMilestones = data.milestones.filter(m => m.project_id === project.id);
+        const projectTasks = data.tasks.filter(t => {
+          if (t.project_id !== project.id) return false;
+          if (filterPriority && filterPriority !== 'all' && t.priority !== filterPriority) return false;
+          if (filterOwner && filterOwner !== 'all' && t.owner !== filterOwner) return false;
+          if (filterStatus && filterStatus !== 'all' && t.status !== filterStatus) return false;
+          return true;
+        });
 
-        for (const ms of projectMilestones) {
-          result.push({ type: 'milestone', id: ms.id, title: ms.title, start_date: ms.date, end_date: ms.date, status: ms.status, projectId: ms.project_id, depth: 1, date: ms.date });
-        }
+        const projectChildren = [
+          ...projectMilestones.map(ms => ({ kind: 'milestone' as const, sort_order: ms.sort_order, milestone: ms })),
+          ...projectTasks.map(task => ({ kind: 'task' as const, sort_order: task.sort_order, task })),
+        ].sort((a, b) => a.sort_order - b.sort_order);
 
-        // Then tasks
-        const projectTasks = data.tasks
-          .filter(t => {
-            if (t.project_id !== project.id) return false;
-            if (filterPriority && filterPriority !== 'all' && t.priority !== filterPriority) return false;
-            if (filterOwner && filterOwner !== 'all' && t.owner !== filterOwner) return false;
-            if (filterStatus && filterStatus !== 'all' && t.status !== filterStatus) return false;
-            return true;
-          })
-          .sort((a, b) => a.sort_order - b.sort_order);
+        for (const child of projectChildren) {
+          if (child.kind === 'milestone') {
+            const ms = child.milestone;
+            result.push({ type: 'milestone', id: ms.id, title: ms.title, start_date: ms.date, end_date: ms.date, status: ms.status, projectId: ms.project_id, depth: 1, date: ms.date });
+            continue;
+          }
 
-        for (const task of projectTasks) {
+          const task = child.task;
           result.push({ type: 'task', id: task.id, title: task.title, start_date: task.start_date, end_date: task.end_date, status: task.status, priority: task.priority, owner: task.owner, projectId: task.project_id, depth: 1 });
 
           if (expandedTasks.has(task.id)) {
@@ -183,26 +184,48 @@ export function GanttView() {
       const milestone = data.milestones.find(m => m.id === actualId);
       if (!milestone) return;
 
-      const projectMilestones = data.milestones
-        .filter(m => m.project_id === milestone.project_id)
-        .sort((a, b) => a.sort_order - b.sort_order);
-      const milestoneIds = projectMilestones.map(m => m.id);
-      const srcIdx = milestoneIds.indexOf(actualId);
+      const projectRows = rows.filter(
+        r => (r.type === 'task' || r.type === 'milestone') && r.projectId === milestone.project_id,
+      );
+      const srcIdx = projectRows.findIndex(r => r.type === 'milestone' && r.id === actualId);
 
       let dstIdx = -1;
-      if (destRow.type === 'milestone' && destRow.projectId === milestone.project_id) {
-        dstIdx = milestoneIds.indexOf(destRow.id);
-      } else if (destRow.type === 'project' && destRow.id === milestone.project_id) {
+      if (destRow.type === 'project' && destRow.id === milestone.project_id) {
         dstIdx = 0;
-      } else if (destRow.type === 'task' && destRow.projectId === milestone.project_id) {
-        dstIdx = Math.max(0, milestoneIds.length - 1);
+      } else if (
+        (destRow.type === 'task' || destRow.type === 'milestone') &&
+        destRow.projectId === milestone.project_id
+      ) {
+        dstIdx = projectRows.findIndex(r => r.type === destRow.type && r.id === destRow.id);
       }
 
       if (srcIdx !== -1 && dstIdx !== -1) {
-        const newOrder = [...milestoneIds];
-        newOrder.splice(srcIdx, 1);
-        newOrder.splice(dstIdx, 0, actualId);
-        data.reorderMilestones(newOrder);
+        const reordered = [...projectRows];
+        const [moved] = reordered.splice(srcIdx, 1);
+        reordered.splice(dstIdx, 0, moved);
+
+        const taskOrderMap = new Map(data.tasks.map(t => [t.id, t.sort_order]));
+        const milestoneOrderMap = new Map(data.milestones.map(m => [m.id, m.sort_order]));
+        const updates: Promise<boolean>[] = [];
+
+        reordered.forEach((row, index) => {
+          const sortOrder = (index + 1) * 10;
+          if (row.type === 'task') {
+            const currentOrder = taskOrderMap.get(row.id);
+            if (currentOrder !== sortOrder) {
+              updates.push(data.updateTask(row.id, { sort_order: sortOrder }));
+            }
+          } else if (row.type === 'milestone') {
+            const currentOrder = milestoneOrderMap.get(row.id);
+            if (currentOrder !== sortOrder) {
+              updates.push(data.updateMilestone(row.id, { sort_order: sortOrder }));
+            }
+          }
+        });
+
+        if (updates.length > 0) {
+          void Promise.all(updates);
+        }
       }
     }
   }, [data, rows]);
