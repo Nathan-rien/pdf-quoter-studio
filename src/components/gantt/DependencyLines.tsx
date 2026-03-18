@@ -29,8 +29,14 @@ export function DependencyLines({ dependencies, rows, rowHeight, rowHeights = []
       x2 = dayToX(new Date(targetTask.start_date));
     }
 
-    const y1 = sourceIdx * rowHeight + rowHeight / 2;
-    const y2 = targetIdx * rowHeight + rowHeight / 2;
+    const getRowCenter = (idx: number) => {
+      let top = 0;
+      for (let i = 0; i < idx; i++) top += rowHeights[i] || rowHeight;
+      const h = rowHeights[idx] || rowHeight;
+      return top + h / 2;
+    };
+    const y1 = getRowCenter(sourceIdx);
+    const y2 = getRowCenter(targetIdx);
     const midX = x1 + (x2 - x1) / 2;
 
     return (
