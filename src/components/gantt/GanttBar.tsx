@@ -11,6 +11,7 @@ interface Props {
   width: number;
   y: number;
   height: number;
+  scrollLeft: number;
   onDragEnd: (newX: number) => void;
   onResizeEnd: (newX: number, newWidth: number) => void;
   getOwnerName?: (id: string | null | undefined) => string;
@@ -23,7 +24,7 @@ const barColors = {
   subtask: { base: 'bg-amber-500', done: 'bg-amber-600', notStarted: 'bg-amber-400' },
 };
 
-export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, getOwnerName }: Props) {
+export function GanttBar({ row, x, width, y, height, scrollLeft, onDragEnd, onResizeEnd, getOwnerName }: Props) {
   const barRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'left' | 'right' | false>(false);
@@ -88,6 +89,9 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, get
   const barY = (height - barHeight) / 2;
   const ownerName = getOwnerName?.(row.owner) || '';
 
+  // Compute sticky label offset: how much the bar start is scrolled past
+  const labelOffset = Math.max(0, Math.min(scrollLeft - x, width - 24));
+
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
@@ -120,7 +124,10 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, get
             )}
             {/* Label on bar — sticky so it stays visible during horizontal scroll */}
             {width > 60 && barHeight >= 16 && (
-              <span className="sticky left-2 text-[11px] text-white font-medium truncate px-2" style={{ maxWidth: width - 24 }}>
+              <span
+                className="absolute text-[11px] text-white font-medium truncate"
+                style={{ left: labelOffset + 8, top: '50%', transform: 'translateY(-50%)', maxWidth: width - labelOffset - 24 }}
+              >
                 {row.title}
               </span>
             )}

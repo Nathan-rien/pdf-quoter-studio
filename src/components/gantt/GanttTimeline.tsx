@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useCallback } from 'react';
+import { forwardRef, useMemo, useCallback, useState, useRef, useEffect, useImperativeHandle } from 'react';
 import { differenceInDays, addDays, format, eachDayOfInterval, isWeekend, getISOWeek, getISOWeekYear, getYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,18 @@ const getColWidth = (zoom: ZoomLevel) => {
 
 export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, viewStart, onUpdateDates, dependencies, tasks, getOwnerName }, ref) => {
   const colWidth = getColWidth(zoom);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  useImperativeHandle(ref, () => innerRef.current!);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const onScroll = () => setScrollLeft(el.scrollLeft);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Always work with workdays
   const workDays = useMemo(() => {
@@ -157,7 +169,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   const header2Groups = isYearView ? monthGroups : weekGroups;
 
   return (
-    <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
+    <div ref={innerRef} className="flex-1 overflow-x-auto overflow-y-auto relative">
       <div style={{ width: totalWidth, minWidth: '100%' }}>
         {/* Header Level 1 */}
         <div className="border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth, height: 32 }}>
@@ -251,6 +263,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
                 width={Math.max(w, 8)}
                 y={i * ROW_HEIGHT}
                 height={ROW_HEIGHT}
+                scrollLeft={scrollLeft}
                 getOwnerName={getOwnerName}
                 onDragEnd={(newX) => {
                   const newStart = xToDate(newX);
