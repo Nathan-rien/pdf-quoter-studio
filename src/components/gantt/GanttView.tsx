@@ -138,34 +138,70 @@ export function GanttView() {
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination || result.source.index === result.destination.index) return;
 
-    // Build the same draggable list used by the sidebar (projects + tasks + milestones, in display order)
     const draggableRows = rows.filter(r => r.type === 'project' || r.type === 'task' || r.type === 'milestone');
     const srcGlobal = result.source.index;
     const dstGlobal = result.destination.index;
     const sourceRow = draggableRows[srcGlobal];
-    if (!sourceRow) return;
+    const destinationRow = draggableRows[dstGlobal];
+    if (!sourceRow || !destinationRow) return;
 
-    // Apply the move on the global draggable array to get the new order
     const reordered = [...draggableRows];
     const [moved] = reordered.splice(srcGlobal, 1);
     reordered.splice(dstGlobal, 0, moved);
 
     if (sourceRow.type === 'project') {
-      // Extract the new project order from the reordered global list
       const newProjectIds = reordered.filter(r => r.type === 'project').map(r => r.id);
       void data.reorderProjects(newProjectIds);
-    } else {
-      // Task or milestone — find its parent project
+      return;
+    }
+
+    if (sourceRow.type === 'task') {
       const projectId = sourceRow.projectId;
       if (!projectId) return;
 
-      // Extract the new children order for this project from the reordered global list
       const newChildren = reordered
         .filter(r => (r.type === 'task' || r.type === 'milestone') && r.projectId === projectId)
         .map(r => ({ type: r.type as 'task' | 'milestone', id: r.id }));
 
       void data.reorderProjectChildren(newChildren);
+      return;
     }
+
+    const sourceProjectId = sourceRow.projectId;
+    if (!sourceProjectId) return;
+
+    const targetProjectId = destinationRow.type === 'project'
+      ? destinationRow.id
+      : destinationRow.projectId ?? sourceProjectId;
+
+    const virtualRows = reordered.map(row =>
+      row.type === 'milestone' && row.id === sourceRow.id
+        ? { ...row, projectId: targetProjectId }
+        : row
+    );
+
+    const targetChildren = virtualRows
+      .filter(r => (r.type === 'task' || r.type === 'milestone') && r.projectId === targetProjectId)
+      .map(r => ({ type: r.type as 'task' | 'milestone', id: r.id }));
+
+    if (sourceProjectId === targetProjectId) {
+      void data.reorderProjectChildren(targetChildren);
+      return;
+    }
+
+    const sourceChildren = virtualRows
+      .filter(r => (r.type === 'task' || r.type === 'milestone') && r.projectId === sourceProjectId)
+      .map(r => ({ type: r.type as 'task' | 'milestone', id: r.id }));
+
+    void (async () => {
+      const movedOk = await data.moveMilestoneToProject(sourceRow.id, targetProjectId);
+      if (!movedOk) return;
+
+      await data.reorderProjectChildren(targetChildren);
+      if (sourceChildren.length > 0) {
+        await data.reorderProjectChildren(sourceChildren);
+      }
+    })();
   }, [data, rows]);
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {

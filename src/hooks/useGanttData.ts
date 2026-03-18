@@ -260,7 +260,7 @@ export function useGanttData() {
     createProject, updateProject, deleteProject,
     createTask, updateTask, deleteTask,
     createSubtask, updateSubtask, deleteSubtask,
-    createMilestone, updateMilestone, deleteMilestone,
+    createMilestone, updateMilestone, deleteMilestone, moveMilestoneToProject,
     createDependency, deleteDependency,
     reorderProjects, reorderTasks, reorderMilestones, reorderProjectChildren,
     refresh: fetchAll,
