@@ -89,6 +89,9 @@ export function GanttBar({ row, x, width, y, height, scrollLeft, onDragEnd, onRe
   const barY = (height - barHeight) / 2;
   const ownerName = getOwnerName?.(row.owner) || '';
 
+  // Compute sticky label offset: how much the bar start is scrolled past
+  const labelOffset = Math.max(0, Math.min(scrollLeft - x, width - 24));
+
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
