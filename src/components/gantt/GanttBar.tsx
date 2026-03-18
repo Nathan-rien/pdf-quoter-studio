@@ -11,6 +11,7 @@ interface Props {
   width: number;
   y: number;
   height: number;
+  scrollLeft: number;
   onDragEnd: (newX: number) => void;
   onResizeEnd: (newX: number, newWidth: number) => void;
   getOwnerName?: (id: string | null | undefined) => string;
