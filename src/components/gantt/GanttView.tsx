@@ -317,7 +317,13 @@ export function GanttView() {
           const ok = milestoneDialog.milestone
             ? await data.updateMilestone(milestoneDialog.milestone.id, d)
             : await data.createMilestone(d as any);
-          if (ok) setMilestoneDialog({ open: false });
+          if (ok) {
+            // Auto-expand the project to show the new milestone
+            if (milestoneDialog.projectId) {
+              setExpandedProjects(prev => new Set([...prev, milestoneDialog.projectId!]));
+            }
+            setMilestoneDialog({ open: false });
+          }
           return !!ok;
         }}
       />
