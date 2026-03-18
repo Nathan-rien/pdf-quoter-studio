@@ -173,7 +173,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
         </div>
 
         {/* Header Level 2 */}
-        <div className="h-7 border-b border-border flex sticky top-8 z-20" style={{ width: totalWidth }}>
+        <div className="border-b border-border flex sticky top-[32px] z-20" style={{ width: totalWidth, height: 28 }}>
           {header2Groups.map((w, i) => (
             <div
               key={i}
