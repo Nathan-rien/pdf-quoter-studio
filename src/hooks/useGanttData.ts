@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { GanttProject, GanttTask, GanttSubtask, GanttDependency, GanttMilestone, GanttStatus, GanttPriority, GanttDependencyType } from '@/types/gantt';
@@ -10,8 +10,10 @@ export function useGanttData() {
   const [dependencies, setDependencies] = useState<GanttDependency[]>([]);
   const [milestones, setMilestones] = useState<GanttMilestone[]>([]);
   const [loading, setLoading] = useState(true);
+  const reorderingRef = useRef(false);
 
   const fetchAll = useCallback(async () => {
+    if (reorderingRef.current) return; // Skip during reordering
     setLoading(true);
     const [pRes, tRes, sRes, dRes, mRes] = await Promise.all([
       supabase.from('gantt_projects').select('*').order('sort_order'),
