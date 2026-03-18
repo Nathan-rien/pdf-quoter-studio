@@ -221,16 +221,20 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
         )}
 
         {/* Rows + bars */}
-        <div className="relative" style={{ height: rows.length * ROW_HEIGHT }}>
+        <div className="relative" style={{ height: rows.reduce((sum, _, i) => sum + (rowHeights[i] || DEFAULT_ROW_HEIGHT), 0) }}>
           {/* Grid lines — adapted to zoom level */}
           {(isYearView || zoom === 'month' ? monthGroups : weekGroups).map((g, i) => (
             <div key={i} className="absolute top-0 bottom-0 border-r border-border/20" style={{ left: g.x + g.width }} />
           ))}
 
           {/* Row backgrounds */}
-          {rows.map((_, i) => (
-            <div key={i} className={cn('absolute w-full border-b border-border/10', i % 2 === 0 ? 'bg-transparent' : 'bg-muted/20')} style={{ top: i * ROW_HEIGHT, height: ROW_HEIGHT }} />
-          ))}
+          {rows.map((_, i) => {
+            const rowTop = rows.slice(0, i).reduce((sum, __, j) => sum + (rowHeights[j] || DEFAULT_ROW_HEIGHT), 0);
+            const rowH = rowHeights[i] || DEFAULT_ROW_HEIGHT;
+            return (
+              <div key={i} className={cn('absolute w-full border-b border-border/10', i % 2 === 0 ? 'bg-transparent' : 'bg-muted/20')} style={{ top: rowTop, height: rowH }} />
+            );
+          })}
 
           {/* Today line */}
           {showToday && (
@@ -241,13 +245,16 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
 
           {/* Bars */}
           {rows.map((row, i) => {
+            const rowTop = rows.slice(0, i).reduce((sum, __, j) => sum + (rowHeights[j] || DEFAULT_ROW_HEIGHT), 0);
+            const rowH = rowHeights[i] || DEFAULT_ROW_HEIGHT;
+
             // Milestones (Axes): render as colored section band, no bar
             if (row.type === 'milestone') {
               return (
                 <div
                   key={`milestone-${row.id}`}
                   className="absolute w-full bg-orange-100/40 dark:bg-orange-900/20 border-t-2 border-orange-400/50"
-                  style={{ top: i * ROW_HEIGHT, height: ROW_HEIGHT }}
+                  style={{ top: rowTop, height: rowH }}
                 />
               );
             }
@@ -262,8 +269,8 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
                 row={row}
                 x={x}
                 width={Math.max(w, 8)}
-                y={i * ROW_HEIGHT}
-                height={ROW_HEIGHT}
+                y={rowTop}
+                height={rowH}
                 scrollLeft={scrollLeft}
                 getOwnerName={getOwnerName}
                 onDragEnd={(newX) => {
@@ -285,7 +292,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
           <DependencyLines
             dependencies={dependencies}
             rows={rows}
-            rowHeight={ROW_HEIGHT}
+            rowHeight={DEFAULT_ROW_HEIGHT}
             dayToX={dayToX}
             tasks={tasks}
           />

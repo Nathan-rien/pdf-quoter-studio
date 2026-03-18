@@ -227,6 +227,7 @@ export function GanttView() {
           dependencies={data.dependencies}
           tasks={data.tasks}
           getOwnerName={getOwnerName}
+          rowHeights={rowHeights}
         />
       </div>
 

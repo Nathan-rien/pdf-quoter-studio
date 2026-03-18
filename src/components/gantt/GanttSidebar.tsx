@@ -141,7 +141,7 @@ export function GanttSidebar({
   onEditMilestone, onEditProject, onEditTask, onEditSubtask,
   onAddProject, onAddTask, onAddSubtask,
   onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
-  getOwnerName, onDragEnd, headerHeight,
+  getOwnerName, onDragEnd, headerHeight, onRowHeightsChange,
 }: GanttSidebarProps) {
 
   const sharedProps = {
@@ -150,6 +150,35 @@ export function GanttSidebar({
     onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
     getOwnerName,
   };
+
+  const rowContainerRef = useRef<HTMLDivElement>(null);
+
+  // Measure row heights and report them
+  const measureRowHeights = useCallback(() => {
+    if (!rowContainerRef.current || !onRowHeightsChange) return;
+    const children = rowContainerRef.current.children;
+    const heights: number[] = [];
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i] as HTMLElement;
+      // Skip the placeholder element from dnd
+      if (child.dataset.rbdPlaceholder !== undefined) continue;
+      heights.push(child.getBoundingClientRect().height);
+    }
+    if (heights.length > 0) {
+      onRowHeightsChange(heights);
+    }
+  }, [onRowHeightsChange]);
+
+  useEffect(() => {
+    measureRowHeights();
+  }, [rows, width, measureRowHeights]);
+
+  useEffect(() => {
+    if (!rowContainerRef.current) return;
+    const observer = new ResizeObserver(() => measureRowHeights());
+    observer.observe(rowContainerRef.current);
+    return () => observer.disconnect();
+  }, [measureRowHeights]);
 
   return (
     <div className="border-r border-border flex-shrink-0 flex flex-col" style={{ width, minWidth: width }}>
@@ -170,7 +199,10 @@ export function GanttSidebar({
         <Droppable droppableId="gantt-sidebar" type="GANTT_ROW">
           {(provided) => (
             <div
-              ref={provided.innerRef}
+              ref={(el) => {
+                provided.innerRef(el);
+                (rowContainerRef as any).current = el;
+              }}
               {...provided.droppableProps}
               className="flex-1 overflow-y-auto"
             >
