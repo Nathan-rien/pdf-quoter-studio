@@ -169,7 +169,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
   const header2Groups = isYearView ? monthGroups : weekGroups;
 
   return (
-    <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
+    <div ref={innerRef} className="flex-1 overflow-x-auto overflow-y-auto relative">
       <div style={{ width: totalWidth, minWidth: '100%' }}>
         {/* Header Level 1 */}
         <div className="border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth, height: 32 }}>
