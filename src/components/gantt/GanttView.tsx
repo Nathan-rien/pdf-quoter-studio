@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useGanttData } from '@/hooks/useGanttData';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { GanttSidebar } from './GanttSidebar';
