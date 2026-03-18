@@ -30,6 +30,18 @@ const getColWidth = (zoom: ZoomLevel) => {
 
 export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, viewStart, onUpdateDates, dependencies, tasks, getOwnerName }, ref) => {
   const colWidth = getColWidth(zoom);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  useImperativeHandle(ref, () => innerRef.current!);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const onScroll = () => setScrollLeft(el.scrollLeft);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Always work with workdays
   const workDays = useMemo(() => {
