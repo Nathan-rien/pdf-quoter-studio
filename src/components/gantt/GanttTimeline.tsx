@@ -14,9 +14,10 @@ interface Props {
   dependencies: GanttDependency[];
   tasks: GanttTask[];
   getOwnerName?: (id: string | null | undefined) => string;
+  rowHeights?: number[];
 }
 
-const ROW_HEIGHT = 40;
+const DEFAULT_ROW_HEIGHT = 40;
 const END_DATE = new Date(2027, 11, 31);
 
 const getColWidth = (zoom: ZoomLevel) => {
