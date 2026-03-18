@@ -293,6 +293,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
             dependencies={dependencies}
             rows={rows}
             rowHeight={DEFAULT_ROW_HEIGHT}
+            rowHeights={rowHeights}
             dayToX={dayToX}
             tasks={tasks}
           />
