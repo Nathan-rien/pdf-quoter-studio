@@ -29,7 +29,7 @@ const getColWidth = (zoom: ZoomLevel) => {
   }
 };
 
-export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, viewStart, onUpdateDates, dependencies, tasks, getOwnerName }, ref) => {
+export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, viewStart, onUpdateDates, dependencies, tasks, getOwnerName, rowHeights = [] }, ref) => {
   const colWidth = getColWidth(zoom);
   const innerRef = useRef<HTMLDivElement>(null);
   const [scrollLeft, setScrollLeft] = useState(0);
