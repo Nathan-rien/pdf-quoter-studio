@@ -134,87 +134,37 @@ export function GanttView() {
     return result;
   }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority, commerciaux]);
 
-  // Drag & Drop handler
+  // Drag & Drop handler — unified global-index approach
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination || result.source.index === result.destination.index) return;
 
-    const draggedId = result.draggableId;
-    const [draggedType, ...idParts] = draggedId.split('-');
-    const actualId = idParts.join('-');
-
+    // Build the same draggable list used by the sidebar (projects + tasks + milestones, in display order)
     const draggableRows = rows.filter(r => r.type === 'project' || r.type === 'task' || r.type === 'milestone');
-    const sourceRow = draggableRows[result.source.index];
-    const destRow = draggableRows[result.destination.index];
-    if (!sourceRow || !destRow) return;
+    const srcGlobal = result.source.index;
+    const dstGlobal = result.destination.index;
+    const sourceRow = draggableRows[srcGlobal];
+    if (!sourceRow) return;
 
-    if (draggedType === 'project') {
-      const projectRows = rows.filter(r => r.type === 'project');
-      const projectIds = projectRows.map(r => r.id);
+    // Apply the move on the global draggable array to get the new order
+    const reordered = [...draggableRows];
+    const [moved] = reordered.splice(srcGlobal, 1);
+    reordered.splice(dstGlobal, 0, moved);
 
-      if (sourceRow.type === 'project' && destRow.type === 'project') {
-        const srcIdx = projectIds.indexOf(sourceRow.id);
-        const dstIdx = projectIds.indexOf(destRow.id);
-        if (srcIdx !== -1 && dstIdx !== -1) {
-          const newOrder = [...projectIds];
-          newOrder.splice(srcIdx, 1);
-          newOrder.splice(dstIdx, 0, sourceRow.id);
-          data.reorderProjects(newOrder);
-        }
-      }
-    } else if (draggedType === 'task') {
-      const task = data.tasks.find(t => t.id === actualId);
-      if (!task) return;
+    if (sourceRow.type === 'project') {
+      // Extract the new project order from the reordered global list
+      const newProjectIds = reordered.filter(r => r.type === 'project').map(r => r.id);
+      void data.reorderProjects(newProjectIds);
+    } else {
+      // Task or milestone — find its parent project
+      const projectId = sourceRow.projectId;
+      if (!projectId) return;
 
-      const projectTasks = data.tasks
-        .filter(t => t.project_id === task.project_id)
-        .sort((a, b) => a.sort_order - b.sort_order);
-      const taskIds = projectTasks.map(t => t.id);
-      const srcIdx = taskIds.indexOf(actualId);
-
-      if (sourceRow.type === 'task' && destRow.type === 'task') {
-        const dstIdx = taskIds.indexOf(destRow.id);
-        if (srcIdx !== -1 && dstIdx !== -1) {
-          const newOrder = [...taskIds];
-          newOrder.splice(srcIdx, 1);
-          newOrder.splice(dstIdx, 0, actualId);
-          data.reorderTasks(newOrder);
-        }
-      }
-    } else if (draggedType === 'milestone') {
-      const milestone = data.milestones.find(m => m.id === actualId);
-      if (!milestone) return;
-
-      // Get all children (milestones + tasks) of this project in current display order
-      const projectChildren = rows
-        .filter(r => (r.type === 'task' || r.type === 'milestone') && r.projectId === milestone.project_id)
+      // Extract the new children order for this project from the reordered global list
+      const newChildren = reordered
+        .filter(r => (r.type === 'task' || r.type === 'milestone') && r.projectId === projectId)
         .map(r => ({ type: r.type as 'task' | 'milestone', id: r.id }));
 
-      const srcIdx = projectChildren.findIndex(c => c.type === 'milestone' && c.id === actualId);
-
-      let dstIdx = -1;
-      if (destRow.type === 'project' && destRow.id === milestone.project_id) {
-        dstIdx = 0;
-      } else if (
-        (destRow.type === 'task' || destRow.type === 'milestone') &&
-        destRow.projectId === milestone.project_id
-      ) {
-        dstIdx = projectChildren.findIndex(c => c.type === destRow.type && c.id === destRow.id);
-      }
-
-      // Fallback: if dropped outside same project block, move to nearest edge in the same project
-      if (dstIdx === -1) {
-        const globalSourceIdx = draggableRows.findIndex(r => r.type === 'milestone' && r.id === actualId);
-        const globalDestIdx = result.destination.index;
-        dstIdx = globalDestIdx > globalSourceIdx ? Math.max(0, projectChildren.length - 1) : 0;
-      }
-
-      if (srcIdx !== -1 && dstIdx !== -1 && srcIdx !== dstIdx) {
-        const reordered = [...projectChildren];
-        const [moved] = reordered.splice(srcIdx, 1);
-        reordered.splice(dstIdx, 0, moved);
-        console.debug('[Gantt] milestone reorder', { actualId, srcIdx, dstIdx, reordered });
-        void data.reorderProjectChildren(reordered);
-      }
+      void data.reorderProjectChildren(newChildren);
     }
   }, [data, rows]);
 
@@ -249,7 +199,7 @@ export function GanttView() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4 h-full min-h-0">
       <GanttFilters
         search={search}
         onSearchChange={setSearch}
@@ -269,7 +219,7 @@ export function GanttView() {
 
       <GanttNavigation zoom={zoom} onZoomChange={setZoom} onNavigate={navigate} />
 
-      <div className="border border-border rounded-lg bg-card overflow-hidden flex" style={{ minHeight: 400 }}>
+      <div className="border border-border rounded-lg bg-card overflow-hidden flex flex-1 min-h-0">
         <GanttSidebar
           rows={rows}
           expandedProjects={expandedProjects}

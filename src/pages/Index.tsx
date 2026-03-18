@@ -88,7 +88,7 @@ export default function Index() {
         onSignOut={signOut}
       />
 
-      <main className="flex-1 p-3 lg:p-4 overflow-auto">
+      <main className={cn("flex-1 p-3 lg:p-4", currentView === 'gantt' ? 'overflow-hidden flex flex-col' : 'overflow-auto')}>
         {isAdmin && (
           <div className="flex justify-end mb-2">
             <AdminNotificationBell
