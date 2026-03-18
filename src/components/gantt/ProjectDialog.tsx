@@ -38,12 +38,14 @@ export function ProjectDialog({ open, onOpenChange, project, milestoneId, milest
       setEndDate(project?.end_date || format(new Date(), 'yyyy-MM-dd'));
       setOwner(project?.owner || '');
       setStatus(project?.status || 'not_started');
-      setSelectedMilestoneId(project?.milestone_id || milestoneId || '');
+      setSelectedMilestoneId(project?.milestone_id || milestoneId || milestones[0]?.id || '');
     }
-  }, [open, project, milestoneId]);
+  }, [open, project, milestoneId, milestones]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedMilestoneId) return;
+
     setSaving(true);
     await onSave({
       title,
@@ -52,7 +54,7 @@ export function ProjectDialog({ open, onOpenChange, project, milestoneId, milest
       end_date: endDate,
       owner: owner || null,
       status,
-      milestone_id: selectedMilestoneId || null,
+      milestone_id: selectedMilestoneId,
     });
     setSaving(false);
   };
@@ -71,18 +73,20 @@ export function ProjectDialog({ open, onOpenChange, project, milestoneId, milest
             <div><Label>Date fin *</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required /></div>
           </div>
           <div>
-            <Label>Jalon parent</Label>
+            <Label>Jalon parent *</Label>
             <Select value={selectedMilestoneId} onValueChange={setSelectedMilestoneId}>
               <SelectTrigger><SelectValue placeholder="Sélectionner un jalon" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Aucun</SelectItem>
                 {milestones.map(m => <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>)}
               </SelectContent>
             </Select>
+            {milestones.length === 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">Créez d'abord un jalon pour pouvoir créer un projet.</p>
+            )}
           </div>
           <div>
             <Label>Responsable</Label>
-            <Select value={owner} onValueChange={setOwner}>
+            <Select value={owner || 'none'} onValueChange={(value) => setOwner(value === 'none' ? '' : value)}>
               <SelectTrigger><SelectValue placeholder="Sélectionner un responsable" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Aucun</SelectItem>
@@ -105,7 +109,7 @@ export function ProjectDialog({ open, onOpenChange, project, milestoneId, milest
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button type="submit" disabled={saving || !title || !startDate || !endDate}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
+            <Button type="submit" disabled={saving || !title || !startDate || !endDate || !selectedMilestoneId || milestones.length === 0}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

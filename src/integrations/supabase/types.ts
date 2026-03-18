@@ -74,7 +74,6 @@ export type Database = {
           date: string
           description: string | null
           id: string
-          project_id: string | null
           sort_order: number
           status: Database["public"]["Enums"]["gantt_status"]
           title: string
@@ -84,7 +83,6 @@ export type Database = {
           date: string
           description?: string | null
           id?: string
-          project_id?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["gantt_status"]
           title: string
@@ -94,20 +92,11 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
-          project_id?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["gantt_status"]
           title?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "gantt_milestones_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "gantt_projects"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       gantt_projects: {
         Row: {
@@ -116,7 +105,7 @@ export type Database = {
           description: string | null
           end_date: string
           id: string
-          milestone_id: string | null
+          milestone_id: string
           owner: string | null
           sort_order: number
           start_date: string
@@ -129,7 +118,7 @@ export type Database = {
           description?: string | null
           end_date: string
           id?: string
-          milestone_id?: string | null
+          milestone_id: string
           owner?: string | null
           sort_order?: number
           start_date: string
@@ -142,7 +131,7 @@ export type Database = {
           description?: string | null
           end_date?: string
           id?: string
-          milestone_id?: string | null
+          milestone_id?: string
           owner?: string | null
           sort_order?: number
           start_date?: string
