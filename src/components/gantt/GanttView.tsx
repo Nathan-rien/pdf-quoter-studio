@@ -21,6 +21,7 @@ export function GanttView() {
   const [zoom, setZoom] = useState<ZoomLevel>('week');
   const [viewStart, setViewStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [initialExpanded, setInitialExpanded] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [filterProject, setFilterProject] = useState('');
