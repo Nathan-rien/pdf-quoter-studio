@@ -147,119 +147,167 @@ export function GanttView() {
     return result;
   }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedMilestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority]);
 
-  /**
-   * Smart drag-and-drop handler for the flat list.
-   * Determines parent context from surrounding rows at the destination index.
-   */
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
-    const srcIdx = result.source.index;
-    const dstIdx = result.destination.index;
-    if (srcIdx === dstIdx) return;
 
-    const draggedRow = rows[srcIdx];
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+    if (sourceIndex === destinationIndex) return;
+
+    const draggedRow = rows[sourceIndex];
     if (!draggedRow) return;
 
-    // Create a simulated reordered list to find new context
-    const reordered = [...rows];
-    const [moved] = reordered.splice(srcIdx, 1);
-    reordered.splice(dstIdx, 0, moved);
+    const withoutDragged = rows.filter((_, index) => index !== sourceIndex);
+    const safeDestinationIndex = Math.max(0, Math.min(destinationIndex, withoutDragged.length));
 
-    const newDstIdx = dstIdx; // index in the reordered array
+    const rowsAfterDrop = [...withoutDragged];
+    rowsAfterDrop.splice(safeDestinationIndex, 0, draggedRow);
+
+    const findMilestoneAbove = (list: GanttRow[], fromIndex: number): string | null => {
+      for (let i = fromIndex - 1; i >= 0; i--) {
+        if (list[i].type === 'milestone') return list[i].id;
+      }
+      return null;
+    };
+
+    const findProjectAbove = (list: GanttRow[], fromIndex: number): string | null => {
+      for (let i = fromIndex - 1; i >= 0; i--) {
+        if (list[i].type === 'project') return list[i].id;
+        if (list[i].type === 'milestone') return null;
+      }
+      return null;
+    };
+
+    const findTaskAbove = (list: GanttRow[], fromIndex: number): string | null => {
+      for (let i = fromIndex - 1; i >= 0; i--) {
+        if (list[i].type === 'task') return list[i].id;
+        if (list[i].type === 'project' || list[i].type === 'milestone') return null;
+      }
+      return null;
+    };
+
+    const getProjectsUnderMilestone = (list: GanttRow[], milestoneId: string): string[] => {
+      const ids: string[] = [];
+      let currentMilestoneId: string | null = null;
+
+      for (const row of list) {
+        if (row.type === 'milestone') {
+          currentMilestoneId = row.id;
+          continue;
+        }
+
+        if (row.type === 'project' && currentMilestoneId === milestoneId) {
+          ids.push(row.id);
+        }
+      }
+
+      return ids;
+    };
+
+    const getTasksUnderProject = (list: GanttRow[], projectId: string): string[] => {
+      const ids: string[] = [];
+      let currentProjectId: string | null = null;
+
+      for (const row of list) {
+        if (row.type === 'milestone') {
+          currentProjectId = null;
+          continue;
+        }
+
+        if (row.type === 'project') {
+          currentProjectId = row.id;
+          continue;
+        }
+
+        if (row.type === 'task' && currentProjectId === projectId) {
+          ids.push(row.id);
+        }
+      }
+
+      return ids;
+    };
+
+    const getSubtasksUnderTask = (list: GanttRow[], taskId: string): string[] => {
+      const ids: string[] = [];
+      let currentTaskId: string | null = null;
+
+      for (const row of list) {
+        if (row.type === 'milestone' || row.type === 'project') {
+          currentTaskId = null;
+          continue;
+        }
+
+        if (row.type === 'task') {
+          currentTaskId = row.id;
+          continue;
+        }
+
+        if (row.type === 'subtask' && currentTaskId === taskId) {
+          ids.push(row.id);
+        }
+      }
+
+      return ids;
+    };
 
     if (draggedRow.type === 'milestone') {
-      // Reorder milestones: extract milestone order from the reordered flat list
-      const milestoneIds = reordered.filter(r => r.type === 'milestone').map(r => r.id);
-      void data.reorderMilestones(milestoneIds);
+      const milestoneIdsWithoutDragged = withoutDragged.filter((row) => row.type === 'milestone').map((row) => row.id);
+      const milestoneInsertIndex = withoutDragged
+        .slice(0, safeDestinationIndex)
+        .filter((row) => row.type === 'milestone').length;
+
+      const nextMilestoneIds = [...milestoneIdsWithoutDragged];
+      nextMilestoneIds.splice(milestoneInsertIndex, 0, draggedRow.id);
+
+      void data.reorderMilestones(nextMilestoneIds);
       return;
     }
 
     if (draggedRow.type === 'project') {
-      // Find the milestone this project now belongs to by scanning upward
-      let newMilestoneId: string | null = null;
-      for (let i = newDstIdx - 1; i >= 0; i--) {
-        if (reordered[i].type === 'milestone') {
-          newMilestoneId = reordered[i].id;
-          break;
+      const newMilestoneId = findMilestoneAbove(rowsAfterDrop, safeDestinationIndex);
+      if (!newMilestoneId) return;
+
+      const orderedProjectIds = getProjectsUnderMilestone(rowsAfterDrop, newMilestoneId);
+
+      void (async () => {
+        if (draggedRow.milestoneId !== newMilestoneId) {
+          const moved = await data.moveProjectToMilestone(draggedRow.id, newMilestoneId);
+          if (!moved) return;
         }
-      }
-      if (!newMilestoneId) return; // Can't place a project before any milestone
-
-      // Move to new milestone if needed
-      if (draggedRow.milestoneId !== newMilestoneId) {
-        void data.moveProjectToMilestone(draggedRow.id, newMilestoneId);
-      }
-
-      // Reorder projects within that milestone
-      const projectIds = reordered
-        .filter(r => r.type === 'project' && (() => {
-          // Determine milestone for each project in reordered list
-          for (let i = reordered.indexOf(r) - 1; i >= 0; i--) {
-            if (reordered[i].type === 'milestone') return reordered[i].id === newMilestoneId;
-          }
-          return false;
-        })())
-        .map(r => r.id);
-      void data.reorderProjects(projectIds);
+        await data.reorderProjects(orderedProjectIds);
+      })();
       return;
     }
 
     if (draggedRow.type === 'task') {
-      // Find the project this task now belongs to by scanning upward
-      let newProjectId: string | null = null;
-      for (let i = newDstIdx - 1; i >= 0; i--) {
-        if (reordered[i].type === 'project') {
-          newProjectId = reordered[i].id;
-          break;
-        }
-        if (reordered[i].type === 'milestone') break; // Hit a milestone before a project
-      }
+      const newProjectId = findProjectAbove(rowsAfterDrop, safeDestinationIndex);
       if (!newProjectId) return;
 
-      if (draggedRow.projectId !== newProjectId) {
-        void data.moveTaskToProject(draggedRow.id, newProjectId);
-      }
+      const orderedTaskIds = getTasksUnderProject(rowsAfterDrop, newProjectId);
 
-      // Reorder tasks within that project
-      const taskIds = reordered
-        .filter(r => r.type === 'task' && (() => {
-          for (let i = reordered.indexOf(r) - 1; i >= 0; i--) {
-            if (reordered[i].type === 'project') return reordered[i].id === newProjectId;
-            if (reordered[i].type === 'milestone') return false;
-          }
-          return false;
-        })())
-        .map(r => r.id);
-      void data.reorderTasks(taskIds);
+      void (async () => {
+        if (draggedRow.projectId !== newProjectId) {
+          const moved = await data.moveTaskToProject(draggedRow.id, newProjectId);
+          if (!moved) return;
+        }
+        await data.reorderTasks(orderedTaskIds);
+      })();
       return;
     }
 
     if (draggedRow.type === 'subtask') {
-      // Find the task this subtask now belongs to by scanning upward
-      let newTaskId: string | null = null;
-      for (let i = newDstIdx - 1; i >= 0; i--) {
-        if (reordered[i].type === 'task') {
-          newTaskId = reordered[i].id;
-          break;
-        }
-        if (reordered[i].type === 'project' || reordered[i].type === 'milestone') break;
-      }
+      const newTaskId = findTaskAbove(rowsAfterDrop, safeDestinationIndex);
       if (!newTaskId) return;
 
-      if (draggedRow.taskId !== newTaskId) {
-        void data.moveSubtaskToTask(draggedRow.id, newTaskId);
-      }
+      const orderedSubtaskIds = getSubtasksUnderTask(rowsAfterDrop, newTaskId);
 
-      const subtaskIds = reordered
-        .filter(r => r.type === 'subtask' && (() => {
-          for (let i = reordered.indexOf(r) - 1; i >= 0; i--) {
-            if (reordered[i].type === 'task') return reordered[i].id === newTaskId;
-            if (reordered[i].type === 'project' || reordered[i].type === 'milestone') return false;
-          }
-          return false;
-        })())
-        .map(r => r.id);
-      void data.reorderSubtasks(subtaskIds);
+      void (async () => {
+        if (draggedRow.taskId !== newTaskId) {
+          const moved = await data.moveSubtaskToTask(draggedRow.id, newTaskId);
+          if (!moved) return;
+        }
+        await data.reorderSubtasks(orderedSubtaskIds);
+      })();
     }
   }, [data, rows]);
 
