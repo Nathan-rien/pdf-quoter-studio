@@ -24,7 +24,7 @@ const barColors = {
   subtask: { base: 'bg-amber-500', done: 'bg-amber-600', notStarted: 'bg-amber-400' },
 };
 
-export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, getOwnerName }: Props) {
+export function GanttBar({ row, x, width, y, height, scrollLeft, onDragEnd, onResizeEnd, getOwnerName }: Props) {
   const barRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'left' | 'right' | false>(false);
