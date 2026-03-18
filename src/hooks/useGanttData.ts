@@ -147,18 +147,42 @@ export function useGanttData() {
 
   // Batch reorder helpers
   const reorderProjects = async (orderedIds: string[]) => {
-    const updates = orderedIds.map((id, i) => supabase.from('gantt_projects').update({ sort_order: (i + 1) * 10 } as any).eq('id', id));
-    await Promise.all(updates);
+    const previous = [...projects];
+    setProjects(prev => {
+      const map = new Map(prev.map(p => [p.id, p]));
+      const reordered = orderedIds
+        .map((id, i) => { const p = map.get(id); return p ? { ...p, sort_order: (i + 1) * 10 } : null; })
+        .filter(Boolean) as GanttProject[];
+      return [...reordered, ...prev.filter(p => !orderedIds.includes(p.id))];
+    });
+    const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_projects').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
+    if (results.some(r => r.error)) { setProjects(previous); toast.error('Erreur réordonnancement'); }
   };
 
   const reorderTasks = async (orderedIds: string[]) => {
-    const updates = orderedIds.map((id, i) => supabase.from('gantt_tasks').update({ sort_order: (i + 1) * 10 } as any).eq('id', id));
-    await Promise.all(updates);
+    const previous = [...tasks];
+    setTasks(prev => {
+      const map = new Map(prev.map(t => [t.id, t]));
+      const reordered = orderedIds
+        .map((id, i) => { const t = map.get(id); return t ? { ...t, sort_order: (i + 1) * 10 } : null; })
+        .filter(Boolean) as GanttTask[];
+      return [...reordered, ...prev.filter(t => !orderedIds.includes(t.id))];
+    });
+    const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_tasks').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
+    if (results.some(r => r.error)) { setTasks(previous); toast.error('Erreur réordonnancement'); }
   };
 
   const reorderMilestones = async (orderedIds: string[]) => {
-    const updates = orderedIds.map((id, i) => supabase.from('gantt_milestones').update({ sort_order: (i + 1) * 10 } as any).eq('id', id));
-    await Promise.all(updates);
+    const previous = [...milestones];
+    setMilestones(prev => {
+      const map = new Map(prev.map(m => [m.id, m]));
+      const reordered = orderedIds
+        .map((id, i) => { const m = map.get(id); return m ? { ...m, sort_order: (i + 1) * 10 } : null; })
+        .filter(Boolean) as GanttMilestone[];
+      return [...reordered, ...prev.filter(m => !orderedIds.includes(m.id))];
+    });
+    const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_milestones').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
+    if (results.some(r => r.error)) { setMilestones(previous); toast.error('Erreur réordonnancement'); }
   };
 
   return {
