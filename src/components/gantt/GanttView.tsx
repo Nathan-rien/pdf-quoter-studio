@@ -184,10 +184,12 @@ export function GanttView() {
       const milestone = data.milestones.find(m => m.id === actualId);
       if (!milestone) return;
 
-      const projectRows = rows.filter(
-        r => (r.type === 'task' || r.type === 'milestone') && r.projectId === milestone.project_id,
-      );
-      const srcIdx = projectRows.findIndex(r => r.type === 'milestone' && r.id === actualId);
+      // Get all children (milestones + tasks) of this project in current display order
+      const projectChildren = rows
+        .filter(r => (r.type === 'task' || r.type === 'milestone') && r.projectId === milestone.project_id)
+        .map(r => ({ type: r.type as 'task' | 'milestone', id: r.id }));
+
+      const srcIdx = projectChildren.findIndex(c => c.type === 'milestone' && c.id === actualId);
 
       let dstIdx = -1;
       if (destRow.type === 'project' && destRow.id === milestone.project_id) {
@@ -196,36 +198,14 @@ export function GanttView() {
         (destRow.type === 'task' || destRow.type === 'milestone') &&
         destRow.projectId === milestone.project_id
       ) {
-        dstIdx = projectRows.findIndex(r => r.type === destRow.type && r.id === destRow.id);
+        dstIdx = projectChildren.findIndex(c => c.type === destRow.type && c.id === destRow.id);
       }
 
-      if (srcIdx !== -1 && dstIdx !== -1) {
-        const reordered = [...projectRows];
+      if (srcIdx !== -1 && dstIdx !== -1 && srcIdx !== dstIdx) {
+        const reordered = [...projectChildren];
         const [moved] = reordered.splice(srcIdx, 1);
         reordered.splice(dstIdx, 0, moved);
-
-        const taskOrderMap = new Map(data.tasks.map(t => [t.id, t.sort_order]));
-        const milestoneOrderMap = new Map(data.milestones.map(m => [m.id, m.sort_order]));
-        const updates: Promise<boolean>[] = [];
-
-        reordered.forEach((row, index) => {
-          const sortOrder = (index + 1) * 10;
-          if (row.type === 'task') {
-            const currentOrder = taskOrderMap.get(row.id);
-            if (currentOrder !== sortOrder) {
-              updates.push(data.updateTask(row.id, { sort_order: sortOrder }));
-            }
-          } else if (row.type === 'milestone') {
-            const currentOrder = milestoneOrderMap.get(row.id);
-            if (currentOrder !== sortOrder) {
-              updates.push(data.updateMilestone(row.id, { sort_order: sortOrder }));
-            }
-          }
-        });
-
-        if (updates.length > 0) {
-          void Promise.all(updates);
-        }
+        data.reorderProjectChildren(reordered);
       }
     }
   }, [data, rows]);
