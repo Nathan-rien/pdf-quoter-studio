@@ -5,6 +5,7 @@ import { STATUS_LABELS } from '@/types/gantt';
 import type { GanttRow } from '@/types/gantt';
 import { Badge } from '@/components/ui/badge';
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
+import { useRef, useEffect, useCallback } from 'react';
 
 interface GanttSidebarProps {
   rows: GanttRow[];
@@ -23,9 +24,10 @@ interface GanttSidebarProps {
   getOwnerName: (id: string | null | undefined) => string;
   onDragEnd: (result: DropResult) => void;
   headerHeight: number;
+  onRowHeightsChange?: (heights: number[]) => void;
 }
 
-const ROW_HEIGHT = 40;
+const MIN_ROW_HEIGHT = 40;
 
 const statusColor = (status: string) => {
   switch (status) {
