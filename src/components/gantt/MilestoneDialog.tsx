@@ -4,10 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { STATUS_LABELS } from '@/types/gantt';
-import type { GanttMilestone, GanttStatus } from '@/types/gantt';
-import { format } from 'date-fns';
+import type { GanttMilestone } from '@/types/gantt';
 
 interface Props {
   open: boolean;
@@ -18,25 +15,20 @@ interface Props {
 
 export function MilestoneDialog({ open, onOpenChange, milestone, onSave }: Props) {
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<GanttStatus>('not_started');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setTitle(milestone?.title || '');
-      setDate(milestone?.date || format(new Date(), 'yyyy-MM-dd'));
       setDescription(milestone?.description || '');
-      setStatus(milestone?.status || 'not_started');
     }
   }, [open, milestone]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const data: any = { title, date, description: description || null, status };
-    await onSave(data);
+    await onSave({ title, description: description || null } as any);
     setSaving(false);
   };
 
@@ -44,22 +36,14 @@ export function MilestoneDialog({ open, onOpenChange, milestone, onSave }: Props
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{milestone ? 'Modifier le jalon' : 'Créer un jalon'}</DialogTitle>
+          <DialogTitle>{milestone ? 'Modifier l\'axe' : 'Créer un axe'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div><Label>Titre *</Label><Input value={title} onChange={e => setTitle(e.target.value)} required /></div>
-          <div><Label>Date *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
+          <div><Label>Titre *</Label><Input value={title} onChange={e => setTitle(e.target.value)} required placeholder="Ex: Développement commercial" /></div>
           <div><Label>Description</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} /></div>
-          <div>
-            <Label>Statut</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as GanttStatus)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{(Object.entries(STATUS_LABELS) as [GanttStatus, string][]).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button type="submit" disabled={saving || !title || !date}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
+            <Button type="submit" disabled={saving || !title}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
