@@ -61,7 +61,7 @@ export function GanttSidebar({
             <div ref={provided.innerRef} {...provided.droppableProps}>
               {rows.map((row, index) => {
                 const ownerName = getOwnerName(row.owner);
-                const isDraggable = row.type === 'project' || row.type === 'task';
+                const isDraggable = row.type === 'project' || row.type === 'task' || row.type === 'milestone';
 
                 const content = (
                   <div
