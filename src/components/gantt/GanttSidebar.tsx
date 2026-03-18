@@ -156,7 +156,7 @@ export function GanttSidebar({
 
                 if (isDraggable) {
                   return (
-                    <Draggable key={`${row.type}-${row.id}`} draggableId={`${row.type}-${row.id}`} index={index}>
+                    <Draggable key={`${row.type}-${row.id}`} draggableId={`${row.type}-${row.id}`} index={draggableIndex}>
                       {(dragProvided, snapshot) => (
                         <div
                           ref={dragProvided.innerRef}
