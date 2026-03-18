@@ -1,33 +1,34 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { GanttProject, GanttTask, GanttSubtask, GanttDependency, GanttStatus, GanttPriority, GanttDependencyType } from '@/types/gantt';
+import type { GanttProject, GanttTask, GanttSubtask, GanttDependency, GanttMilestone, GanttStatus, GanttPriority, GanttDependencyType } from '@/types/gantt';
 
 export function useGanttData() {
   const [projects, setProjects] = useState<GanttProject[]>([]);
   const [tasks, setTasks] = useState<GanttTask[]>([]);
   const [subtasks, setSubtasks] = useState<GanttSubtask[]>([]);
   const [dependencies, setDependencies] = useState<GanttDependency[]>([]);
+  const [milestones, setMilestones] = useState<GanttMilestone[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [pRes, tRes, sRes, dRes] = await Promise.all([
-      supabase.from('gantt_projects').select('*').order('created_at'),
+    const [pRes, tRes, sRes, dRes, mRes] = await Promise.all([
+      supabase.from('gantt_projects').select('*').order('sort_order'),
       supabase.from('gantt_tasks').select('*').order('sort_order'),
       supabase.from('gantt_subtasks').select('*').order('sort_order'),
       supabase.from('gantt_dependencies').select('*'),
+      supabase.from('gantt_milestones').select('*').order('sort_order'),
     ]);
     if (pRes.data) setProjects(pRes.data as unknown as GanttProject[]);
     if (tRes.data) setTasks(tRes.data as unknown as GanttTask[]);
     if (sRes.data) setSubtasks(sRes.data as unknown as GanttSubtask[]);
     if (dRes.data) setDependencies(dRes.data as unknown as GanttDependency[]);
+    if (mRes.data) setMilestones(mRes.data as unknown as GanttMilestone[]);
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   // Realtime subscriptions
   useEffect(() => {
@@ -37,6 +38,7 @@ export function useGanttData() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gantt_tasks' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gantt_subtasks' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gantt_dependencies' }, () => fetchAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gantt_milestones' }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchAll]);
@@ -44,13 +46,14 @@ export function useGanttData() {
   // CRUD Projects
   const createProject = async (data: { title: string; description?: string; start_date: string; end_date: string; owner?: string }) => {
     const user = (await supabase.auth.getUser()).data.user;
-    const { error } = await supabase.from('gantt_projects').insert({ ...data, created_by: user?.id } as any);
+    const maxOrder = projects.reduce((max, p) => Math.max(max, p.sort_order), 0);
+    const { error } = await supabase.from('gantt_projects').insert({ ...data, created_by: user?.id, sort_order: maxOrder + 10 } as any);
     if (error) { toast.error('Erreur création projet'); console.error(error); return false; }
     toast.success('Projet créé');
     return true;
   };
 
-  const updateProject = async (id: string, data: Partial<{ title: string; description: string | null; start_date: string; end_date: string; owner: string | null; status: GanttStatus }>) => {
+  const updateProject = async (id: string, data: Partial<{ title: string; description: string | null; start_date: string; end_date: string; owner: string | null; status: GanttStatus; sort_order: number }>) => {
     const { error } = await supabase.from('gantt_projects').update(data as any).eq('id', id);
     if (error) { toast.error('Erreur mise à jour projet'); return false; }
     return true;
@@ -105,6 +108,29 @@ export function useGanttData() {
     return true;
   };
 
+  // CRUD Milestones
+  const createMilestone = async (data: { project_id: string; title: string; date: string; description?: string; status?: GanttStatus }) => {
+    const projectMilestones = milestones.filter(m => m.project_id === data.project_id);
+    const maxOrder = projectMilestones.reduce((max, m) => Math.max(max, m.sort_order), 0);
+    const { error } = await supabase.from('gantt_milestones').insert({ ...data, sort_order: maxOrder + 10 } as any);
+    if (error) { toast.error('Erreur création jalon'); console.error(error); return false; }
+    toast.success('Jalon créé');
+    return true;
+  };
+
+  const updateMilestone = async (id: string, data: Partial<{ title: string; date: string; description: string | null; status: GanttStatus; sort_order: number }>) => {
+    const { error } = await supabase.from('gantt_milestones').update(data as any).eq('id', id);
+    if (error) { toast.error('Erreur mise à jour jalon'); return false; }
+    return true;
+  };
+
+  const deleteMilestone = async (id: string) => {
+    const { error } = await supabase.from('gantt_milestones').delete().eq('id', id);
+    if (error) { toast.error('Erreur suppression jalon'); return false; }
+    toast.success('Jalon supprimé');
+    return true;
+  };
+
   // Dependencies
   const createDependency = async (data: { source_task_id: string; target_task_id: string; dependency_type?: GanttDependencyType }) => {
     const { error } = await supabase.from('gantt_dependencies').insert(data as any);
@@ -119,12 +145,25 @@ export function useGanttData() {
     return true;
   };
 
+  // Batch reorder helpers
+  const reorderProjects = async (orderedIds: string[]) => {
+    const updates = orderedIds.map((id, i) => supabase.from('gantt_projects').update({ sort_order: (i + 1) * 10 } as any).eq('id', id));
+    await Promise.all(updates);
+  };
+
+  const reorderTasks = async (orderedIds: string[]) => {
+    const updates = orderedIds.map((id, i) => supabase.from('gantt_tasks').update({ sort_order: (i + 1) * 10 } as any).eq('id', id));
+    await Promise.all(updates);
+  };
+
   return {
-    projects, tasks, subtasks, dependencies, loading,
+    projects, tasks, subtasks, dependencies, milestones, loading,
     createProject, updateProject, deleteProject,
     createTask, updateTask, deleteTask,
     createSubtask, updateSubtask, deleteSubtask,
+    createMilestone, updateMilestone, deleteMilestone,
     createDependency, deleteDependency,
+    reorderProjects, reorderTasks,
     refresh: fetchAll,
   };
 }

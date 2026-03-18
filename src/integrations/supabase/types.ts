@@ -68,6 +68,47 @@ export type Database = {
           },
         ]
       }
+      gantt_milestones: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          project_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["gantt_status"]
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          project_id: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["gantt_status"]
+          title: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          project_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["gantt_status"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gantt_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "gantt_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gantt_projects: {
         Row: {
           created_at: string
@@ -76,6 +117,7 @@ export type Database = {
           end_date: string
           id: string
           owner: string | null
+          sort_order: number
           start_date: string
           status: Database["public"]["Enums"]["gantt_status"]
           title: string
@@ -87,6 +129,7 @@ export type Database = {
           end_date: string
           id?: string
           owner?: string | null
+          sort_order?: number
           start_date: string
           status?: Database["public"]["Enums"]["gantt_status"]
           title: string
@@ -98,6 +141,7 @@ export type Database = {
           end_date?: string
           id?: string
           owner?: string | null
+          sort_order?: number
           start_date?: string
           status?: Database["public"]["Enums"]["gantt_status"]
           title?: string
