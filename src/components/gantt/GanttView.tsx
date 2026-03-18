@@ -192,6 +192,7 @@ export function GanttView() {
       <div className="border border-border rounded-lg bg-card overflow-hidden flex flex-1 min-h-0">
         <GanttSidebar
           rows={rows}
+          width={sidebarWidth}
           headerHeight={headerHeight}
           onEditMilestone={(id) => { const m = data.milestones.find(m => m.id === id); setMilestoneDialog({ open: true, milestone: m }); }}
           onEditProject={(id) => setProjectDialog({ open: true, project: data.projects.find(p => p.id === id) })}
@@ -206,6 +207,10 @@ export function GanttView() {
           onDeleteSubtask={data.deleteSubtask}
           getOwnerName={getOwnerName}
           onDragEnd={handleDragEnd}
+        />
+        <div
+          className="w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors flex-shrink-0"
+          onMouseDown={() => { resizingRef.current = true; }}
         />
         <GanttTimeline
           ref={timelineRef}
