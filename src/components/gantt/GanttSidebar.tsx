@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { STATUS_LABELS } from '@/types/gantt';
 import type { GanttRow } from '@/types/gantt';
 import { Badge } from '@/components/ui/badge';
-import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 
 interface GanttSidebarProps {
   rows: GanttRow[];
@@ -39,6 +39,11 @@ const statusColor = (status: string) => {
   }
 };
 
+interface RenderRowOptions {
+  isDraggable?: boolean;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null;
+}
+
 export function GanttSidebar({
   rows, expandedMilestones, expandedProjects, expandedTasks,
   onToggleMilestone, onToggleProject, onToggleTask,
@@ -49,7 +54,8 @@ export function GanttSidebar({
 }: GanttSidebarProps) {
   const milestones = rows.filter((row) => row.type === 'milestone');
 
-  const renderRowContent = (row: GanttRow, isDraggable: boolean) => {
+  const renderRowContent = (row: GanttRow, options: RenderRowOptions = {}) => {
+    const { isDraggable = false, dragHandleProps } = options;
     const ownerName = getOwnerName(row.owner);
 
     return (
@@ -62,9 +68,15 @@ export function GanttSidebar({
         style={{ height: ROW_HEIGHT, paddingLeft: 8 + row.depth * 20 }}
       >
         {isDraggable ? (
-          <GripVertical className="h-3 w-3 text-muted-foreground/50 cursor-grab active:cursor-grabbing flex-shrink-0" />
+          <button
+            type="button"
+            className="p-0.5 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
+            {...dragHandleProps}
+          >
+            <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+          </button>
         ) : (
-          <span className="w-3" />
+          <span className="w-4" />
         )}
 
         {(row.type === 'milestone' || row.type === 'project' || row.type === 'task') ? (
@@ -80,8 +92,7 @@ export function GanttSidebar({
               row.type === 'project' ? expandedProjects.has(row.id) :
               expandedTasks.has(row.id))
               ? <ChevronDown className="h-3.5 w-3.5" />
-              : <ChevronRight className="h-3.5 w-3.5" />
-            }
+              : <ChevronRight className="h-3.5 w-3.5" />}
           </button>
         ) : <span className="w-5" />}
 
@@ -159,105 +170,55 @@ export function GanttSidebar({
 
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="milestones-root" type="MILESTONE">
-          {(milestoneDropProvided) => (
+          {(provided) => (
             <div
-              ref={milestoneDropProvided.innerRef}
-              {...milestoneDropProvided.droppableProps}
+              ref={provided.innerRef}
+              {...provided.droppableProps}
               className="flex-1 overflow-y-auto"
             >
               {milestones.map((milestone, milestoneIndex) => {
-                const projects = rows.filter(
-                  (row) => row.type === 'project' && row.milestoneId === milestone.id,
-                );
+                const projects = rows.filter((row) => row.type === 'project' && row.milestoneId === milestone.id);
 
                 return (
-                  <div key={`milestone-block-${milestone.id}`}>
-                    <Draggable draggableId={`milestone-${milestone.id}`} index={milestoneIndex}>
-                      {(milestoneDragProvided, snapshot) => (
-                        <div
-                          ref={milestoneDragProvided.innerRef}
-                          {...milestoneDragProvided.draggableProps}
-                          {...milestoneDragProvided.dragHandleProps}
-                          className={cn(snapshot.isDragging && 'opacity-80 shadow-lg z-50')}
-                        >
-                          {renderRowContent(milestone, true)}
-                        </div>
-                      )}
-                    </Draggable>
+                  <Draggable key={`milestone-${milestone.id}`} draggableId={`milestone-${milestone.id}`} index={milestoneIndex}>
+                    {(dragProvided, snapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        className={cn(snapshot.isDragging && 'opacity-80 shadow-lg z-50')}
+                      >
+                        {renderRowContent(milestone, { isDraggable: true, dragHandleProps: dragProvided.dragHandleProps })}
 
-                    {expandedMilestones.has(milestone.id) && (
-                      <Droppable droppableId={`projects-in-${milestone.id}`} type="PROJECT">
-                        {(projectDropProvided) => (
-                          <div ref={projectDropProvided.innerRef} {...projectDropProvided.droppableProps}>
-                            {projects.map((project, projectIndex) => {
-                              const tasks = rows.filter(
-                                (row) => row.type === 'task' && row.projectId === project.id,
-                              );
+                        {expandedMilestones.has(milestone.id) && projects.map((project) => {
+                          const tasks = rows.filter((row) => row.type === 'task' && row.projectId === project.id);
 
-                              return (
-                                <div key={`project-block-${project.id}`}>
-                                  <Draggable draggableId={`project-${project.id}`} index={projectIndex}>
-                                    {(projectDragProvided, snapshot) => (
-                                      <div
-                                        ref={projectDragProvided.innerRef}
-                                        {...projectDragProvided.draggableProps}
-                                        {...projectDragProvided.dragHandleProps}
-                                        className={cn(snapshot.isDragging && 'opacity-80 shadow-lg z-50')}
-                                      >
-                                        {renderRowContent(project, true)}
+                          return (
+                            <div key={`project-${project.id}`}>
+                              {renderRowContent(project)}
+
+                              {expandedProjects.has(project.id) && tasks.map((task) => {
+                                const subtasks = rows.filter((row) => row.type === 'subtask' && row.taskId === task.id);
+
+                                return (
+                                  <div key={`task-${task.id}`}>
+                                    {renderRowContent(task)}
+                                    {expandedTasks.has(task.id) && subtasks.map((subtask) => (
+                                      <div key={`subtask-${subtask.id}`}>
+                                        {renderRowContent(subtask)}
                                       </div>
-                                    )}
-                                  </Draggable>
-
-                                  {expandedProjects.has(project.id) && (
-                                    <Droppable droppableId={`tasks-in-${project.id}`} type="TASK">
-                                      {(taskDropProvided) => (
-                                        <div ref={taskDropProvided.innerRef} {...taskDropProvided.droppableProps}>
-                                          {tasks.map((task, taskIndex) => {
-                                            const subtasks = rows.filter(
-                                              (row) => row.type === 'subtask' && row.taskId === task.id,
-                                            );
-
-                                            return (
-                                              <div key={`task-block-${task.id}`}>
-                                                <Draggable draggableId={`task-${task.id}`} index={taskIndex}>
-                                                  {(taskDragProvided, snapshot) => (
-                                                    <div
-                                                      ref={taskDragProvided.innerRef}
-                                                      {...taskDragProvided.draggableProps}
-                                                      {...taskDragProvided.dragHandleProps}
-                                                      className={cn(snapshot.isDragging && 'opacity-80 shadow-lg z-50')}
-                                                    >
-                                                      {renderRowContent(task, true)}
-                                                    </div>
-                                                  )}
-                                                </Draggable>
-
-                                                {expandedTasks.has(task.id) && subtasks.map((subtask) => (
-                                                  <div key={`subtask-${subtask.id}`}>
-                                                    {renderRowContent(subtask, false)}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            );
-                                          })}
-                                          {taskDropProvided.placeholder}
-                                        </div>
-                                      )}
-                                    </Droppable>
-                                  )}
-                                </div>
-                              );
-                            })}
-                            {projectDropProvided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
-                  </div>
+                  </Draggable>
                 );
               })}
-              {milestoneDropProvided.placeholder}
+              {provided.placeholder}
             </div>
           )}
         </Droppable>

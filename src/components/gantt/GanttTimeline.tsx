@@ -16,7 +16,7 @@ interface Props {
   getOwnerName?: (id: string | null | undefined) => string;
 }
 
-const ROW_HEIGHT = 48;
+const ROW_HEIGHT = 40;
 const END_DATE = new Date(2027, 11, 31);
 
 const getColWidth = (zoom: ZoomLevel) => {
