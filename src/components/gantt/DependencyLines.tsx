@@ -5,11 +5,12 @@ interface Props {
   dependencies: GanttDependency[];
   rows: GanttRow[];
   rowHeight: number;
+  rowHeights?: number[];
   dayToX: (date: Date) => number;
   tasks: GanttTask[];
 }
 
-export function DependencyLines({ dependencies, rows, rowHeight, dayToX, tasks }: Props) {
+export function DependencyLines({ dependencies, rows, rowHeight, rowHeights = [], dayToX, tasks }: Props) {
   const lines = dependencies.map(dep => {
     const sourceTask = tasks.find(t => t.id === dep.source_task_id);
     const targetTask = tasks.find(t => t.id === dep.target_task_id);
