@@ -62,7 +62,7 @@ export function DependencyLines({ dependencies, rows, rowHeight, rowHeights = []
   if (lines.length === 0) return null;
 
   return (
-    <svg className="absolute inset-0 pointer-events-none z-10" style={{ width: '100%', height: rows.length * rowHeight }}>
+    <svg className="absolute inset-0 pointer-events-none z-10" style={{ width: '100%', height: rows.reduce((sum, _, i) => sum + (rowHeights[i] || rowHeight), 0) }}>
       {lines}
     </svg>
   );
