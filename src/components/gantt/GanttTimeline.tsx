@@ -10,7 +10,7 @@ interface Props {
   rows: GanttRow[];
   zoom: ZoomLevel;
   viewStart: Date;
-  onUpdateDates: (type: 'project' | 'task' | 'subtask', id: string, start: string, end: string) => void;
+  onUpdateDates: (type: 'project' | 'task' | 'subtask' | 'milestone', id: string, start: string, end: string) => void;
   dependencies: GanttDependency[];
   tasks: GanttTask[];
   getOwnerName?: (id: string | null | undefined) => string;
