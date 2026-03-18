@@ -64,11 +64,11 @@ function RowContent({
   return (
     <div
       className={cn(
-        'flex items-center gap-1 px-2 border-b border-border/50 group hover:bg-accent/50 transition-colors',
+        'flex items-center gap-1 px-2 py-1 border-b border-border/50 group hover:bg-accent/50 transition-colors',
         row.type === 'milestone' && 'bg-orange-50/50 dark:bg-orange-950/30 border-l-4 border-l-orange-500',
         row.type === 'project' && 'bg-muted/30',
       )}
-      style={{ height: ROW_HEIGHT, paddingLeft: row.type === 'milestone' ? 8 : 8 + row.depth * 20 }}
+      style={{ minHeight: MIN_ROW_HEIGHT, paddingLeft: row.type === 'milestone' ? 8 : 8 + row.depth * 20 }}
     >
       <button
         type="button"
