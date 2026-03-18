@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useGanttData } from '@/hooks/useGanttData';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { GanttSidebar } from './GanttSidebar';
@@ -9,7 +9,9 @@ import { ProjectDialog } from './ProjectDialog';
 import { TaskDialog } from './TaskDialog';
 import { SubtaskDialog } from './SubtaskDialog';
 import { DependencyDialog } from './DependencyDialog';
+import { MilestoneDialog } from './MilestoneDialog';
 import type { GanttRow, ZoomLevel } from '@/types/gantt';
+import type { DropResult } from '@hello-pangea/dnd';
 import { addDays, addWeeks, addMonths, startOfWeek, startOfMonth, startOfYear, subDays, subWeeks, subMonths } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
@@ -30,6 +32,7 @@ export function GanttView() {
   const [projectDialog, setProjectDialog] = useState<{ open: boolean; project?: any }>({ open: false });
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; task?: any; projectId?: string }>({ open: false });
   const [subtaskDialog, setSubtaskDialog] = useState<{ open: boolean; subtask?: any; taskId?: string }>({ open: false });
+  const [milestoneDialog, setMilestoneDialog] = useState<{ open: boolean; milestone?: any; projectId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
 
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -55,6 +58,60 @@ export function GanttView() {
       return next;
     });
   };
+
+  // Drag & Drop handler
+  const handleDragEnd = useCallback((result: DropResult) => {
+    if (!result.destination || result.source.index === result.destination.index) return;
+
+    const draggedId = result.draggableId;
+    const [draggedType, ...idParts] = draggedId.split('-');
+    const actualId = idParts.join('-');
+
+    if (draggedType === 'project') {
+      // Reorder projects
+      const projectRows = rows.filter(r => r.type === 'project');
+      const projectIds = projectRows.map(r => r.id);
+      
+      // Find source and dest within project rows
+      const sourceRow = rows[result.source.index];
+      const destRow = rows[result.destination.index];
+      
+      if (sourceRow?.type === 'project' && destRow?.type === 'project') {
+        const srcIdx = projectIds.indexOf(sourceRow.id);
+        const dstIdx = projectIds.indexOf(destRow.id);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          const newOrder = [...projectIds];
+          newOrder.splice(srcIdx, 1);
+          newOrder.splice(dstIdx, 0, sourceRow.id);
+          data.reorderProjects(newOrder);
+        }
+      }
+    } else if (draggedType === 'task') {
+      // Get the task being dragged
+      const task = data.tasks.find(t => t.id === actualId);
+      if (!task) return;
+      
+      // Reorder tasks within the same project
+      const projectTasks = data.tasks
+        .filter(t => t.project_id === task.project_id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      const taskIds = projectTasks.map(t => t.id);
+      const srcIdx = taskIds.indexOf(actualId);
+      
+      // Calculate destination index within project tasks
+      const sourceRow = rows[result.source.index];
+      const destRow = rows[result.destination.index];
+      if (sourceRow?.type === 'task' && destRow?.type === 'task') {
+        const dstIdx = taskIds.indexOf(destRow.id);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          const newOrder = [...taskIds];
+          newOrder.splice(srcIdx, 1);
+          newOrder.splice(dstIdx, 0, actualId);
+          data.reorderTasks(newOrder);
+        }
+      }
+    }
+  }, [data]);
 
   // Build flat row list
   const rows = useMemo<GanttRow[]>(() => {
@@ -83,6 +140,16 @@ export function GanttView() {
       result.push({ type: 'project', id: project.id, title: project.title, start_date: project.start_date, end_date: project.end_date, status: project.status, owner: project.owner, depth: 0 });
 
       if (expandedProjects.has(project.id)) {
+        // Milestones first
+        const projectMilestones = data.milestones
+          .filter(m => m.project_id === project.id)
+          .sort((a, b) => a.sort_order - b.sort_order);
+
+        for (const ms of projectMilestones) {
+          result.push({ type: 'milestone', id: ms.id, title: ms.title, start_date: ms.date, end_date: ms.date, status: ms.status, projectId: ms.project_id, depth: 1, date: ms.date });
+        }
+
+        // Then tasks
         const projectTasks = data.tasks
           .filter(t => {
             if (t.project_id !== project.id) return false;
@@ -109,7 +176,7 @@ export function GanttView() {
       }
     }
     return result;
-  }, [data.projects, data.tasks, data.subtasks, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority, commerciaux]);
+  }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority, commerciaux]);
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
     if (dir === 'today') {
@@ -172,12 +239,16 @@ export function GanttView() {
           onEditProject={(id) => setProjectDialog({ open: true, project: data.projects.find(p => p.id === id) })}
           onEditTask={(id) => { const t = data.tasks.find(t => t.id === id); setTaskDialog({ open: true, task: t }); }}
           onEditSubtask={(id) => { const s = data.subtasks.find(s => s.id === id); setSubtaskDialog({ open: true, subtask: s }); }}
+          onEditMilestone={(id) => { const m = data.milestones.find(m => m.id === id); setMilestoneDialog({ open: true, milestone: m }); }}
           onAddTask={(projectId) => setTaskDialog({ open: true, projectId })}
           onAddSubtask={(taskId) => setSubtaskDialog({ open: true, taskId })}
+          onAddMilestone={(projectId) => setMilestoneDialog({ open: true, projectId })}
           onDeleteProject={data.deleteProject}
           onDeleteTask={data.deleteTask}
           onDeleteSubtask={data.deleteSubtask}
+          onDeleteMilestone={data.deleteMilestone}
           getOwnerName={getOwnerName}
+          onDragEnd={handleDragEnd}
         />
         <GanttTimeline
           ref={timelineRef}
@@ -187,6 +258,7 @@ export function GanttView() {
           onUpdateDates={(type, id, start, end) => {
             if (type === 'project') data.updateProject(id, { start_date: start, end_date: end });
             else if (type === 'task') data.updateTask(id, { start_date: start, end_date: end });
+            else if (type === 'milestone') data.updateMilestone(id, { date: start });
             else data.updateSubtask(id, { start_date: start, end_date: end });
           }}
           dependencies={data.dependencies}
@@ -233,6 +305,19 @@ export function GanttView() {
             ? await data.updateSubtask(subtaskDialog.subtask.id, d)
             : await data.createSubtask(d as any);
           if (ok) setSubtaskDialog({ open: false });
+          return !!ok;
+        }}
+      />
+      <MilestoneDialog
+        open={milestoneDialog.open}
+        onOpenChange={(open) => setMilestoneDialog({ open })}
+        milestone={milestoneDialog.milestone}
+        projectId={milestoneDialog.projectId}
+        onSave={async (d): Promise<boolean> => {
+          const ok = milestoneDialog.milestone
+            ? await data.updateMilestone(milestoneDialog.milestone.id, d)
+            : await data.createMilestone(d as any);
+          if (ok) setMilestoneDialog({ open: false });
           return !!ok;
         }}
       />
