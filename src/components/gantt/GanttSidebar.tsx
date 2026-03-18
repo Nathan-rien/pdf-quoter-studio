@@ -8,6 +8,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableP
 
 interface GanttSidebarProps {
   rows: GanttRow[];
+  width: number;
   onEditMilestone: (id: string) => void;
   onEditProject: (id: string) => void;
   onEditTask: (id: string) => void;
