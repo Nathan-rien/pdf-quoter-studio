@@ -14,7 +14,6 @@ import type { GanttRow, ZoomLevel } from '@/types/gantt';
 import type { DropResult } from '@hello-pangea/dnd';
 import { addDays, addWeeks, addMonths, startOfWeek, startOfMonth, startOfYear, subDays, subWeeks, subMonths } from 'date-fns';
 import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 
 const reorderIds = (ids: string[], sourceIndex: number, destinationIndex: number): string[] => {
   const next = [...ids];
@@ -23,9 +22,6 @@ const reorderIds = (ids: string[], sourceIndex: number, destinationIndex: number
   next.splice(destinationIndex, 0, moved);
   return next;
 };
-
-const getMilestoneDroppableId = (value: string) => value.startsWith('projects-in-') ? value.replace('projects-in-', '') : null;
-const getProjectDroppableId = (value: string) => value.startsWith('tasks-in-') ? value.replace('tasks-in-', '') : null;
 
 export function GanttView() {
   const data = useGanttData();
@@ -180,89 +176,15 @@ export function GanttView() {
   }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedMilestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority]);
 
   const handleDragEnd = useCallback((result: DropResult) => {
-    void (async () => {
-      if (!result.destination) {
-        toast.info('Déplacement invalide');
-        return;
-      }
+    if (!result.destination) return;
+    if (result.source.droppableId !== 'milestones-root' || result.destination.droppableId !== 'milestones-root') return;
+    if (result.source.index === result.destination.index) return;
 
-      if (result.source.droppableId === result.destination.droppableId && result.source.index === result.destination.index) {
-        toast.info('Aucun changement de position');
-        return;
-      }
+    const milestoneIds = rows.filter((row) => row.type === 'milestone').map((row) => row.id);
+    if (!milestoneIds.length) return;
 
-      const sourceDroppable = result.source.droppableId;
-      const destinationDroppable = result.destination.droppableId;
-
-      if (sourceDroppable === 'milestones-root' && destinationDroppable === 'milestones-root') {
-        const milestoneIds = rows.filter((row) => row.type === 'milestone').map((row) => row.id);
-        const nextOrder = reorderIds(milestoneIds, result.source.index, result.destination.index);
-        await data.reorderMilestones(nextOrder);
-        return;
-      }
-
-      const sourceMilestoneId = getMilestoneDroppableId(sourceDroppable);
-      const destinationMilestoneId = getMilestoneDroppableId(destinationDroppable);
-
-      if (sourceMilestoneId && destinationMilestoneId) {
-        const sourceProjectIds = rows
-          .filter((row) => row.type === 'project' && row.milestoneId === sourceMilestoneId)
-          .map((row) => row.id);
-
-        if (sourceMilestoneId === destinationMilestoneId) {
-          const nextOrder = reorderIds(sourceProjectIds, result.source.index, result.destination.index);
-          await data.reorderMilestoneChildren(nextOrder);
-          return;
-        }
-
-        const destinationProjectIds = rows
-          .filter((row) => row.type === 'project' && row.milestoneId === destinationMilestoneId)
-          .map((row) => row.id);
-
-        const movedProjectId = sourceProjectIds[result.source.index];
-        if (!movedProjectId) {
-          toast.error('Projet introuvable pour ce déplacement');
-          return;
-        }
-
-        const sourceAfter = sourceProjectIds.filter((id) => id !== movedProjectId);
-        const destinationAfter = [...destinationProjectIds];
-        destinationAfter.splice(result.destination.index, 0, movedProjectId);
-
-        const moved = await data.moveProjectToMilestone(movedProjectId, destinationMilestoneId);
-        if (!moved) return;
-
-        const reorderResults = await Promise.all([
-          sourceAfter.length ? data.reorderMilestoneChildren(sourceAfter) : Promise.resolve(true),
-          destinationAfter.length ? data.reorderMilestoneChildren(destinationAfter) : Promise.resolve(true),
-        ]);
-
-        if (reorderResults.some((value) => !value)) {
-          toast.error('Le déplacement du projet a échoué');
-        }
-        return;
-      }
-
-      const sourceProjectId = getProjectDroppableId(sourceDroppable);
-      const destinationProjectId = getProjectDroppableId(destinationDroppable);
-
-      if (sourceProjectId && destinationProjectId) {
-        if (sourceProjectId !== destinationProjectId) {
-          toast.info('Le déplacement de tâche entre projets n\'est pas disponible pour le moment');
-          return;
-        }
-
-        const taskIds = rows
-          .filter((row) => row.type === 'task' && row.projectId === sourceProjectId)
-          .map((row) => row.id);
-
-        const nextOrder = reorderIds(taskIds, result.source.index, result.destination.index);
-        await data.reorderTasks(nextOrder);
-        return;
-      }
-
-      toast.info('Type de déplacement non supporté');
-    })();
+    const nextOrder = reorderIds(milestoneIds, result.source.index, result.destination.index);
+    void data.reorderMilestones(nextOrder);
   }, [data, rows]);
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
