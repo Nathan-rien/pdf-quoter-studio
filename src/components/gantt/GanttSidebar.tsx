@@ -60,7 +60,7 @@ export function GanttSidebar({
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="gantt-sidebar" type="GANTT_ROW">
           {(provided) => (
-            <div ref={provided.innerRef} {...provided.droppableProps}>
+            <div ref={provided.innerRef} {...provided.droppableProps} className="overflow-y-auto">
               {rows.map((row) => {
                 const ownerName = getOwnerName(row.owner);
                 const isDraggable = row.type === 'project' || row.type === 'task' || row.type === 'milestone';

@@ -201,11 +201,19 @@ export function GanttView() {
         dstIdx = projectChildren.findIndex(c => c.type === destRow.type && c.id === destRow.id);
       }
 
+      // Fallback: if dropped outside same project block, move to nearest edge in the same project
+      if (dstIdx === -1) {
+        const globalSourceIdx = draggableRows.findIndex(r => r.type === 'milestone' && r.id === actualId);
+        const globalDestIdx = result.destination.index;
+        dstIdx = globalDestIdx > globalSourceIdx ? Math.max(0, projectChildren.length - 1) : 0;
+      }
+
       if (srcIdx !== -1 && dstIdx !== -1 && srcIdx !== dstIdx) {
         const reordered = [...projectChildren];
         const [moved] = reordered.splice(srcIdx, 1);
         reordered.splice(dstIdx, 0, moved);
-        data.reorderProjectChildren(reordered);
+        console.debug('[Gantt] milestone reorder', { actualId, srcIdx, dstIdx, reordered });
+        void data.reorderProjectChildren(reordered);
       }
     }
   }, [data, rows]);
