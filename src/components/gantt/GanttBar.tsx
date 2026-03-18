@@ -95,7 +95,7 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, get
           <div
             ref={barRef}
             className={cn(
-              'absolute rounded-sm cursor-grab active:cursor-grabbing transition-shadow group/bar',
+              'absolute rounded-sm cursor-grab active:cursor-grabbing transition-shadow group/bar flex items-center overflow-hidden',
               colorClass,
               row.status === 'not_started' && 'opacity-60 border border-dashed border-current',
               (isDragging || isResizing) && 'shadow-lg z-30 ring-2 ring-ring',
@@ -105,22 +105,22 @@ export function GanttBar({ row, x, width, y, height, onDragEnd, onResizeEnd, get
           >
             {/* Resize handles */}
             <div
-              className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-l-sm"
+              className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-l-sm z-10"
               onMouseDown={(e) => handleMouseDown(e, 'resize-left')}
             />
             <div
-              className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-r-sm"
+              className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize opacity-0 group-hover/bar:opacity-100 hover:bg-black/20 rounded-r-sm z-10"
               onMouseDown={(e) => handleMouseDown(e, 'resize-right')}
             />
             {/* Done check */}
             {row.status === 'done' && barHeight >= 16 && (
-              <div className="absolute right-1 top-1/2 -translate-y-1/2">
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 z-10">
                 <Check className="h-3 w-3 text-white" />
               </div>
             )}
-            {/* Label on bar */}
+            {/* Label on bar — sticky so it stays visible during horizontal scroll */}
             {width > 60 && barHeight >= 16 && (
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-white font-medium truncate" style={{ maxWidth: width - 24 }}>
+              <span className="sticky left-2 text-[11px] text-white font-medium truncate px-2" style={{ maxWidth: width - 24 }}>
                 {row.title}
               </span>
             )}
