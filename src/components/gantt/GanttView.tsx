@@ -31,8 +31,25 @@ export function GanttView() {
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; task?: any; projectId?: string }>({ open: false });
   const [subtaskDialog, setSubtaskDialog] = useState<{ open: boolean; subtask?: any; taskId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
 
   const timelineRef = useRef<HTMLDivElement>(null);
+  const resizingRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      e.preventDefault();
+      setSidebarWidth(w => Math.max(200, Math.min(500, w + e.movementX)));
+    };
+    const handleMouseUp = () => { resizingRef.current = false; };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   const getOwnerName = (ownerId: string | null | undefined): string => {
     if (!ownerId) return '';

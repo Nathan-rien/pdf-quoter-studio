@@ -135,7 +135,7 @@ function RowContent({
 }
 
 export function GanttSidebar({
-  rows,
+  rows, width,
   onEditMilestone, onEditProject, onEditTask, onEditSubtask,
   onAddProject, onAddTask, onAddSubtask,
   onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
