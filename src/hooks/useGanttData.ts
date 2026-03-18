@@ -147,8 +147,9 @@ export function useGanttData() {
     return true;
   };
 
-  // Batch reorder helpers
+  // Batch reorder helpers with realtime suppression
   const reorderProjects = async (orderedIds: string[]) => {
+    reorderingRef.current = true;
     const previous = [...projects];
     setProjects(prev => {
       const map = new Map(prev.map(p => [p.id, p]));
@@ -159,9 +160,11 @@ export function useGanttData() {
     });
     const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_projects').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
     if (results.some(r => r.error)) { setProjects(previous); toast.error('Erreur réordonnancement'); }
+    reorderingRef.current = false;
   };
 
   const reorderTasks = async (orderedIds: string[]) => {
+    reorderingRef.current = true;
     const previous = [...tasks];
     setTasks(prev => {
       const map = new Map(prev.map(t => [t.id, t]));
@@ -172,9 +175,11 @@ export function useGanttData() {
     });
     const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_tasks').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
     if (results.some(r => r.error)) { setTasks(previous); toast.error('Erreur réordonnancement'); }
+    reorderingRef.current = false;
   };
 
   const reorderMilestones = async (orderedIds: string[]) => {
+    reorderingRef.current = true;
     const previous = [...milestones];
     setMilestones(prev => {
       const map = new Map(prev.map(m => [m.id, m]));
@@ -185,6 +190,40 @@ export function useGanttData() {
     });
     const results = await Promise.all(orderedIds.map((id, i) => supabase.from('gantt_milestones').update({ sort_order: (i + 1) * 10 } as any).eq('id', id)));
     if (results.some(r => r.error)) { setMilestones(previous); toast.error('Erreur réordonnancement'); }
+    reorderingRef.current = false;
+  };
+
+  // Reorder mixed children (milestones + tasks) within a project
+  const reorderProjectChildren = async (children: { type: 'task' | 'milestone'; id: string }[]) => {
+    reorderingRef.current = true;
+    const previousTasks = [...tasks];
+    const previousMilestones = [...milestones];
+
+    // Optimistic local update
+    setTasks(prev => {
+      const updated = new Map<string, number>();
+      children.forEach((c, i) => { if (c.type === 'task') updated.set(c.id, (i + 1) * 10); });
+      return prev.map(t => updated.has(t.id) ? { ...t, sort_order: updated.get(t.id)! } : t);
+    });
+    setMilestones(prev => {
+      const updated = new Map<string, number>();
+      children.forEach((c, i) => { if (c.type === 'milestone') updated.set(c.id, (i + 1) * 10); });
+      return prev.map(m => updated.has(m.id) ? { ...m, sort_order: updated.get(m.id)! } : m);
+    });
+
+    // Server updates
+    const updates = children.map((c, i) => {
+      const sortOrder = (i + 1) * 10;
+      if (c.type === 'task') return supabase.from('gantt_tasks').update({ sort_order: sortOrder } as any).eq('id', c.id);
+      return supabase.from('gantt_milestones').update({ sort_order: sortOrder } as any).eq('id', c.id);
+    });
+    const results = await Promise.all(updates);
+    if (results.some(r => r.error)) {
+      setTasks(previousTasks);
+      setMilestones(previousMilestones);
+      toast.error('Erreur réordonnancement');
+    }
+    reorderingRef.current = false;
   };
 
   return {
@@ -194,7 +233,7 @@ export function useGanttData() {
     createSubtask, updateSubtask, deleteSubtask,
     createMilestone, updateMilestone, deleteMilestone,
     createDependency, deleteDependency,
-    reorderProjects, reorderTasks, reorderMilestones,
+    reorderProjects, reorderTasks, reorderMilestones, reorderProjectChildren,
     refresh: fetchAll,
   };
 }
