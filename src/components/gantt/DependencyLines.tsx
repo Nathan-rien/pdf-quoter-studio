@@ -5,11 +5,12 @@ interface Props {
   dependencies: GanttDependency[];
   rows: GanttRow[];
   rowHeight: number;
+  rowHeights?: number[];
   dayToX: (date: Date) => number;
   tasks: GanttTask[];
 }
 
-export function DependencyLines({ dependencies, rows, rowHeight, dayToX, tasks }: Props) {
+export function DependencyLines({ dependencies, rows, rowHeight, rowHeights = [], dayToX, tasks }: Props) {
   const lines = dependencies.map(dep => {
     const sourceTask = tasks.find(t => t.id === dep.source_task_id);
     const targetTask = tasks.find(t => t.id === dep.target_task_id);
@@ -28,8 +29,14 @@ export function DependencyLines({ dependencies, rows, rowHeight, dayToX, tasks }
       x2 = dayToX(new Date(targetTask.start_date));
     }
 
-    const y1 = sourceIdx * rowHeight + rowHeight / 2;
-    const y2 = targetIdx * rowHeight + rowHeight / 2;
+    const getRowCenter = (idx: number) => {
+      let top = 0;
+      for (let i = 0; i < idx; i++) top += rowHeights[i] || rowHeight;
+      const h = rowHeights[idx] || rowHeight;
+      return top + h / 2;
+    };
+    const y1 = getRowCenter(sourceIdx);
+    const y2 = getRowCenter(targetIdx);
     const midX = x1 + (x2 - x1) / 2;
 
     return (
@@ -55,7 +62,7 @@ export function DependencyLines({ dependencies, rows, rowHeight, dayToX, tasks }
   if (lines.length === 0) return null;
 
   return (
-    <svg className="absolute inset-0 pointer-events-none z-10" style={{ width: '100%', height: rows.length * rowHeight }}>
+    <svg className="absolute inset-0 pointer-events-none z-10" style={{ width: '100%', height: rows.reduce((sum, _, i) => sum + (rowHeights[i] || rowHeight), 0) }}>
       {lines}
     </svg>
   );

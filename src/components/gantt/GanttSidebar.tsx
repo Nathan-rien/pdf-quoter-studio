@@ -5,6 +5,7 @@ import { STATUS_LABELS } from '@/types/gantt';
 import type { GanttRow } from '@/types/gantt';
 import { Badge } from '@/components/ui/badge';
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
+import { useRef, useEffect, useCallback } from 'react';
 
 interface GanttSidebarProps {
   rows: GanttRow[];
@@ -23,9 +24,10 @@ interface GanttSidebarProps {
   getOwnerName: (id: string | null | undefined) => string;
   onDragEnd: (result: DropResult) => void;
   headerHeight: number;
+  onRowHeightsChange?: (heights: number[]) => void;
 }
 
-const ROW_HEIGHT = 40;
+const MIN_ROW_HEIGHT = 40;
 
 const statusColor = (status: string) => {
   switch (status) {
@@ -62,11 +64,11 @@ function RowContent({
   return (
     <div
       className={cn(
-        'flex items-center gap-1 px-2 border-b border-border/50 group hover:bg-accent/50 transition-colors',
+        'flex items-center gap-1 px-2 py-1 border-b border-border/50 group hover:bg-accent/50 transition-colors',
         row.type === 'milestone' && 'bg-orange-50/50 dark:bg-orange-950/30 border-l-4 border-l-orange-500',
         row.type === 'project' && 'bg-muted/30',
       )}
-      style={{ height: ROW_HEIGHT, paddingLeft: row.type === 'milestone' ? 8 : 8 + row.depth * 20 }}
+      style={{ minHeight: MIN_ROW_HEIGHT, paddingLeft: row.type === 'milestone' ? 8 : 8 + row.depth * 20 }}
     >
       <button
         type="button"
@@ -79,7 +81,7 @@ function RowContent({
       {row.type === 'milestone' ? (
         // Axe: bold section title, no chevron
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="text-sm font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400 truncate">{row.title}</span>
+          <span className="text-sm font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400 break-words">{row.title}</span>
         </div>
       ) : (
         <>
@@ -88,7 +90,7 @@ function RowContent({
             row.type === 'project' ? 'bg-blue-500' : row.type === 'task' ? 'bg-violet-500' : 'bg-amber-500',
           )} />
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-sm truncate">{row.title}</span>
+            <span className="text-sm break-words">{row.title}</span>
             {ownerName && (
               <span className="text-[10px] text-muted-foreground truncate">{ownerName}</span>
             )}
@@ -139,7 +141,7 @@ export function GanttSidebar({
   onEditMilestone, onEditProject, onEditTask, onEditSubtask,
   onAddProject, onAddTask, onAddSubtask,
   onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
-  getOwnerName, onDragEnd, headerHeight,
+  getOwnerName, onDragEnd, headerHeight, onRowHeightsChange,
 }: GanttSidebarProps) {
 
   const sharedProps = {
@@ -148,6 +150,35 @@ export function GanttSidebar({
     onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
     getOwnerName,
   };
+
+  const rowContainerRef = useRef<HTMLDivElement>(null);
+
+  // Measure row heights and report them
+  const measureRowHeights = useCallback(() => {
+    if (!rowContainerRef.current || !onRowHeightsChange) return;
+    const children = rowContainerRef.current.children;
+    const heights: number[] = [];
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i] as HTMLElement;
+      // Skip the placeholder element from dnd
+      if (child.dataset.rbdPlaceholder !== undefined) continue;
+      heights.push(child.getBoundingClientRect().height);
+    }
+    if (heights.length > 0) {
+      onRowHeightsChange(heights);
+    }
+  }, [onRowHeightsChange]);
+
+  useEffect(() => {
+    measureRowHeights();
+  }, [rows, width, measureRowHeights]);
+
+  useEffect(() => {
+    if (!rowContainerRef.current) return;
+    const observer = new ResizeObserver(() => measureRowHeights());
+    observer.observe(rowContainerRef.current);
+    return () => observer.disconnect();
+  }, [measureRowHeights]);
 
   return (
     <div className="border-r border-border flex-shrink-0 flex flex-col" style={{ width, minWidth: width }}>
@@ -168,7 +199,10 @@ export function GanttSidebar({
         <Droppable droppableId="gantt-sidebar" type="GANTT_ROW">
           {(provided) => (
             <div
-              ref={provided.innerRef}
+              ref={(el) => {
+                provided.innerRef(el);
+                (rowContainerRef as any).current = el;
+              }}
               {...provided.droppableProps}
               className="flex-1 overflow-y-auto"
             >

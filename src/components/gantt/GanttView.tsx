@@ -32,6 +32,7 @@ export function GanttView() {
   const [subtaskDialog, setSubtaskDialog] = useState<{ open: boolean; subtask?: any; taskId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [rowHeights, setRowHeights] = useState<number[]>([]);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
@@ -207,6 +208,7 @@ export function GanttView() {
           onDeleteSubtask={data.deleteSubtask}
           getOwnerName={getOwnerName}
           onDragEnd={handleDragEnd}
+          onRowHeightsChange={setRowHeights}
         />
         <div
           className="w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors flex-shrink-0"
@@ -225,6 +227,7 @@ export function GanttView() {
           dependencies={data.dependencies}
           tasks={data.tasks}
           getOwnerName={getOwnerName}
+          rowHeights={rowHeights}
         />
       </div>
 
