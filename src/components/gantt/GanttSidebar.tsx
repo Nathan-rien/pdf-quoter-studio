@@ -45,6 +45,8 @@ export function GanttSidebar({
   onDeleteProject, onDeleteTask, onDeleteSubtask, onDeleteMilestone,
   getOwnerName, onDragEnd,
 }: GanttSidebarProps) {
+  let draggableIndex = -1;
+
   return (
     <div className="w-72 min-w-72 border-r border-border flex-shrink-0 overflow-y-auto">
       <div className="h-10 border-b border-border flex items-center px-3 bg-muted/50">
@@ -59,9 +61,10 @@ export function GanttSidebar({
         <Droppable droppableId="gantt-sidebar" type="GANTT_ROW">
           {(provided) => (
             <div ref={provided.innerRef} {...provided.droppableProps}>
-              {rows.map((row, index) => {
+              {rows.map((row) => {
                 const ownerName = getOwnerName(row.owner);
                 const isDraggable = row.type === 'project' || row.type === 'task' || row.type === 'milestone';
+                if (isDraggable) draggableIndex += 1;
 
                 const content = (
                   <div
