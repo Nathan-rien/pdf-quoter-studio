@@ -41,9 +41,7 @@ const statusColor = (status: string) => {
 };
 
 function RowContent({
-  row,
-  dragHandleProps,
-  isDraggable,
+  row, dragHandleProps,
   expandedMilestones, expandedProjects, expandedTasks,
   onToggleMilestone, onToggleProject, onToggleTask,
   onEditMilestone, onEditProject, onEditTask, onEditSubtask,
@@ -53,7 +51,6 @@ function RowContent({
 }: {
   row: GanttRow;
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
-  isDraggable?: boolean;
   expandedMilestones: Set<string>;
   expandedProjects: Set<string>;
   expandedTasks: Set<string>;
@@ -84,17 +81,13 @@ function RowContent({
       )}
       style={{ height: ROW_HEIGHT, paddingLeft: 8 + row.depth * 20 }}
     >
-      {isDraggable ? (
-        <button
-          type="button"
-          className="p-0.5 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
-          {...dragHandleProps}
-        >
-          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
-        </button>
-      ) : (
-        <span className="w-4" />
-      )}
+      <button
+        type="button"
+        className="p-0.5 rounded hover:bg-accent cursor-grab active:cursor-grabbing"
+        {...dragHandleProps}
+      >
+        <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+      </button>
 
       {(row.type === 'milestone' || row.type === 'project' || row.type === 'task') ? (
         <button
@@ -182,9 +175,6 @@ export function GanttSidebar({
   getOwnerName, onDragEnd, headerHeight,
 }: GanttSidebarProps) {
 
-  // Build a milestone drag index: only milestones are draggable
-  let milestoneIndex = -1;
-
   const sharedProps = {
     expandedMilestones, expandedProjects, expandedTasks,
     onToggleMilestone, onToggleProject, onToggleTask,
@@ -196,7 +186,6 @@ export function GanttSidebar({
 
   return (
     <div className="w-72 min-w-72 border-r border-border flex-shrink-0 flex flex-col">
-      {/* Header synchronized with timeline */}
       <div
         className="border-b border-border flex items-end px-3 bg-muted/50 flex-shrink-0"
         style={{ height: headerHeight }}
@@ -211,48 +200,34 @@ export function GanttSidebar({
       )}
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="milestones-root" type="MILESTONE">
+        <Droppable droppableId="gantt-sidebar" type="GANTT_ROW">
           {(provided) => (
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
               className="flex-1 overflow-y-auto"
             >
-              {rows.map((row) => {
-                if (row.type === 'milestone') {
-                  milestoneIndex++;
-                  const currentIdx = milestoneIndex;
-                  return (
-                    <Draggable
-                      key={`milestone-${row.id}`}
-                      draggableId={`milestone-${row.id}`}
-                      index={currentIdx}
+              {rows.map((row, index) => (
+                <Draggable
+                  key={`${row.type}-${row.id}`}
+                  draggableId={`${row.type}-${row.id}`}
+                  index={index}
+                >
+                  {(dragProvided, snapshot) => (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      className={cn(snapshot.isDragging && 'opacity-80 shadow-lg z-50 bg-card rounded')}
                     >
-                      {(dragProvided, snapshot) => (
-                        <div
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          className={cn(snapshot.isDragging && 'opacity-80 shadow-lg z-50')}
-                        >
-                          <RowContent
-                            row={row}
-                            isDraggable
-                            dragHandleProps={dragProvided.dragHandleProps}
-                            {...sharedProps}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  );
-                }
-
-                // Non-milestone rows: render flat, outside any Draggable
-                return (
-                  <div key={`${row.type}-${row.id}`}>
-                    <RowContent row={row} {...sharedProps} />
-                  </div>
-                );
-              })}
+                      <RowContent
+                        row={row}
+                        dragHandleProps={dragProvided.dragHandleProps}
+                        {...sharedProps}
+                      />
+                    </div>
+                  )}
+                </Draggable>
+              ))}
               {provided.placeholder}
             </div>
           )}
