@@ -90,7 +90,7 @@ function RowContent({
             row.type === 'project' ? 'bg-blue-500' : row.type === 'task' ? 'bg-violet-500' : 'bg-amber-500',
           )} />
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-sm truncate">{row.title}</span>
+            <span className="text-sm break-words">{row.title}</span>
             {ownerName && (
               <span className="text-[10px] text-muted-foreground truncate">{ownerName}</span>
             )}
