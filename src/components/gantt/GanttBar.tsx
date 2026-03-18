@@ -124,7 +124,10 @@ export function GanttBar({ row, x, width, y, height, scrollLeft, onDragEnd, onRe
             )}
             {/* Label on bar — sticky so it stays visible during horizontal scroll */}
             {width > 60 && barHeight >= 16 && (
-              <span className="sticky left-2 text-[11px] text-white font-medium truncate px-2" style={{ maxWidth: width - 24 }}>
+              <span
+                className="absolute text-[11px] text-white font-medium truncate"
+                style={{ left: labelOffset + 8, top: '50%', transform: 'translateY(-50%)', maxWidth: width - labelOffset - 24 }}
+              >
                 {row.title}
               </span>
             )}
