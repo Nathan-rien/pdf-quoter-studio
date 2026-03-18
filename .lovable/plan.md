@@ -1,23 +1,26 @@
 
 
-## Problème identifié
+## Plan : Retour à la ligne des titres dans la sidebar Gantt
 
-La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
+### Problème
+Les titres sont tronqués (`truncate`) dans la sidebar. L'utilisateur souhaite qu'ils passent à la ligne au lieu d'être coupés.
 
-```typescript
-if (/support@3ddentalstore/i.test(line)) return true;
-```
+### Solution
+- Retirer `truncate` des `<span>` de titre (lignes 82, 91) et le remplacer par un retour à la ligne naturel
+- Retirer la hauteur fixe `ROW_HEIGHT` (40px) sur chaque ligne pour permettre l'expansion verticale — utiliser `min-height: 40px` à la place
+- Synchroniser cette hauteur dynamique avec la timeline : passer les hauteurs calculées des lignes à `GanttTimeline` pour que les barres restent alignées
 
-Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
-> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
+### Impact sur l'alignement sidebar ↔ timeline
+C'est le point critique. Actuellement chaque ligne fait exactement 40px des deux côtés. Si la sidebar a des lignes de hauteur variable, la timeline doit suivre.
 
-Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
+**Approche** : mesurer les hauteurs réelles des lignes sidebar via `useRef` + `ResizeObserver`, puis passer un tableau `rowHeights: number[]` à `GanttTimeline` qui l'utilise pour positionner chaque barre.
 
-## Correction
+### Fichiers modifiés
 
-**Fichier** : `src/lib/pdf-import-parser.ts`
-
-Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
-
-Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
+| Fichier | Changements |
+|---------|-------------|
+| `GanttSidebar.tsx` | `truncate` → `break-words`, `height: ROW_HEIGHT` → `minHeight: ROW_HEIGHT`, exposer `rowHeights` via callback |
+| `GanttView.tsx` | État `rowHeights`, le passer à `GanttTimeline` |
+| `GanttTimeline.tsx` | Utiliser `rowHeights` pour le positionnement vertical des barres au lieu de `index * ROW_HEIGHT` |
+| `GanttBar.tsx` | Recevoir `top` et `height` dynamiques au lieu de les calculer depuis l'index |
 
