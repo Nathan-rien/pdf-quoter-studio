@@ -68,81 +68,6 @@ export function GanttView() {
     });
   };
 
-  // Drag & Drop handler
-  const handleDragEnd = useCallback((result: DropResult) => {
-    if (!result.destination || result.source.index === result.destination.index) return;
-
-    const draggedId = result.draggableId;
-    const [draggedType, ...idParts] = draggedId.split('-');
-    const actualId = idParts.join('-');
-
-    if (draggedType === 'project') {
-      // Reorder projects
-      const projectRows = rows.filter(r => r.type === 'project');
-      const projectIds = projectRows.map(r => r.id);
-      
-      // Find source and dest within project rows
-      const sourceRow = rows[result.source.index];
-      const destRow = rows[result.destination.index];
-      
-      if (sourceRow?.type === 'project' && destRow?.type === 'project') {
-        const srcIdx = projectIds.indexOf(sourceRow.id);
-        const dstIdx = projectIds.indexOf(destRow.id);
-        if (srcIdx !== -1 && dstIdx !== -1) {
-          const newOrder = [...projectIds];
-          newOrder.splice(srcIdx, 1);
-          newOrder.splice(dstIdx, 0, sourceRow.id);
-          data.reorderProjects(newOrder);
-        }
-      }
-    } else if (draggedType === 'task') {
-      // Get the task being dragged
-      const task = data.tasks.find(t => t.id === actualId);
-      if (!task) return;
-      
-      // Reorder tasks within the same project
-      const projectTasks = data.tasks
-        .filter(t => t.project_id === task.project_id)
-        .sort((a, b) => a.sort_order - b.sort_order);
-      const taskIds = projectTasks.map(t => t.id);
-      const srcIdx = taskIds.indexOf(actualId);
-      
-      // Calculate destination index within project tasks
-      const sourceRow = rows[result.source.index];
-      const destRow = rows[result.destination.index];
-      if (sourceRow?.type === 'task' && destRow?.type === 'task') {
-        const dstIdx = taskIds.indexOf(destRow.id);
-        if (srcIdx !== -1 && dstIdx !== -1) {
-          const newOrder = [...taskIds];
-          newOrder.splice(srcIdx, 1);
-          newOrder.splice(dstIdx, 0, actualId);
-          data.reorderTasks(newOrder);
-        }
-      }
-    } else if (draggedType === 'milestone') {
-      const milestone = data.milestones.find(m => m.id === actualId);
-      if (!milestone) return;
-
-      const projectMilestones = data.milestones
-        .filter(m => m.project_id === milestone.project_id)
-        .sort((a, b) => a.sort_order - b.sort_order);
-      const milestoneIds = projectMilestones.map(m => m.id);
-      const srcIdx = milestoneIds.indexOf(actualId);
-
-      const sourceRow = rows[result.source.index];
-      const destRow = rows[result.destination.index];
-      if (sourceRow?.type === 'milestone' && destRow?.type === 'milestone') {
-        const dstIdx = milestoneIds.indexOf(destRow.id);
-        if (srcIdx !== -1 && dstIdx !== -1) {
-          const newOrder = [...milestoneIds];
-          newOrder.splice(srcIdx, 1);
-          newOrder.splice(dstIdx, 0, actualId);
-          data.reorderMilestones(newOrder);
-        }
-      }
-    }
-  }, [data]);
-
   // Build flat row list
   const rows = useMemo<GanttRow[]>(() => {
     const result: GanttRow[] = [];
@@ -207,6 +132,80 @@ export function GanttView() {
     }
     return result;
   }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority, commerciaux]);
+
+  // Drag & Drop handler
+  const handleDragEnd = useCallback((result: DropResult) => {
+    if (!result.destination || result.source.index === result.destination.index) return;
+
+    const draggedId = result.draggableId;
+    const [draggedType, ...idParts] = draggedId.split('-');
+    const actualId = idParts.join('-');
+
+    const draggableRows = rows.filter(r => r.type === 'project' || r.type === 'task' || r.type === 'milestone');
+    const sourceRow = draggableRows[result.source.index];
+    const destRow = draggableRows[result.destination.index];
+    if (!sourceRow || !destRow) return;
+
+    if (draggedType === 'project') {
+      const projectRows = rows.filter(r => r.type === 'project');
+      const projectIds = projectRows.map(r => r.id);
+
+      if (sourceRow.type === 'project' && destRow.type === 'project') {
+        const srcIdx = projectIds.indexOf(sourceRow.id);
+        const dstIdx = projectIds.indexOf(destRow.id);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          const newOrder = [...projectIds];
+          newOrder.splice(srcIdx, 1);
+          newOrder.splice(dstIdx, 0, sourceRow.id);
+          data.reorderProjects(newOrder);
+        }
+      }
+    } else if (draggedType === 'task') {
+      const task = data.tasks.find(t => t.id === actualId);
+      if (!task) return;
+
+      const projectTasks = data.tasks
+        .filter(t => t.project_id === task.project_id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      const taskIds = projectTasks.map(t => t.id);
+      const srcIdx = taskIds.indexOf(actualId);
+
+      if (sourceRow.type === 'task' && destRow.type === 'task') {
+        const dstIdx = taskIds.indexOf(destRow.id);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          const newOrder = [...taskIds];
+          newOrder.splice(srcIdx, 1);
+          newOrder.splice(dstIdx, 0, actualId);
+          data.reorderTasks(newOrder);
+        }
+      }
+    } else if (draggedType === 'milestone') {
+      const milestone = data.milestones.find(m => m.id === actualId);
+      if (!milestone) return;
+
+      const projectMilestones = data.milestones
+        .filter(m => m.project_id === milestone.project_id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      const milestoneIds = projectMilestones.map(m => m.id);
+      const srcIdx = milestoneIds.indexOf(actualId);
+
+      let dstIdx = -1;
+      if (destRow.type === 'milestone' && destRow.projectId === milestone.project_id) {
+        dstIdx = milestoneIds.indexOf(destRow.id);
+      } else if (destRow.type === 'project' && destRow.id === milestone.project_id) {
+        dstIdx = 0;
+      } else if (destRow.type === 'task' && destRow.projectId === milestone.project_id) {
+        dstIdx = Math.max(0, milestoneIds.length - 1);
+      }
+
+      if (srcIdx !== -1 && dstIdx !== -1) {
+        const newOrder = [...milestoneIds];
+        newOrder.splice(srcIdx, 1);
+        newOrder.splice(dstIdx, 0, actualId);
+        data.reorderMilestones(newOrder);
+      }
+    }
+  }, [data, rows]);
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
     if (dir === 'today') {
