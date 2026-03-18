@@ -150,7 +150,7 @@ export function GanttSidebar({
   };
 
   return (
-    <div className="w-72 min-w-72 border-r border-border flex-shrink-0 flex flex-col">
+    <div className="border-r border-border flex-shrink-0 flex flex-col" style={{ width, minWidth: width }}>
       <div
         className="border-b border-border flex items-end px-3 bg-muted/50 flex-shrink-0"
         style={{ height: headerHeight }}
