@@ -156,6 +156,11 @@ export function useGanttData() {
     await Promise.all(updates);
   };
 
+  const reorderMilestones = async (orderedIds: string[]) => {
+    const updates = orderedIds.map((id, i) => supabase.from('gantt_milestones').update({ sort_order: (i + 1) * 10 } as any).eq('id', id));
+    await Promise.all(updates);
+  };
+
   return {
     projects, tasks, subtasks, dependencies, milestones, loading,
     createProject, updateProject, deleteProject,
@@ -163,7 +168,7 @@ export function useGanttData() {
     createSubtask, updateSubtask, deleteSubtask,
     createMilestone, updateMilestone, deleteMilestone,
     createDependency, deleteDependency,
-    reorderProjects, reorderTasks,
+    reorderProjects, reorderTasks, reorderMilestones,
     refresh: fetchAll,
   };
 }
