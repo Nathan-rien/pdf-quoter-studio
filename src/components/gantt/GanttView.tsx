@@ -32,6 +32,7 @@ export function GanttView() {
   const [subtaskDialog, setSubtaskDialog] = useState<{ open: boolean; subtask?: any; taskId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [rowHeights, setRowHeights] = useState<number[]>([]);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
