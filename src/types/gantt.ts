@@ -12,9 +12,10 @@ export interface GanttProject {
   owner: string | null;
   status: GanttStatus;
   sort_order: number;
+  global_sort_order: number;
   created_by: string | null;
   created_at: string;
-  milestone_id: string;
+  milestone_id: string | null;
 }
 
 export interface GanttTask {
@@ -28,6 +29,7 @@ export interface GanttTask {
   priority: GanttPriority;
   owner: string | null;
   sort_order: number;
+  global_sort_order: number;
 }
 
 export interface GanttSubtask {
@@ -38,6 +40,7 @@ export interface GanttSubtask {
   end_date: string;
   status: GanttStatus;
   sort_order: number;
+  global_sort_order: number;
 }
 
 export interface GanttMilestone {
@@ -47,6 +50,7 @@ export interface GanttMilestone {
   description: string | null;
   status: GanttStatus;
   sort_order: number;
+  global_sort_order: number;
   created_at: string;
 }
 
@@ -57,8 +61,10 @@ export interface GanttDependency {
   dependency_type: GanttDependencyType;
 }
 
+export type GanttItemType = 'milestone' | 'project' | 'task' | 'subtask';
+
 export interface GanttRow {
-  type: 'milestone' | 'project' | 'task' | 'subtask';
+  type: GanttItemType;
   id: string;
   title: string;
   start_date: string;
@@ -66,11 +72,11 @@ export interface GanttRow {
   status: GanttStatus;
   priority?: GanttPriority;
   owner?: string | null;
-  milestoneId?: string;
   projectId?: string;
   taskId?: string;
   depth: number;
-  date?: string; // for milestones (single date)
+  date?: string;
+  global_sort_order: number;
 }
 
 export const STATUS_LABELS: Record<GanttStatus, string> = {

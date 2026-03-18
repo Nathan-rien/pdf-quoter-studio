@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useGanttData } from '@/hooks/useGanttData';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { GanttSidebar } from './GanttSidebar';
@@ -20,10 +20,6 @@ export function GanttView() {
   const { commerciaux, getCommercialById } = useCommerciaux();
   const [zoom, setZoom] = useState<ZoomLevel>('week');
   const [viewStart, setViewStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [expandedMilestones, setExpandedMilestones] = useState<Set<string>>(new Set());
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const [initialExpanded, setInitialExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const [filterProject, setFilterProject] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
@@ -31,18 +27,10 @@ export function GanttView() {
   const [filterPriority, setFilterPriority] = useState('');
 
   const [milestoneDialog, setMilestoneDialog] = useState<{ open: boolean; milestone?: any }>({ open: false });
-  const [projectDialog, setProjectDialog] = useState<{ open: boolean; project?: any; milestoneId?: string }>({ open: false });
+  const [projectDialog, setProjectDialog] = useState<{ open: boolean; project?: any }>({ open: false });
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; task?: any; projectId?: string }>({ open: false });
   const [subtaskDialog, setSubtaskDialog] = useState<{ open: boolean; subtask?: any; taskId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
-
-  useEffect(() => {
-    if (!initialExpanded && !data.loading && data.milestones.length > 0) {
-      setExpandedMilestones(new Set(data.milestones.map(m => m.id)));
-      setExpandedProjects(new Set(data.projects.map(p => p.id)));
-      setInitialExpanded(true);
-    }
-  }, [data.loading, data.milestones, data.projects, initialExpanded]);
 
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -52,263 +40,95 @@ export function GanttView() {
     return c ? c.nom : ownerId;
   };
 
-  const toggleMilestone = (id: string) => {
-    setExpandedMilestones(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
-  };
-  const toggleProject = (id: string) => {
-    setExpandedProjects(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
-  };
-  const toggleTask = (id: string) => {
-    setExpandedTasks(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
-  };
-
-  // Build flat row list
+  // Build flat row list sorted by global_sort_order
   const rows = useMemo<GanttRow[]>(() => {
-    const result: GanttRow[] = [];
     const lowerSearch = search.toLowerCase();
-    const sortedMilestones = [...data.milestones].sort((a, b) => a.sort_order - b.sort_order);
 
-    for (const milestone of sortedMilestones) {
-      if (filterStatus && filterStatus !== 'all' && milestone.status !== filterStatus) continue;
-      if (lowerSearch && !milestone.title.toLowerCase().includes(lowerSearch)) {
-        const msProjects = data.projects.filter(p => p.milestone_id === milestone.id);
-        const anyMatch = msProjects.some(p => {
-          if (p.title.toLowerCase().includes(lowerSearch)) return true;
-          if (getOwnerName(p.owner).toLowerCase().includes(lowerSearch)) return true;
-          return data.tasks.filter(t => t.project_id === p.id).some(t =>
-            t.title.toLowerCase().includes(lowerSearch) || getOwnerName(t.owner).toLowerCase().includes(lowerSearch),
-          );
-        });
-        if (!anyMatch) continue;
+    // Merge all items into a single flat list
+    type FlatItem = { type: 'milestone' | 'project' | 'task' | 'subtask'; global_sort_order: number; data: any };
+    const allItems: FlatItem[] = [
+      ...data.milestones.map(m => ({ type: 'milestone' as const, global_sort_order: m.global_sort_order, data: m })),
+      ...data.projects.map(p => ({ type: 'project' as const, global_sort_order: p.global_sort_order, data: p })),
+      ...data.tasks.map(t => ({ type: 'task' as const, global_sort_order: t.global_sort_order, data: t })),
+      ...data.subtasks.map(s => ({ type: 'subtask' as const, global_sort_order: s.global_sort_order, data: s })),
+    ];
+
+    allItems.sort((a, b) => a.global_sort_order - b.global_sort_order);
+
+    const depthMap: Record<string, number> = { milestone: 0, project: 1, task: 2, subtask: 3 };
+
+    const result: GanttRow[] = [];
+    for (const item of allItems) {
+      const d = item.data;
+
+      // Filters
+      if (item.type === 'project') {
+        if (filterProject && filterProject !== 'all' && d.id !== filterProject) continue;
+        if (filterOwner && filterOwner !== 'all' && d.owner !== filterOwner) continue;
+        if (filterStatus && filterStatus !== 'all' && d.status !== filterStatus) continue;
+      }
+      if (item.type === 'task') {
+        if (filterPriority && filterPriority !== 'all' && d.priority !== filterPriority) continue;
+        if (filterOwner && filterOwner !== 'all' && d.owner !== filterOwner) continue;
+        if (filterStatus && filterStatus !== 'all' && d.status !== filterStatus) continue;
+      }
+      if (item.type === 'milestone' && filterStatus && filterStatus !== 'all' && d.status !== filterStatus) continue;
+
+      // Search filter
+      if (lowerSearch) {
+        const title = (d.title || '').toLowerCase();
+        const ownerName = getOwnerName(d.owner).toLowerCase();
+        if (!title.includes(lowerSearch) && !ownerName.includes(lowerSearch)) continue;
       }
 
-      result.push({
-        type: 'milestone', id: milestone.id, title: milestone.title,
-        start_date: milestone.date, end_date: milestone.date,
-        status: milestone.status, depth: 0, date: milestone.date,
-      });
-
-      if (!expandedMilestones.has(milestone.id)) continue;
-
-      const milestoneProjects = data.projects
-        .filter(p => p.milestone_id === milestone.id)
-        .filter(p => {
-          if (filterProject && filterProject !== 'all' && p.id !== filterProject) return false;
-          if (filterOwner && filterOwner !== 'all' && p.owner !== filterOwner) return false;
-          if (filterStatus && filterStatus !== 'all' && p.status !== filterStatus) return false;
-          return true;
-        })
-        .sort((a, b) => a.sort_order - b.sort_order);
-
-      for (const project of milestoneProjects) {
+      if (item.type === 'milestone') {
         result.push({
-          type: 'project', id: project.id, title: project.title,
-          start_date: project.start_date, end_date: project.end_date,
-          status: project.status, owner: project.owner,
-          milestoneId: milestone.id, depth: 1,
+          type: 'milestone', id: d.id, title: d.title,
+          start_date: d.date, end_date: d.date,
+          status: d.status, depth: depthMap.milestone,
+          date: d.date, global_sort_order: d.global_sort_order,
         });
-
-        if (!expandedProjects.has(project.id)) continue;
-
-        const projectTasks = data.tasks
-          .filter(t => {
-            if (t.project_id !== project.id) return false;
-            if (filterPriority && filterPriority !== 'all' && t.priority !== filterPriority) return false;
-            if (filterOwner && filterOwner !== 'all' && t.owner !== filterOwner) return false;
-            if (filterStatus && filterStatus !== 'all' && t.status !== filterStatus) return false;
-            return true;
-          })
-          .sort((a, b) => a.sort_order - b.sort_order);
-
-        for (const task of projectTasks) {
-          result.push({
-            type: 'task', id: task.id, title: task.title,
-            start_date: task.start_date, end_date: task.end_date,
-            status: task.status, priority: task.priority, owner: task.owner,
-            projectId: task.project_id, milestoneId: milestone.id, depth: 2,
-          });
-
-          if (!expandedTasks.has(task.id)) continue;
-
-          const taskSubtasks = data.subtasks
-            .filter(s => s.task_id === task.id)
-            .sort((a, b) => a.sort_order - b.sort_order);
-
-          for (const sub of taskSubtasks) {
-            result.push({
-              type: 'subtask', id: sub.id, title: sub.title,
-              start_date: sub.start_date, end_date: sub.end_date,
-              status: sub.status, taskId: sub.task_id, depth: 3,
-            });
-          }
-        }
+      } else if (item.type === 'project') {
+        result.push({
+          type: 'project', id: d.id, title: d.title,
+          start_date: d.start_date, end_date: d.end_date,
+          status: d.status, owner: d.owner,
+          depth: depthMap.project, global_sort_order: d.global_sort_order,
+        });
+      } else if (item.type === 'task') {
+        result.push({
+          type: 'task', id: d.id, title: d.title,
+          start_date: d.start_date, end_date: d.end_date,
+          status: d.status, priority: d.priority, owner: d.owner,
+          projectId: d.project_id, depth: depthMap.task,
+          global_sort_order: d.global_sort_order,
+        });
+      } else {
+        result.push({
+          type: 'subtask', id: d.id, title: d.title,
+          start_date: d.start_date, end_date: d.end_date,
+          status: d.status, taskId: d.task_id, depth: depthMap.subtask,
+          global_sort_order: d.global_sort_order,
+        });
       }
     }
     return result;
-  }, [data.projects, data.tasks, data.subtasks, data.milestones, expandedMilestones, expandedProjects, expandedTasks, search, filterProject, filterOwner, filterStatus, filterPriority]);
+  }, [data.milestones, data.projects, data.tasks, data.subtasks, search, filterProject, filterOwner, filterStatus, filterPriority]);
 
+  // Simple flat DnD handler
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
+    const src = result.source.index;
+    const dst = result.destination.index;
+    if (src === dst) return;
 
-    const sourceIndex = result.source.index;
-    const destinationIndex = result.destination.index;
-    if (sourceIndex === destinationIndex) return;
+    const reordered = [...rows];
+    const [moved] = reordered.splice(src, 1);
+    reordered.splice(dst, 0, moved);
 
-    const draggedRow = rows[sourceIndex];
-    if (!draggedRow) return;
-
-    const withoutDragged = rows.filter((_, index) => index !== sourceIndex);
-    const safeDestinationIndex = Math.max(0, Math.min(destinationIndex, withoutDragged.length));
-
-    const rowsAfterDrop = [...withoutDragged];
-    rowsAfterDrop.splice(safeDestinationIndex, 0, draggedRow);
-
-    const findMilestoneAbove = (list: GanttRow[], fromIndex: number): string | null => {
-      for (let i = fromIndex - 1; i >= 0; i--) {
-        if (list[i].type === 'milestone') return list[i].id;
-      }
-      return null;
-    };
-
-    const findProjectAbove = (list: GanttRow[], fromIndex: number): string | null => {
-      for (let i = fromIndex - 1; i >= 0; i--) {
-        if (list[i].type === 'project') return list[i].id;
-        if (list[i].type === 'milestone') return null;
-      }
-      return null;
-    };
-
-    const findTaskAbove = (list: GanttRow[], fromIndex: number): string | null => {
-      for (let i = fromIndex - 1; i >= 0; i--) {
-        if (list[i].type === 'task') return list[i].id;
-        if (list[i].type === 'project' || list[i].type === 'milestone') return null;
-      }
-      return null;
-    };
-
-    const getProjectsUnderMilestone = (list: GanttRow[], milestoneId: string): string[] => {
-      const ids: string[] = [];
-      let currentMilestoneId: string | null = null;
-
-      for (const row of list) {
-        if (row.type === 'milestone') {
-          currentMilestoneId = row.id;
-          continue;
-        }
-
-        if (row.type === 'project' && currentMilestoneId === milestoneId) {
-          ids.push(row.id);
-        }
-      }
-
-      return ids;
-    };
-
-    const getTasksUnderProject = (list: GanttRow[], projectId: string): string[] => {
-      const ids: string[] = [];
-      let currentProjectId: string | null = null;
-
-      for (const row of list) {
-        if (row.type === 'milestone') {
-          currentProjectId = null;
-          continue;
-        }
-
-        if (row.type === 'project') {
-          currentProjectId = row.id;
-          continue;
-        }
-
-        if (row.type === 'task' && currentProjectId === projectId) {
-          ids.push(row.id);
-        }
-      }
-
-      return ids;
-    };
-
-    const getSubtasksUnderTask = (list: GanttRow[], taskId: string): string[] => {
-      const ids: string[] = [];
-      let currentTaskId: string | null = null;
-
-      for (const row of list) {
-        if (row.type === 'milestone' || row.type === 'project') {
-          currentTaskId = null;
-          continue;
-        }
-
-        if (row.type === 'task') {
-          currentTaskId = row.id;
-          continue;
-        }
-
-        if (row.type === 'subtask' && currentTaskId === taskId) {
-          ids.push(row.id);
-        }
-      }
-
-      return ids;
-    };
-
-    if (draggedRow.type === 'milestone') {
-      const milestoneIdsWithoutDragged = withoutDragged.filter((row) => row.type === 'milestone').map((row) => row.id);
-      const milestoneInsertIndex = withoutDragged
-        .slice(0, safeDestinationIndex)
-        .filter((row) => row.type === 'milestone').length;
-
-      const nextMilestoneIds = [...milestoneIdsWithoutDragged];
-      nextMilestoneIds.splice(milestoneInsertIndex, 0, draggedRow.id);
-
-      void data.reorderMilestones(nextMilestoneIds);
-      return;
-    }
-
-    if (draggedRow.type === 'project') {
-      const newMilestoneId = findMilestoneAbove(rowsAfterDrop, safeDestinationIndex);
-      if (!newMilestoneId) return;
-
-      const orderedProjectIds = getProjectsUnderMilestone(rowsAfterDrop, newMilestoneId);
-
-      void (async () => {
-        if (draggedRow.milestoneId !== newMilestoneId) {
-          const moved = await data.moveProjectToMilestone(draggedRow.id, newMilestoneId);
-          if (!moved) return;
-        }
-        await data.reorderProjects(orderedProjectIds);
-      })();
-      return;
-    }
-
-    if (draggedRow.type === 'task') {
-      const newProjectId = findProjectAbove(rowsAfterDrop, safeDestinationIndex);
-      if (!newProjectId) return;
-
-      const orderedTaskIds = getTasksUnderProject(rowsAfterDrop, newProjectId);
-
-      void (async () => {
-        if (draggedRow.projectId !== newProjectId) {
-          const moved = await data.moveTaskToProject(draggedRow.id, newProjectId);
-          if (!moved) return;
-        }
-        await data.reorderTasks(orderedTaskIds);
-      })();
-      return;
-    }
-
-    if (draggedRow.type === 'subtask') {
-      const newTaskId = findTaskAbove(rowsAfterDrop, safeDestinationIndex);
-      if (!newTaskId) return;
-
-      const orderedSubtaskIds = getSubtasksUnderTask(rowsAfterDrop, newTaskId);
-
-      void (async () => {
-        if (draggedRow.taskId !== newTaskId) {
-          const moved = await data.moveSubtaskToTask(draggedRow.id, newTaskId);
-          if (!moved) return;
-        }
-        await data.reorderSubtasks(orderedSubtaskIds);
-      })();
-    }
+    // Build ordered items list
+    const orderedItems = reordered.map(r => ({ type: r.type, id: r.id }));
+    void data.reorderAll(orderedItems);
   }, [data, rows]);
 
   const navigate = (dir: 'prev' | 'next' | 'today') => {
@@ -346,6 +166,7 @@ export function GanttView() {
         filterStatus={filterStatus} onFilterStatusChange={setFilterStatus}
         filterPriority={filterPriority} onFilterPriorityChange={setFilterPriority}
         onCreateMilestone={() => setMilestoneDialog({ open: true })}
+        onCreateProject={() => setProjectDialog({ open: true })}
         onCreateDependency={() => setDepDialog(true)}
       />
 
@@ -354,18 +175,12 @@ export function GanttView() {
       <div className="border border-border rounded-lg bg-card overflow-hidden flex flex-1 min-h-0">
         <GanttSidebar
           rows={rows}
-          expandedMilestones={expandedMilestones}
-          expandedProjects={expandedProjects}
-          expandedTasks={expandedTasks}
           headerHeight={headerHeight}
-          onToggleMilestone={toggleMilestone}
-          onToggleProject={toggleProject}
-          onToggleTask={toggleTask}
           onEditMilestone={(id) => { const m = data.milestones.find(m => m.id === id); setMilestoneDialog({ open: true, milestone: m }); }}
           onEditProject={(id) => setProjectDialog({ open: true, project: data.projects.find(p => p.id === id) })}
           onEditTask={(id) => { const t = data.tasks.find(t => t.id === id); setTaskDialog({ open: true, task: t }); }}
           onEditSubtask={(id) => { const s = data.subtasks.find(s => s.id === id); setSubtaskDialog({ open: true, subtask: s }); }}
-          onAddProject={(milestoneId) => setProjectDialog({ open: true, milestoneId })}
+          onAddProject={() => setProjectDialog({ open: true })}
           onAddTask={(projectId) => setTaskDialog({ open: true, projectId })}
           onAddSubtask={(taskId) => setSubtaskDialog({ open: true, taskId })}
           onDeleteMilestone={data.deleteMilestone}
@@ -381,10 +196,9 @@ export function GanttView() {
           zoom={zoom}
           viewStart={viewStart}
           onUpdateDates={(type, id, start, end) => {
-            if (type === 'milestone') data.updateMilestone(id, { date: start });
-            else if (type === 'project') data.updateProject(id, { start_date: start, end_date: end });
+            if (type === 'project') data.updateProject(id, { start_date: start, end_date: end });
             else if (type === 'task') data.updateTask(id, { start_date: start, end_date: end });
-            else data.updateSubtask(id, { start_date: start, end_date: end });
+            else if (type === 'subtask') data.updateSubtask(id, { start_date: start, end_date: end });
           }}
           dependencies={data.dependencies}
           tasks={data.tasks}
@@ -408,17 +222,12 @@ export function GanttView() {
         open={projectDialog.open}
         onOpenChange={(open) => setProjectDialog({ open })}
         project={projectDialog.project}
-        milestoneId={projectDialog.milestoneId}
-        milestones={data.milestones}
         commerciaux={commerciaux}
         onSave={async (d): Promise<boolean> => {
           const ok = projectDialog.project
             ? await data.updateProject(projectDialog.project.id, d)
             : await data.createProject(d as any);
-          if (ok) {
-            if (projectDialog.milestoneId) setExpandedMilestones(prev => new Set([...prev, projectDialog.milestoneId!]));
-            setProjectDialog({ open: false });
-          }
+          if (ok) setProjectDialog({ open: false });
           return !!ok;
         }}
       />

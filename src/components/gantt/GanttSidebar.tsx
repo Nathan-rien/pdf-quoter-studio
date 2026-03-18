@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Diamond, GripVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { STATUS_LABELS } from '@/types/gantt';
 import type { GanttRow } from '@/types/gantt';
@@ -8,17 +8,11 @@ import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableP
 
 interface GanttSidebarProps {
   rows: GanttRow[];
-  expandedMilestones: Set<string>;
-  expandedProjects: Set<string>;
-  expandedTasks: Set<string>;
-  onToggleMilestone: (id: string) => void;
-  onToggleProject: (id: string) => void;
-  onToggleTask: (id: string) => void;
   onEditMilestone: (id: string) => void;
   onEditProject: (id: string) => void;
   onEditTask: (id: string) => void;
   onEditSubtask: (id: string) => void;
-  onAddProject: (milestoneId: string) => void;
+  onAddProject: () => void;
   onAddTask: (projectId: string) => void;
   onAddSubtask: (taskId: string) => void;
   onDeleteMilestone: (id: string) => void;
@@ -42,8 +36,6 @@ const statusColor = (status: string) => {
 
 function RowContent({
   row, dragHandleProps,
-  expandedMilestones, expandedProjects, expandedTasks,
-  onToggleMilestone, onToggleProject, onToggleTask,
   onEditMilestone, onEditProject, onEditTask, onEditSubtask,
   onAddProject, onAddTask, onAddSubtask,
   onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
@@ -51,17 +43,11 @@ function RowContent({
 }: {
   row: GanttRow;
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
-  expandedMilestones: Set<string>;
-  expandedProjects: Set<string>;
-  expandedTasks: Set<string>;
-  onToggleMilestone: (id: string) => void;
-  onToggleProject: (id: string) => void;
-  onToggleTask: (id: string) => void;
   onEditMilestone: (id: string) => void;
   onEditProject: (id: string) => void;
   onEditTask: (id: string) => void;
   onEditSubtask: (id: string) => void;
-  onAddProject: (milestoneId: string) => void;
+  onAddProject: () => void;
   onAddTask: (projectId: string) => void;
   onAddSubtask: (taskId: string) => void;
   onDeleteMilestone: (id: string) => void;
@@ -76,10 +62,10 @@ function RowContent({
     <div
       className={cn(
         'flex items-center gap-1 px-2 border-b border-border/50 group hover:bg-accent/50 transition-colors',
-        row.type === 'milestone' && 'bg-orange-50/30 dark:bg-orange-950/20 font-medium',
+        row.type === 'milestone' && 'bg-orange-50/50 dark:bg-orange-950/30 border-l-4 border-l-orange-500',
         row.type === 'project' && 'bg-muted/30',
       )}
-      style={{ height: ROW_HEIGHT, paddingLeft: 8 + row.depth * 20 }}
+      style={{ height: ROW_HEIGHT, paddingLeft: row.type === 'milestone' ? 8 : 8 + row.depth * 20 }}
     >
       <button
         type="button"
@@ -89,52 +75,33 @@ function RowContent({
         <GripVertical className="h-3 w-3 text-muted-foreground/50" />
       </button>
 
-      {(row.type === 'milestone' || row.type === 'project' || row.type === 'task') ? (
-        <button
-          className="p-0.5 rounded hover:bg-accent"
-          onClick={() => {
-            if (row.type === 'milestone') onToggleMilestone(row.id);
-            else if (row.type === 'project') onToggleProject(row.id);
-            else onToggleTask(row.id);
-          }}
-        >
-          {(row.type === 'milestone' ? expandedMilestones.has(row.id) :
-            row.type === 'project' ? expandedProjects.has(row.id) :
-            expandedTasks.has(row.id))
-            ? <ChevronDown className="h-3.5 w-3.5" />
-            : <ChevronRight className="h-3.5 w-3.5" />}
-        </button>
-      ) : <span className="w-5" />}
-
       {row.type === 'milestone' ? (
-        <Diamond className="h-3.5 w-3.5 text-orange-500 fill-orange-500 flex-shrink-0" />
+        // Axe: bold section title, no chevron
+        <div className="flex flex-col flex-1 min-w-0">
+          <span className="text-sm font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400 truncate">{row.title}</span>
+        </div>
       ) : (
-        <span className={cn(
-          'w-2 h-2 rounded-full flex-shrink-0',
-          row.type === 'project' ? 'bg-blue-500' : row.type === 'task' ? 'bg-violet-500' : 'bg-amber-500',
-        )} />
+        <>
+          <span className={cn(
+            'w-2 h-2 rounded-full flex-shrink-0',
+            row.type === 'project' ? 'bg-blue-500' : row.type === 'task' ? 'bg-violet-500' : 'bg-amber-500',
+          )} />
+          <div className="flex flex-col flex-1 min-w-0">
+            <span className="text-sm truncate">{row.title}</span>
+            {ownerName && (
+              <span className="text-[10px] text-muted-foreground truncate">{ownerName}</span>
+            )}
+          </div>
+        </>
       )}
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className={cn('text-sm truncate', row.type === 'milestone' && 'font-semibold')}>{row.title}</span>
-        {ownerName && (
-          <span className="text-[10px] text-muted-foreground truncate">{ownerName}</span>
-        )}
-        {row.type === 'milestone' && row.date && (
-          <span className="text-[10px] text-orange-600 dark:text-orange-400 truncate">{row.date}</span>
-        )}
-      </div>
-
-      <Badge variant="outline" className={cn('text-[10px] px-1 py-0 h-4 hidden group-hover:flex', statusColor(row.status))}>
-        {STATUS_LABELS[row.status]}
-      </Badge>
+      {row.type !== 'milestone' && (
+        <Badge variant="outline" className={cn('text-[10px] px-1 py-0 h-4 hidden group-hover:flex', statusColor(row.status))}>
+          {STATUS_LABELS[row.status]}
+        </Badge>
+      )}
 
       <div className="hidden group-hover:flex items-center gap-0.5">
-        {row.type === 'milestone' && (
-          <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddProject(row.id)} title="Ajouter un projet">
-            <Plus className="h-3 w-3" />
-          </Button>
-        )}
         {row.type === 'project' && (
           <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddTask(row.id)} title="Ajouter une tâche">
             <Plus className="h-3 w-3" />
@@ -167,8 +134,7 @@ function RowContent({
 }
 
 export function GanttSidebar({
-  rows, expandedMilestones, expandedProjects, expandedTasks,
-  onToggleMilestone, onToggleProject, onToggleTask,
+  rows,
   onEditMilestone, onEditProject, onEditTask, onEditSubtask,
   onAddProject, onAddTask, onAddSubtask,
   onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
@@ -176,8 +142,6 @@ export function GanttSidebar({
 }: GanttSidebarProps) {
 
   const sharedProps = {
-    expandedMilestones, expandedProjects, expandedTasks,
-    onToggleMilestone, onToggleProject, onToggleTask,
     onEditMilestone, onEditProject, onEditTask, onEditSubtask,
     onAddProject, onAddTask, onAddSubtask,
     onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
@@ -190,12 +154,12 @@ export function GanttSidebar({
         className="border-b border-border flex items-end px-3 bg-muted/50 flex-shrink-0"
         style={{ height: headerHeight }}
       >
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2">Jalons / Projets / Tâches</span>
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2">Axes / Projets / Tâches</span>
       </div>
 
       {rows.length === 0 && (
         <div className="p-4 text-sm text-muted-foreground text-center">
-          Aucun jalon. Créez-en un pour commencer.
+          Aucun élément. Créez un axe ou un projet pour commencer.
         </div>
       )}
 

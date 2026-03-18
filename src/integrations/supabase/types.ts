@@ -73,6 +73,7 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
+          global_sort_order: number
           id: string
           sort_order: number
           status: Database["public"]["Enums"]["gantt_status"]
@@ -82,6 +83,7 @@ export type Database = {
           created_at?: string
           date: string
           description?: string | null
+          global_sort_order?: number
           id?: string
           sort_order?: number
           status?: Database["public"]["Enums"]["gantt_status"]
@@ -91,6 +93,7 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
+          global_sort_order?: number
           id?: string
           sort_order?: number
           status?: Database["public"]["Enums"]["gantt_status"]
@@ -104,8 +107,9 @@ export type Database = {
           created_by: string | null
           description: string | null
           end_date: string
+          global_sort_order: number
           id: string
-          milestone_id: string
+          milestone_id: string | null
           owner: string | null
           sort_order: number
           start_date: string
@@ -117,8 +121,9 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date: string
+          global_sort_order?: number
           id?: string
-          milestone_id: string
+          milestone_id?: string | null
           owner?: string | null
           sort_order?: number
           start_date: string
@@ -130,8 +135,9 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date?: string
+          global_sort_order?: number
           id?: string
-          milestone_id?: string
+          milestone_id?: string | null
           owner?: string | null
           sort_order?: number
           start_date?: string
@@ -151,6 +157,7 @@ export type Database = {
       gantt_subtasks: {
         Row: {
           end_date: string
+          global_sort_order: number
           id: string
           sort_order: number
           start_date: string
@@ -160,6 +167,7 @@ export type Database = {
         }
         Insert: {
           end_date: string
+          global_sort_order?: number
           id?: string
           sort_order?: number
           start_date: string
@@ -169,6 +177,7 @@ export type Database = {
         }
         Update: {
           end_date?: string
+          global_sort_order?: number
           id?: string
           sort_order?: number
           start_date?: string
@@ -190,6 +199,7 @@ export type Database = {
         Row: {
           description: string | null
           end_date: string
+          global_sort_order: number
           id: string
           owner: string | null
           priority: Database["public"]["Enums"]["gantt_priority"]
@@ -202,6 +212,7 @@ export type Database = {
         Insert: {
           description?: string | null
           end_date: string
+          global_sort_order?: number
           id?: string
           owner?: string | null
           priority?: Database["public"]["Enums"]["gantt_priority"]
@@ -214,6 +225,7 @@ export type Database = {
         Update: {
           description?: string | null
           end_date?: string
+          global_sort_order?: number
           id?: string
           owner?: string | null
           priority?: Database["public"]["Enums"]["gantt_priority"]

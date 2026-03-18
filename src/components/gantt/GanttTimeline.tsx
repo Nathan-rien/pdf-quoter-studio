@@ -10,7 +10,7 @@ interface Props {
   rows: GanttRow[];
   zoom: ZoomLevel;
   viewStart: Date;
-  onUpdateDates: (type: 'project' | 'task' | 'subtask' | 'milestone', id: string, start: string, end: string) => void;
+  onUpdateDates: (type: 'project' | 'task' | 'subtask', id: string, start: string, end: string) => void;
   dependencies: GanttDependency[];
   tasks: GanttTask[];
   getOwnerName?: (id: string | null | undefined) => string;
@@ -228,48 +228,20 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
 
           {/* Bars */}
           {rows.map((row, i) => {
-            const startDate = new Date(row.start_date);
-            const endDate = new Date(row.end_date);
-            const x = dayToX(startDate);
-
-            // Milestones: diamond marker instead of bar
+            // Milestones (Axes): render as colored section band, no bar
             if (row.type === 'milestone') {
               return (
                 <div
                   key={`milestone-${row.id}`}
-                  className="absolute flex items-center justify-center cursor-pointer"
-                  style={{ left: x - 8, top: i * ROW_HEIGHT + (ROW_HEIGHT - 16) / 2, width: 16, height: 16 }}
-                  title={`${row.title} — ${row.date}`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const startMouseX = e.clientX;
-                    const startLeft = x;
-                    const el = e.currentTarget;
-                    const handleMove = (ev: MouseEvent) => {
-                      el.style.left = `${startLeft + (ev.clientX - startMouseX) - 8}px`;
-                    };
-                    const handleUp = (ev: MouseEvent) => {
-                      window.removeEventListener('mousemove', handleMove);
-                      window.removeEventListener('mouseup', handleUp);
-                      const dx = ev.clientX - startMouseX;
-                      if (Math.abs(dx) < 3) return;
-                      const newDate = xToDate(startLeft + dx);
-                      onUpdateDates('milestone', row.id, format(newDate, 'yyyy-MM-dd'), format(newDate, 'yyyy-MM-dd'));
-                    };
-                    window.addEventListener('mousemove', handleMove);
-                    window.addEventListener('mouseup', handleUp);
-                  }}
-                >
-                  <div className={cn(
-                    'w-3 h-3 rotate-45 border-2',
-                    row.status === 'done' ? 'bg-green-500 border-green-600' :
-                    row.status === 'in_progress' ? 'bg-orange-500 border-orange-600' :
-                    'bg-orange-400 border-orange-500'
-                  )} />
-                </div>
+                  className="absolute w-full bg-orange-100/40 dark:bg-orange-900/20 border-t-2 border-orange-400/50"
+                  style={{ top: i * ROW_HEIGHT, height: ROW_HEIGHT }}
+                />
               );
             }
 
+            const startDate = new Date(row.start_date);
+            const endDate = new Date(row.end_date);
+            const x = dayToX(startDate);
             const w = dayToX(addDays(endDate, 1)) - x;
             return (
               <GanttBar
