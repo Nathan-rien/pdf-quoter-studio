@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useGanttData } from '@/hooks/useGanttData';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { GanttSidebar } from './GanttSidebar';
@@ -31,8 +31,25 @@ export function GanttView() {
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; task?: any; projectId?: string }>({ open: false });
   const [subtaskDialog, setSubtaskDialog] = useState<{ open: boolean; subtask?: any; taskId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
 
   const timelineRef = useRef<HTMLDivElement>(null);
+  const resizingRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      e.preventDefault();
+      setSidebarWidth(w => Math.max(200, Math.min(500, w + e.movementX)));
+    };
+    const handleMouseUp = () => { resizingRef.current = false; };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   const getOwnerName = (ownerId: string | null | undefined): string => {
     if (!ownerId) return '';
@@ -175,6 +192,7 @@ export function GanttView() {
       <div className="border border-border rounded-lg bg-card overflow-hidden flex flex-1 min-h-0">
         <GanttSidebar
           rows={rows}
+          width={sidebarWidth}
           headerHeight={headerHeight}
           onEditMilestone={(id) => { const m = data.milestones.find(m => m.id === id); setMilestoneDialog({ open: true, milestone: m }); }}
           onEditProject={(id) => setProjectDialog({ open: true, project: data.projects.find(p => p.id === id) })}
@@ -189,6 +207,10 @@ export function GanttView() {
           onDeleteSubtask={data.deleteSubtask}
           getOwnerName={getOwnerName}
           onDragEnd={handleDragEnd}
+        />
+        <div
+          className="w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors flex-shrink-0"
+          onMouseDown={() => { resizingRef.current = true; }}
         />
         <GanttTimeline
           ref={timelineRef}
