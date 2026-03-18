@@ -36,6 +36,14 @@ export function GanttView() {
   const [milestoneDialog, setMilestoneDialog] = useState<{ open: boolean; milestone?: any; projectId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
 
+  // Auto-expand all projects on initial load
+  useEffect(() => {
+    if (!initialExpanded && !data.loading && data.projects.length > 0) {
+      setExpandedProjects(new Set(data.projects.map(p => p.id)));
+      setInitialExpanded(true);
+    }
+  }, [data.loading, data.projects, initialExpanded]);
+
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const getOwnerName = (ownerId: string | null | undefined): string => {
