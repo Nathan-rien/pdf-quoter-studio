@@ -81,7 +81,7 @@ function RowContent({
       {row.type === 'milestone' ? (
         // Axe: bold section title, no chevron
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="text-sm font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400 truncate">{row.title}</span>
+          <span className="text-sm font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400 break-words">{row.title}</span>
         </div>
       ) : (
         <>
