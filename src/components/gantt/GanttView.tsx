@@ -244,6 +244,7 @@ export function GanttView() {
           expandedMilestones={expandedMilestones}
           expandedProjects={expandedProjects}
           expandedTasks={expandedTasks}
+          headerHeight={zoom === 'day' || zoom === 'week' ? 60 + 24 : 60}
           onToggleMilestone={toggleMilestone}
           onToggleProject={toggleProject}
           onToggleTask={toggleTask}

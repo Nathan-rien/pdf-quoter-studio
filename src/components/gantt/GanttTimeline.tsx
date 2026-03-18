@@ -160,7 +160,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
     <div ref={ref} className="flex-1 overflow-x-auto overflow-y-auto relative">
       <div style={{ width: totalWidth, minWidth: '100%' }}>
         {/* Header Level 1 */}
-        <div className="h-8 border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth }}>
+        <div className="border-b border-border flex bg-muted/30 sticky top-0 z-20" style={{ width: totalWidth, height: 32 }}>
           {header1Groups.map((m, i) => (
             <div
               key={i}
@@ -173,7 +173,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
         </div>
 
         {/* Header Level 2 */}
-        <div className="h-7 border-b border-border flex sticky top-8 z-20" style={{ width: totalWidth }}>
+        <div className="border-b border-border flex sticky top-[32px] z-20" style={{ width: totalWidth, height: 28 }}>
           {header2Groups.map((w, i) => (
             <div
               key={i}

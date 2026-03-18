@@ -1,45 +1,23 @@
 
 
-## Plan : Jalons indépendants + alignement des barres
+## Problème identifié
 
-### Problème 1 — DnD des jalons ne fonctionne pas
-Le `Draggable` du jalon **englobe tous ses enfants** (projets, tâches, sous-tâches). Le calcul des positions de drop par la librairie prend en compte la hauteur totale du bloc (jalon + enfants), ce qui fausse les indices et provoque le "snap back".
+La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
 
-**Correction** : Rendre la sidebar comme une **liste plate**. Seule la ligne du jalon est un `Draggable`. Les enfants (projets, tâches, sous-tâches) sont rendus en dehors du `Draggable`, comme des éléments statiques indépendants.
-
-```text
-Avant (imbriqué) :
-<Draggable milestone>
-  <MilestoneRow />
-  <ProjectRow />     ← inclus dans le Draggable
-  <TaskRow />        ← inclus dans le Draggable
-</Draggable>
-
-Après (plat) :
-<Draggable milestone>
-  <MilestoneRow />   ← seul élément draggable
-</Draggable>
-<ProjectRow />       ← rendu à part, hors Draggable
-<TaskRow />          ← rendu à part, hors Draggable
+```typescript
+if (/support@3ddentalstore/i.test(line)) return true;
 ```
 
-### Problème 2 — Barres timeline décalées
-La sidebar a un header de **40px** (`h-10`), mais la timeline a 2-3 niveaux de header totalisant **60-84px**. Les lignes ne s'alignent plus verticalement.
+Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
+> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
 
-**Correction** : Synchroniser la hauteur du header sidebar avec celle de la timeline (variable selon le zoom : 60px pour mois/année, 84px pour jour/semaine).
+Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
 
-### Fichiers modifiés
+## Correction
 
-1. **`src/components/gantt/GanttSidebar.tsx`**
-   - Aplatir le rendu : itérer sur `rows` directement (liste déjà plate)
-   - Envelopper uniquement les lignes `milestone` dans un `Draggable`
-   - Passer la hauteur de header en prop pour synchronisation
-   - Filtrer les milestones pour calculer le bon index de drag
+**Fichier** : `src/lib/pdf-import-parser.ts`
 
-2. **`src/components/gantt/GanttView.tsx`**
-   - Calculer la hauteur header en fonction du zoom et la passer à `GanttSidebar`
-   - Simplifier `handleDragEnd` (les indices correspondent directement aux milestones)
+Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
 
-3. **`src/components/gantt/GanttTimeline.tsx`**
-   - Exposer la hauteur du header via une constante partagée ou prop
+Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
 
