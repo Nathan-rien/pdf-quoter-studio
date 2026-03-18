@@ -263,6 +263,7 @@ export const GanttTimeline = forwardRef<HTMLDivElement, Props>(({ rows, zoom, vi
                 width={Math.max(w, 8)}
                 y={i * ROW_HEIGHT}
                 height={ROW_HEIGHT}
+                scrollLeft={scrollLeft}
                 getOwnerName={getOwnerName}
                 onDragEnd={(newX) => {
                   const newStart = xToDate(newX);
