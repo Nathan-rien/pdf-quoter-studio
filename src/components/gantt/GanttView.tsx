@@ -219,7 +219,7 @@ export function GanttView() {
 
       <GanttNavigation zoom={zoom} onZoomChange={setZoom} onNavigate={navigate} />
 
-      <div className="border border-border rounded-lg bg-card overflow-hidden flex" style={{ minHeight: 400 }}>
+      <div className="border border-border rounded-lg bg-card overflow-hidden flex flex-1 min-h-0">
         <GanttSidebar
           rows={rows}
           expandedProjects={expandedProjects}
