@@ -72,7 +72,7 @@ export function GanttSidebar({
                     )}
                     style={{ height: ROW_HEIGHT, paddingLeft: 8 + row.depth * 20 }}
                   >
-                    {/* Drag handle for projects and tasks */}
+                    {/* Drag handle for draggable rows */}
                     {isDraggable && (
                       <GripVertical className="h-3 w-3 text-muted-foreground/50 cursor-grab active:cursor-grabbing flex-shrink-0" />
                     )}

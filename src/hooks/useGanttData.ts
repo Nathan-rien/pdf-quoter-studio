@@ -168,7 +168,7 @@ export function useGanttData() {
     createSubtask, updateSubtask, deleteSubtask,
     createMilestone, updateMilestone, deleteMilestone,
     createDependency, deleteDependency,
-    reorderProjects, reorderTasks,
+    reorderProjects, reorderTasks, reorderMilestones,
     refresh: fetchAll,
   };
 }
