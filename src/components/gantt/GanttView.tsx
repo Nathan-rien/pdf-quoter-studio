@@ -110,6 +110,27 @@ export function GanttView() {
           data.reorderTasks(newOrder);
         }
       }
+    } else if (draggedType === 'milestone') {
+      const milestone = data.milestones.find(m => m.id === actualId);
+      if (!milestone) return;
+
+      const projectMilestones = data.milestones
+        .filter(m => m.project_id === milestone.project_id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      const milestoneIds = projectMilestones.map(m => m.id);
+      const srcIdx = milestoneIds.indexOf(actualId);
+
+      const sourceRow = rows[result.source.index];
+      const destRow = rows[result.destination.index];
+      if (sourceRow?.type === 'milestone' && destRow?.type === 'milestone') {
+        const dstIdx = milestoneIds.indexOf(destRow.id);
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          const newOrder = [...milestoneIds];
+          newOrder.splice(srcIdx, 1);
+          newOrder.splice(dstIdx, 0, actualId);
+          data.reorderMilestones(newOrder);
+        }
+      }
     }
   }, [data]);
 
