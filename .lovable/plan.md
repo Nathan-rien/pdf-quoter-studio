@@ -1,23 +1,18 @@
 
 
-## Problème identifié
+## Plan : Noms des projets sticky au scroll horizontal
 
-La fonction `isDentalNoiseLine` (ligne 1512 de `pdf-import-parser.ts`) filtre les lignes contenant `support@3ddentalstore` :
+### Problème
+Quand on scroll horizontalement dans la timeline, le texte affiché sur les barres (notamment les projets) disparaît car il est positionné en `absolute left-2` à l'intérieur de la barre. Si la barre commence avant la zone visible, le label sort de l'écran.
 
-```typescript
-if (/support@3ddentalstore/i.test(line)) return true;
-```
+### Solution
+Utiliser `position: sticky` sur le label à l'intérieur de la barre pour qu'il reste visible tant que la barre est partiellement dans le viewport. Le container scrollable (`GanttTimeline`) fournit déjà le contexte de scroll nécessaire.
 
-Or, dans le PDF Dental, le texte du produit contient légitimement cette adresse email en fin de description :
-> *(9h-12h30/14h-17h30) au 02.30.32.24.03 ou par email à support@3ddentalstore.fr*
+### Fichier modifié
 
-Quand le PDF est découpé en lignes, la partie contenant l'email est classée comme "bruit" et supprimée.
-
-## Correction
-
-**Fichier** : `src/lib/pdf-import-parser.ts`
-
-Supprimer la règle de filtrage `support@3ddentalstore` dans `isDentalNoiseLine` (ligne 1512). Ce texte fait partie de la description produit et doit être conservé.
-
-Les autres filtres de bruit (adresses vendeur, SIRET/IBAN, entêtes HT/TTC) restent inchangés car ils ne concernent pas le contenu produit.
+**`src/components/gantt/GanttBar.tsx`** (lignes 96-126)
+- Ajouter `overflow: hidden` sur la barre (div parent) pour que le sticky fonctionne dans le bon contexte
+- Changer le label (ligne 123) de `absolute left-2` à `sticky left-2` avec `position: sticky`
+- Retirer `top-1/2 -translate-y-1/2` du label et utiliser `flex items-center` sur le parent pour le centrage vertical
+- Appliquer à tous les types (projets, tâches, sous-tâches) tant que la barre est assez grande
 
