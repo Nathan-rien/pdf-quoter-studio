@@ -48,8 +48,8 @@ export function GanttSidebar({
   let draggableIndex = -1;
 
   return (
-    <div className="w-72 min-w-72 border-r border-border flex-shrink-0">
-      <div className="h-10 border-b border-border flex items-center px-3 bg-muted/50">
+    <div className="w-72 min-w-72 border-r border-border flex-shrink-0 flex flex-col">
+      <div className="h-10 border-b border-border flex items-center px-3 bg-muted/50 flex-shrink-0">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Projets / Tâches</span>
       </div>
       {rows.length === 0 && (
@@ -60,7 +60,11 @@ export function GanttSidebar({
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="gantt-sidebar" type="GANTT_ROW">
           {(provided) => (
-            <div ref={provided.innerRef} {...provided.droppableProps} className="overflow-y-auto">
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className="flex-1 overflow-y-auto"
+            >
               {rows.map((row) => {
                 const ownerName = getOwnerName(row.owner);
                 const isDraggable = row.type === 'project' || row.type === 'task' || row.type === 'milestone';
