@@ -208,6 +208,7 @@ export function GanttView() {
           onDeleteSubtask={data.deleteSubtask}
           getOwnerName={getOwnerName}
           onDragEnd={handleDragEnd}
+          onRowHeightsChange={setRowHeights}
         />
         <div
           className="w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors flex-shrink-0"
