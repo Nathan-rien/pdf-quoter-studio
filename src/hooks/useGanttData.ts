@@ -133,6 +133,23 @@ export function useGanttData() {
     return true;
   };
 
+  const moveMilestoneToProject = async (id: string, projectId: string) => {
+    const previous = [...milestones];
+    reorderingRef.current = true;
+    try {
+      setMilestones(prev => prev.map(m => m.id === id ? { ...m, project_id: projectId } : m));
+      const { error } = await supabase.from('gantt_milestones').update({ project_id: projectId } as any).eq('id', id);
+      if (error) {
+        setMilestones(previous);
+        toast.error('Erreur déplacement jalon');
+        return false;
+      }
+      return true;
+    } finally {
+      reorderingRef.current = false;
+    }
+  };
+
   // Dependencies
   const createDependency = async (data: { source_task_id: string; target_task_id: string; dependency_type?: GanttDependencyType }) => {
     const { error } = await supabase.from('gantt_dependencies').insert(data as any);
@@ -243,7 +260,7 @@ export function useGanttData() {
     createProject, updateProject, deleteProject,
     createTask, updateTask, deleteTask,
     createSubtask, updateSubtask, deleteSubtask,
-    createMilestone, updateMilestone, deleteMilestone,
+    createMilestone, updateMilestone, deleteMilestone, moveMilestoneToProject,
     createDependency, deleteDependency,
     reorderProjects, reorderTasks, reorderMilestones, reorderProjectChildren,
     refresh: fetchAll,
