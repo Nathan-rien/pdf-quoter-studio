@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useGanttData } from '@/hooks/useGanttData';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { GanttSidebar } from './GanttSidebar';
@@ -21,6 +21,7 @@ export function GanttView() {
   const [zoom, setZoom] = useState<ZoomLevel>('week');
   const [viewStart, setViewStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [initialExpanded, setInitialExpanded] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [filterProject, setFilterProject] = useState('');
@@ -34,6 +35,14 @@ export function GanttView() {
   const [subtaskDialog, setSubtaskDialog] = useState<{ open: boolean; subtask?: any; taskId?: string }>({ open: false });
   const [milestoneDialog, setMilestoneDialog] = useState<{ open: boolean; milestone?: any; projectId?: string }>({ open: false });
   const [depDialog, setDepDialog] = useState(false);
+
+  // Auto-expand all projects on initial load
+  useEffect(() => {
+    if (!initialExpanded && !data.loading && data.projects.length > 0) {
+      setExpandedProjects(new Set(data.projects.map(p => p.id)));
+      setInitialExpanded(true);
+    }
+  }, [data.loading, data.projects, initialExpanded]);
 
   const timelineRef = useRef<HTMLDivElement>(null);
 
