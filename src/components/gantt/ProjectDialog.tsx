@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { STATUS_LABELS } from '@/types/gantt';
-import type { GanttProject, GanttStatus } from '@/types/gantt';
+import type { GanttProject, GanttMilestone, GanttStatus } from '@/types/gantt';
 import type { Commercial } from '@/data/commerciaux';
 import { format } from 'date-fns';
 
@@ -14,17 +14,20 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: GanttProject;
+  milestoneId?: string;
+  milestones: GanttMilestone[];
   commerciaux: Commercial[];
   onSave: (data: Partial<GanttProject>) => Promise<boolean>;
 }
 
-export function ProjectDialog({ open, onOpenChange, project, commerciaux, onSave }: Props) {
+export function ProjectDialog({ open, onOpenChange, project, milestoneId, milestones, commerciaux, onSave }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [owner, setOwner] = useState('');
   const [status, setStatus] = useState<GanttStatus>('not_started');
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -35,13 +38,22 @@ export function ProjectDialog({ open, onOpenChange, project, commerciaux, onSave
       setEndDate(project?.end_date || format(new Date(), 'yyyy-MM-dd'));
       setOwner(project?.owner || '');
       setStatus(project?.status || 'not_started');
+      setSelectedMilestoneId(project?.milestone_id || milestoneId || '');
     }
-  }, [open, project]);
+  }, [open, project, milestoneId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await onSave({ title, description: description || null, start_date: startDate, end_date: endDate, owner: owner || null, status });
+    await onSave({
+      title,
+      description: description || null,
+      start_date: startDate,
+      end_date: endDate,
+      owner: owner || null,
+      status,
+      milestone_id: selectedMilestoneId || null,
+    });
     setSaving(false);
   };
 
@@ -57,6 +69,16 @@ export function ProjectDialog({ open, onOpenChange, project, commerciaux, onSave
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Date début *</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required /></div>
             <div><Label>Date fin *</Label><Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required /></div>
+          </div>
+          <div>
+            <Label>Jalon parent</Label>
+            <Select value={selectedMilestoneId} onValueChange={setSelectedMilestoneId}>
+              <SelectTrigger><SelectValue placeholder="Sélectionner un jalon" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun</SelectItem>
+                {milestones.map(m => <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Responsable</Label>

@@ -8,21 +8,23 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 
 interface GanttSidebarProps {
   rows: GanttRow[];
+  expandedMilestones: Set<string>;
   expandedProjects: Set<string>;
   expandedTasks: Set<string>;
+  onToggleMilestone: (id: string) => void;
   onToggleProject: (id: string) => void;
   onToggleTask: (id: string) => void;
+  onEditMilestone: (id: string) => void;
   onEditProject: (id: string) => void;
   onEditTask: (id: string) => void;
   onEditSubtask: (id: string) => void;
-  onEditMilestone: (id: string) => void;
+  onAddProject: (milestoneId: string) => void;
   onAddTask: (projectId: string) => void;
   onAddSubtask: (taskId: string) => void;
-  onAddMilestone: (projectId: string) => void;
+  onDeleteMilestone: (id: string) => void;
   onDeleteProject: (id: string) => void;
   onDeleteTask: (id: string) => void;
   onDeleteSubtask: (id: string) => void;
-  onDeleteMilestone: (id: string) => void;
   getOwnerName: (id: string | null | undefined) => string;
   onDragEnd: (result: DropResult) => void;
 }
@@ -38,11 +40,11 @@ const statusColor = (status: string) => {
 };
 
 export function GanttSidebar({
-  rows, expandedProjects, expandedTasks,
-  onToggleProject, onToggleTask,
-  onEditProject, onEditTask, onEditSubtask, onEditMilestone,
-  onAddTask, onAddSubtask, onAddMilestone,
-  onDeleteProject, onDeleteTask, onDeleteSubtask, onDeleteMilestone,
+  rows, expandedMilestones, expandedProjects, expandedTasks,
+  onToggleMilestone, onToggleProject, onToggleTask,
+  onEditMilestone, onEditProject, onEditTask, onEditSubtask,
+  onAddProject, onAddTask, onAddSubtask,
+  onDeleteMilestone, onDeleteProject, onDeleteTask, onDeleteSubtask,
   getOwnerName, onDragEnd,
 }: GanttSidebarProps) {
   let draggableIndex = -1;
@@ -50,11 +52,11 @@ export function GanttSidebar({
   return (
     <div className="w-72 min-w-72 border-r border-border flex-shrink-0 flex flex-col">
       <div className="h-10 border-b border-border flex items-center px-3 bg-muted/50 flex-shrink-0">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Projets / Tâches</span>
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Jalons / Projets / Tâches</span>
       </div>
       {rows.length === 0 && (
         <div className="p-4 text-sm text-muted-foreground text-center">
-          Aucun projet. Créez-en un pour commencer.
+          Aucun jalon. Créez-en un pour commencer.
         </div>
       )}
       <DragDropContext onDragEnd={onDragEnd}>
@@ -67,39 +69,45 @@ export function GanttSidebar({
             >
               {rows.map((row) => {
                 const ownerName = getOwnerName(row.owner);
-                const isDraggable = row.type === 'project' || row.type === 'task' || row.type === 'milestone';
+                const isDraggable = row.type === 'milestone' || row.type === 'project' || row.type === 'task';
                 if (isDraggable) draggableIndex += 1;
 
                 const content = (
                   <div
                     className={cn(
                       'flex items-center gap-1 px-2 border-b border-border/50 group hover:bg-accent/50 transition-colors',
-                      row.type === 'project' && 'bg-muted/30 font-medium',
-                      row.type === 'milestone' && 'bg-orange-50/30 dark:bg-orange-950/20',
+                      row.type === 'milestone' && 'bg-orange-50/30 dark:bg-orange-950/20 font-medium',
+                      row.type === 'project' && 'bg-muted/30',
                     )}
                     style={{ height: ROW_HEIGHT, paddingLeft: 8 + row.depth * 20 }}
                   >
-                    {/* Drag handle for draggable rows */}
+                    {/* Drag handle */}
                     {isDraggable && (
                       <GripVertical className="h-3 w-3 text-muted-foreground/50 cursor-grab active:cursor-grabbing flex-shrink-0" />
                     )}
 
                     {/* Expand toggle */}
-                    {(row.type === 'project' || row.type === 'task') ? (
+                    {(row.type === 'milestone' || row.type === 'project' || row.type === 'task') ? (
                       <button
                         className="p-0.5 rounded hover:bg-accent"
-                        onClick={() => row.type === 'project' ? onToggleProject(row.id) : onToggleTask(row.id)}
+                        onClick={() => {
+                          if (row.type === 'milestone') onToggleMilestone(row.id);
+                          else if (row.type === 'project') onToggleProject(row.id);
+                          else onToggleTask(row.id);
+                        }}
                       >
-                        {(row.type === 'project' ? expandedProjects.has(row.id) : expandedTasks.has(row.id))
+                        {(row.type === 'milestone' ? expandedMilestones.has(row.id) :
+                          row.type === 'project' ? expandedProjects.has(row.id) :
+                          expandedTasks.has(row.id))
                           ? <ChevronDown className="h-3.5 w-3.5" />
                           : <ChevronRight className="h-3.5 w-3.5" />
                         }
                       </button>
-                    ) : !isDraggable ? <span className="w-5" /> : null}
+                    ) : <span className="w-5" />}
 
-                    {/* Color dot / diamond for milestones */}
+                    {/* Icon */}
                     {row.type === 'milestone' ? (
-                      <Diamond className="h-3 w-3 text-orange-500 fill-orange-500 flex-shrink-0" />
+                      <Diamond className="h-3.5 w-3.5 text-orange-500 fill-orange-500 flex-shrink-0" />
                     ) : (
                       <span className={cn(
                         'w-2 h-2 rounded-full flex-shrink-0',
@@ -108,7 +116,7 @@ export function GanttSidebar({
                     )}
 
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className={cn('text-sm truncate', row.type === 'milestone' && 'italic')}>{row.title}</span>
+                      <span className={cn('text-sm truncate', row.type === 'milestone' && 'font-semibold')}>{row.title}</span>
                       {ownerName && (
                         <span className="text-[10px] text-muted-foreground truncate">{ownerName}</span>
                       )}
@@ -123,33 +131,33 @@ export function GanttSidebar({
 
                     {/* Actions */}
                     <div className="hidden group-hover:flex items-center gap-0.5">
+                      {row.type === 'milestone' && (
+                        <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddProject(row.id)} title="Ajouter un projet">
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      )}
                       {row.type === 'project' && (
-                        <>
-                          <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddTask(row.id)} title="Ajouter une tâche">
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="iconSm" className="h-5 w-5 text-orange-500" onClick={() => onAddMilestone(row.id)} title="Ajouter un jalon">
-                            <Diamond className="h-3 w-3" />
-                          </Button>
-                        </>
+                        <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddTask(row.id)} title="Ajouter une tâche">
+                          <Plus className="h-3 w-3" />
+                        </Button>
                       )}
                       {row.type === 'task' && (
-                        <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddSubtask(row.id)}>
+                        <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => onAddSubtask(row.id)} title="Ajouter une sous-tâche">
                           <Plus className="h-3 w-3" />
                         </Button>
                       )}
                       <Button variant="ghost" size="iconSm" className="h-5 w-5" onClick={() => {
-                        if (row.type === 'project') onEditProject(row.id);
+                        if (row.type === 'milestone') onEditMilestone(row.id);
+                        else if (row.type === 'project') onEditProject(row.id);
                         else if (row.type === 'task') onEditTask(row.id);
-                        else if (row.type === 'milestone') onEditMilestone(row.id);
                         else onEditSubtask(row.id);
                       }}>
                         <Pencil className="h-3 w-3" />
                       </Button>
                       <Button variant="ghost" size="iconSm" className="h-5 w-5 text-destructive" onClick={() => {
-                        if (row.type === 'project') onDeleteProject(row.id);
+                        if (row.type === 'milestone') onDeleteMilestone(row.id);
+                        else if (row.type === 'project') onDeleteProject(row.id);
                         else if (row.type === 'task') onDeleteTask(row.id);
-                        else if (row.type === 'milestone') onDeleteMilestone(row.id);
                         else onDeleteSubtask(row.id);
                       }}>
                         <Trash2 className="h-3 w-3" />

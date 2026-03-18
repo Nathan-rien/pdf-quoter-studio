@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Link2 } from 'lucide-react';
+import { Diamond, Search, Link2 } from 'lucide-react';
 import { STATUS_LABELS, PRIORITY_LABELS } from '@/types/gantt';
 import type { GanttProject, GanttStatus, GanttPriority } from '@/types/gantt';
 import type { Commercial } from '@/data/commerciaux';
@@ -19,7 +19,7 @@ interface Props {
   onFilterStatusChange: (v: string) => void;
   filterPriority: string;
   onFilterPriorityChange: (v: string) => void;
-  onCreateProject: () => void;
+  onCreateMilestone: () => void;
   onCreateDependency: () => void;
 }
 
@@ -29,14 +29,14 @@ export function GanttFilters({
   commerciaux, filterOwner, onFilterOwnerChange,
   filterStatus, onFilterStatusChange,
   filterPriority, onFilterPriorityChange,
-  onCreateProject, onCreateDependency,
+  onCreateMilestone, onCreateDependency,
 }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative flex-1 min-w-48">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Rechercher projet, tâche, responsable..."
+          placeholder="Rechercher jalon, projet, tâche, responsable..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9 h-9"
@@ -79,8 +79,8 @@ export function GanttFilters({
         </SelectContent>
       </Select>
 
-      <Button onClick={onCreateProject} size="sm" className="gap-1.5">
-        <Plus className="h-4 w-4" /> Créer un projet
+      <Button onClick={onCreateMilestone} size="sm" className="gap-1.5">
+        <Diamond className="h-4 w-4" /> Créer un jalon
       </Button>
 
       <Button onClick={onCreateDependency} variant="outline" size="sm" className="gap-1.5">

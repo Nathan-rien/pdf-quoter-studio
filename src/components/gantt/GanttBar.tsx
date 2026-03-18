@@ -17,6 +17,7 @@ interface Props {
 }
 
 const barColors = {
+  milestone: { base: 'bg-orange-500', done: 'bg-orange-600', notStarted: 'bg-orange-400' },
   project: { base: 'bg-blue-500', done: 'bg-blue-600', notStarted: 'bg-blue-400' },
   task: { base: 'bg-violet-500', done: 'bg-violet-600', notStarted: 'bg-violet-400' },
   subtask: { base: 'bg-amber-500', done: 'bg-amber-600', notStarted: 'bg-amber-400' },
