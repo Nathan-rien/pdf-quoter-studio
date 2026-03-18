@@ -68,9 +68,48 @@ export function useGanttData() {
     return true;
   };
 
+  const deleteDependenciesForTaskIds = async (taskIds: string[]) => {
+    if (!taskIds.length) return true;
+
+    const [sourceDepsDelete, targetDepsDelete] = await Promise.all([
+      supabase.from('gantt_dependencies').delete().in('source_task_id', taskIds),
+      supabase.from('gantt_dependencies').delete().in('target_task_id', taskIds),
+    ]);
+
+    return !sourceDepsDelete.error && !targetDepsDelete.error;
+  };
+
   const deleteMilestone = async (id: string) => {
+    const projectIds = projects.filter((project) => project.milestone_id === id).map((project) => project.id);
+    const taskIds = tasks.filter((task) => projectIds.includes(task.project_id)).map((task) => task.id);
+
+    if (taskIds.length) {
+      const [subtasksDelete, dependenciesDeleted, tasksDelete] = await Promise.all([
+        supabase.from('gantt_subtasks').delete().in('task_id', taskIds),
+        deleteDependenciesForTaskIds(taskIds),
+        supabase.from('gantt_tasks').delete().in('id', taskIds),
+      ]);
+
+      if (subtasksDelete.error || !dependenciesDeleted || tasksDelete.error) {
+        toast.error('Erreur suppression jalon');
+        return false;
+      }
+    }
+
+    if (projectIds.length) {
+      const { error: projectsDeleteError } = await supabase.from('gantt_projects').delete().in('id', projectIds);
+      if (projectsDeleteError) {
+        toast.error('Erreur suppression jalon');
+        return false;
+      }
+    }
+
     const { error } = await supabase.from('gantt_milestones').delete().eq('id', id);
-    if (error) { toast.error('Erreur suppression jalon'); return false; }
+    if (error) {
+      toast.error('Erreur suppression jalon');
+      return false;
+    }
+
     toast.success('Jalon supprimé');
     return true;
   };
@@ -92,8 +131,27 @@ export function useGanttData() {
   };
 
   const deleteProject = async (id: string) => {
+    const taskIds = tasks.filter((task) => task.project_id === id).map((task) => task.id);
+
+    if (taskIds.length) {
+      const [subtasksDelete, dependenciesDeleted, tasksDelete] = await Promise.all([
+        supabase.from('gantt_subtasks').delete().in('task_id', taskIds),
+        deleteDependenciesForTaskIds(taskIds),
+        supabase.from('gantt_tasks').delete().in('id', taskIds),
+      ]);
+
+      if (subtasksDelete.error || !dependenciesDeleted || tasksDelete.error) {
+        toast.error('Erreur suppression projet');
+        return false;
+      }
+    }
+
     const { error } = await supabase.from('gantt_projects').delete().eq('id', id);
-    if (error) { toast.error('Erreur suppression projet'); return false; }
+    if (error) {
+      toast.error('Erreur suppression projet');
+      return false;
+    }
+
     toast.success('Projet supprimé');
     return true;
   };
@@ -113,8 +171,17 @@ export function useGanttData() {
   };
 
   const deleteTask = async (id: string) => {
-    const { error } = await supabase.from('gantt_tasks').delete().eq('id', id);
-    if (error) { toast.error('Erreur suppression tâche'); return false; }
+    const [subtasksDelete, dependenciesDeleted, taskDelete] = await Promise.all([
+      supabase.from('gantt_subtasks').delete().eq('task_id', id),
+      deleteDependenciesForTaskIds([id]),
+      supabase.from('gantt_tasks').delete().eq('id', id),
+    ]);
+
+    if (subtasksDelete.error || !dependenciesDeleted || taskDelete.error) {
+      toast.error('Erreur suppression tâche');
+      return false;
+    }
+
     toast.success('Tâche supprimée');
     return true;
   };
