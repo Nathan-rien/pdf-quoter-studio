@@ -78,7 +78,7 @@ export const COMMERCIAUX: Commercial[] = [
     entity: 'grosbill-pro', 
     nom: 'Grégory Moinet', 
     telephone: '07 43 15 32 11', 
-    email: 'g.moinet@cybertek-pro.fr', 
+    email: 'location@grosbill-pro.com', 
     adresse: '60 Boulevard de l\'hôpital, 75013 Paris' 
   },
   { 
