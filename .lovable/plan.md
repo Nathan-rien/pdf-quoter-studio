@@ -1,41 +1,41 @@
 
 
-## Plan : Corriger la propagation du coefficient override vers l'aperçu et l'export PDF
+## Plan : Propager coefficientOverride dans getAllProposalsCalculations
 
 ### Problème
-Quand l'utilisateur modifie le coefficient dans l'onglet "Données" (via `ProposalCard`), la valeur `coefficientOverride` est bien stockée dans `proposal.coefficientOverride`. Cependant, la fonction `getCalculatedValues()` dans `rentalProposalStore.ts` (ligne 649-655) ne passe **pas** ce `coefficientOverride` à `calculateAllMatriceValues()`. Le 6e argument est omis.
+Le fix précédent a corrigé `getCalculatedValues()` mais pas `getAllProposalsCalculations()` — qui est la fonction réellement utilisée par l'aperçu et l'export PDF pour rendre les blocs "Votre offre" (Loyer mensuel HT, Coût locatif annuel, etc.).
 
-Résultat : l'aperçu PDF et l'export utilisent toujours le coefficient auto-calculé, ignorant la saisie manuelle.
+À la ligne 446 de `rentalProposalStore.ts`, l'appel à `calculateAllMatriceValues` omet le 6e argument `proposal.coefficientOverride`.
 
 ### Solution
-Ajouter `firstProposal?.coefficientOverride` comme 6e argument dans l'appel à `calculateAllMatriceValues` dans `getCalculatedValues()`.
+Ajouter `proposal.coefficientOverride` comme 6e argument dans `getAllProposalsCalculations`.
 
 ### Fichier modifié
 
 | Fichier | Changement |
 |---------|------------|
-| `src/stores/rentalProposalStore.ts` | Ligne 654 : ajouter `, firstProposal?.coefficientOverride` après `optionsPrices` dans l'appel `calculateAllMatriceValues(...)` |
+| `src/stores/rentalProposalStore.ts` | Ligne 446 : ajouter `, proposal.coefficientOverride` après `optionsPrices` |
 
 ### Avant
 ```typescript
-return calculateAllMatriceValues(
-  firstProposal?.montantInvestissement ?? state.matriceData.montantInvestissement,
-  firstProposal?.duree ?? state.matriceData.duree,
-  firstProposal?.refinanceur ?? state.matriceData.refinanceur,
-  firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
+calculations: calculateAllMatriceValues(
+  proposal.montantInvestissement,
+  proposal.duree,
+  proposal.refinanceur,
+  proposal.margeAppliquee,
   optionsPrices
-);
+),
 ```
 
 ### Après
 ```typescript
-return calculateAllMatriceValues(
-  firstProposal?.montantInvestissement ?? state.matriceData.montantInvestissement,
-  firstProposal?.duree ?? state.matriceData.duree,
-  firstProposal?.refinanceur ?? state.matriceData.refinanceur,
-  firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
+calculations: calculateAllMatriceValues(
+  proposal.montantInvestissement,
+  proposal.duree,
+  proposal.refinanceur,
+  proposal.margeAppliquee,
   optionsPrices,
-  firstProposal?.coefficientOverride
-);
+  proposal.coefficientOverride
+),
 ```
 
