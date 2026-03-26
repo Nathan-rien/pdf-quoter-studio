@@ -426,7 +426,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           proposal.duree,
           proposal.refinanceur,
           proposal.margeAppliquee,
-          optionsPrices
+          optionsPrices,
+          proposal.coefficientOverride
         );
       },
 
@@ -443,7 +444,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             proposal.duree,
             proposal.refinanceur,
             proposal.margeAppliquee,
-            optionsPrices
+            optionsPrices,
+            proposal.coefficientOverride
           ),
         }));
       },
