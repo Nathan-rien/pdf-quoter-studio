@@ -651,7 +651,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           firstProposal?.duree ?? state.matriceData.duree,
           firstProposal?.refinanceur ?? state.matriceData.refinanceur,
           firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
-          optionsPrices
+          optionsPrices,
+          firstProposal?.coefficientOverride
         );
       },
 
