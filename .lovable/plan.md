@@ -1,16 +1,41 @@
 
 
-## Plan : Corriger l'email de Grégory Moinet pour Grosbill Pro
+## Plan : Corriger la propagation du coefficient override vers l'aperçu et l'export PDF
 
 ### Problème
-Dans le référentiel statique `src/data/commerciaux.ts`, l'entrée de Grégory Moinet sous Grosbill Pro (ligne 81) utilise l'email `g.moinet@cybertek-pro.fr` au lieu de `location@grosbill-pro.com`.
+Quand l'utilisateur modifie le coefficient dans l'onglet "Données" (via `ProposalCard`), la valeur `coefficientOverride` est bien stockée dans `proposal.coefficientOverride`. Cependant, la fonction `getCalculatedValues()` dans `rentalProposalStore.ts` (ligne 649-655) ne passe **pas** ce `coefficientOverride` à `calculateAllMatriceValues()`. Le 6e argument est omis.
+
+Résultat : l'aperçu PDF et l'export utilisent toujours le coefficient auto-calculé, ignorant la saisie manuelle.
 
 ### Solution
-Modifier la ligne 81 de `src/data/commerciaux.ts` pour remplacer l'email par `location@grosbill-pro.com`.
+Ajouter `firstProposal?.coefficientOverride` comme 6e argument dans l'appel à `calculateAllMatriceValues` dans `getCalculatedValues()`.
 
 ### Fichier modifié
 
 | Fichier | Changement |
 |---------|------------|
-| `src/data/commerciaux.ts` | Ligne 81 : `g.moinet@cybertek-pro.fr` → `location@grosbill-pro.com` |
+| `src/stores/rentalProposalStore.ts` | Ligne 654 : ajouter `, firstProposal?.coefficientOverride` après `optionsPrices` dans l'appel `calculateAllMatriceValues(...)` |
+
+### Avant
+```typescript
+return calculateAllMatriceValues(
+  firstProposal?.montantInvestissement ?? state.matriceData.montantInvestissement,
+  firstProposal?.duree ?? state.matriceData.duree,
+  firstProposal?.refinanceur ?? state.matriceData.refinanceur,
+  firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
+  optionsPrices
+);
+```
+
+### Après
+```typescript
+return calculateAllMatriceValues(
+  firstProposal?.montantInvestissement ?? state.matriceData.montantInvestissement,
+  firstProposal?.duree ?? state.matriceData.duree,
+  firstProposal?.refinanceur ?? state.matriceData.refinanceur,
+  firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
+  optionsPrices,
+  firstProposal?.coefficientOverride
+);
+```
 
