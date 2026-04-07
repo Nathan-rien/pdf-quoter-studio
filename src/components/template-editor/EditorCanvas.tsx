@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
+import type { InlineTextEditorHandle } from "./InlineTextEditor";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,9 +93,14 @@ export function EditorCanvas() {
   // Flag pour savoir si on doit recalculer la position de la toolbar
   const [needsToolbarReposition, setNeedsToolbarReposition] = useState(false);
   
+  // Drag threshold state
+  const [pendingDrag, setPendingDrag] = useState<{ elementId: string; startX: number; startY: number; offsetX: number; offsetY: number } | null>(null);
+  const DRAG_THRESHOLD = 5;
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const inlineEditorRef = useRef<InlineTextEditorHandle>(null);
   const editingElementRef = useRef<HTMLDivElement>(null);
 
   // Seuil de snap pour les guides (en pixels canvas)
@@ -319,42 +325,36 @@ export function EditorCanvas() {
     return getSharedElementStyle({ element: fullElement });
   };
 
-  // Drag & Drop handlers
+  // Drag & Drop handlers – with movement threshold to avoid interfering with double-click
   const handleMouseDown = useCallback((elementId: string, e: React.MouseEvent) => {
     if (!isEditable || isAddMode || isInlineEditing) return;
     
     const element = pageContent?.elements.find(el => el.id === elementId);
     if (!element || element.isDynamic) return;
     
-    // Ne pas démarrer le drag si c'est un potentiel double-clic
-    // On vérifie si l'élément texte vient d'être cliqué
-    if (element.type === 'text' && e.detail === 1) {
-      // Simple clic - ne pas démarrer le drag tout de suite
-      // Le drag sera activé si l'utilisateur bouge la souris
-    }
-    
     e.stopPropagation();
     
     // Multi-sélection avec Ctrl ou Cmd - ne pas démarrer le drag
     if (e.ctrlKey || e.metaKey) {
       toggleElementSelection(elementId);
-      return; // Ne pas démarrer le drag pour la multi-sélection
+      return;
     }
     
     // Si l'élément n'est pas déjà dans la sélection, le sélectionner seul
     if (!selectedElementIds.includes(elementId)) {
       selectElement(elementId);
     }
-    // Sinon, garder la multi-sélection actuelle pour pouvoir déplacer le groupe
     
-    // Démarrer le drag uniquement pour un clic simple
+    // Store pending drag – actual drag starts only after threshold is crossed
     const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+    setPendingDrag({
+      elementId,
+      startX: e.clientX,
+      startY: e.clientY,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
     });
-    setIsDragging(true);
-  }, [isEditable, isAddMode, pageContent, selectElement, toggleElementSelection, selectedElementIds]);
+  }, [isEditable, isAddMode, isInlineEditing, pageContent, selectElement, toggleElementSelection, selectedElementIds]);
 
   // Handler pour démarrer le resize
   const handleResizeMouseDown = useCallback((elementId: string, handle: 'nw' | 'ne' | 'sw' | 'se', e: React.MouseEvent) => {
@@ -384,6 +384,18 @@ export function EditorCanvas() {
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!canvasRef.current) return;
+
+    // Check pending drag threshold
+    if (pendingDrag && !isDragging) {
+      const dx = Math.abs(e.clientX - pendingDrag.startX);
+      const dy = Math.abs(e.clientY - pendingDrag.startY);
+      if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+        setDragOffset({ x: pendingDrag.offsetX, y: pendingDrag.offsetY });
+        setIsDragging(true);
+        setPendingDrag(null);
+      }
+      return; // Don't do anything else while under threshold
+    }
     
     // Resize d'un élément
     if (isResizing && selectedElementId && resizeStart && resizeHandle) {
@@ -544,9 +556,11 @@ export function EditorCanvas() {
       const y = ((e.clientY - canvasRect.top) / canvasRect.height) * CANVAS_SCALE.height;
       setLassoEnd({ x, y });
     }
-  }, [isDragging, isDraggingZone, isResizing, isLassoing, lassoStart, selectedElementId, selectedDynamicZoneId, dragOffset, resizeStart, resizeHandle, pageContent, dynamicZones, updateElementPosition, updateElementSize, updateDynamicZonePosition]);
+  }, [isDragging, isDraggingZone, isResizing, isLassoing, pendingDrag, lassoStart, selectedElementId, selectedDynamicZoneId, dragOffset, resizeStart, resizeHandle, pageContent, dynamicZones, updateElementPosition, updateElementSize, updateDynamicZonePosition]);
 
   const handleMouseUp = useCallback(() => {
+    // Clear pending drag
+    setPendingDrag(null);
     // Finaliser le lasso et sélectionner les éléments
     if (isLassoing && lassoStart && lassoEnd && pageContent) {
       const lassoWidth = Math.abs(lassoEnd.x - lassoStart.x);
@@ -707,8 +721,8 @@ export function EditorCanvas() {
     setToolbarPosition(null);
   }, [setInlineEditing]);
 
-  // Mettre à jour le contenu du texte depuis l'éditeur inline
-  const handleInlineContentChange = useCallback((html: string, plainText: string) => {
+  // Commit du contenu inline dans le store (appelé une seule fois au blur/confirm)
+  const handleInlineCommit = useCallback((html: string, plainText: string) => {
     if (inlineEditingElementId) {
       updateTextContent(inlineEditingElementId, { 
         htmlContent: html,
@@ -717,25 +731,25 @@ export function EditorCanvas() {
     }
   }, [inlineEditingElementId, updateTextContent]);
 
-  // Actions de la toolbar flottante
+  // Actions de la toolbar flottante - routed through editor ref
   const handleToolbarBold = useCallback(() => {
-    document.execCommand('bold', false);
+    inlineEditorRef.current?.execFormat('bold');
   }, []);
 
   const handleToolbarItalic = useCallback(() => {
-    document.execCommand('italic', false);
+    inlineEditorRef.current?.execFormat('italic');
   }, []);
 
   const handleToolbarUnderline = useCallback(() => {
-    document.execCommand('underline', false);
+    inlineEditorRef.current?.execFormat('underline');
   }, []);
 
   const handleToolbarBulletList = useCallback(() => {
-    document.execCommand('insertUnorderedList', false);
+    inlineEditorRef.current?.execFormat('insertUnorderedList');
   }, []);
 
   const handleToolbarNumberedList = useCallback(() => {
-    document.execCommand('insertOrderedList', false);
+    inlineEditorRef.current?.execFormat('insertOrderedList');
   }, []);
 
   const handleToolbarAlignChange = useCallback((align: TextAlign) => {
