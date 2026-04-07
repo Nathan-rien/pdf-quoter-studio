@@ -1199,7 +1199,7 @@ export function EditorCanvas() {
                             width: '100%',
                           }}
                         >
-                          <div className="whitespace-pre-wrap break-words">{renderTextContent()}</div>
+                          <div className="rich-text whitespace-pre-wrap break-words">{renderTextContent()}</div>
                         </div>
                       )}
                     </React.Fragment>
