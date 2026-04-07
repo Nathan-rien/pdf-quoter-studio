@@ -388,7 +388,7 @@ export function PreviewEditableCanvas({
           {inlineEditingId === element.id ? (
             <InlineTextEditor
               content={content}
-              onContentChange={(html, plainText) => {
+              onCommit={(html, plainText) => {
                 updateElementFromPreview(element.id, pageNumber, {
                   content: { htmlContent: html, text: plainText },
                 });

@@ -1179,8 +1179,9 @@ export function EditorCanvas() {
                     <React.Fragment key={inlineEditingElementId === element.id ? `editing-${element.id}` : `display-${element.id}`}>
                       {inlineEditingElementId === element.id ? (
                         <InlineTextEditor
+                          ref={inlineEditorRef}
                           content={textContent}
-                          onContentChange={handleInlineContentChange}
+                          onCommit={handleInlineCommit}
                           onExit={handleExitInlineEditing}
                         />
                       ) : (

@@ -903,7 +903,7 @@ export function RentalProposalPreview() {
           {isInlineEditing ? (
             <InlineTextEditor
               content={content}
-              onContentChange={(html, plainText) => {
+              onCommit={(html, plainText) => {
                 updateElementFromPreview(element.id, 4 as PDFPageNumber, {
                   content: { htmlContent: html, text: plainText },
                 });
