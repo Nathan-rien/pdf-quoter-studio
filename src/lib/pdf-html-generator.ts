@@ -619,6 +619,20 @@ export async function generatePDFDocumentHTML(
           color: inherit !important;
         }
         
+        .rich-text ul {
+          list-style: disc;
+          padding-left: 1.25em;
+          margin: 0.15em 0;
+        }
+        .rich-text ol {
+          list-style: decimal;
+          padding-left: 1.5em;
+          margin: 0.15em 0;
+        }
+        .rich-text li {
+          margin: 0.1em 0;
+        }
+        
         body {
           font-family: 'DM Sans', 'Outfit', sans-serif;
           line-height: 1.5;
