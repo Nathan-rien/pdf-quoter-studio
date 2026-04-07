@@ -609,6 +609,7 @@ export function EditorCanvas() {
   }, [isLassoing, lassoStart, lassoEnd, pageContent, selectMultipleElements]);
 
   const handleMouseLeave = useCallback(() => {
+    setPendingDrag(null);
     if (isDragging || isDraggingZone || isResizing || isLassoing) {
       setIsLassoing(false);
       setLassoStart(null);
