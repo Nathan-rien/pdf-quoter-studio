@@ -598,10 +598,14 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     if (elementIndex === -1) return false;
 
     const element = currentVersion.pages[pageIndex].elements[elementIndex];
-    if (element.isDynamic) return false; // Protection zone dynamique
+    if (element.isDynamic) return false;
 
-    // Sauvegarder dans l'historique avant modification
-    saveToHistory(state);
+    // Only save to history for structural changes (alignment, fontSize),
+    // NOT for every keystroke (htmlContent/text updates are committed once on blur)
+    const isStructuralChange = !content.htmlContent && !content.text;
+    if (isStructuralChange) {
+      saveToHistory(state);
+    }
 
     const updatedPages = [...currentVersion.pages];
     const updatedElements = [...updatedPages[pageIndex].elements];

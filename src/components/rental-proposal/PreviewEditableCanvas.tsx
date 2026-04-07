@@ -112,23 +112,27 @@ export function PreviewEditableCanvas({
     };
   }, []);
 
-  // Gestion du drag
+  // Drag threshold state
+  const pendingDragRef = useRef<{ elementId: string; startX: number; startY: number; coordsX: number; coordsY: number } | null>(null);
+  const DRAG_THRESHOLD = 5;
+
+  // Gestion du drag - with threshold to not interfere with double-click
   const handleMouseDown = useCallback((e: React.MouseEvent, element: EditableElement) => {
     if (!isEditMode || isElementLocked(element) || inlineEditingId === element.id) return;
-    e.preventDefault(); // Empêche la sélection de texte pendant le drag
     e.stopPropagation();
     
     const coords = getCanvasCoordinates(e.clientX, e.clientY);
     setSelectedId(element.id);
-    setDragState({
-      isDragging: true,
+    
+    // Store pending – don't start actual drag yet
+    pendingDragRef.current = {
       elementId: element.id,
-      startX: coords.x,
-      startY: coords.y,
-      elementStartX: element.position.x,
-      elementStartY: element.position.y,
-    });
-  }, [isEditMode, getCanvasCoordinates]);
+      startX: e.clientX,
+      startY: e.clientY,
+      coordsX: coords.x,
+      coordsY: coords.y,
+    };
+  }, [isEditMode, getCanvasCoordinates, inlineEditingId]);
 
   // Gestion du resize
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, element: EditableElement, corner: string) => {
@@ -200,6 +204,28 @@ export function PreviewEditableCanvas({
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const coords = getCanvasCoordinates(e.clientX, e.clientY);
 
+    // Check pending drag threshold
+    if (pendingDragRef.current && !dragState?.isDragging) {
+      const dx = Math.abs(e.clientX - pendingDragRef.current.startX);
+      const dy = Math.abs(e.clientY - pendingDragRef.current.startY);
+      if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+        const pd = pendingDragRef.current;
+        const element = elements.find(el => el.id === pd.elementId);
+        if (element) {
+          setDragState({
+            isDragging: true,
+            elementId: pd.elementId,
+            startX: pd.coordsX,
+            startY: pd.coordsY,
+            elementStartX: element.position.x,
+            elementStartY: element.position.y,
+          });
+        }
+        pendingDragRef.current = null;
+      }
+      return;
+    }
+
     // Dynamic content resize
     if (dynamicResizeState?.isResizing && onDynamicContentScale) {
       const deltaX = coords.x - dynamicResizeState.startX;
@@ -222,7 +248,6 @@ export function PreviewEditableCanvas({
         scaleFactorY = dynamicResizeState.startScaleY - deltaY / dynamicResizeState.containerHeight;
       }
       
-      // Clamp between 0.3 and 1.5
       scaleFactorX = Math.max(0.3, Math.min(1.5, scaleFactorX));
       scaleFactorY = Math.max(0.3, Math.min(1.5, scaleFactorY));
       
@@ -287,6 +312,7 @@ export function PreviewEditableCanvas({
   }, [dragState, resizeState, dynamicDragState, dynamicResizeState, elements, getCanvasCoordinates, updateElementFromPreview, pageNumber, onDynamicContentDrag, onDynamicContentScale]);
 
   const handleMouseUp = useCallback(() => {
+    pendingDragRef.current = null;
     setDragState(null);
     setResizeState(null);
     setDynamicDragState(null);
@@ -388,7 +414,7 @@ export function PreviewEditableCanvas({
           {inlineEditingId === element.id ? (
             <InlineTextEditor
               content={content}
-              onContentChange={(html, plainText) => {
+              onCommit={(html, plainText) => {
                 updateElementFromPreview(element.id, pageNumber, {
                   content: { htmlContent: html, text: plainText },
                 });
@@ -420,7 +446,7 @@ export function PreviewEditableCanvas({
                 width: '100%',
               }}
             >
-              <div className="whitespace-pre-wrap break-words">
+              <div className="rich-text whitespace-pre-wrap break-words">
                 {renderTextContent(content, element.id)}
               </div>
             </div>

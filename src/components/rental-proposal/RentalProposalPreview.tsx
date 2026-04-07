@@ -362,7 +362,7 @@ export function RentalProposalPreview() {
               width: '100%',
             }}
           >
-            <div className="whitespace-pre-wrap break-words">
+            <div className="rich-text whitespace-pre-wrap break-words">
               {renderTextContent(content)}
             </div>
           </div>
@@ -903,7 +903,7 @@ export function RentalProposalPreview() {
           {isInlineEditing ? (
             <InlineTextEditor
               content={content}
-              onContentChange={(html, plainText) => {
+              onCommit={(html, plainText) => {
                 updateElementFromPreview(element.id, 4 as PDFPageNumber, {
                   content: { htmlContent: html, text: plainText },
                 });
@@ -935,7 +935,7 @@ export function RentalProposalPreview() {
                 width: '100%',
               }}
             >
-              <div className="whitespace-pre-wrap break-words">
+              <div className="rich-text whitespace-pre-wrap break-words">
                 {content.htmlContent ? (
                   <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(
                     substituteDynamicPlaceholders(content.htmlContent, { fraisDossier: calculatedValues.fraisDossier })
