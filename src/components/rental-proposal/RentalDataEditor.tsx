@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
-import { BASE_TAUX_DATA } from '@/data/base-taux';
+import { useBaseTauxStore } from '@/stores/baseTauxStore';
 import { getConditionFinContrat } from '@/data/frais-dossier';
 import { ENTITIES, CommercialEntity } from '@/data/commerciaux';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
@@ -25,6 +25,7 @@ import { useCommercialIdentity } from '@/hooks/useCommercialIdentity';
 import { ReadOnlyBadge } from '@/components/ui/read-only-badge';
 
 export function RentalDataEditor() {
+  const baseTauxEntries = useBaseTauxStore((s) => s.entries);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
   const [isNosOptionsPopoverOpen, setIsNosOptionsPopoverOpen] = useState(false);
@@ -1106,7 +1107,7 @@ export function RentalDataEditor() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {BASE_TAUX_DATA.slice(0, 50).map((row, index) => (
+                    {baseTauxEntries.slice(0, 50).map((row, index) => (
                       <TableRow key={index}>
                         <TableCell>{row.partenaire}</TableCell>
                         <TableCell className="text-right">{row.montantMin.toLocaleString()} €</TableCell>
@@ -1119,7 +1120,7 @@ export function RentalDataEditor() {
                 </Table>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Affichage limité à 50 lignes. Total : {BASE_TAUX_DATA.length} entrées.
+                Affichage limité à 50 lignes. Total : {baseTauxEntries.length} entrées.
               </p>
             </CardContent>
           </Card>

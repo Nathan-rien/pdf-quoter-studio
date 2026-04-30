@@ -1,7 +1,7 @@
 // Fonctions de calcul pour le workflow Proposition
 // Basées sur les formules Excel de Matrice_Location
 
-import { BASE_TAUX_DATA } from '@/data/base-taux';
+import { getBaseTauxRuntime } from '@/stores/baseTauxStore';
 import { getFraisDossier } from '@/data/frais-dossier';
 
 /**
@@ -18,7 +18,7 @@ export function lookupCoefficient(
   }
 
   // Chercher la ligne correspondante dans Base Taux (comparaison directe en mois)
-  const match = BASE_TAUX_DATA.find(row =>
+  const match = getBaseTauxRuntime().find(row =>
     row.partenaire === partenaire &&
     row.montantMin <= montant &&
     row.montantMax >= montant &&
