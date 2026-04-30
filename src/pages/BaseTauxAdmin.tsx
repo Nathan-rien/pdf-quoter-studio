@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Database, FileSpreadsheet, Check, AlertCircle, Search, Filter, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { BASE_TAUX_DATA, BaseTauxEntry } from "@/data/base-taux";
+import type { BaseTauxEntry } from "@/data/base-taux";
 import { useBaseTauxStore } from "@/stores/baseTauxStore";
 import { cn } from "@/lib/utils";
 
