@@ -1,64 +1,86 @@
+## Problème confirmé
 
-## Objectif
+Les modifications dans `BaseTauxAdmin` sont bien persistées dans `useBaseTauxStore` (vérifié), mais la matrice ne se met pas à jour car :
 
-Permettre, dans l'admin **Base Taux**, d'éditer directement les cellules **Montant min**, **Montant max**, **Durée** et **Taux** (le **Partenaire** reste non modifiable pour préserver la cohérence des lookups). Toute modification doit être **immédiatement répercutée partout** où ces données sont utilisées : calculs de proposition, aperçus, exports.
+1. **`ProposalCard.tsx`** appelle `calculateAllMatriceValues(...)` directement dans le rendu, qui en interne lit `getBaseTauxRuntime()`. Cet accès est un *snapshot* hors React : le composant ne s'abonne pas au store, donc aucune re-render ne se déclenche quand un taux est modifié.
+2. **`RentalDataEditor.tsx`** s'abonne bien à `useBaseTauxStore` mais ne propage pas cette dépendance jusqu'à `ProposalCard` (la carte est rendue indépendamment).
+3. **`rentalProposalStore.ts`** expose `getProposalCalculations` / `getAllProposalsCalculations` (lignes 424, 442, 651) qui appellent aussi `calculateAllMatriceValues`. Quand ils sont consommés via un sélecteur Zustand, ils ne se re-déclenchent que si l'état du store proposal change — pas quand le store baseTaux change.
 
-## Constat important (bug existant à corriger)
+Résultat : on doit changer d'onglet, recharger la page, ou modifier un champ de la matrice (durée, montant, refinanceur) pour que le coefficient soit relu.
 
-En explorant le code, j'ai identifié un problème déjà présent indépendamment de votre demande :
+## Correctif
 
-- `BaseTauxAdmin.tsx` met à jour une variable `runtimeBaseTaux` (en mémoire) lors d'un import Excel.
-- **Mais** `src/lib/rental-calculations.ts` (`lookupCoefficient`) et `src/components/rental-proposal/RentalDataEditor.tsx` lisent directement la constante statique `BASE_TAUX_DATA` importée depuis `src/data/base-taux.ts`.
-- Conséquence : **aucun import Excel ne change réellement les coefficients utilisés dans les calculs**. Idem pour de futures éditions inline si on ne corrige pas ce point.
+### 1. Abonner `ProposalCard` au store Base Taux
 
-Donc avant d'ajouter l'édition, il faut centraliser la source de vérité runtime, sinon les modifications resteraient cosmétiques.
+Dans `src/components/rental-proposal/ProposalCard.tsx`, ajouter un abonnement réactif aux entrées Base Taux pour forcer un recalcul à chaque modification :
 
-## Ce qui sera fait
+```ts
+import { useBaseTauxStore } from '@/stores/baseTauxStore';
+// ...
+const baseTauxEntries = useBaseTauxStore((s) => s.entries);
 
-### 1. Centraliser la source de vérité runtime
-- Créer un store léger `src/stores/baseTauxStore.ts` (zustand, comme les autres stores du projet) avec :
-  - `entries: BaseTauxEntry[]` initialisées depuis `BASE_TAUX_DATA`
-  - `updateEntry(index, patch)`, `setAll(entries)`, `reset()`
-  - **Persistance localStorage** pour conserver les modifications entre sessions et entre onglets (cohérent avec les autres données admin).
-- Exposer un sélecteur `getBaseTauxRuntime()` utilisable hors composant React.
+const calculatedValues = useMemo(
+  () => calculateAllMatriceValues(
+    montantInvestissement,
+    proposal.duree,
+    proposal.refinanceur,
+    proposal.margeAppliquee,
+    optionsPrices,
+    proposal.coefficientOverride
+  ),
+  [
+    montantInvestissement, proposal.duree, proposal.refinanceur,
+    proposal.margeAppliquee, optionsPrices, proposal.coefficientOverride,
+    baseTauxEntries, // ← clé : relance le calcul quand un taux est édité
+  ]
+);
+```
 
-### 2. Brancher tous les consommateurs sur le store
-- `src/lib/rental-calculations.ts` → `lookupCoefficient` lit le store au lieu de `BASE_TAUX_DATA`.
-- `src/components/rental-proposal/RentalDataEditor.tsx` → tableau d'aide affiche les entrées du store (et non plus la constante).
-- `src/pages/BaseTauxAdmin.tsx` → affiche, édite et importe via le store.
-- La constante `BASE_TAUX_DATA` reste utilisée uniquement comme **valeur initiale / reset par défaut**.
+L'abonnement à `entries` suffit à déclencher la re-render. `useMemo` évite des recalculs superflus.
 
-### 3. Édition inline dans BaseTauxAdmin
-- Rendre les cellules **Montant min**, **Montant max**, **Durée**, **Taux** éditables :
-  - Clic sur une cellule → champ `Input` numérique avec valeur courante.
-  - `Enter` ou blur → validation + commit dans le store.
-  - `Escape` → annulation.
-- Validation par champ :
-  - Montant min ≥ 0, Montant max > Montant min.
-  - Durée : nombre entier > 0 (suggestions visuelles : 18, 24, 36, 48, 60).
-  - Taux : nombre > 0, jusqu'à 6 décimales.
-- Indicateur visuel : ligne modifiée mise en évidence légèrement, toast "Modifié" discret au commit.
-- Le champ **Partenaire** reste affiché en lecture seule (renommer un partenaire casserait les lookups existants — à traiter séparément si besoin).
+### 2. Faire pareil dans les autres consommateurs des calculs
 
-### 4. Actions complémentaires
-- Bouton **"Réinitialiser aux valeurs par défaut"** restauré et clair (vide localStorage et recharge `BASE_TAUX_DATA`).
-- L'import Excel continue de fonctionner et écrase également via le store.
-- Les filtres existants (recherche, partenaire, durée) sont préservés ; l'édition se fait sur la ligne réellement éditée même si la liste est filtrée.
+Identifier et corriger les composants qui consomment `getProposalCalculations` / `getAllProposalsCalculations` ou appellent directement `calculateAllMatriceValues` :
 
-### 5. Vérifications de répercussion
-- Modifier un taux dans l'admin → ouvrir une proposition de location avec ce partenaire/montant/durée → le coefficient affiché et tous les calculs dérivés (loyer, somme loyers, coût contrat, coût locatif annuel, marge loc) reflètent immédiatement la nouvelle valeur.
-- Recharger la page → la modification est conservée (localStorage).
-- Réinitialiser → on revient aux 136 entrées d'origine.
+- `RentalProposalPreview.tsx`
+- `PreviewEditableCanvas.tsx`
+- `RentalProposalExport.tsx`
+- `pdf-html-generator.ts` (côté génération PDF — pas réactif, ok, lit au moment de l'export ce qui est correct)
 
-## Fichiers concernés
+Pour chaque composant React concerné : ajouter `const baseTauxEntries = useBaseTauxStore(s => s.entries);` et l'inclure comme dépendance du `useMemo` / recalcul. Pour les sélecteurs du store proposal qui retournent des calculs, soit :
+- déplacer le calcul dans le composant avec abonnement, soit
+- exposer un hook `useProposalCalculations(id)` qui combine `useRentalProposalStore` + `useBaseTauxStore` et renvoie le résultat à jour.
 
-- `src/stores/baseTauxStore.ts` *(nouveau)*
-- `src/pages/BaseTauxAdmin.tsx` *(édition inline + branchement store)*
-- `src/lib/rental-calculations.ts` *(lecture via store)*
-- `src/components/rental-proposal/RentalDataEditor.tsx` *(lecture via store)*
+Je privilégie un petit hook dédié dans `src/hooks/useProposalCalculations.ts` pour éviter de répéter la logique partout :
 
-## Hors scope (peut être traité plus tard si besoin)
+```ts
+export function useProposalCalculations(proposal, optionsPrices) {
+  const baseTauxEntries = useBaseTauxStore((s) => s.entries);
+  return useMemo(
+    () => calculateAllMatriceValues(
+      proposal.montantInvestissement, proposal.duree, proposal.refinanceur,
+      proposal.margeAppliquee, optionsPrices, proposal.coefficientOverride
+    ),
+    [proposal, optionsPrices, baseTauxEntries]
+  );
+}
+```
 
-- Édition du nom de **Partenaire** (impacte les lookups par clé, nécessite migration des références).
-- Ajout / suppression de lignes (déjà possible via import Excel ; on peut l'ajouter en édition inline si vous le souhaitez — dites-le moi).
-- Persistance côté base de données (actuellement tout est en localStorage côté client, conforme à l'existant).
+Et l'utiliser dans `ProposalCard`, `RentalProposalPreview`, `PreviewEditableCanvas`, `RentalProposalExport`.
+
+### 3. Vérifications
+
+- Modifier un taux dans `BaseTauxAdmin` → revenir sur la matrice : le coefficient et tous les calculs dérivés (loyer mensuel, somme loyers, coût contrat, coût locatif annuel, marge) doivent se mettre à jour **sans recharger ni toucher la matrice**.
+- Aperçu PDF : doit refléter le nouveau coefficient immédiatement.
+- Export PDF : doit utiliser la valeur à jour (déjà ok car lecture au moment de l'export).
+- Cas où le coefficient est en override manuel : ne doit pas être impacté (comportement existant conservé).
+
+## Fichiers impactés
+
+- `src/hooks/useProposalCalculations.ts` (nouveau)
+- `src/components/rental-proposal/ProposalCard.tsx`
+- `src/components/rental-proposal/RentalProposalPreview.tsx`
+- `src/components/rental-proposal/PreviewEditableCanvas.tsx`
+- `src/components/rental-proposal/RentalProposalExport.tsx`
+
+Aucun changement de schéma BDD, aucun changement de logique de calcul — on rend simplement la chaîne de rendu réactive au store Base Taux.
