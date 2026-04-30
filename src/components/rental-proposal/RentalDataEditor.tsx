@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
-import { BASE_TAUX_DATA } from '@/data/base-taux';
+import { useBaseTauxStore } from '@/stores/baseTauxStore';
 import { getConditionFinContrat } from '@/data/frais-dossier';
 import { ENTITIES, CommercialEntity } from '@/data/commerciaux';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
