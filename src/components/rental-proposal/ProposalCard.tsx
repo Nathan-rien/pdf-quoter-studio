@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
-import { calculateAllMatriceValues } from '@/lib/rental-calculations';
+import { useProposalCalculations } from '@/hooks/useProposalCalculations';
 import type { MatriceProposal } from '@/stores/rentalProposalStore';
 
 interface ProposalCardProps {
@@ -38,14 +38,7 @@ export function ProposalCard({
 }: ProposalCardProps) {
   const montantInvestissement = proposal.montantInvestissement;
 
-  const calculatedValues = calculateAllMatriceValues(
-    montantInvestissement,
-    proposal.duree,
-    proposal.refinanceur,
-    proposal.margeAppliquee,
-    optionsPrices,
-    proposal.coefficientOverride
-  );
+  const calculatedValues = useProposalCalculations(proposal, optionsPrices);
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
