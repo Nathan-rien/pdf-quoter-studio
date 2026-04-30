@@ -1,94 +1,64 @@
 
-Objectif
+## Objectif
 
-Rendre l’édition inline réellement fluide et fiable dans l’éditeur de template, avec listes à puces/numérotées visibles et persistées, sans bugs au double-clic ni pendant la sélection de texte.
+Permettre, dans l'admin **Base Taux**, d'éditer directement les cellules **Montant min**, **Montant max**, **Durée** et **Taux** (le **Partenaire** reste non modifiable pour préserver la cohérence des lookups). Toute modification doit être **immédiatement répercutée partout** où ces données sont utilisées : calculs de proposition, aperçus, exports.
 
-Constat
+## Constat important (bug existant à corriger)
 
-J’ai identifié 4 causes principales dans le code actuel :
+En explorant le code, j'ai identifié un problème déjà présent indépendamment de votre demande :
 
-1. Le drag démarre trop tôt
-- Dans `EditorCanvas.tsx` et `PreviewEditableCanvas.tsx`, le `mousedown` lance le déplacement immédiatement.
-- Cela entre en conflit avec le double-clic et avec l’entrée en édition.
+- `BaseTauxAdmin.tsx` met à jour une variable `runtimeBaseTaux` (en mémoire) lors d'un import Excel.
+- **Mais** `src/lib/rental-calculations.ts` (`lookupCoefficient`) et `src/components/rental-proposal/RentalDataEditor.tsx` lisent directement la constante statique `BASE_TAUX_DATA` importée depuis `src/data/base-taux.ts`.
+- Conséquence : **aucun import Excel ne change réellement les coefficients utilisés dans les calculs**. Idem pour de futures éditions inline si on ne corrige pas ce point.
 
-2. L’édition tape directement dans le store à chaque frappe
-- `InlineTextEditor.tsx` appelle `onContentChange` sur chaque `input`.
-- `templateEditorStore.ts` fait un `saveToHistory` avant chaque `updateTextContent`, donc on clone tout le document à chaque touche.
-- C’est une source directe de lenteur, rerenders, perte de fluidité et comportement instable.
+Donc avant d'ajouter l'édition, il faut centraliser la source de vérité runtime, sinon les modifications resteraient cosmétiques.
 
-3. La toolbar agit “à côté” de l’éditeur
-- `EditorCanvas.tsx` utilise `document.execCommand(...)` depuis la toolbar.
-- Les commandes de liste/gras/etc. ne sont pas pilotées par une instance d’éditeur ciblée et la synchro DOM/store est fragile.
+## Ce qui sera fait
 
-4. Les bullets sont probablement créées mais invisibles
-- Les rendus HTML utilisent `dangerouslySetInnerHTML` pour `<ul>/<ol>/<li>`.
-- Or il n’y a pas de styles dédiés pour les listes, donc les puces/numéros peuvent être masqués par le reset CSS.
-- Même problème à répercuter dans l’aperçu et dans le HTML PDF.
+### 1. Centraliser la source de vérité runtime
+- Créer un store léger `src/stores/baseTauxStore.ts` (zustand, comme les autres stores du projet) avec :
+  - `entries: BaseTauxEntry[]` initialisées depuis `BASE_TAUX_DATA`
+  - `updateEntry(index, patch)`, `setAll(entries)`, `reset()`
+  - **Persistance localStorage** pour conserver les modifications entre sessions et entre onglets (cohérent avec les autres données admin).
+- Exposer un sélecteur `getBaseTauxRuntime()` utilisable hors composant React.
 
-Plan d’implémentation
+### 2. Brancher tous les consommateurs sur le store
+- `src/lib/rental-calculations.ts` → `lookupCoefficient` lit le store au lieu de `BASE_TAUX_DATA`.
+- `src/components/rental-proposal/RentalDataEditor.tsx` → tableau d'aide affiche les entrées du store (et non plus la constante).
+- `src/pages/BaseTauxAdmin.tsx` → affiche, édite et importe via le store.
+- La constante `BASE_TAUX_DATA` reste utilisée uniquement comme **valeur initiale / reset par défaut**.
 
-1. Refaire la session d’édition inline en mode “draft local”
-- Modifier `InlineTextEditor.tsx` pour garder le HTML et le texte en local pendant l’édition.
-- Ne plus pousser les changements lourds dans le store à chaque frappe.
-- Commit unique au `blur` confirmé / bouton valider.
-- Annulation propre au `Escape` avec restauration du contenu initial.
+### 3. Édition inline dans BaseTauxAdmin
+- Rendre les cellules **Montant min**, **Montant max**, **Durée**, **Taux** éditables :
+  - Clic sur une cellule → champ `Input` numérique avec valeur courante.
+  - `Enter` ou blur → validation + commit dans le store.
+  - `Escape` → annulation.
+- Validation par champ :
+  - Montant min ≥ 0, Montant max > Montant min.
+  - Durée : nombre entier > 0 (suggestions visuelles : 18, 24, 36, 48, 60).
+  - Taux : nombre > 0, jusqu'à 6 décimales.
+- Indicateur visuel : ligne modifiée mise en évidence légèrement, toast "Modifié" discret au commit.
+- Le champ **Partenaire** reste affiché en lecture seule (renommer un partenaire casserait les lookups existants — à traiter séparément si besoin).
 
-2. Connecter la toolbar à l’éditeur actif
-- Remplacer les `document.execCommand(...)` déclenchés depuis `EditorCanvas.tsx` par une API pilotée par l’éditeur actif.
-- L’éditeur exposera des actions du type :
-  - bold / italic / underline
-  - unordered list / ordered list
-  - align
-  - font size
-  - commit / cancel
-- La toolbar restera visuelle, mais son exécution sera reliée à l’instance de `InlineTextEditor`.
+### 4. Actions complémentaires
+- Bouton **"Réinitialiser aux valeurs par défaut"** restauré et clair (vide localStorage et recharge `BASE_TAUX_DATA`).
+- L'import Excel continue de fonctionner et écrase également via le store.
+- Les filtres existants (recherche, partenaire, durée) sont préservés ; l'édition se fait sur la ligne réellement éditée même si la liste est filtrée.
 
-3. Corriger le conflit double-clic / drag
-- Dans `EditorCanvas.tsx` et `PreviewEditableCanvas.tsx`, ne plus démarrer le drag immédiatement au `mousedown`.
-- Introduire un seuil de déplacement avant activation réelle du drag.
-- Si l’utilisateur double-clique sur un texte, on entre en édition sans lancer de déplacement parasite.
-- Si l’utilisateur est déjà en édition, aucun handler canvas ne doit reprendre la main.
+### 5. Vérifications de répercussion
+- Modifier un taux dans l'admin → ouvrir une proposition de location avec ce partenaire/montant/durée → le coefficient affiché et tous les calculs dérivés (loyer, somme loyers, coût contrat, coût locatif annuel, marge loc) reflètent immédiatement la nouvelle valeur.
+- Recharger la page → la modification est conservée (localStorage).
+- Réinitialiser → on revient aux 136 entrées d'origine.
 
-4. Rendre les listes visibles partout
-- Ajouter des styles riches partagés pour le contenu HTML :
-  - `.rich-text ul { list-style: disc; padding-left: ... }`
-  - `.rich-text ol { list-style: decimal; padding-left: ... }`
-  - `.rich-text li { ... }`
-- Appliquer cette classe dans :
-  - `EditorCanvas.tsx`
-  - `PreviewEditableCanvas.tsx`
-  - `RentalProposalPreview.tsx`
-  - `pdf-html-generator.ts`
-- Ainsi, les bullets seront visibles dans l’éditeur, l’aperçu et le PDF généré.
+## Fichiers concernés
 
-5. Réduire le coût historique
-- Dans `templateEditorStore.ts`, éviter `saveToHistory` à chaque touche pour l’édition inline.
-- Sauvegarder l’historique une seule fois au début ou à la validation de l’édition.
-- Garder le comportement actuel pour les autres modifications structurelles (move/resize/etc.).
+- `src/stores/baseTauxStore.ts` *(nouveau)*
+- `src/pages/BaseTauxAdmin.tsx` *(édition inline + branchement store)*
+- `src/lib/rental-calculations.ts` *(lecture via store)*
+- `src/components/rental-proposal/RentalDataEditor.tsx` *(lecture via store)*
 
-Fichiers concernés
+## Hors scope (peut être traité plus tard si besoin)
 
-- `src/components/template-editor/InlineTextEditor.tsx`
-- `src/components/template-editor/EditorCanvas.tsx`
-- `src/components/template-editor/FloatingToolbar.tsx`
-- `src/components/rental-proposal/PreviewEditableCanvas.tsx`
-- `src/components/rental-proposal/RentalProposalPreview.tsx`
-- `src/stores/templateEditorStore.ts`
-- `src/lib/pdf-html-generator.ts`
-- `src/index.css`
-
-Résultat attendu
-
-Après ce refactor :
-- le double-clic ouvrira l’édition sans “saut” ni drag involontaire ;
-- la sélection de texte sera stable ;
-- les listes à puces et numérotées fonctionneront visuellement ;
-- le contenu restera cohérent entre éditeur, aperçu et PDF ;
-- la frappe sera beaucoup plus fluide, même sur des blocs de texte longs.
-
-Vérifications prévues
-
-- Double-clic sur un bloc texte -> entrée en édition immédiate.
-- Sélection d’un mot puis clic “bullet list” -> la liste apparaît visuellement.
-- Validation -> la liste reste visible dans l’éditeur, l’aperçu et le PDF.
-- Test sur la page 4 et sur des paragraphes longs pour confirmer la fluidité.
+- Édition du nom de **Partenaire** (impacte les lookups par clé, nécessite migration des références).
+- Ajout / suppression de lignes (déjà possible via import Excel ; on peut l'ajouter en édition inline si vous le souhaitez — dites-le moi).
+- Persistance côté base de données (actuellement tout est en localStorage côté client, conforme à l'existant).
