@@ -77,6 +77,11 @@ export function RentalProposalPreview() {
     resetClientLogoOverride,
   } = useRentalProposalStore();
 
+  // Abonnement réactif au store Base Taux : toute modification de taux force
+  // une re-render et donc un nouvel appel à getCalculatedValues / getAllProposalsCalculations.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _baseTauxEntries = (await import('@/stores/baseTauxStore')).useBaseTauxStore;
+
   const { 
     getActiveTemplate,
     allTemplates,
