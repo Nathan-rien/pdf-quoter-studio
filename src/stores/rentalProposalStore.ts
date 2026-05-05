@@ -630,7 +630,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       getSelectedCommercial: () => {
         const { commercialData } = get();
         if (!commercialData.commercialId) return null;
-        return getCommercialById(commercialData.commercialId);
+        return getCommercialByIdRuntime(commercialData.commercialId);
       },
 
       getSelectedOptionsPrices: () => {
