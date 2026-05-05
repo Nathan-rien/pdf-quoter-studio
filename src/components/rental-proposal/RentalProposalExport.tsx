@@ -63,6 +63,9 @@ export function RentalProposalExport() {
   // une re-render → getCalculatedValues / getAllProposalsCalculations relisent les valeurs à jour.
   useBaseTauxStore((s) => s.entries);
 
+  // Synchronise les overrides commerciaux (téléphones DB) avec le store
+  useCommerciaux();
+
   const investShowPrices = matriceData.investShowPrices;
 
   const { getActiveTemplate, getTemplateLatestVersion, allTemplates } = useTemplateEditorStore();
