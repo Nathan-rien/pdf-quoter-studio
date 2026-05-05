@@ -83,6 +83,9 @@ export function RentalProposalPreview() {
   // une re-render → getCalculatedValues / getAllProposalsCalculations relisent les valeurs à jour.
   useBaseTauxStore((s) => s.entries);
 
+  // Synchronise les overrides commerciaux (téléphones DB) avec le store
+  useCommerciaux();
+
   const { 
     getActiveTemplate,
     allTemplates,
