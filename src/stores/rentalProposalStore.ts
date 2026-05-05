@@ -4,6 +4,7 @@ import { PDFParseResult, PDFProductLine } from '@/lib/pdf-import-parser';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
 import { PARTENAIRES, Partenaire } from '@/data/base-taux';
 import { CommercialEntity, Commercial, COMMERCIAUX, getCommercialById } from '@/data/commerciaux';
+import { getCommercialByIdRuntime } from '@/lib/commercials-runtime';
 
 export type RentalWorkflowStep = 'import' | 'data' | 'template' | 'preview' | 'export';
 
