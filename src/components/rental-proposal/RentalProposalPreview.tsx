@@ -1137,11 +1137,22 @@ export function RentalProposalPreview() {
       }
       if (bloc.type === 'option') {
         const option = bloc.data;
+        const priceLabel = option.showPrice === false ? null : getOptionPriceLabel({
+          price: option.price,
+          priceTotal: option.priceTotal,
+          showPriceMode: option.showPriceMode ?? 'mensuel',
+          pricingScope: option.pricingScope ?? 'par_machine',
+        });
         return (
           <div key={option.id} className="border rounded overflow-hidden">
             <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
               <CheckCircle className="h-3 w-3 text-foreground/70" />
               <span className="font-semibold text-[11px]">{option.name}</span>
+              {priceLabel && (
+                <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
+                  {priceLabel}
+                </span>
+              )}
             </div>
             {option.description && (
               <div className="px-3 py-1.5 bg-background">

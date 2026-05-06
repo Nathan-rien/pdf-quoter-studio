@@ -1,61 +1,47 @@
-## Objectif
+## Problème
 
-Ajouter, sur chaque option additionnelle (bloc "Options additionnelles" et "Nos options" dans Données → Services inclus), un interrupteur permettant d'afficher ou non le montant (mois ou total) sur la page du template généré et dans le PDF exporté.
+Dans la section **Options additionnelles** (Pro-Actif, Pro-Tection, Pro-Flex…) de l'onglet "Services inclus", le toggle **"Prix visible"** a bien été ajouté, mais sur le template et le PDF le prix n'apparaît jamais — quel que soit l'état du toggle.
 
-Le toggle global mois/total reste en place : il choisit **quel** montant afficher. Le nouveau toggle choisit **si** on l'affiche.
+**Cause** : ces options (`optionsServices` dans le store) sont rendues par un bloc dédié (`'option'` dans la preview, `makeOptionHTML` dans l'export) qui **n'a jamais inclus l'affichage du prix**. Seul le bloc "Nos options" (`nosOptions`) gère l'affichage du prix. Le toggle `showPrice` n'a donc aucun effet sur les Options additionnelles puisqu'aucun prix n'y est rendu en amont.
 
-## Interface utilisateur
+À l'inverse, sur la capture du template fournie, Pro-Actif / Pro-Tection / Pro-Flex apparaissent bien (nom + description) mais sans aucun prix à droite.
 
-Dans `src/components/rental-proposal/RentalDataEditor.tsx`, sous chaque option (dans les deux sections "Options additionnelles" ~ligne 534 et "Nos options" ~ligne 793), ajouter une nouvelle ligne sous "Afficher : /mois | total" :
+## Correctif
 
-```text
-Prix visible : [ ●— ] (switch ON par défaut)
+Ajouter le rendu du libellé prix (mensuel/total + /machine ou /parc) dans le bloc Options additionnelles, en respectant le toggle "Prix visible" déjà en place.
+
+### 1. `src/components/rental-proposal/RentalProposalPreview.tsx` (bloc `'option'`, ~ligne 1138)
+
+Calculer `priceLabel` via `getOptionPriceLabel` en respectant `option.showPrice`, et l'insérer à droite du nom dans l'en-tête (mêmes classes que le bloc `'nos-option'` pour cohérence visuelle) :
+
+```tsx
+<div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+  <CheckCircle className="h-3 w-3 text-foreground/70" />
+  <span className="font-semibold text-[11px]">{option.name}</span>
+  {option.showPrice !== false && priceLabel && (
+    <span className="ml-auto text-[10px] text-primary font-medium whitespace-nowrap">
+      {priceLabel}
+    </span>
+  )}
+</div>
 ```
 
-- Composant `Switch` (déjà disponible dans `@/components/ui/switch`).
-- Quand OFF, on grise visuellement les champs "Au total / Au mois" et les boutons /mois|total + /machine|/parc pour signaler qu'ils n'ont pas d'effet sur l'affichage final (mais restent éditables).
+### 2. `src/components/rental-proposal/RentalProposalExport.tsx` (`makeOptionHTML`, ~ligne 565)
 
-## Modèle de données
-
-Étendre `OptionService` dans `src/stores/rentalProposalStore.ts` :
+Aligner sur `makeNosOptionHTML` : calculer `priceLabel` (avec garde `opt.showPrice === false ? null : …`) et l'afficher à droite du nom dans la même ligne flex :
 
 ```ts
-export interface OptionService {
-  // ...champs existants
-  showPrice: boolean; // affiche le montant sur le template/PDF (défaut true)
-}
+const priceLabel = opt.showPrice === false ? null : getOptionPriceLabel({
+  price: opt.price,
+  priceTotal: opt.priceTotal,
+  showPriceMode: opt.showPriceMode ?? 'mensuel',
+  pricingScope: opt.pricingScope ?? 'par_machine',
+});
+// Header avec justify-content: space-between, ✓ + nom à gauche, priceLabel à droite si non null.
 ```
 
-- Initialisation à `true` dans `addOptionService` et `addNosOption`.
-- Migration douce dans le bloc `onRehydrateStorage` (déjà utilisé pour `pricingScope`) : `showPrice: o.showPrice ?? true` pour `optionsServices` et `nosOptions`.
-- Idem dans le hydrate des snapshots historiques (`loadFromSnapshot`).
+## Comportement attendu après correctif
 
-## Rendu preview + export
-
-Dans les 3 emplacements qui appellent `getOptionPriceLabel(...)` :
-
-- `src/components/rental-proposal/RentalProposalPreview.tsx` (bloc options additionnelles, ~ligne 1180 ; bloc nos options, ~ligne 1265)
-- `src/components/rental-proposal/RentalProposalExport.tsx` (`makeNosOptionHTML`, ~ligne 580, et l'équivalent pour `optionsServices`)
-
-Encapsuler par :
-
-```ts
-const priceLabel = option.showPrice === false
-  ? null
-  : getOptionPriceLabel({ ... });
-```
-
-Le label est déjà conditionnellement rendu (`priceLabel ? ... : null`), donc renvoyer `null` masque proprement le badge prix sur le template **et** dans le HTML exporté pour le PDF.
-
-## Fichiers impactés
-
-- `src/stores/rentalProposalStore.ts` — champ `showPrice`, init, migration, snapshots.
-- `src/components/rental-proposal/RentalDataEditor.tsx` — switch UI dans les deux blocs.
-- `src/components/rental-proposal/RentalProposalPreview.tsx` — gating dans les 2 rendus.
-- `src/components/rental-proposal/RentalProposalExport.tsx` — gating dans les 2 makers HTML (options additionnelles + nos options).
-
-## Hors périmètre
-
-- Aucun changement aux calculs (rien dans `rental-calculations.ts` / coefficients).
-- Aucun changement à l'admin Options Services.
-- Pas de modification de la logique mois↔total, ni du scope /machine|/parc.
+- Toggle **"Prix visible" ON** (par défaut) → le prix s'affiche à droite du nom de l'option additionnelle dans le template ET le PDF, formaté selon les sélecteurs `/mois | total` et `/machine | /parc`.
+- Toggle **"Prix visible" OFF** → l'option reste affichée (nom + description avec ✓), seul le prix est masqué — comportement identique à "Nos options".
+- Aucun changement sur "Nos options" ni sur les autres pages.
