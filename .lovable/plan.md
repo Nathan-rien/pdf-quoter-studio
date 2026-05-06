@@ -1,86 +1,61 @@
-## Problème confirmé
+## Objectif
 
-Les modifications dans `BaseTauxAdmin` sont bien persistées dans `useBaseTauxStore` (vérifié), mais la matrice ne se met pas à jour car :
+Ajouter, sur chaque option additionnelle (bloc "Options additionnelles" et "Nos options" dans Données → Services inclus), un interrupteur permettant d'afficher ou non le montant (mois ou total) sur la page du template généré et dans le PDF exporté.
 
-1. **`ProposalCard.tsx`** appelle `calculateAllMatriceValues(...)` directement dans le rendu, qui en interne lit `getBaseTauxRuntime()`. Cet accès est un *snapshot* hors React : le composant ne s'abonne pas au store, donc aucune re-render ne se déclenche quand un taux est modifié.
-2. **`RentalDataEditor.tsx`** s'abonne bien à `useBaseTauxStore` mais ne propage pas cette dépendance jusqu'à `ProposalCard` (la carte est rendue indépendamment).
-3. **`rentalProposalStore.ts`** expose `getProposalCalculations` / `getAllProposalsCalculations` (lignes 424, 442, 651) qui appellent aussi `calculateAllMatriceValues`. Quand ils sont consommés via un sélecteur Zustand, ils ne se re-déclenchent que si l'état du store proposal change — pas quand le store baseTaux change.
+Le toggle global mois/total reste en place : il choisit **quel** montant afficher. Le nouveau toggle choisit **si** on l'affiche.
 
-Résultat : on doit changer d'onglet, recharger la page, ou modifier un champ de la matrice (durée, montant, refinanceur) pour que le coefficient soit relu.
+## Interface utilisateur
 
-## Correctif
+Dans `src/components/rental-proposal/RentalDataEditor.tsx`, sous chaque option (dans les deux sections "Options additionnelles" ~ligne 534 et "Nos options" ~ligne 793), ajouter une nouvelle ligne sous "Afficher : /mois | total" :
 
-### 1. Abonner `ProposalCard` au store Base Taux
-
-Dans `src/components/rental-proposal/ProposalCard.tsx`, ajouter un abonnement réactif aux entrées Base Taux pour forcer un recalcul à chaque modification :
-
-```ts
-import { useBaseTauxStore } from '@/stores/baseTauxStore';
-// ...
-const baseTauxEntries = useBaseTauxStore((s) => s.entries);
-
-const calculatedValues = useMemo(
-  () => calculateAllMatriceValues(
-    montantInvestissement,
-    proposal.duree,
-    proposal.refinanceur,
-    proposal.margeAppliquee,
-    optionsPrices,
-    proposal.coefficientOverride
-  ),
-  [
-    montantInvestissement, proposal.duree, proposal.refinanceur,
-    proposal.margeAppliquee, optionsPrices, proposal.coefficientOverride,
-    baseTauxEntries, // ← clé : relance le calcul quand un taux est édité
-  ]
-);
+```text
+Prix visible : [ ●— ] (switch ON par défaut)
 ```
 
-L'abonnement à `entries` suffit à déclencher la re-render. `useMemo` évite des recalculs superflus.
+- Composant `Switch` (déjà disponible dans `@/components/ui/switch`).
+- Quand OFF, on grise visuellement les champs "Au total / Au mois" et les boutons /mois|total + /machine|/parc pour signaler qu'ils n'ont pas d'effet sur l'affichage final (mais restent éditables).
 
-### 2. Faire pareil dans les autres consommateurs des calculs
+## Modèle de données
 
-Identifier et corriger les composants qui consomment `getProposalCalculations` / `getAllProposalsCalculations` ou appellent directement `calculateAllMatriceValues` :
-
-- `RentalProposalPreview.tsx`
-- `PreviewEditableCanvas.tsx`
-- `RentalProposalExport.tsx`
-- `pdf-html-generator.ts` (côté génération PDF — pas réactif, ok, lit au moment de l'export ce qui est correct)
-
-Pour chaque composant React concerné : ajouter `const baseTauxEntries = useBaseTauxStore(s => s.entries);` et l'inclure comme dépendance du `useMemo` / recalcul. Pour les sélecteurs du store proposal qui retournent des calculs, soit :
-- déplacer le calcul dans le composant avec abonnement, soit
-- exposer un hook `useProposalCalculations(id)` qui combine `useRentalProposalStore` + `useBaseTauxStore` et renvoie le résultat à jour.
-
-Je privilégie un petit hook dédié dans `src/hooks/useProposalCalculations.ts` pour éviter de répéter la logique partout :
+Étendre `OptionService` dans `src/stores/rentalProposalStore.ts` :
 
 ```ts
-export function useProposalCalculations(proposal, optionsPrices) {
-  const baseTauxEntries = useBaseTauxStore((s) => s.entries);
-  return useMemo(
-    () => calculateAllMatriceValues(
-      proposal.montantInvestissement, proposal.duree, proposal.refinanceur,
-      proposal.margeAppliquee, optionsPrices, proposal.coefficientOverride
-    ),
-    [proposal, optionsPrices, baseTauxEntries]
-  );
+export interface OptionService {
+  // ...champs existants
+  showPrice: boolean; // affiche le montant sur le template/PDF (défaut true)
 }
 ```
 
-Et l'utiliser dans `ProposalCard`, `RentalProposalPreview`, `PreviewEditableCanvas`, `RentalProposalExport`.
+- Initialisation à `true` dans `addOptionService` et `addNosOption`.
+- Migration douce dans le bloc `onRehydrateStorage` (déjà utilisé pour `pricingScope`) : `showPrice: o.showPrice ?? true` pour `optionsServices` et `nosOptions`.
+- Idem dans le hydrate des snapshots historiques (`loadFromSnapshot`).
 
-### 3. Vérifications
+## Rendu preview + export
 
-- Modifier un taux dans `BaseTauxAdmin` → revenir sur la matrice : le coefficient et tous les calculs dérivés (loyer mensuel, somme loyers, coût contrat, coût locatif annuel, marge) doivent se mettre à jour **sans recharger ni toucher la matrice**.
-- Aperçu PDF : doit refléter le nouveau coefficient immédiatement.
-- Export PDF : doit utiliser la valeur à jour (déjà ok car lecture au moment de l'export).
-- Cas où le coefficient est en override manuel : ne doit pas être impacté (comportement existant conservé).
+Dans les 3 emplacements qui appellent `getOptionPriceLabel(...)` :
+
+- `src/components/rental-proposal/RentalProposalPreview.tsx` (bloc options additionnelles, ~ligne 1180 ; bloc nos options, ~ligne 1265)
+- `src/components/rental-proposal/RentalProposalExport.tsx` (`makeNosOptionHTML`, ~ligne 580, et l'équivalent pour `optionsServices`)
+
+Encapsuler par :
+
+```ts
+const priceLabel = option.showPrice === false
+  ? null
+  : getOptionPriceLabel({ ... });
+```
+
+Le label est déjà conditionnellement rendu (`priceLabel ? ... : null`), donc renvoyer `null` masque proprement le badge prix sur le template **et** dans le HTML exporté pour le PDF.
 
 ## Fichiers impactés
 
-- `src/hooks/useProposalCalculations.ts` (nouveau)
-- `src/components/rental-proposal/ProposalCard.tsx`
-- `src/components/rental-proposal/RentalProposalPreview.tsx`
-- `src/components/rental-proposal/PreviewEditableCanvas.tsx`
-- `src/components/rental-proposal/RentalProposalExport.tsx`
+- `src/stores/rentalProposalStore.ts` — champ `showPrice`, init, migration, snapshots.
+- `src/components/rental-proposal/RentalDataEditor.tsx` — switch UI dans les deux blocs.
+- `src/components/rental-proposal/RentalProposalPreview.tsx` — gating dans les 2 rendus.
+- `src/components/rental-proposal/RentalProposalExport.tsx` — gating dans les 2 makers HTML (options additionnelles + nos options).
 
-Aucun changement de schéma BDD, aucun changement de logique de calcul — on rend simplement la chaîne de rendu réactive au store Base Taux.
+## Hors périmètre
+
+- Aucun changement aux calculs (rien dans `rental-calculations.ts` / coefficients).
+- Aucun changement à l'admin Options Services.
+- Pas de modification de la logique mois↔total, ni du scope /machine|/parc.
