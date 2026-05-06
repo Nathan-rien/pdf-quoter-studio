@@ -1127,7 +1127,7 @@ export function RentalDataEditor() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {baseTauxEntries.slice(0, 50).map((row, index) => (
+                    {baseTauxEntries.map((row, index) => (
                       <TableRow key={index}>
                         <TableCell>{row.partenaire}</TableCell>
                         <TableCell className="text-right">{row.montantMin.toLocaleString()} €</TableCell>
@@ -1140,7 +1140,7 @@ export function RentalDataEditor() {
                 </Table>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Affichage limité à 50 lignes. Total : {baseTauxEntries.length} entrées.
+                Total : {baseTauxEntries.length} entrées.
               </p>
             </CardContent>
           </Card>
