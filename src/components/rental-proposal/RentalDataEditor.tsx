@@ -701,6 +701,16 @@ export function RentalDataEditor() {
                               /parc
                             </button>
                           </div>
+                          {/* Toggle visibilité du prix sur le template/PDF */}
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="text-[10px] text-muted-foreground">Prix visible :</span>
+                            <Switch
+                              checked={opt.showPrice ?? true}
+                              onCheckedChange={(checked) => updateOptionService(opt.id, { showPrice: checked })}
+                              className="scale-75 origin-left"
+                              aria-label="Afficher le prix sur le template et le PDF"
+                            />
+                          </div>
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => deleteOptionService(opt.id)} className="mt-1">
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -894,6 +904,16 @@ export function RentalDataEditor() {
                             >
                               /parc
                             </button>
+                          </div>
+                          {/* Toggle visibilité du prix sur le template/PDF */}
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="text-[10px] text-muted-foreground">Prix visible :</span>
+                            <Switch
+                              checked={opt.showPrice ?? true}
+                              onCheckedChange={(checked) => updateNosOption(opt.id, { showPrice: checked })}
+                              className="scale-75 origin-left"
+                              aria-label="Afficher le prix sur le template et le PDF"
+                            />
                           </div>
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => deleteNosOption(opt.id)} className="mt-1">
