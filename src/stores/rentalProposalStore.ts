@@ -67,6 +67,7 @@ export interface OptionService {
   priceTotal: number | null;      // montant "au total"
   showPriceMode: 'mensuel' | 'total'; // quel montant afficher
   pricingScope: 'par_machine' | 'pour_le_parc'; // scope de tarification
+  showPrice: boolean;             // afficher le montant sur le template/PDF
   selected: boolean;
 }
 
@@ -544,7 +545,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set(state => ({
           optionsServices: [
             ...state.optionsServices,
-            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel' as const, pricingScope: 'par_machine' as const, selected: true },
+            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel' as const, pricingScope: 'par_machine' as const, showPrice: true, selected: true },
           ],
           hasUnsavedChanges: true,
         }));
@@ -581,7 +582,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set(state => ({
           nosOptions: [
             ...state.nosOptions,
-            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel', pricingScope: 'par_machine' as const, selected: true },
+            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel', pricingScope: 'par_machine' as const, showPrice: true, selected: true },
           ],
           hasUnsavedChanges: true,
         }));
@@ -864,9 +865,9 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             if (!Array.isArray(state.nosOptions)) {
               state.nosOptions = [];
             }
-            // Migrate pricingScope for existing options
-            state.optionsServices = state.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine' }));
-            state.nosOptions = state.nosOptions.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine' }));
+            // Migrate pricingScope + showPrice for existing options
+            state.optionsServices = state.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }));
+            state.nosOptions = state.nosOptions.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }));
             
             // Migrate proposals: if proposals array is missing/empty, create from legacy matriceData
             if (!Array.isArray(state.proposals) || state.proposals.length === 0) {
