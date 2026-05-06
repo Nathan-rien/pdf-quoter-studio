@@ -577,7 +577,7 @@ export function RentalProposalExport() {
     `;
 
     const makeNosOptionHTML = (opt: typeof nosOptions[0], forceAllOptions = false) => {
-      const priceLabel = getOptionPriceLabel({
+      const priceLabel = opt.showPrice === false ? null : getOptionPriceLabel({
         price: opt.price,
         priceTotal: opt.priceTotal,
         showPriceMode: opt.showPriceMode ?? 'mensuel',

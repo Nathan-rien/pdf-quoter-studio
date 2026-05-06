@@ -1178,7 +1178,7 @@ export function RentalProposalPreview() {
               <div className="h-3 w-3 border border-foreground/70 rounded-sm flex-shrink-0" />
               <span className="font-semibold text-[11px]">{option.name}</span>
               {(() => {
-                const priceLabel = getOptionPriceLabel({
+                const priceLabel = option.showPrice === false ? null : getOptionPriceLabel({
                   price: option.price,
                   priceTotal: option.priceTotal,
                   showPriceMode: option.showPriceMode ?? 'mensuel',
@@ -1262,7 +1262,7 @@ export function RentalProposalPreview() {
         ) : (
           <div className="space-y-3">
             {nosOptions.map((option) => {
-              const priceLabel = getOptionPriceLabel({
+              const priceLabel = option.showPrice === false ? null : getOptionPriceLabel({
                 price: option.price,
                 priceTotal: option.priceTotal,
                 showPriceMode: option.showPriceMode ?? 'mensuel',
