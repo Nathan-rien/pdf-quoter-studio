@@ -779,8 +779,12 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             : [createDefaultProposal()],
           lignesData: Array.isArray(snapshot.lignesData) ? snapshot.lignesData : [],
           servicesInclus: snapshot.servicesInclus ?? get().servicesInclus,
-          optionsServices: Array.isArray(snapshot.optionsServices) ? snapshot.optionsServices : [],
-          nosOptions: Array.isArray(snapshot.nosOptions) ? snapshot.nosOptions : [],
+          optionsServices: Array.isArray(snapshot.optionsServices)
+            ? snapshot.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }))
+            : [],
+          nosOptions: Array.isArray(snapshot.nosOptions)
+            ? snapshot.nosOptions.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }))
+            : [],
           proposalName: snapshot.proposalName ?? '',
           selectedTemplateId: snapshot.selectedTemplateId ?? null,
           pdfImportStatus: { isImported: true, fileName: 'Chargé depuis historique', source: null, importDate: new Date().toISOString() },
