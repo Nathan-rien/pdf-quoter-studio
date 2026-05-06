@@ -562,19 +562,27 @@ export function RentalProposalExport() {
       </div>
     `;
 
-    const makeOptionHTML = (opt: typeof selectedOptions[0]) => `
+    const makeOptionHTML = (opt: typeof selectedOptions[0]) => {
+      const priceLabel = opt.showPrice === false ? null : getOptionPriceLabel({
+        price: opt.price,
+        priceTotal: opt.priceTotal,
+        showPriceMode: opt.showPriceMode ?? 'mensuel',
+        pricingScope: opt.pricingScope ?? 'par_machine',
+      });
+      return `
       <div class="option-card" style="margin-bottom: 6px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+          <div style="flex: 1; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
               <span style="color: #22c55e; font-size: 10px;">✓</span>
               <span style="font-weight: 600; font-size: 9px;">${opt.name}</span>
             </div>
             ${opt.description ? `<div style="color: #6b7280; font-size: 8px; margin: 0 0 0 16px;">${opt.description.split('\n').filter(l => l.trim()).map(line => { const trimmed = line.trim(); const isSubItem = trimmed.startsWith('- '); return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${isSubItem ? trimmed : '• ' + trimmed}</div>`; }).join('')}</div>` : ''}
           </div>
+          ${priceLabel ? `<span style="font-weight: 600; color: #374151; font-size: 9px; white-space: nowrap;">${priceLabel}</span>` : ''}
         </div>
       </div>
-    `;
+    `};
 
     const makeNosOptionHTML = (opt: typeof nosOptions[0], forceAllOptions = false) => {
       const priceLabel = opt.showPrice === false ? null : getOptionPriceLabel({
