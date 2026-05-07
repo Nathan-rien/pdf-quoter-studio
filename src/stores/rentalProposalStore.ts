@@ -780,7 +780,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           lignesData: Array.isArray(snapshot.lignesData) ? snapshot.lignesData : [],
           servicesInclus: snapshot.servicesInclus ?? get().servicesInclus,
           optionsServices: Array.isArray(snapshot.optionsServices)
-            ? snapshot.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }))
+            ? snapshot.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? false }))
             : [],
           nosOptions: Array.isArray(snapshot.nosOptions)
             ? snapshot.nosOptions.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }))
@@ -870,7 +870,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
               state.nosOptions = [];
             }
             // Migrate pricingScope + showPrice for existing options
-            state.optionsServices = state.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }));
+            state.optionsServices = state.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? false }));
             state.nosOptions = state.nosOptions.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? true }));
             
             // Migrate proposals: if proposals array is missing/empty, create from legacy matriceData
