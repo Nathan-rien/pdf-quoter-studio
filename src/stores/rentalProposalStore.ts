@@ -545,7 +545,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set(state => ({
           optionsServices: [
             ...state.optionsServices,
-            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel' as const, pricingScope: 'par_machine' as const, showPrice: true, selected: true },
+            { id, name, description, price, priceTotal: null, showPriceMode: 'mensuel' as const, pricingScope: 'par_machine' as const, showPrice: false, selected: true },
           ],
           hasUnsavedChanges: true,
         }));
