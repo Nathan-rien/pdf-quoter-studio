@@ -705,7 +705,7 @@ export function RentalDataEditor() {
                           <div className="flex items-center gap-1.5 pt-0.5">
                             <span className="text-[10px] text-muted-foreground">Prix visible :</span>
                             <Switch
-                              checked={opt.showPrice ?? true}
+                              checked={opt.showPrice ?? false}
                               onCheckedChange={(checked) => updateOptionService(opt.id, { showPrice: checked })}
                               className="scale-75 origin-left"
                               aria-label="Afficher le prix sur le template et le PDF"
