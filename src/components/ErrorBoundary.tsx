@@ -1,6 +1,17 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 
 interface Props {
@@ -10,34 +21,59 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  autoRecoveryAttempted: boolean;
 }
 
+/**
+ * ErrorBoundary global.
+ *
+ * Politique stricte : nous n'effaçons JAMAIS automatiquement
+ * `rental-proposal-storage` ni `template-editor-storage`.
+ * Les erreurs `removeChild` / `insertBefore` proviennent quasi-systématiquement
+ * d'extensions ou de traducteurs navigateurs qui mutent le DOM hors du contrôle
+ * de React — ce n'est PAS une corruption du cache.
+ *
+ * Comportement :
+ * - 1ère erreur : tentative de récupération silencieuse (re-render).
+ * - Si l'erreur persiste : écran de secours, bouton "Rafraîchir" (sûr) et
+ *   bouton "Réinitialiser" derrière une confirmation explicite.
+ */
 class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    autoRecoveryAttempted: false,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
-    // Detect DOM manipulation errors and auto-clear cache
+
     const errorMessage = error.message || '';
-    if (errorMessage.includes('removeChild') || 
-        errorMessage.includes('appendChild') ||
-        errorMessage.includes('insertBefore')) {
-      console.warn('DOM manipulation error detected, clearing cache...');
-      try {
-        localStorage.removeItem('rental-proposal-storage');
-        localStorage.removeItem('template-editor-storage');
-        // NOTE: options-admin-storage is intentionally NOT cleared here
-        // Options Services data is persisted in the database and must survive ErrorBoundary resets
-      } catch (e) {
-        console.error('Failed to clear storage after DOM error:', e);
+    const isDomMutationError =
+      errorMessage.includes('removeChild') ||
+      errorMessage.includes('appendChild') ||
+      errorMessage.includes('insertBefore');
+
+    if (isDomMutationError) {
+      console.warn(
+        '[ErrorBoundary] Erreur de mutation DOM détectée. ' +
+          "Cause probable : extension navigateur (traducteur, adblock). " +
+          "Les données utilisateur sont préservées."
+      );
+
+      // Tentative de récupération silencieuse une seule fois.
+      if (!this.state.autoRecoveryAttempted) {
+        setTimeout(() => {
+          this.setState({
+            hasError: false,
+            error: null,
+            autoRecoveryAttempted: true,
+          });
+        }, 50);
       }
     }
   }
@@ -46,9 +82,8 @@ class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
-  private handleClearStorageAndReload = () => {
+  private handleHardReset = () => {
     try {
-      // Clear potentially corrupted localStorage data
       localStorage.removeItem('rental-proposal-storage');
       localStorage.removeItem('template-editor-storage');
       localStorage.removeItem('options-admin-storage');
@@ -72,9 +107,13 @@ class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                L'application a rencontré un problème. Cela peut être dû à des données corrompues en cache.
+                L'application a rencontré un problème. <strong>Vos données ne sont pas perdues</strong> — un simple rafraîchissement devrait suffire à les retrouver.
               </p>
-              
+
+              <p className="text-xs text-muted-foreground text-center">
+                Astuce : si vous utilisez un traducteur de navigateur (Edge, Google Translate…), désactivez-le sur ce site pour éviter ce problème.
+              </p>
+
               {this.state.error && (
                 <div className="bg-muted p-3 rounded-md">
                   <p className="text-xs font-mono text-muted-foreground break-words">
@@ -82,20 +121,40 @@ class ErrorBoundary extends Component<Props, State> {
                   </p>
                 </div>
               )}
-              
+
               <div className="flex flex-col gap-2">
                 <Button onClick={this.handleReload} className="w-full">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Rafraîchir la page
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={this.handleClearStorageAndReload}
-                  className="w-full"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Effacer le cache et rafraîchir
-                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Réinitialiser (perte des données non sauvegardées)
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Réinitialiser l'application ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Cette action supprimera <strong>tous vos brouillons en cours</strong> (proposition, template en édition, options…) stockés localement dans votre navigateur. Les propositions déjà enregistrées dans l'historique ne sont pas concernées.
+                        <br /><br />
+                        À n'utiliser que si "Rafraîchir la page" ne résout pas le problème.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={this.handleHardReset}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Oui, tout réinitialiser
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </CardContent>
           </Card>
