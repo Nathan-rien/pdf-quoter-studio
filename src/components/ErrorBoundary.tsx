@@ -50,32 +50,33 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-
     const errorMessage = error.message || '';
     const isDomMutationError =
       errorMessage.includes('removeChild') ||
       errorMessage.includes('appendChild') ||
-      errorMessage.includes('insertBefore');
+      errorMessage.includes('insertBefore') ||
+      errorMessage.includes('The node to be removed') ||
+      errorMessage.includes('The node before which the new node');
 
     if (isDomMutationError) {
       console.warn(
-        '[ErrorBoundary] Erreur de mutation DOM détectée. ' +
-          "Cause probable : extension navigateur (traducteur, adblock). " +
-          "Les données utilisateur sont préservées."
+        '[ErrorBoundary] Mutation DOM externe détectée (extension/traducteur navigateur). ' +
+          'Récupération silencieuse, données utilisateur préservées.'
       );
-
-      // Tentative de récupération silencieuse une seule fois.
-      if (!this.state.autoRecoveryAttempted) {
-        setTimeout(() => {
-          this.setState({
-            hasError: false,
-            error: null,
-            autoRecoveryAttempted: true,
-          });
-        }, 50);
-      }
+      // Récupération silencieuse : on ne montre PAS l'écran d'erreur.
+      // Le DOM guard de main.tsx empêche normalement ces erreurs d'arriver
+      // jusqu'ici, ceci reste un filet de sécurité.
+      setTimeout(() => {
+        this.setState({
+          hasError: false,
+          error: null,
+          autoRecoveryAttempted: true,
+        });
+      }, 0);
+      return;
     }
+
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
   private handleReload = () => {
