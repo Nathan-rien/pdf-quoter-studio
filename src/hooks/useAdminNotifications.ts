@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AdminNotification {
@@ -10,9 +10,12 @@ export interface AdminNotification {
   isRead: boolean;
 }
 
+const POLL_INTERVAL_MS = 30_000;
+
 export function useAdminNotifications(isAdmin: boolean) {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const lastSeenAtRef = useRef<string>(new Date().toISOString());
 
   const markAllAsRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -29,35 +32,38 @@ export function useAdminNotifications(isAdmin: boolean) {
   useEffect(() => {
     if (!isAdmin) return;
 
-    // S'abonner aux nouveaux exports en temps réel
-    const channel = supabase
-      .channel('admin-proposal-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'proposal_exports',
-          filter: "status=eq.success",
-        },
-        (payload) => {
-          const newRecord = payload.new as any;
-          const notification: AdminNotification = {
-            id: newRecord.id,
-            commercial_name: newRecord.commercial_name || null,
-            proposal_name: newRecord.proposal_name,
-            client_name: newRecord.client_name || null,
-            created_at: newRecord.created_at,
-            isRead: false,
-          };
-          setNotifications(prev => [notification, ...prev].slice(0, 20));
-          setUnreadCount(prev => prev + 1);
-        }
-      )
-      .subscribe();
+    let cancelled = false;
 
+    const poll = async () => {
+      const since = lastSeenAtRef.current;
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('id, commercial_name, proposal_name, client_name, created_at, status')
+        .eq('status', 'success')
+        .gt('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (cancelled || error || !data || data.length === 0) return;
+
+      lastSeenAtRef.current = data[0].created_at;
+      const newNotifications: AdminNotification[] = data.map((row: any) => ({
+        id: row.id,
+        commercial_name: row.commercial_name || null,
+        proposal_name: row.proposal_name,
+        client_name: row.client_name || null,
+        created_at: row.created_at,
+        isRead: false,
+      }));
+
+      setNotifications(prev => [...newNotifications, ...prev].slice(0, 20));
+      setUnreadCount(prev => prev + newNotifications.length);
+    };
+
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      clearInterval(interval);
     };
   }, [isAdmin]);
 
