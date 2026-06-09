@@ -100,6 +100,49 @@ export function AppSidebar({
           </Button>
         )}
 
+        {/* Liens utiles - menu déroulant */}
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 h-8 text-sm group"
+            >
+              <LinkIcon className="h-3.5 w-3.5" />
+              <span className="flex-1 text-left">Liens utiles</span>
+              <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-0.5 mt-0.5">
+            {USEFUL_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 pl-8 pr-2 h-7 text-xs rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                <span className="truncate">{link.label}</span>
+              </a>
+            ))}
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide mt-2 mb-1 pl-8">
+              Suivi transport
+            </p>
+            {TRANSPORT_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 pl-8 pr-2 h-7 text-xs rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                <span className="truncate">{link.label}</span>
+              </a>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Section Administration - masquée pour les commerciaux */}
         {canAccessAdmin && (
           <div className="pt-3 mt-3 border-t border-border">
