@@ -6,78 +6,75 @@
 
 @layer base {
   :root {
-    /* Professional navy-slate palette */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* CBpro monochrome charter — noir & blanc épuré */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 7%;
 
-    /* Deep navy primary */
-    --primary: 222 47% 20%;
-    --primary-foreground: 210 40% 98%;
+    /* Pure ink primary */
+    --primary: 0 0% 10%;
+    --primary-foreground: 0 0% 98%;
 
-    /* Light slate secondary */
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 222 47% 20%;
+    /* Soft neutral secondary */
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 10%;
 
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
 
     /* Subtle accent */
-    --accent: 220 14% 92%;
-    --accent-foreground: 222 47% 20%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 10%;
 
-    /* Status colors */
+    /* Status colors (kept functional) */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Emerald success */
     --success: 158 64% 40%;
     --success-foreground: 0 0% 100%;
 
-    /* Amber warning */
     --warning: 38 92% 50%;
     --warning-foreground: 38 92% 15%;
 
-    /* Info blue */
     --info: 210 100% 50%;
     --info-foreground: 0 0% 100%;
 
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 222 47% 20%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 0 0% 20%;
 
     --radius: 0.625rem;
 
     /* Workflow step colors */
-    --step-pending: 220 14% 75%;
-    --step-active: 222 47% 20%;
+    --step-pending: 0 0% 75%;
+    --step-active: 0 0% 10%;
     --step-complete: 158 64% 40%;
     --step-error: 0 84% 60%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(222 47% 20%) 0%, hsl(222 47% 30%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(222 47% 15%) 0%, hsl(222 47% 25%) 50%, hsl(210 50% 30%) 100%);
+    /* Gradients — anthracite ramps */
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 8%) 0%, hsl(0 0% 22%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 6%) 0%, hsl(0 0% 14%) 50%, hsl(0 0% 24%) 100%);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.08), 0 2px 4px -2px hsl(222 47% 11% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.08), 0 4px 6px -4px hsl(222 47% 11% / 0.05);
-    --shadow-glow: 0 0 20px hsl(222 47% 20% / 0.15);
+    /* Shadows (neutral) */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 7% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 7% / 0.08), 0 2px 4px -2px hsl(0 0% 7% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 7% / 0.08), 0 4px 6px -4px hsl(0 0% 7% / 0.05);
+    --shadow-glow: 0 0 20px hsl(0 0% 10% / 0.15);
 
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-foreground: 0 0% 26%;
+    --sidebar-primary: 0 0% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 0 0% 20%;
   }
 
   .dark {
