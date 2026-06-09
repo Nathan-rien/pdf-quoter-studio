@@ -11,8 +11,28 @@ import {
   BarChart3,
   UserCircle,
   GanttChart,
+  Link as LinkIcon,
+  ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+const USEFUL_LINKS = [
+  { label: "Projet prod", url: "https://quote-enricher.lovable.app/auth" },
+  { label: "ERP", url: "https://jaja.cybertek.fr/magasin/vente.aspx" },
+  { label: "Produit Destock", url: "https://data-shepherd-92.lovable.app/" },
+  { label: "CRM", url: "https://app-eu1.hubspot.com/reports-dashboard/143332020/view/106706371/183256509" },
+  { label: "Contact fournisseur", url: "https://cybertekfr-my.sharepoint.com/:o:/r/personal/z_azakri_cybertek-pro_fr/_layouts/15/Doc.aspx?sourcedoc=%7B95415c87-9bb9-4296-80ca-78674a5ecf30%7D&action=edit&wd=target(lenovo.one%7Cce05277c-e208-4cdc-b7b0-93dd3b6a1d4e%2FLenovo%7C4df99934-34b0-4cb2-b5c3-31a875dd9194%2F)&wdorigin=NavigationUrl" },
+  { label: "Dossier commun", url: "https://cybertekfr-my.sharepoint.com/shared?id=%2Fsites%2Fequipe%5FB2B%2FShared%20Documents%2FGeneral&listurl=https%3A%2F%2Fcybertekfr%2Esharepoint%2Ecom%2Fsites%2Fequipe%5FB2B%2FShared%20Documents&viewid=a5737b31%2D7990%2D43a2%2D88ec%2D123f9ee56ea0" },
+];
+
+const TRANSPORT_LINKS = [
+  { label: "TNT", url: "https://www.tnt.fr/mytnt/suivi_colis/recherche/detailbontransport.do" },
+  { label: "Kuehne", url: "https://sso.kuehne-nagel.com/authorization/login" },
+  { label: "Geodis", url: "https://parcelsapp.com/fr/carriers/geodis" },
+  { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
+];
 
 export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
 
