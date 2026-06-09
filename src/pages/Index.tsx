@@ -103,7 +103,7 @@ export default function Index() {
           <img
             src={cbproLogo.url}
             alt="CBpro"
-            className="h-10 w-auto select-none"
+            className="h-12 w-auto select-none"
             draggable={false}
           />
         </div>
