@@ -15,6 +15,7 @@ import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
 import { GanttView } from "@/components/gantt/GanttView";
 import { cn } from "@/lib/utils";
+import cbproLogo from "@/assets/cbpro-logo.svg.asset.json";
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
@@ -89,8 +90,8 @@ export default function Index() {
       />
 
       <main className={cn("flex-1 p-3 lg:p-4", currentView === 'gantt' ? 'overflow-hidden flex flex-col' : 'overflow-auto')}>
-        {isAdmin && (
-          <div className="flex justify-end mb-2">
+        <div className="flex justify-end items-center gap-3 mb-2">
+          {isAdmin && (
             <AdminNotificationBell
               notifications={notifications}
               unreadCount={unreadCount}
@@ -98,8 +99,14 @@ export default function Index() {
               onMarkAsRead={markAsRead}
               onNavigateToHistory={handleNavigateToHistory}
             />
-          </div>
-        )}
+          )}
+          <img
+            src={cbproLogo.url}
+            alt="CBpro"
+            className="h-10 w-auto select-none"
+            draggable={false}
+          />
+        </div>
         <div className={cn(
           "mx-auto",
           (currentView === 'template-editor' || currentView === 'gantt') ? "max-w-full" : "max-w-7xl"

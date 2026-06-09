@@ -1,41 +1,37 @@
-# Plan : Menu déroulant Liens utiles dans la sidebar
+## Plan
 
-## Objectif
-Ajouter un onglet déroulant **Liens utiles** dans la barre de navigation verticale de gauche, positionné **juste en dessous de "Mes infos"**. Chaque lien s'ouvre dans un nouvel onglet (`target="_blank"`).
+### 1. Intégration du logo CBpro
+- Uploader le SVG via `lovable-assets` et créer `src/assets/cbpro-logo.svg.asset.json`.
+- Ajouter le logo en haut à droite de l'application dans le layout principal (header global au-dessus du contenu, à côté/au-dessus de la sidebar).
+  - Hauteur ~32-40px, lien vers `/`, padding cohérent.
+  - Visible sur toutes les pages (hors export PDF).
 
-## Implémentation
+### 2. Charte graphique — Noir & blanc épuré
+Refonte des tokens dans `src/index.css` (mode clair uniquement, dark mode conservé tel quel) :
 
-### 1. Modification de `src/components/layout/AppSidebar.tsx`
-- Importer les composants `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` depuis `@/components/ui/collapsible`.
-- Importer l'icône `Link` (ou `ExternalLink`) depuis `lucide-react`.
-- Ajouter une nouvelle section **Liens utiles** sous le bouton "Mes infos".
-- Utiliser `Collapsible` avec un trigger affichant l'icône + le label "Liens utiles".
-- À l'intérieur du `CollapsibleContent`, afficher la liste des liens sous forme de petits boutons `ghost` stylisés (taille réduite, légère indentation gauche).
+| Token | Avant (navy) | Après (mono) |
+|---|---|---|
+| `--background` | 220 20% 97% | 0 0% 98% |
+| `--foreground` | 222 47% 11% | 0 0% 7% |
+| `--primary` | 222 47% 20% | 0 0% 10% |
+| `--primary-foreground` | 210 40% 98% | 0 0% 98% |
+| `--secondary` | 220 14% 92% | 0 0% 94% |
+| `--muted` | 220 14% 95% | 0 0% 96% |
+| `--accent` | 220 14% 92% | 0 0% 92% |
+| `--border` / `--input` | 220 13% 88% | 0 0% 88% |
+| `--ring` | 222 47% 20% | 0 0% 20% |
+| `--sidebar-*` | mix bleu | nuances neutres alignées |
+| `--gradient-primary` / `hero` | dégradés navy | dégradés noir → gris anthracite |
+| `--shadow-*` | hsl navy | hsl neutre (0 0% 7%) |
 
-### Liens à intégrer
-| Label | URL |
-|-------|-----|
-| Projet prod | https://quote-enricher.lovable.app/auth |
-| ERP | https://jaja.cybertek.fr/magasin/vente.aspx |
-| Produit Destock | https://data-shepherd-92.lovable.app/ |
-| CRM | https://app-eu1.hubspot.com/reports-dashboard/143332020/view/106706371/183256509 |
-| Contact fournisseur | https://cybertekfr-my.sharepoint.com/:o:/r/personal/z_azakri_cybertek-pro_fr/_layouts/15/Doc.aspx?sourcedoc=%7B95415c87-9bb9-4296-80ca-78674a5ecf30%7D&action=edit&wd=target(lenovo.one%7Cce05277c-e208-4cdc-b7b0-93dd3b6a1d4e%2FLenovo%7C4df99934-34b0-4cb2-b5c3-31a875dd9194%2F)&wdorigin=NavigationUrl |
-| Dossier commun | https://cybertekfr-my.sharepoint.com/shared?id=%2Fsites%2Fequipe%5FB2B%2FShared%20Documents%2FGeneral&listurl=https%3A%2F%2Fcybertekfr%2Esharepoint%2Ecom%2Fsites%2Fequipe%5FB2B%2FShared%20Documents&viewid=a5737b31%2D7990%2D43a2%2D88ec%2D123f9ee56ea0 |
-| TNT | https://www.tnt.fr/mytnt/suivi_colis/recherche/detailbontransport.do |
-| Kuehne | https://sso.kuehne-nagel.com/authorization/login |
-| Geodis | https://parcelsapp.com/fr/carriers/geodis |
-| WelcomeTrack | https://app.welcometrack.io/index.cfm |
+Statuts conservés (success vert, warning ambre, destructive rouge, info bleu) pour la lisibilité fonctionnelle — seul l'identité « marque » devient monochrome.
 
-- Les 4 derniers liens (TNT, Kuehne, Geodis, WelcomeTrack) seront regroupés visuellement sous un petit label "Suivi transport" à l'intérieur du menu déroulant.
+### 3. Vérifications
+- Build OK.
+- Contrôle visuel : sidebar, boutons primaires, cartes, badges de statut, écran d'aperçu de proposition.
+- Aucune modification de la logique métier ni des templates PDF (les couleurs marque des PDF restent gérées par les templates utilisateur).
 
-### 2. Style
-- Cohérent avec les boutons existants (`ghost`, `w-full`, `justify-start`, `h-8`, `text-sm`).
-- Les éléments déroulés auront un `pl-8` (indentation) et une taille de texte légèrement réduite (`text-xs`) pour signifier la hiérarchie.
-- Icône `ExternalLink` (ou `Link`) à côté de chaque lien pour indiquer l'ouverture externe.
-- Ajout de `rel="noopener noreferrer"` sur chaque `<a>` pour la sécurité.
-
-### 3. Aucun autre fichier modifié
-La modification est strictement limitée au composant `AppSidebar.tsx`. Aucun changement de state, de routing ou de store n'est requis.
-
-## Résultat attendu
-Un menu "Liens utiles" repliable apparaît dans la sidebar. En cliquant dessus, la liste des liens s'afficre. Un clic sur un lien ouvre l'URL dans un nouvel onglet du navigateur.
+### Fichiers touchés
+- `src/assets/cbpro-logo.svg.asset.json` (créé)
+- `src/index.css` (tokens `:root`)
+- `src/components/layout/AppSidebar.tsx` ou layout parent — emplacement à confirmer après lecture pour positionner le logo en haut à droite globalement.
