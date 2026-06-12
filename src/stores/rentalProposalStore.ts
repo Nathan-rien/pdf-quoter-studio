@@ -596,7 +596,128 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         });
       },
 
-      updateServicesInclus: (description) => {
+      // ============ Reprise actions ============
+      addRepriseLigne: () => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            lignes: [...state.repriseData.lignes, { designation: '', nb: 1, vun: null, vtn: 0 }],
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateRepriseLigne: (index, updates) => {
+        set(state => {
+          const newLignes = [...state.repriseData.lignes];
+          if (!newLignes[index]) return state;
+          newLignes[index] = { ...newLignes[index], ...updates };
+          if (!newLignes[index].isSeparator) {
+            const l = newLignes[index];
+            const vun = l.vun ?? 0;
+            l.vtn = Math.round((l.nb || 0) * vun * 100) / 100;
+          }
+          return {
+            repriseData: { ...state.repriseData, lignes: newLignes },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      deleteRepriseLigne: (index) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            lignes: state.repriseData.lignes.filter((_, i) => i !== index),
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      reorderRepriseLigne: (fromIndex, toIndex) => {
+        set(state => {
+          const newLignes = [...state.repriseData.lignes];
+          const [moved] = newLignes.splice(fromIndex, 1);
+          newLignes.splice(toIndex, 0, moved);
+          return {
+            repriseData: { ...state.repriseData, lignes: newLignes },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      addRepriseSeparator: (atIndex?: number) => {
+        set(state => {
+          const sep: RepriseLigne = { designation: '', nb: 0, vun: null, vtn: 0, isSeparator: true };
+          const newLignes = [...state.repriseData.lignes];
+          if (atIndex !== undefined && atIndex >= 0 && atIndex <= newLignes.length) {
+            newLignes.splice(atIndex, 0, sep);
+          } else {
+            newLignes.push(sep);
+          }
+          return {
+            repriseData: { ...state.repriseData, lignes: newLignes },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      updateRepriseMarge: (marge) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            marge: marge === null ? 0.20 : marge,
+            margeIsOverridden: marge !== null,
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateRepriseGrade: (grade, prixPartenaire) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            grades: state.repriseData.grades.map(g =>
+              g.grade === grade ? { ...g, prixPartenaire } : g
+            ),
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      addRepriseDescription: () => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            descriptions: [...state.repriseData.descriptions, { description: '', quantite: 0 }],
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateRepriseDescription: (index, updates) => {
+        set(state => {
+          const newDescs = [...state.repriseData.descriptions];
+          if (!newDescs[index]) return state;
+          newDescs[index] = { ...newDescs[index], ...updates };
+          return {
+            repriseData: { ...state.repriseData, descriptions: newDescs },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      deleteRepriseDescription: (index) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            descriptions: state.repriseData.descriptions.filter((_, i) => i !== index),
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+
         set(state => ({
           servicesInclus: { ...state.servicesInclus, description },
           hasUnsavedChanges: true,
