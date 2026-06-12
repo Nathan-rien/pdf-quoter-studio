@@ -1083,6 +1083,29 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
                 montantInvestissement: p.montantInvestissement ?? state.matriceData?.montantInvestissement ?? null,
               }));
             }
+
+            // Validate / migrate repriseData
+            if (!state.repriseData || typeof state.repriseData !== 'object') {
+              state.repriseData = initialRepriseData;
+            } else {
+              state.repriseData = {
+                ...initialRepriseData,
+                ...state.repriseData,
+                grades: Array.isArray(state.repriseData.grades) && state.repriseData.grades.length === 4
+                  ? state.repriseData.grades
+                  : initialRepriseData.grades,
+                lignes: Array.isArray(state.repriseData.lignes) ? state.repriseData.lignes : [],
+                descriptions: Array.isArray(state.repriseData.descriptions) ? state.repriseData.descriptions : [],
+                marge: typeof state.repriseData.marge === 'number' ? state.repriseData.marge : 0.20,
+                margeIsOverridden: !!state.repriseData.margeIsOverridden,
+              };
+            }
+
+            // Migrate matriceData reprise toggles
+            if (state.matriceData) {
+              if (typeof state.matriceData.repriseShowPrices !== 'boolean') state.matriceData.repriseShowPrices = true;
+              if (typeof state.matriceData.repriseShowOffer !== 'boolean') state.matriceData.repriseShowOffer = true;
+            }
           }
         } catch (validationError) {
           console.error('State validation failed, resetting store:', validationError);
