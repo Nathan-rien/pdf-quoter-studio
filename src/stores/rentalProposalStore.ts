@@ -299,6 +299,19 @@ const initialServicesInclus: ServicesInclus = {
   description: 'Contrat de location et gestion administrative\nOptimisation des coûts et gestion budgétaire\nGestion des évolutions (ajout / retrait de matériels en cours de contrat)\nAccès privilégié aux matériels de seconde vie\nGarantie de recyclage / valorisation du matériel en fin de vie (DEEE)\nMise à disposition du matériel informatique (location possible au-delà de la durée du contrat)',
 };
 
+export const initialRepriseData: RepriseData = {
+  lignes: [],
+  marge: 0.20,
+  margeIsOverridden: false,
+  grades: [
+    { grade: 'A', prixPartenaire: 0 },
+    { grade: 'B', prixPartenaire: 0 },
+    { grade: 'C', prixPartenaire: 0 },
+    { grade: 'D', prixPartenaire: 0 },
+  ],
+  descriptions: [],
+};
+
 const initialState: RentalProposalState = {
   pdfImportStatus: initialPDFImportStatus,
   clientData: initialClientData,
@@ -306,6 +319,7 @@ const initialState: RentalProposalState = {
   matriceData: initialMatriceData,
   proposals: [createDefaultProposal()],
   lignesData: [],
+  repriseData: initialRepriseData,
   servicesInclus: initialServicesInclus,
   optionsServices: [],
   nosOptions: [],
