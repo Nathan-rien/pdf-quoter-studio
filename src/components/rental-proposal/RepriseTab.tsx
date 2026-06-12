@@ -381,7 +381,7 @@ export function RepriseTab() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="show-cout-locatif-reprise" className="text-sm">Afficher coût locatif annuel</Label>
+            <Label htmlFor="show-cout-locatif-reprise" className="text-sm">Afficher</Label>
             <Switch
               id="show-cout-locatif-reprise"
               checked={matriceData.showCoutLocatifAnnuel}
