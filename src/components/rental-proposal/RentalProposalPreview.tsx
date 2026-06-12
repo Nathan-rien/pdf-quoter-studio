@@ -41,6 +41,7 @@ import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION, estimateVisualLines, chunkLinesByVisualHeight } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders, computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
+import { computeRepriseGrades } from '@/lib/reprise-calculations';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZoneType } from '@/types/pdf-template';
