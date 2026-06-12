@@ -51,6 +51,12 @@ export function QuotePreview({
   onExport 
 }: QuotePreviewProps) {
   const [expandedView, setExpandedView] = useState(false);
+  const matriceData = useRentalProposalStore(s => s.matriceData);
+  const repriseData = useRentalProposalStore(s => s.repriseData);
+  const computedGrades = useMemo(
+    () => computeRepriseGrades(repriseData.grades, repriseData.marge),
+    [repriseData.grades, repriseData.marge]
+  );
   
   // Construire optionsData à partir de selectedOptions si non fourni
   const effectiveOptionsData: OptionsServicesData | null = optionsData || (selectedOptions.length > 0 ? {
