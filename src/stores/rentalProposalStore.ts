@@ -140,6 +140,10 @@ interface RentalProposalState {
   
   // Lignes produits (Invest tab)
   lignesData: PDFProductLine[];
+
+  // Reprise (nouvel onglet)
+  repriseData: RepriseData;
+
   
   // Services inclus (bloc permanent - toujours affiché en haut de page 5)
   servicesInclus: ServicesInclus;
