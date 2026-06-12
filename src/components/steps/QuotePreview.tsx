@@ -24,8 +24,12 @@ import {
   Page5OffreMateriel,
   Page6Services,
   Page7ServicesPro,
-  Page8Signature
+  Page8Signature,
+  Page9Reprise
 } from "@/components/pdf/pages";
+import { useRentalProposalStore } from "@/stores/rentalProposalStore";
+import { computeRepriseGrades } from "@/lib/reprise-calculations";
+import { useMemo } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +51,12 @@ export function QuotePreview({
   onExport 
 }: QuotePreviewProps) {
   const [expandedView, setExpandedView] = useState(false);
+  const matriceData = useRentalProposalStore(s => s.matriceData);
+  const repriseData = useRentalProposalStore(s => s.repriseData);
+  const computedGrades = useMemo(
+    () => computeRepriseGrades(repriseData.grades, repriseData.marge),
+    [repriseData.grades, repriseData.marge]
+  );
   
   // Construire optionsData à partir de selectedOptions si non fourni
   const effectiveOptionsData: OptionsServicesData | null = optionsData || (selectedOptions.length > 0 ? {
@@ -207,6 +217,9 @@ export function QuotePreview({
           <Page5OffreMateriel investData={investData} />
           <Page6Services optionsData={effectiveOptionsData} />
           <Page7ServicesPro />
+          {matriceData.showCoutLocatifAnnuel && (
+            <Page9Reprise repriseData={repriseData} computedGrades={computedGrades} />
+          )}
           <Page8Signature />
         </div>
       )}

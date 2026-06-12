@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy, Loader2, GripVertical, SeparatorHorizontal, ImagePlus, X } from 'lucide-react';
+import { User, FileText, Package, Calculator, Settings, Trash2, Plus, Eye, EyeOff, Download, Briefcase, Copy, Loader2, GripVertical, SeparatorHorizontal, ImagePlus, X, Recycle } from 'lucide-react';
+import { RepriseTab } from './RepriseTab';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,6 +42,7 @@ export function RentalDataEditor() {
     matriceData,
     proposals,
     lignesData,
+    repriseData,
     servicesInclus,
     optionsServices,
     nosOptions,
@@ -191,7 +193,7 @@ export function RentalDataEditor() {
       </Card>
 
       <Tabs defaultValue="client" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="client" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Client
@@ -216,6 +218,13 @@ export function RentalDataEditor() {
             Invest
             {lignesData.length > 0 && (
               <Badge variant="secondary" className="ml-1">{lignesData.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="reprise" className="flex items-center gap-2">
+            <Recycle className="h-4 w-4" />
+            Reprise
+            {repriseData.lignes.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{repriseData.lignes.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="basetaux" className="flex items-center gap-2">
@@ -1105,6 +1114,11 @@ export function RentalDataEditor() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Reprise Tab */}
+        <TabsContent value="reprise" className="mt-4">
+          <RepriseTab />
         </TabsContent>
 
         {/* Base Taux Tab */}

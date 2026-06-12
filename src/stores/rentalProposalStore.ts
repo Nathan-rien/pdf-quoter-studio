@@ -49,6 +49,10 @@ interface MatriceData {
   investShowPrices: boolean;
   // Toggle affichage du bloc "Votre offre"
   investShowOffer: boolean;
+  // Toggle affichage des prix dans le tableau Reprise
+  repriseShowPrices: boolean;
+  // Toggle affichage du bloc "Votre offre" pour Reprise
+  repriseShowOffer: boolean;
   // Commentaire libre affiché sous Avantages/Conditions sur la page 4
   commentaire: string;
   
@@ -56,6 +60,33 @@ interface MatriceData {
   duree: number | null;
   refinanceur: Partenaire | null;
   margeAppliquee: number;
+}
+
+// ============ Reprise types ============
+export interface RepriseLigne {
+  designation: string;
+  nb: number;
+  vun: number | null;
+  vtn: number;
+  isSeparator?: boolean;
+}
+
+export interface RepriseGradeRow {
+  grade: 'A' | 'B' | 'C' | 'D';
+  prixPartenaire: number;
+}
+
+export interface RepriseDescriptionRow {
+  description: string;
+  quantite: number;
+}
+
+export interface RepriseData {
+  lignes: RepriseLigne[];
+  marge: number;
+  margeIsOverridden: boolean;
+  grades: RepriseGradeRow[];
+  descriptions: RepriseDescriptionRow[];
 }
 
 // Options service pour le calcul des services inclus
@@ -109,6 +140,10 @@ interface RentalProposalState {
   
   // Lignes produits (Invest tab)
   lignesData: PDFProductLine[];
+
+  // Reprise (nouvel onglet)
+  repriseData: RepriseData;
+
   
   // Services inclus (bloc permanent - toujours affiché en haut de page 5)
   servicesInclus: ServicesInclus;
@@ -167,6 +202,18 @@ interface RentalProposalActions {
   addSeparatorLigne: (atIndex?: number) => void;
   reorderLigne: (fromIndex: number, toIndex: number) => void;
   deleteLigne: (index: number) => void;
+
+  // Reprise actions
+  addRepriseLigne: () => void;
+  updateRepriseLigne: (index: number, updates: Partial<RepriseLigne>) => void;
+  deleteRepriseLigne: (index: number) => void;
+  reorderRepriseLigne: (fromIndex: number, toIndex: number) => void;
+  addRepriseSeparator: (atIndex?: number) => void;
+  updateRepriseMarge: (marge: number | null) => void;
+  updateRepriseGrade: (grade: 'A' | 'B' | 'C' | 'D', prixPartenaire: number) => void;
+  addRepriseDescription: () => void;
+  updateRepriseDescription: (index: number, updates: Partial<RepriseDescriptionRow>) => void;
+  deleteRepriseDescription: (index: number) => void;
   
   // Services inclus (bloc permanent)
   updateServicesInclus: (description: string) => void;
@@ -230,6 +277,8 @@ const initialMatriceData: MatriceData = {
   showCoutLocatifAnnuel: true,
   investShowPrices: true,
   investShowOffer: true,
+  repriseShowPrices: true,
+  repriseShowOffer: true,
   commentaire: '',
   // Legacy fields
   duree: 36,
@@ -262,6 +311,19 @@ const initialServicesInclus: ServicesInclus = {
   description: 'Contrat de location et gestion administrative\nOptimisation des coûts et gestion budgétaire\nGestion des évolutions (ajout / retrait de matériels en cours de contrat)\nAccès privilégié aux matériels de seconde vie\nGarantie de recyclage / valorisation du matériel en fin de vie (DEEE)\nMise à disposition du matériel informatique (location possible au-delà de la durée du contrat)',
 };
 
+export const initialRepriseData: RepriseData = {
+  lignes: [],
+  marge: 0.20,
+  margeIsOverridden: false,
+  grades: [
+    { grade: 'A', prixPartenaire: 0 },
+    { grade: 'B', prixPartenaire: 0 },
+    { grade: 'C', prixPartenaire: 0 },
+    { grade: 'D', prixPartenaire: 0 },
+  ],
+  descriptions: [],
+};
+
 const initialState: RentalProposalState = {
   pdfImportStatus: initialPDFImportStatus,
   clientData: initialClientData,
@@ -269,6 +331,7 @@ const initialState: RentalProposalState = {
   matriceData: initialMatriceData,
   proposals: [createDefaultProposal()],
   lignesData: [],
+  repriseData: initialRepriseData,
   servicesInclus: initialServicesInclus,
   optionsServices: [],
   nosOptions: [],
@@ -533,6 +596,127 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         });
       },
 
+      // ============ Reprise actions ============
+      addRepriseLigne: () => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            lignes: [...state.repriseData.lignes, { designation: '', nb: 1, vun: null, vtn: 0 }],
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateRepriseLigne: (index, updates) => {
+        set(state => {
+          const newLignes = [...state.repriseData.lignes];
+          if (!newLignes[index]) return state;
+          newLignes[index] = { ...newLignes[index], ...updates };
+          if (!newLignes[index].isSeparator) {
+            const l = newLignes[index];
+            const vun = l.vun ?? 0;
+            l.vtn = Math.round((l.nb || 0) * vun * 100) / 100;
+          }
+          return {
+            repriseData: { ...state.repriseData, lignes: newLignes },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      deleteRepriseLigne: (index) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            lignes: state.repriseData.lignes.filter((_, i) => i !== index),
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      reorderRepriseLigne: (fromIndex, toIndex) => {
+        set(state => {
+          const newLignes = [...state.repriseData.lignes];
+          const [moved] = newLignes.splice(fromIndex, 1);
+          newLignes.splice(toIndex, 0, moved);
+          return {
+            repriseData: { ...state.repriseData, lignes: newLignes },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      addRepriseSeparator: (atIndex?: number) => {
+        set(state => {
+          const sep: RepriseLigne = { designation: '', nb: 0, vun: null, vtn: 0, isSeparator: true };
+          const newLignes = [...state.repriseData.lignes];
+          if (atIndex !== undefined && atIndex >= 0 && atIndex <= newLignes.length) {
+            newLignes.splice(atIndex, 0, sep);
+          } else {
+            newLignes.push(sep);
+          }
+          return {
+            repriseData: { ...state.repriseData, lignes: newLignes },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      updateRepriseMarge: (marge) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            marge: marge === null ? 0.20 : marge,
+            margeIsOverridden: marge !== null,
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateRepriseGrade: (grade, prixPartenaire) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            grades: state.repriseData.grades.map(g =>
+              g.grade === grade ? { ...g, prixPartenaire } : g
+            ),
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      addRepriseDescription: () => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            descriptions: [...state.repriseData.descriptions, { description: '', quantite: 0 }],
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateRepriseDescription: (index, updates) => {
+        set(state => {
+          const newDescs = [...state.repriseData.descriptions];
+          if (!newDescs[index]) return state;
+          newDescs[index] = { ...newDescs[index], ...updates };
+          return {
+            repriseData: { ...state.repriseData, descriptions: newDescs },
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
+      deleteRepriseDescription: (index) => {
+        set(state => ({
+          repriseData: {
+            ...state.repriseData,
+            descriptions: state.repriseData.descriptions.filter((_, i) => i !== index),
+          },
+          hasUnsavedChanges: true,
+        }));
+      },
+
       updateServicesInclus: (description) => {
         set(state => ({
           servicesInclus: { ...state.servicesInclus, description },
@@ -778,6 +962,14 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             ? snapshot.proposals
             : [createDefaultProposal()],
           lignesData: Array.isArray(snapshot.lignesData) ? snapshot.lignesData : [],
+          repriseData: (snapshot.repriseData && typeof snapshot.repriseData === 'object')
+            ? { ...initialRepriseData, ...snapshot.repriseData,
+                grades: Array.isArray(snapshot.repriseData.grades) && snapshot.repriseData.grades.length === 4
+                  ? snapshot.repriseData.grades : initialRepriseData.grades,
+                lignes: Array.isArray(snapshot.repriseData.lignes) ? snapshot.repriseData.lignes : [],
+                descriptions: Array.isArray(snapshot.repriseData.descriptions) ? snapshot.repriseData.descriptions : [],
+              }
+            : initialRepriseData,
           servicesInclus: snapshot.servicesInclus ?? get().servicesInclus,
           optionsServices: Array.isArray(snapshot.optionsServices)
             ? snapshot.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? false }))
@@ -805,6 +997,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         matriceData: state.matriceData,
         proposals: state.proposals,
         lignesData: state.lignesData,
+        repriseData: state.repriseData,
         servicesInclus: state.servicesInclus,
         optionsServices: state.optionsServices,
         nosOptions: state.nosOptions,
@@ -889,6 +1082,29 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
                 ...p,
                 montantInvestissement: p.montantInvestissement ?? state.matriceData?.montantInvestissement ?? null,
               }));
+            }
+
+            // Validate / migrate repriseData
+            if (!state.repriseData || typeof state.repriseData !== 'object') {
+              state.repriseData = initialRepriseData;
+            } else {
+              state.repriseData = {
+                ...initialRepriseData,
+                ...state.repriseData,
+                grades: Array.isArray(state.repriseData.grades) && state.repriseData.grades.length === 4
+                  ? state.repriseData.grades
+                  : initialRepriseData.grades,
+                lignes: Array.isArray(state.repriseData.lignes) ? state.repriseData.lignes : [],
+                descriptions: Array.isArray(state.repriseData.descriptions) ? state.repriseData.descriptions : [],
+                marge: typeof state.repriseData.marge === 'number' ? state.repriseData.marge : 0.20,
+                margeIsOverridden: !!state.repriseData.margeIsOverridden,
+              };
+            }
+
+            // Migrate matriceData reprise toggles
+            if (state.matriceData) {
+              if (typeof state.matriceData.repriseShowPrices !== 'boolean') state.matriceData.repriseShowPrices = true;
+              if (typeof state.matriceData.repriseShowOffer !== 'boolean') state.matriceData.repriseShowOffer = true;
             }
           }
         } catch (validationError) {
