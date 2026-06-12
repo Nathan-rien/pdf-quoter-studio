@@ -41,6 +41,7 @@ import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { CANVAS_SCALE, PREVIEW_FONT_SCALE, PREVIEW_ICON_SCALE, LIST_INDENT_PX, DEFAULT_CONTRACT_PAGES, OPTIONS_PER_PAGE, LINES_PER_PAGE, CANVAS_DISPLAY_MAX_WIDTH, INVEST_LINES_PAGE1, INVEST_LINES_CONTINUATION, computeFooterLines, INVEST_SINGLE_PAGE_FOOTER_THRESHOLD, SERVICES_ITEMS_PAGE1, SERVICES_ITEMS_CONTINUATION, estimateVisualLines, chunkLinesByVisualHeight } from '@/lib/canvas-constants';
 import { getSharedElementStyle, sortElementsByZIndex, resolveImageUrl, substituteDynamicPlaceholders, computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
+import { computeRepriseGrades } from '@/lib/reprise-calculations';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { EditableElement, TextContent, ImageContent, ShapeContent, IconContent, TemplateVersion } from '@/types/template-editor';
 import type { PDFPageNumber, DynamicZoneType } from '@/types/pdf-template';
@@ -62,6 +63,7 @@ export function RentalProposalPreview() {
     clientData,
     matriceData,
     lignesData,
+    repriseData,
     servicesInclus,
     optionsServices,
     nosOptions,
@@ -238,7 +240,8 @@ export function RentalProposalPreview() {
   })();
   const extraServicesPages = Math.max(0, servicesChunks.length - 1);
 
-  const totalPages = templatePages + extraInvestPages + extraServicesPages;
+  const extraReprisePages = matriceData.showReprise ? 1 : 0;
+  const totalPages = templatePages + extraInvestPages + extraServicesPages + extraReprisePages;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
@@ -1428,8 +1431,66 @@ export function RentalProposalPreview() {
     return renderPageWithEditMode(pageNum as PDFPageNumber, staticElements, renderSignatureZone);
   };
 
+  // Rendu de la page Reprise (insérée après la dernière page Invest si matriceData.showReprise)
+  const renderReprisePage = (pageNum: number) => {
+    const computedGrades = computeRepriseGrades(repriseData.grades, repriseData.marge);
+    const fmt = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const renderRepriseContent = () => (
+      <div className="absolute" style={{ left: '5%', top: '5%', width: '90%', zIndex: 40 }}>
+        <div style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>Synthèse reprise</div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, border: '1px solid #e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+          <thead>
+            <tr style={{ background: '#000', color: '#fff' }}>
+              <th style={{ textAlign: 'left', padding: '6px 8px' }}>Description</th>
+              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>Quantités</th>
+              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>A</th>
+              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>B</th>
+              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>C</th>
+              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>D</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <td style={{ padding: '6px 8px', fontWeight: 600 }}>Total HT</td>
+              <td />
+              {computedGrades.map(g => (
+                <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.totalHT)} €</td>
+              ))}
+            </tr>
+            <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <td style={{ padding: '6px 8px', fontWeight: 600 }}>TVA</td>
+              <td />
+              {computedGrades.map(g => (
+                <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.tva)} €</td>
+              ))}
+            </tr>
+            <tr style={{ background: '#000', color: '#fff', fontWeight: 700 }}>
+              <td style={{ padding: '6px 8px' }}>Total TTC</td>
+              <td />
+              {computedGrades.map(g => (
+                <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.totalTTC)} €</td>
+              ))}
+            </tr>
+            {repriseData.descriptions.map((d, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <td style={{ padding: '6px 8px' }}>{d.description || '—'}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{d.quantite}</td>
+                <td /><td /><td /><td />
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+    // Réutiliser le background de la page Invest (logos, etc.) pour cohérence visuelle
+    const investPage = getInjectionPageForZoneType('invest_table') || 4;
+    const bgElements = getStaticPageElements(investPage as PDFPageNumber)
+      .filter(el => el.type === 'image');
+    return renderPageWithEditMode(pageNum as PDFPageNumber, bgElements, renderRepriseContent);
+  };
+
   // Rendu de la page courante - Structure dynamique avec réaffectation automatique
-  // Gère les pages supplémentaires insérées pour le tableau investissements et les services
+  // Gère les pages supplémentaires insérées pour le tableau investissements, Reprise et les services
   const renderCurrentPage = () => {
     // Trouver les pages d'injection pour chaque type de zone
     const investPage = getInjectionPageForZoneType('invest_table') || 4;
@@ -1452,10 +1513,16 @@ export function RentalProposalPreview() {
       return renderGenericStaticPage(currentPreviewPage);
     }
     
-    // Pages après la zone invest : décaler pour retrouver le numéro de page du template
-    // mais d'abord vérifier la plage services (page 5 du template + extras)
+    // Page Reprise (insérée juste après la dernière page Invest) si activée
+    const reprisePageNum = extraReprisePages > 0 ? investPageEnd + 1 : -1;
+    if (currentPreviewPage === reprisePageNum) {
+      return renderReprisePage(currentPreviewPage);
+    }
+
+    // Pages après la zone invest (+ reprise) : décaler pour retrouver le numéro de page du template
+    // mais d'abord vérifier la plage services (page 5 du template + extras invest + reprise)
     const servicesPageTemplate = 5;
-    const servicesPageStart = servicesPageTemplate + extraInvestPages; // page réelle de début services
+    const servicesPageStart = servicesPageTemplate + extraInvestPages + extraReprisePages; // page réelle de début services
     const servicesPageEnd = servicesPageStart + extraServicesPages; // dernière page services (incluse)
     
     if (currentPreviewPage >= servicesPageStart && currentPreviewPage <= servicesPageEnd) {
@@ -1463,8 +1530,8 @@ export function RentalProposalPreview() {
       return renderServicesInclusPage(chunkIndex);
     }
     
-    // Pages après la zone services : décaler par extraInvestPages + extraServicesPages
-    const realPageNum = currentPreviewPage - extraInvestPages - extraServicesPages;
+    // Pages après la zone services : décaler par extraInvestPages + extraReprisePages + extraServicesPages
+    const realPageNum = currentPreviewPage - extraInvestPages - extraReprisePages - extraServicesPages;
     
     // Vérifier si la page réelle existe dans la version
     const version = getCurrentVersion();

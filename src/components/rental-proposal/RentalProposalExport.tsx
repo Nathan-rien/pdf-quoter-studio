@@ -34,6 +34,7 @@ const EXPORT_HEIGHT_RATIO = (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) / CANVAS_SC
 const EXPORT_LINES_PAGE1 = Math.floor(INVEST_LINES_PAGE1 * EXPORT_HEIGHT_RATIO);           // ≈ 19
 const EXPORT_LINES_CONTINUATION = Math.floor(INVEST_LINES_CONTINUATION * EXPORT_HEIGHT_RATIO); // ≈ 28
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
+import { computeRepriseGrades } from '@/lib/reprise-calculations';
 import type { TextContent } from '@/types/template-editor';
 import { computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
@@ -48,6 +49,7 @@ export function RentalProposalExport() {
     clientData,
     matriceData,
     lignesData,
+    repriseData,
     servicesInclus,
     optionsServices,
     nosOptions,
@@ -541,6 +543,58 @@ export function RentalProposalExport() {
       }
       extraPagesAfter[4] = extraPages;
     }
+
+    // Page Reprise (insérée juste après la dernière page Invest si matriceData.showReprise)
+    if (matriceData.showReprise) {
+      const computedGrades = computeRepriseGrades(repriseData.grades, repriseData.marge);
+      const fmt = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const gradeCells = (key: 'totalHT' | 'tva' | 'totalTTC', color?: string) =>
+        computedGrades.map(g => `<td style="padding:6px 8px; text-align:right;${color ? ` color:${color};` : ''}">${fmt(g[key])} €</td>`).join('');
+      const descRowsHTML = repriseData.descriptions.map(d => `
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:6px 8px;">${(d.description || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+          <td style="padding:6px 8px; text-align:right;">${d.quantite}</td>
+          <td></td><td></td><td></td><td></td>
+        </tr>`).join('');
+      const repriseHTML = `
+        <div class="dynamic-content" style="position:absolute; left:5%; top:5%; width:90%; z-index:40;">
+          <div style="font-weight:bold; font-size:13px; margin-bottom:8px;">Synthèse reprise</div>
+          <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #e5e7eb; border-radius:4px; overflow:hidden;">
+            <thead>
+              <tr style="background:#000; color:#fff;">
+                <th style="text-align:left; padding:6px 8px;">Description</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">Quantités</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">A</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">B</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">C</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">D</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:6px 8px; font-weight:600;">Total HT</td>
+                <td></td>
+                ${gradeCells('totalHT')}
+              </tr>
+              <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:6px 8px; font-weight:600;">TVA</td>
+                <td></td>
+                ${gradeCells('tva')}
+              </tr>
+              <tr style="background:#000; color:#fff; font-weight:700;">
+                <td style="padding:6px 8px;">Total TTC</td>
+                <td></td>
+                ${gradeCells('totalTTC', '#fff')}
+              </tr>
+              ${descRowsHTML}
+            </tbody>
+          </table>
+        </div>
+      `;
+      if (!extraPagesAfter[4]) extraPagesAfter[4] = [];
+      extraPagesAfter[4].push(repriseHTML);
+    }
+    
     
     // Page 5 : Services inclus + Options additionnelles + Nos Options (avec pagination)
     // Construire la liste linéaire de blocs

@@ -45,6 +45,8 @@ interface MatriceData {
   montantInvestissement: number | null;
   // Toggle affichage
   showCoutLocatifAnnuel: boolean;
+  // Toggle affichage de la page Reprise dans le PDF/preview
+  showReprise: boolean;
   // Toggle affichage des prix dans le tableau Invest
   investShowPrices: boolean;
   // Toggle affichage du bloc "Votre offre"
@@ -275,6 +277,7 @@ const initialClientData: ClientData = {
 const initialMatriceData: MatriceData = {
   montantInvestissement: null,
   showCoutLocatifAnnuel: true,
+  showReprise: false,
   investShowPrices: true,
   investShowOffer: true,
   repriseShowPrices: true,
