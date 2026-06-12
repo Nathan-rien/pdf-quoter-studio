@@ -49,6 +49,10 @@ interface MatriceData {
   investShowPrices: boolean;
   // Toggle affichage du bloc "Votre offre"
   investShowOffer: boolean;
+  // Toggle affichage des prix dans le tableau Reprise
+  repriseShowPrices: boolean;
+  // Toggle affichage du bloc "Votre offre" pour Reprise
+  repriseShowOffer: boolean;
   // Commentaire libre affiché sous Avantages/Conditions sur la page 4
   commentaire: string;
   
@@ -56,6 +60,33 @@ interface MatriceData {
   duree: number | null;
   refinanceur: Partenaire | null;
   margeAppliquee: number;
+}
+
+// ============ Reprise types ============
+export interface RepriseLigne {
+  designation: string;
+  nb: number;
+  vun: number | null;
+  vtn: number;
+  isSeparator?: boolean;
+}
+
+export interface RepriseGradeRow {
+  grade: 'A' | 'B' | 'C' | 'D';
+  prixPartenaire: number;
+}
+
+export interface RepriseDescriptionRow {
+  description: string;
+  quantite: number;
+}
+
+export interface RepriseData {
+  lignes: RepriseLigne[];
+  marge: number;
+  margeIsOverridden: boolean;
+  grades: RepriseGradeRow[];
+  descriptions: RepriseDescriptionRow[];
 }
 
 // Options service pour le calcul des services inclus
