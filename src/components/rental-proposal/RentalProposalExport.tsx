@@ -34,6 +34,7 @@ const EXPORT_HEIGHT_RATIO = (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) / CANVAS_SC
 const EXPORT_LINES_PAGE1 = Math.floor(INVEST_LINES_PAGE1 * EXPORT_HEIGHT_RATIO);           // ≈ 19
 const EXPORT_LINES_CONTINUATION = Math.floor(INVEST_LINES_CONTINUATION * EXPORT_HEIGHT_RATIO); // ≈ 28
 import { generatePDFDocumentHTML, clearImageCache, renderFlowTextElementToHTML, setPdfSubstitutionContext } from '@/lib/pdf-html-generator';
+import { computeRepriseGrades } from '@/lib/reprise-calculations';
 import type { TextContent } from '@/types/template-editor';
 import { computeSignatureBoxLayout } from '@/lib/template-render-utils';
 import { findZoneByTypeInVersion } from '@/lib/pdf-export-validation';
@@ -48,6 +49,7 @@ export function RentalProposalExport() {
     clientData,
     matriceData,
     lignesData,
+    repriseData,
     servicesInclus,
     optionsServices,
     nosOptions,
