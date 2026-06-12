@@ -42,6 +42,7 @@ interface PreRegisteredCommercial {
   full_name: string;
   created_at: string;
   telephone: string | null;
+  entity: string | null;
 }
 
 interface EditedFields {
