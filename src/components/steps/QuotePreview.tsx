@@ -217,6 +217,9 @@ export function QuotePreview({
           <Page5OffreMateriel investData={investData} />
           <Page6Services optionsData={effectiveOptionsData} />
           <Page7ServicesPro />
+          {matriceData.showCoutLocatifAnnuel && (
+            <Page9Reprise repriseData={repriseData} computedGrades={computedGrades} />
+          )}
           <Page8Signature />
         </div>
       )}
