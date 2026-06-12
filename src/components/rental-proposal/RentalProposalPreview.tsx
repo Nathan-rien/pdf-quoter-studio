@@ -62,6 +62,7 @@ export function RentalProposalPreview() {
     clientData,
     matriceData,
     lignesData,
+    repriseData,
     servicesInclus,
     optionsServices,
     nosOptions,
@@ -238,7 +239,8 @@ export function RentalProposalPreview() {
   })();
   const extraServicesPages = Math.max(0, servicesChunks.length - 1);
 
-  const totalPages = templatePages + extraInvestPages + extraServicesPages;
+  const extraReprisePages = matriceData.showReprise ? 1 : 0;
+  const totalPages = templatePages + extraInvestPages + extraServicesPages + extraReprisePages;
 
   const formatNumber = (value: number | null) => {
     if (value === null) return '-';
