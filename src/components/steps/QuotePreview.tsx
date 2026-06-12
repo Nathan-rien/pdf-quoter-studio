@@ -24,8 +24,12 @@ import {
   Page5OffreMateriel,
   Page6Services,
   Page7ServicesPro,
-  Page8Signature
+  Page8Signature,
+  Page9Reprise
 } from "@/components/pdf/pages";
+import { useRentalProposalStore } from "@/stores/rentalProposalStore";
+import { computeRepriseGrades } from "@/lib/reprise-calculations";
+import { useMemo } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
