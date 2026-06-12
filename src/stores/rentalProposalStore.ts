@@ -202,6 +202,18 @@ interface RentalProposalActions {
   addSeparatorLigne: (atIndex?: number) => void;
   reorderLigne: (fromIndex: number, toIndex: number) => void;
   deleteLigne: (index: number) => void;
+
+  // Reprise actions
+  addRepriseLigne: () => void;
+  updateRepriseLigne: (index: number, updates: Partial<RepriseLigne>) => void;
+  deleteRepriseLigne: (index: number) => void;
+  reorderRepriseLigne: (fromIndex: number, toIndex: number) => void;
+  addRepriseSeparator: (atIndex?: number) => void;
+  updateRepriseMarge: (marge: number | null) => void;
+  updateRepriseGrade: (grade: 'A' | 'B' | 'C' | 'D', prixPartenaire: number) => void;
+  addRepriseDescription: () => void;
+  updateRepriseDescription: (index: number, updates: Partial<RepriseDescriptionRow>) => void;
+  deleteRepriseDescription: (index: number) => void;
   
   // Services inclus (bloc permanent)
   updateServicesInclus: (description: string) => void;
