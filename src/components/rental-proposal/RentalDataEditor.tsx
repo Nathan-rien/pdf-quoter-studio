@@ -1116,6 +1116,11 @@ export function RentalDataEditor() {
           </Card>
         </TabsContent>
 
+        {/* Reprise Tab */}
+        <TabsContent value="reprise" className="mt-4">
+          <RepriseTab />
+        </TabsContent>
+
         {/* Base Taux Tab */}
         <TabsContent value="basetaux" className="mt-4">
           <Card>
