@@ -997,6 +997,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         matriceData: state.matriceData,
         proposals: state.proposals,
         lignesData: state.lignesData,
+        repriseData: state.repriseData,
         servicesInclus: state.servicesInclus,
         optionsServices: state.optionsServices,
         nosOptions: state.nosOptions,
