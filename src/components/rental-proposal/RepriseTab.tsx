@@ -382,11 +382,11 @@ export function RepriseTab() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="show-cout-locatif-reprise" className="text-sm">Afficher</Label>
+            <Label htmlFor="show-reprise-page" className="text-sm">Afficher</Label>
             <Switch
-              id="show-cout-locatif-reprise"
-              checked={matriceData.showCoutLocatifAnnuel}
-              onCheckedChange={(c) => updateMatriceField('showCoutLocatifAnnuel', c)}
+              id="show-reprise-page"
+              checked={matriceData.showReprise}
+              onCheckedChange={(c) => updateMatriceField('showReprise', c)}
             />
           </div>
         </CardContent>

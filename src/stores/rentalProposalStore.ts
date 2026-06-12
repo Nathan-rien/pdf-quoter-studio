@@ -277,6 +277,7 @@ const initialClientData: ClientData = {
 const initialMatriceData: MatriceData = {
   montantInvestissement: null,
   showCoutLocatifAnnuel: true,
+  showReprise: false,
   investShowPrices: true,
   investShowOffer: true,
   repriseShowPrices: true,
