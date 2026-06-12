@@ -347,7 +347,8 @@ export function AccessManagement() {
                 <TableBody>
                   {preRegistered.map((p) => {
                     const commercialData = COMMERCIAUX.find(c => c.id === p.commercial_id);
-                    const entityLabel = commercialData ? ENTITIES.find(e => e.id === commercialData.entity)?.label : null;
+                    const entityId = commercialData?.entity ?? (p.entity as any) ?? null;
+                    const entityLabel = entityId ? ENTITIES.find(e => e.id === entityId)?.label : null;
                     const edited = editedFields[p.commercial_id];
                     const hasChanges = !!edited;
                     const currentEmail = edited?.email ?? p.email;
