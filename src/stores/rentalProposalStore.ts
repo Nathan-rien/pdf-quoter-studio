@@ -962,6 +962,14 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             ? snapshot.proposals
             : [createDefaultProposal()],
           lignesData: Array.isArray(snapshot.lignesData) ? snapshot.lignesData : [],
+          repriseData: (snapshot.repriseData && typeof snapshot.repriseData === 'object')
+            ? { ...initialRepriseData, ...snapshot.repriseData,
+                grades: Array.isArray(snapshot.repriseData.grades) && snapshot.repriseData.grades.length === 4
+                  ? snapshot.repriseData.grades : initialRepriseData.grades,
+                lignes: Array.isArray(snapshot.repriseData.lignes) ? snapshot.repriseData.lignes : [],
+                descriptions: Array.isArray(snapshot.repriseData.descriptions) ? snapshot.repriseData.descriptions : [],
+              }
+            : initialRepriseData,
           servicesInclus: snapshot.servicesInclus ?? get().servicesInclus,
           optionsServices: Array.isArray(snapshot.optionsServices)
             ? snapshot.optionsServices.map((o: any) => ({ ...o, pricingScope: o.pricingScope ?? 'par_machine', showPrice: o.showPrice ?? false }))
