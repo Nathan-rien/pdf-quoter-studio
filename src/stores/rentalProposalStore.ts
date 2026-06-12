@@ -717,7 +717,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         }));
       },
 
-
+      updateServicesInclus: (description) => {
         set(state => ({
           servicesInclus: { ...state.servicesInclus, description },
           hasUnsavedChanges: true,
