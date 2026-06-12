@@ -42,6 +42,7 @@ export function RentalDataEditor() {
     matriceData,
     proposals,
     lignesData,
+    repriseData,
     servicesInclus,
     optionsServices,
     nosOptions,
