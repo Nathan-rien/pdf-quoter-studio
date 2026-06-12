@@ -223,8 +223,8 @@ export function RentalDataEditor() {
           <TabsTrigger value="reprise" className="flex items-center gap-2">
             <Recycle className="h-4 w-4" />
             Reprise
-            {useRentalProposalStore.getState().repriseData.lignes.length > 0 && (
-              <Badge variant="secondary" className="ml-1">{useRentalProposalStore.getState().repriseData.lignes.length}</Badge>
+            {repriseData.lignes.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{repriseData.lignes.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="basetaux" className="flex items-center gap-2">
