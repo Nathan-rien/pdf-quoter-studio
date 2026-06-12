@@ -272,9 +272,10 @@ export function RepriseTab() {
                         <Input
                           type="number"
                           step="0.01"
-                          value={row.prixPartenaire}
-                          onChange={(e) => updateRepriseGrade(g, parseFloat(e.target.value) || 0)}
+                          value={row.prixPartenaire === 0 ? '' : row.prixPartenaire}
+                          onChange={(e) => updateRepriseGrade(g, e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                           className="h-8 text-right"
+                          placeholder=""
                         />
                       </TableCell>
                     );
