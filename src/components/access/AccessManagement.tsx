@@ -180,9 +180,16 @@ export function AccessManagement() {
     const telephone = useExistingCommercial
       ? selectedCommercial?.telephone || null
       : (newProfile.telephone.trim() || null);
+    const entity = useExistingCommercial
+      ? selectedCommercial?.entity || null
+      : (newProfile.entity || null);
 
     if (!name || !email || !commercialId) {
       toast({ variant: 'destructive', title: 'Champs manquants', description: 'Nom, email et identifiant commercial sont requis.' });
+      return;
+    }
+    if (!useExistingCommercial && !entity) {
+      toast({ variant: 'destructive', title: 'Entité manquante', description: 'Veuillez sélectionner une entité (Cybertek Pro ou Grosbill Pro).' });
       return;
     }
 
@@ -193,6 +200,7 @@ export function AccessManagement() {
         email: email.toLowerCase(),
         commercial_id: commercialId,
         telephone,
+        entity,
       } as any);
       if (error) throw error;
       toast({ title: 'Profil ajouté', description: `${name} a été ajouté à la liste des commerciaux autorisés.` });
