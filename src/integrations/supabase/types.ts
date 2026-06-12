@@ -310,23 +310,29 @@ export type Database = {
       }
       pre_registered_commercials: {
         Row: {
+          adresse: string | null
           commercial_id: string
           created_at: string
           email: string
+          entity: string | null
           full_name: string
           telephone: string | null
         }
         Insert: {
+          adresse?: string | null
           commercial_id: string
           created_at?: string
           email: string
+          entity?: string | null
           full_name: string
           telephone?: string | null
         }
         Update: {
+          adresse?: string | null
           commercial_id?: string
           created_at?: string
           email?: string
+          entity?: string | null
           full_name?: string
           telephone?: string | null
         }

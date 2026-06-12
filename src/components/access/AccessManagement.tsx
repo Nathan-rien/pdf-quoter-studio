@@ -42,6 +42,7 @@ interface PreRegisteredCommercial {
   full_name: string;
   created_at: string;
   telephone: string | null;
+  entity: string | null;
 }
 
 interface EditedFields {
@@ -88,10 +89,10 @@ export function AccessManagement() {
     try {
       const { data, error } = await supabase
         .from('pre_registered_commercials')
-        .select('commercial_id, email, full_name, created_at, telephone')
+        .select('commercial_id, email, full_name, created_at, telephone, entity' as any)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setPreRegistered(data || []);
+      setPreRegistered((data as any) || []);
     } catch {
       // silencieux
     } finally {
@@ -179,9 +180,16 @@ export function AccessManagement() {
     const telephone = useExistingCommercial
       ? selectedCommercial?.telephone || null
       : (newProfile.telephone.trim() || null);
+    const entity = useExistingCommercial
+      ? selectedCommercial?.entity || null
+      : (newProfile.entity || null);
 
     if (!name || !email || !commercialId) {
       toast({ variant: 'destructive', title: 'Champs manquants', description: 'Nom, email et identifiant commercial sont requis.' });
+      return;
+    }
+    if (!useExistingCommercial && !entity) {
+      toast({ variant: 'destructive', title: 'Entité manquante', description: 'Veuillez sélectionner une entité (Cybertek Pro ou Grosbill Pro).' });
       return;
     }
 
@@ -192,6 +200,7 @@ export function AccessManagement() {
         email: email.toLowerCase(),
         commercial_id: commercialId,
         telephone,
+        entity,
       } as any);
       if (error) throw error;
       toast({ title: 'Profil ajouté', description: `${name} a été ajouté à la liste des commerciaux autorisés.` });
@@ -338,7 +347,8 @@ export function AccessManagement() {
                 <TableBody>
                   {preRegistered.map((p) => {
                     const commercialData = COMMERCIAUX.find(c => c.id === p.commercial_id);
-                    const entityLabel = commercialData ? ENTITIES.find(e => e.id === commercialData.entity)?.label : null;
+                    const entityId = commercialData?.entity ?? (p.entity as any) ?? null;
+                    const entityLabel = entityId ? ENTITIES.find(e => e.id === entityId)?.label : null;
                     const edited = editedFields[p.commercial_id];
                     const hasChanges = !!edited;
                     const currentEmail = edited?.email ?? p.email;
