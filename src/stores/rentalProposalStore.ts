@@ -261,6 +261,8 @@ const initialMatriceData: MatriceData = {
   showCoutLocatifAnnuel: true,
   investShowPrices: true,
   investShowOffer: true,
+  repriseShowPrices: true,
+  repriseShowOffer: true,
   commentaire: '',
   // Legacy fields
   duree: 36,
