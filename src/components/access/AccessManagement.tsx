@@ -89,10 +89,10 @@ export function AccessManagement() {
     try {
       const { data, error } = await supabase
         .from('pre_registered_commercials')
-        .select('commercial_id, email, full_name, created_at, telephone')
+        .select('commercial_id, email, full_name, created_at, telephone, entity' as any)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setPreRegistered(data || []);
+      setPreRegistered((data as any) || []);
     } catch {
       // silencieux
     } finally {
