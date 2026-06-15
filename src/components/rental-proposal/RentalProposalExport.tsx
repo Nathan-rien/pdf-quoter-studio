@@ -604,6 +604,9 @@ export function RentalProposalExport() {
               ${descRowsHTML}
             </tbody>
           </table>
+          ${repriseData.repriseDescription && repriseData.repriseDescription.trim() ? `
+            <div style="margin-top:12px; font-size:10px; white-space:pre-wrap; color:#111827;">${esc(repriseData.repriseDescription)}</div>
+          ` : ''}
         </div>
       `;
       if (!extraPagesAfter[5]) extraPagesAfter[5] = [];
