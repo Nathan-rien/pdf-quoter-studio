@@ -50,22 +50,6 @@ export function RepriseTab() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Lignes produits (Reprise)</CardTitle>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="reprise-show-prices" className="text-sm text-muted-foreground">Afficher prix Investissement</Label>
-              <Switch
-                id="reprise-show-prices"
-                checked={matriceData.repriseShowPrices}
-                onCheckedChange={(c) => updateMatriceField('repriseShowPrices', c)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="reprise-show-offer" className="text-sm text-muted-foreground">Afficher montant Offre</Label>
-              <Switch
-                id="reprise-show-offer"
-                checked={matriceData.repriseShowOffer}
-                onCheckedChange={(c) => updateMatriceField('repriseShowOffer', c)}
-              />
-            </div>
             <Button variant="outline" size="sm" onClick={addRepriseLigne}>
               <Plus className="h-4 w-4 mr-2" />
               Ajouter
