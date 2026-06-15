@@ -723,6 +723,13 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         }));
       },
 
+      updateRepriseDescriptionText: (text) => {
+        set(state => ({
+          repriseData: { ...state.repriseData, repriseDescription: text },
+          hasUnsavedChanges: true,
+        }));
+      },
+
       updateServicesInclus: (description) => {
         set(state => ({
           servicesInclus: { ...state.servicesInclus, description },
