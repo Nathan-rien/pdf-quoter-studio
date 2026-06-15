@@ -336,7 +336,7 @@ const initialServicesInclus: ServicesInclus = {
 };
 
 export const initialRepriseData: RepriseData = {
-  lignes: [],
+  lignes: ensureBlanccoLast([]),
   marge: 0.20,
   margeIsOverridden: false,
   grades: [
