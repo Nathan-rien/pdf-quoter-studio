@@ -1442,8 +1442,10 @@ export function RentalProposalPreview() {
           <thead>
             <tr style={{ background: '#000', color: '#fff' }}>
               <th style={{ textAlign: 'left', padding: '6px 8px' }}>Description</th>
+              {(['A', 'B', 'C', 'D'] as const).map(g => (
+                <th key={g} style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>{g}</th>
+              ))}
               <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>Quantités</th>
-              <th colSpan={4} />
             </tr>
           </thead>
           <tbody>
@@ -1459,48 +1461,48 @@ export function RentalProposalPreview() {
               return (
                 <tr key={`lig-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
                   <td style={{ padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{ligne.designation || '—'}</td>
-                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>{ligne.nb}</td>
                   <td /><td /><td /><td />
+                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>{ligne.nb}</td>
                 </tr>
               );
             })}
             {/* Sous-en-tête synthèse avec en-têtes de grades A/B/C/D */}
             <tr style={{ background: '#f3f4f6' }}>
               <td style={{ padding: '4px 8px', fontWeight: 700, fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: '#374151' }}>Synthèse</td>
-              <td />
               {(['A', 'B', 'C', 'D'] as const).map(g => (
                 <td key={g} style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 700, color: '#374151', width: 80 }}>{g}</td>
               ))}
+              <td />
             </tr>
             {/* Section 2 : Synthèse */}
             <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>Total HT</td>
-              <td />
               {computedGrades.map(g => (
                 <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.totalHT)} €</td>
               ))}
+              <td />
             </tr>
             <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>TVA</td>
-              <td />
               {computedGrades.map(g => (
                 <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.tva)} €</td>
               ))}
+              <td />
             </tr>
             <tr style={{ background: '#000', color: '#fff', fontWeight: 700 }}>
               <td style={{ padding: '6px 8px' }}>Total TTC</td>
-              <td />
               {computedGrades.map(g => (
                 <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.totalTTC)} €</td>
               ))}
+              <td />
             </tr>
 
             {/* Section 3 : Descriptions libres */}
             {repriseData.descriptions.map((d, i) => (
               <tr key={`desc-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
                 <td style={{ padding: '6px 8px' }}>{d.description || '—'}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{d.quantite}</td>
                 <td /><td /><td /><td />
+                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{d.quantite}</td>
               </tr>
             ))}
           </tbody>
