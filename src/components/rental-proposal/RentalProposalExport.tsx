@@ -606,8 +606,8 @@ export function RentalProposalExport() {
           </table>
         </div>
       `;
-      if (!extraPagesAfter[4]) extraPagesAfter[4] = [];
-      extraPagesAfter[4].push(repriseHTML);
+      if (!extraPagesAfter[5]) extraPagesAfter[5] = [];
+      extraPagesAfter[5].push(repriseHTML);
     }
 
     
