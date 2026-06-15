@@ -140,15 +140,15 @@ export function RepriseTab() {
                       <React.Fragment key={`frag-${index}`}>
                         {index === 0 && insertButton(0)}
                         <TableRow
-                          draggable
-                          onDragStart={() => setDragIndex(index)}
+                          draggable={!ligne.isBlancco}
+                          onDragStart={() => { if (!ligne.isBlancco) setDragIndex(index); }}
                           onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
-                          onDrop={() => { if (dragIndex !== null && dragIndex !== index) reorderRepriseLigne(dragIndex, index); setDragIndex(null); setDragOverIndex(null); }}
+                          onDrop={() => { if (dragIndex !== null && dragIndex !== index && !ligne.isBlancco) reorderRepriseLigne(dragIndex, index); setDragIndex(null); setDragOverIndex(null); }}
                           onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                           className={`${dragIndex === index ? 'opacity-40' : ''} ${dragOverIndex === index && dragIndex !== index ? 'border-t-2 border-t-primary' : ''}`}
                         >
-                          <TableCell className="w-10 cursor-grab active:cursor-grabbing px-1">
-                            <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          <TableCell className={`w-10 px-1 ${ligne.isBlancco ? '' : 'cursor-grab active:cursor-grabbing'}`}>
+                            {!ligne.isBlancco && <GripVertical className="h-4 w-4 text-muted-foreground" />}
                           </TableCell>
                           <TableCell className="min-w-[420px] align-top">
                             <AutoResizeTextarea
@@ -184,12 +184,14 @@ export function RepriseTab() {
                             </>
                           )}
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteRepriseLigne(index)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            {!ligne.isBlancco && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteRepriseLigne(index)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
-                        {insertButton(index + 1)}
+                        {!ligne.isBlancco && insertButton(index + 1)}
                       </React.Fragment>
                     );
                   })
