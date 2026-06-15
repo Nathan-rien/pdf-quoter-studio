@@ -549,20 +549,16 @@ export function RentalProposalExport() {
       const computedGrades = computeRepriseGrades(repriseData.grades, repriseData.marge);
       const fmt = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const esc = (s: string) => (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const showPrices = matriceData.repriseShowPrices;
       const gradeCells = (key: 'totalHT' | 'tva' | 'totalTTC', color?: string) =>
         computedGrades.map(g => `<td style="padding:6px 8px; text-align:right;${color ? ` color:${color};` : ''}">${fmt(g[key])} €</td>`).join('');
       const ligneRowsHTML = repriseData.lignes.map(ligne => {
         if (ligne.isSeparator) {
           return `<tr style="background:#f3f4f6;"><td colspan="6" style="padding:6px 8px; font-weight:700;">${esc(ligne.designation || '—')}</td></tr>`;
         }
-        const priceCols = showPrices
-          ? `<td colspan="4" style="padding:6px 8px; text-align:right; color:#4b5563;">VUN ${fmt(ligne.vun ?? 0)} € · VTN ${fmt(ligne.vtn)} €</td>`
-          : `<td></td><td></td><td></td><td></td>`;
         return `<tr style="border-bottom:1px solid #e5e7eb;">
           <td style="padding:6px 8px; white-space:pre-wrap;">${esc(ligne.designation || '—')}</td>
           <td style="padding:6px 8px; text-align:right;">${ligne.nb}</td>
-          ${priceCols}
+          <td></td><td></td><td></td><td></td>
         </tr>`;
       }).join('');
       const descRowsHTML = repriseData.descriptions.map(d => `
@@ -579,17 +575,20 @@ export function RentalProposalExport() {
               <tr style="background:#000; color:#fff;">
                 <th style="text-align:left; padding:6px 8px;">Description</th>
                 <th style="text-align:right; padding:6px 8px; width:80px;">Quantités</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">A</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">B</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">C</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">D</th>
+                <th colspan="4"></th>
               </tr>
             </thead>
             <tbody>
               ${ligneRowsHTML}
               <tr style="background:#f3f4f6;">
-                <td colspan="6" style="padding:4px 8px; font-weight:700; font-size:9px; letter-spacing:0.4px; text-transform:uppercase; color:#374151;">Synthèse</td>
+                <td style="padding:4px 8px; font-weight:700; font-size:9px; letter-spacing:0.4px; text-transform:uppercase; color:#374151;">Synthèse</td>
+                <td></td>
+                <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">A</td>
+                <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">B</td>
+                <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">C</td>
+                <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">D</td>
               </tr>
+
               <tr style="border-bottom:1px solid #e5e7eb;">
                 <td style="padding:6px 8px; font-weight:600;">Total HT</td>
                 <td></td>
