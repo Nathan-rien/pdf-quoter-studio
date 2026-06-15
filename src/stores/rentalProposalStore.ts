@@ -71,7 +71,26 @@ export interface RepriseLigne {
   vun: number | null;
   vtn: number;
   isSeparator?: boolean;
+  isBlancco?: boolean;
 }
+
+export const BLANCCO_DEFAULT_DESIGNATION = 'Collect / Audit / Effacement données Blancco';
+
+const createBlanccoLigne = (): RepriseLigne => ({
+  designation: BLANCCO_DEFAULT_DESIGNATION,
+  nb: 1,
+  vun: 1500,
+  vtn: 1500,
+  isBlancco: true,
+});
+
+export const ensureBlanccoLast = (lignes: RepriseLigne[]): RepriseLigne[] => {
+  const safe = Array.isArray(lignes) ? lignes : [];
+  const blanccos = safe.filter(l => l?.isBlancco);
+  const others = safe.filter(l => !l?.isBlancco);
+  const blancco = blanccos[0] ?? createBlanccoLigne();
+  return [...others, { ...blancco, isBlancco: true, isSeparator: false }];
+};
 
 export interface RepriseGradeRow {
   grade: 'A' | 'B' | 'C' | 'D';
