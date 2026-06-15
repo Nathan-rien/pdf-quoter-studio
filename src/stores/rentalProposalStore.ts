@@ -217,6 +217,7 @@ interface RentalProposalActions {
   addRepriseDescription: () => void;
   updateRepriseDescription: (index: number, updates: Partial<RepriseDescriptionRow>) => void;
   deleteRepriseDescription: (index: number) => void;
+  updateRepriseDescriptionText: (text: string) => void;
   
   // Services inclus (bloc permanent)
   updateServicesInclus: (description: string) => void;
