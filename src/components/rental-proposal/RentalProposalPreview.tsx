@@ -1502,8 +1502,11 @@ export function RentalProposalPreview() {
             ))}
           </tbody>
         </table>
-        {repriseData.repriseDescription && repriseData.repriseDescription.trim() && (
+        {(repriseData.repriseDescriptionTitle?.trim() || repriseData.repriseDescription?.trim()) && (
           <div style={{ marginTop: 12, fontSize: 10, whiteSpace: 'pre-wrap', color: '#111827' }}>
+            {repriseData.repriseDescriptionTitle?.trim() && (
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>{repriseData.repriseDescriptionTitle}</div>
+            )}
             {repriseData.repriseDescription}
           </div>
         )}

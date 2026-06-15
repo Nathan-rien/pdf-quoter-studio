@@ -31,6 +31,7 @@ export function RepriseTab() {
     updateRepriseDescription,
     deleteRepriseDescription,
     updateRepriseDescriptionText,
+    updateRepriseDescriptionTitle,
   } = useRentalProposalStore();
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -356,13 +357,28 @@ export function RepriseTab() {
         <CardHeader>
           <CardTitle className="text-lg">Description</CardTitle>
         </CardHeader>
-        <CardContent>
-          <AutoResizeTextarea
-            value={repriseData.repriseDescription || ''}
-            onChange={(e) => updateRepriseDescriptionText(e.target.value)}
-            placeholder="Texte libre affiché sous le tableau dans le PDF"
-            rows={3}
-          />
+        <CardContent className="space-y-3">
+          <div>
+            <Label htmlFor="reprise-desc-title" className="text-sm">Titre</Label>
+            <Input
+              id="reprise-desc-title"
+              value={repriseData.repriseDescriptionTitle || ''}
+              onChange={(e) => updateRepriseDescriptionTitle(e.target.value)}
+              placeholder="Titre de l'encart"
+              className="h-8 mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="reprise-desc-text" className="text-sm">Texte</Label>
+            <AutoResizeTextarea
+              id="reprise-desc-text"
+              value={repriseData.repriseDescription || ''}
+              onChange={(e) => updateRepriseDescriptionText(e.target.value)}
+              placeholder="Texte libre affiché sous le tableau dans le PDF"
+              rows={3}
+              className="mt-1"
+            />
+          </div>
         </CardContent>
       </Card>
 
