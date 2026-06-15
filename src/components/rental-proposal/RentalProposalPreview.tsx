@@ -1437,14 +1437,11 @@ export function RentalProposalPreview() {
     const fmt = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const renderRepriseContent = () => (
       <div className="absolute" style={{ left: '5%', top: '5%', width: '90%', zIndex: 40 }}>
-        <div style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>Synthèse reprise</div>
+        <div style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>Votre reprise</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, border: '1px solid #e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
           <thead>
             <tr style={{ background: '#000', color: '#fff' }}>
-              <th style={{ textAlign: 'left', padding: '6px 8px' }}>Description</th>
-              {(['A', 'B', 'C', 'D'] as const).map(g => (
-                <th key={g} style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>{g}</th>
-              ))}
+              <th colSpan={5} style={{ textAlign: 'left', padding: '6px 8px' }}>Description</th>
               <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>Quantités</th>
             </tr>
           </thead>
@@ -1460,8 +1457,7 @@ export function RentalProposalPreview() {
               }
               return (
                 <tr key={`lig-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{ligne.designation || '—'}</td>
-                  <td /><td /><td /><td />
+                  <td colSpan={5} style={{ padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{ligne.designation || '—'}</td>
                   <td style={{ padding: '6px 8px', textAlign: 'right' }}>{ligne.nb}</td>
                 </tr>
               );
@@ -1500,8 +1496,7 @@ export function RentalProposalPreview() {
             {/* Section 3 : Descriptions libres */}
             {repriseData.descriptions.map((d, i) => (
               <tr key={`desc-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                <td style={{ padding: '6px 8px' }}>{d.description || '—'}</td>
-                <td /><td /><td /><td />
+                <td colSpan={5} style={{ padding: '6px 8px' }}>{d.description || '—'}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right' }}>{d.quantite}</td>
               </tr>
             ))}

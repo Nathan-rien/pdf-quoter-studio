@@ -1,32 +1,16 @@
-## Objectif
-Déplacer la colonne **Quantités** en dernière position (colonne 6) dans le tableau de la page Reprise, tant dans l'aperçu interactif que dans l'export PDF.
+## Changes to Reprise table (preview + PDF export)
 
-## Changements techniques
+1. **Title**: Rename "Synthèse reprise" → "Votre reprise" in both `RentalProposalPreview.tsx` (`renderRepriseContent`) and `RentalProposalExport.tsx` (`repriseHTML`).
 
-### Actuel (6 colonnes)
-```
-Description | Quantités | A | B | C | D
-```
+2. **Header row simplification**: Remove A/B/C/D columns from the top `<thead>`. New header: `Description` (colSpan=5) | `Quantités`.
+   - Description cell spans columns 1–5 so product description rows naturally extend across the freed space.
+   - Product line rows: Description cell uses `colSpan=5`, followed by Quantités cell.
+   - Free description rows (custom): same colSpan treatment.
 
-### Cible (6 colonnes)
-```
-Description | A | B | C | D | Quantités
-```
+3. **A/B/C/D headers preserved**: They remain in the gray "SYNTHÈSE" sub-header row (already implemented), and Total HT / TVA / Total TTC rows keep their 4 grade cells + Quantités cell.
 
-## Fichiers modifiés
+### Files
+- `src/components/rental-proposal/RentalProposalPreview.tsx`
+- `src/components/rental-proposal/RentalProposalExport.tsx`
 
-1. **`src/components/rental-proposal/RentalProposalPreview.tsx`** (`renderRepriseContent`)
-   - Réorganiser l'ordre des `<th>` dans `<thead>`
-   - Déplacer la cellule `Quantités` à la fin des `<tr>` pour :
-     - Lignes produits (section 1)
-     - Ligne "Synthèse" grise (sous-en-tête)
-     - Lignes Total HT / TVA / Total TTC (section 2)
-     - Descriptions libres (section 3)
-
-2. **`src/components/rental-proposal/RentalProposalExport.tsx`** (`repriseHTML`)
-   - Mêmes réorganisations dans la chaîne HTML générée pour l'export PDF.
-
-## Non-régression
-- Colonnes A/B/C/D restent aux positions 2-5.
-- Le calcul des grades et le formatage monétaire sont inchangés.
-- Les séparateurs gris (`isSeparator`) conservent leur `colSpan=6`.
+No business logic, calculations, or data structures change.
