@@ -30,6 +30,7 @@ export function RepriseTab() {
     addRepriseDescription,
     updateRepriseDescription,
     deleteRepriseDescription,
+    updateRepriseDescriptionText,
   } = useRentalProposalStore();
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
