@@ -1435,7 +1435,6 @@ export function RentalProposalPreview() {
   const renderReprisePage = (pageNum: number) => {
     const computedGrades = computeRepriseGrades(repriseData.grades, repriseData.marge);
     const fmt = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const showPrices = matriceData.repriseShowPrices;
     const renderRepriseContent = () => (
       <div className="absolute" style={{ left: '5%', top: '5%', width: '90%', zIndex: 40 }}>
         <div style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>Synthèse reprise</div>
@@ -1444,10 +1443,7 @@ export function RentalProposalPreview() {
             <tr style={{ background: '#000', color: '#fff' }}>
               <th style={{ textAlign: 'left', padding: '6px 8px' }}>Description</th>
               <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>Quantités</th>
-              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>A</th>
-              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>B</th>
-              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>C</th>
-              <th style={{ textAlign: 'right', padding: '6px 8px', width: 80 }}>D</th>
+              <th colSpan={4} />
             </tr>
           </thead>
           <tbody>
@@ -1464,19 +1460,17 @@ export function RentalProposalPreview() {
                 <tr key={`lig-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
                   <td style={{ padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{ligne.designation || '—'}</td>
                   <td style={{ padding: '6px 8px', textAlign: 'right' }}>{ligne.nb}</td>
-                  {showPrices ? (
-                    <td colSpan={4} style={{ padding: '6px 8px', textAlign: 'right', color: '#4b5563' }}>
-                      VUN {fmt(ligne.vun ?? 0)} € · VTN {fmt(ligne.vtn)} €
-                    </td>
-                  ) : (
-                    <><td /><td /><td /><td /></>
-                  )}
+                  <td /><td /><td /><td />
                 </tr>
               );
             })}
-            {/* Sous-en-tête synthèse */}
+            {/* Sous-en-tête synthèse avec en-têtes de grades A/B/C/D */}
             <tr style={{ background: '#f3f4f6' }}>
-              <td colSpan={6} style={{ padding: '4px 8px', fontWeight: 700, fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: '#374151' }}>Synthèse</td>
+              <td style={{ padding: '4px 8px', fontWeight: 700, fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: '#374151' }}>Synthèse</td>
+              <td />
+              {(['A', 'B', 'C', 'D'] as const).map(g => (
+                <td key={g} style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 700, color: '#374151', width: 80 }}>{g}</td>
+              ))}
             </tr>
             {/* Section 2 : Synthèse */}
             <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
@@ -1500,6 +1494,7 @@ export function RentalProposalPreview() {
                 <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.totalTTC)} €</td>
               ))}
             </tr>
+
             {/* Section 3 : Descriptions libres */}
             {repriseData.descriptions.map((d, i) => (
               <tr key={`desc-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
