@@ -359,7 +359,7 @@ export function RepriseTab() {
             value={repriseData.repriseDescription || ''}
             onChange={(e) => updateRepriseDescriptionText(e.target.value)}
             placeholder="Texte libre affiché sous le tableau dans le PDF"
-            minRows={3}
+            rows={3}
           />
         </CardContent>
       </Card>
