@@ -1435,6 +1435,7 @@ export function RentalProposalPreview() {
   const renderReprisePage = (pageNum: number) => {
     const computedGrades = computeRepriseGrades(repriseData.grades, repriseData.marge);
     const fmt = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const showPrices = matriceData.repriseShowPrices;
     const renderRepriseContent = () => (
       <div className="absolute" style={{ left: '5%', top: '5%', width: '90%', zIndex: 40 }}>
         <div style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>Synthèse reprise</div>
@@ -1450,6 +1451,34 @@ export function RentalProposalPreview() {
             </tr>
           </thead>
           <tbody>
+            {/* Section 1 : Lignes produits */}
+            {repriseData.lignes.map((ligne, i) => {
+              if (ligne.isSeparator) {
+                return (
+                  <tr key={`lig-${i}`} style={{ background: '#f3f4f6' }}>
+                    <td colSpan={6} style={{ padding: '6px 8px', fontWeight: 700 }}>{ligne.designation || '—'}</td>
+                  </tr>
+                );
+              }
+              return (
+                <tr key={`lig-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{ligne.designation || '—'}</td>
+                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>{ligne.nb}</td>
+                  {showPrices ? (
+                    <td colSpan={4} style={{ padding: '6px 8px', textAlign: 'right', color: '#4b5563' }}>
+                      VUN {fmt(ligne.vun ?? 0)} € · VTN {fmt(ligne.vtn)} €
+                    </td>
+                  ) : (
+                    <><td /><td /><td /><td /></>
+                  )}
+                </tr>
+              );
+            })}
+            {/* Sous-en-tête synthèse */}
+            <tr style={{ background: '#f3f4f6' }}>
+              <td colSpan={6} style={{ padding: '4px 8px', fontWeight: 700, fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: '#374151' }}>Synthèse</td>
+            </tr>
+            {/* Section 2 : Synthèse */}
             <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>Total HT</td>
               <td />
@@ -1471,8 +1500,9 @@ export function RentalProposalPreview() {
                 <td key={g.grade} style={{ padding: '6px 8px', textAlign: 'right' }}>{fmt(g.totalTTC)} €</td>
               ))}
             </tr>
+            {/* Section 3 : Descriptions libres */}
             {repriseData.descriptions.map((d, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <tr key={`desc-${i}`} style={{ borderBottom: '1px solid #e5e7eb' }}>
                 <td style={{ padding: '6px 8px' }}>{d.description || '—'}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right' }}>{d.quantite}</td>
                 <td /><td /><td /><td />
@@ -1488,6 +1518,7 @@ export function RentalProposalPreview() {
       .filter(el => el.type === 'image');
     return renderPageWithEditMode(pageNum as PDFPageNumber, bgElements, renderRepriseContent);
   };
+
 
   // Rendu de la page courante - Structure dynamique avec réaffectation automatique
   // Gère les pages supplémentaires insérées pour le tableau investissements, Reprise et les services
