@@ -548,11 +548,26 @@ export function RentalProposalExport() {
     if (matriceData.showReprise) {
       const computedGrades = computeRepriseGrades(repriseData.grades, repriseData.marge);
       const fmt = (v: number) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const esc = (s: string) => (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const showPrices = matriceData.repriseShowPrices;
       const gradeCells = (key: 'totalHT' | 'tva' | 'totalTTC', color?: string) =>
         computedGrades.map(g => `<td style="padding:6px 8px; text-align:right;${color ? ` color:${color};` : ''}">${fmt(g[key])} €</td>`).join('');
+      const ligneRowsHTML = repriseData.lignes.map(ligne => {
+        if (ligne.isSeparator) {
+          return `<tr style="background:#f3f4f6;"><td colspan="6" style="padding:6px 8px; font-weight:700;">${esc(ligne.designation || '—')}</td></tr>`;
+        }
+        const priceCols = showPrices
+          ? `<td colspan="4" style="padding:6px 8px; text-align:right; color:#4b5563;">VUN ${fmt(ligne.vun ?? 0)} € · VTN ${fmt(ligne.vtn)} €</td>`
+          : `<td></td><td></td><td></td><td></td>`;
+        return `<tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:6px 8px; white-space:pre-wrap;">${esc(ligne.designation || '—')}</td>
+          <td style="padding:6px 8px; text-align:right;">${ligne.nb}</td>
+          ${priceCols}
+        </tr>`;
+      }).join('');
       const descRowsHTML = repriseData.descriptions.map(d => `
         <tr style="border-bottom:1px solid #e5e7eb;">
-          <td style="padding:6px 8px;">${(d.description || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+          <td style="padding:6px 8px;">${esc(d.description || '—')}</td>
           <td style="padding:6px 8px; text-align:right;">${d.quantite}</td>
           <td></td><td></td><td></td><td></td>
         </tr>`).join('');
@@ -571,6 +586,10 @@ export function RentalProposalExport() {
               </tr>
             </thead>
             <tbody>
+              ${ligneRowsHTML}
+              <tr style="background:#f3f4f6;">
+                <td colspan="6" style="padding:4px 8px; font-weight:700; font-size:9px; letter-spacing:0.4px; text-transform:uppercase; color:#374151;">Synthèse</td>
+              </tr>
               <tr style="border-bottom:1px solid #e5e7eb;">
                 <td style="padding:6px 8px; font-weight:600;">Total HT</td>
                 <td></td>
@@ -594,6 +613,7 @@ export function RentalProposalExport() {
       if (!extraPagesAfter[4]) extraPagesAfter[4] = [];
       extraPagesAfter[4].push(repriseHTML);
     }
+
     
     
     // Page 5 : Services inclus + Options additionnelles + Nos Options (avec pagination)

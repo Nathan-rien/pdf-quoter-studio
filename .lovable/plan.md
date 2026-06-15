@@ -1,37 +1,43 @@
-## Problème
+## Objectif
 
-Le tableau "Synthèse reprise" n'apparaît pas dans le preview multi-pages utilisé par le workflow (`RentalProposalPreview`), ni dans l'export PDF. Aujourd'hui, `Page9Reprise` n'est branchée que dans `QuotePreview` (un preview parallèle). De plus, le toggle "Afficher" du bloc Reprise réutilise `matriceData.showCoutLocatifAnnuel`, qui est déjà utilisé par une autre fonctionnalité (ligne "coût locatif annuel" sur la page Votre Offre).
+Sur la page Reprise insérée après la dernière page Invest (preview + export PDF), fusionner les "Lignes produits (Reprise)" et la "Synthèse reprise" dans **un seul tableau**, à la place du tableau de synthèse seul actuellement affiché.
 
-## Plan
+## Layout proposé
 
-1. **Flag dédié `showReprise`**
-   - Ajouter `showReprise: boolean` dans `MatriceData` (store) avec valeur par défaut `false`, persistance et rehydratation.
-   - `RepriseTab.tsx` : le Switch "Afficher" pilote `showReprise` au lieu de `showCoutLocatifAnnuel`. Le toggle ne s'active que si au moins une ligne de reprise est saisie (sinon désactivé + tooltip).
-   - `QuotePreview.tsx` : remplacer la condition par `matriceData.showReprise`.
+Un seul tableau bordé avec un en-tête noir unique :
 
-2. **Insertion d'une page Reprise après la page 4 dans le preview principal** (`RentalProposalPreview.tsx`)
-   - Calculer `extraRepriseePages = matriceData.showReprise ? 1 : 0`.
-   - `totalPages = templatePages + extraInvestPages + extraServicesPages + extraReprisePages`.
-   - Dans `renderCurrentPage`, insérer la page Reprise juste après la dernière page invest (`investPageEnd + 1`) avant le bloc Services. Décaler `servicesPageStart` et le calcul `realPageNum` en conséquence (ajouter `extraReprisePages`).
-   - Nouveau `renderReprisePage()` qui réutilise le markup de `Page9Reprise` (tableau Total HT / TVA / Total TTC + lignes descriptions) dans le même conteneur A4 que les autres pages preview (style `aspect-[210/297]`, marges PDF standard).
+```text
+| Description | Quantités | A | B | C | D |
+```
 
-3. **Export PDF** (`RentalProposalExport.tsx`)
-   - Ajouter une section HTML "page-break-before" générée quand `matriceData.showReprise === true`, insérée après le bloc Page 4 (Vos investissements / Votre offre).
-   - Réutiliser `computeRepriseGrades(repriseData.grades, repriseData.marge)` pour produire le même tableau de synthèse.
-   - Respecter les marges latérales 5% et la mise en page neutre (en-tête noir, totaux Total TTC sur fond noir).
+Sections successives dans le même `<tbody>` :
 
-4. **Numérotation**
-   - Le footer "Page X/Y" doit refléter la nouvelle page (déjà géré par `totalPages`).
-   - Vérifier l'absence de régression sur les décalages servicesPage / lastTemplatePageNum (signature reste sur la dernière page).
+1. **Lignes produits** (issues de `repriseData.lignes`, dans l'ordre)
+   - Séparateurs (`isSeparator: true`) → ligne grisée pleine largeur (colSpan=6) avec la désignation en gras.
+   - Lignes normales :
+     - col Description = `designation`
+     - col Quantités = `nb`
+     - cols A/B/C/D :
+       - si `matriceData.repriseShowPrices === true` → fusionnées (colSpan=4) affichant `VUN x,xx € · VTN x,xx €` aligné à droite
+       - sinon → cellules vides
+2. **Sous-en-tête "Synthèse"** : ligne de séparation discrète (fond gris clair) pour marquer la transition.
+3. **Synthèse reprise** (inchangée fonctionnellement) :
+   - Total HT (A/B/C/D)
+   - TVA (A/B/C/D)
+   - Total TTC (ligne noire, texte blanc)
+4. **Descriptions libres** (`repriseData.descriptions`) : `description` + `quantite`, cols A/B/C/D vides.
 
-## Hors scope
+Le titre "Synthèse reprise" au-dessus du tableau est conservé.
 
-- Aucune modification des calculs Reprise (`reprise-calculations.ts`).
-- Aucune modification des onglets Invest / Base Taux.
-- Pas d'édition possible du contenu Reprise depuis le preview (lecture seule, comme Page9Reprise actuelle).
+## Fichiers à modifier
 
-## Validation
+- `src/components/rental-proposal/RentalProposalPreview.tsx`
+  - `renderReprisePage` (≈ l. 1434-1490) : remplacer le `<tbody>` actuel par les 4 sections décrites, en utilisant `repriseData.lignes` et `matriceData.repriseShowPrices`.
+- `src/components/rental-proposal/RentalProposalExport.tsx`
+  - Bloc `repriseHTML` (≈ l. 547-596) : même fusion en HTML statique pour l'export PDF (`window.print()`).
 
-- Saisir des lignes Reprise + activer "Afficher" → la pagination passe de 7 à 8, la page Reprise apparaît en position 5 (après les pages invest), les pages suivantes (Services, Bon pour accord) restent intactes.
-- Désactiver "Afficher" → retour à 7 pages, plus de page Reprise.
-- Export PDF (`window.print()`) : la page Reprise s'imprime au bon endroit avec saut de page propre.
+## Non-régression
+
+- Aucune modification des calculs (`reprise-calculations.ts`), du store, ni de l'onglet Reprise (édition).
+- Pagination, insertion après dernière page Invest, et toggle `showReprise` inchangés.
+- Formatage `fr-FR` 2 décimales conservé ; pas de nouvelle dépendance.
