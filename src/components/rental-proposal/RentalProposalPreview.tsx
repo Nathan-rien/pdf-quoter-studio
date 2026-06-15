@@ -1536,16 +1536,9 @@ export function RentalProposalPreview() {
       return renderGenericStaticPage(currentPreviewPage);
     }
     
-    // Page Reprise (insérée juste après la dernière page Invest) si activée
-    const reprisePageNum = extraReprisePages > 0 ? investPageEnd + 1 : -1;
-    if (currentPreviewPage === reprisePageNum) {
-      return renderReprisePage(currentPreviewPage);
-    }
-
-    // Pages après la zone invest (+ reprise) : décaler pour retrouver le numéro de page du template
-    // mais d'abord vérifier la plage services (page 5 du template + extras invest + reprise)
+    // Pages après la zone invest : vérifier d'abord la plage services (page 5 du template + extras invest)
     const servicesPageTemplate = 5;
-    const servicesPageStart = servicesPageTemplate + extraInvestPages + extraReprisePages; // page réelle de début services
+    const servicesPageStart = servicesPageTemplate + extraInvestPages; // page réelle de début services
     const servicesPageEnd = servicesPageStart + extraServicesPages; // dernière page services (incluse)
     
     if (currentPreviewPage >= servicesPageStart && currentPreviewPage <= servicesPageEnd) {
@@ -1553,8 +1546,14 @@ export function RentalProposalPreview() {
       return renderServicesInclusPage(chunkIndex);
     }
     
-    // Pages après la zone services : décaler par extraInvestPages + extraReprisePages + extraServicesPages
-    const realPageNum = currentPreviewPage - extraInvestPages - extraReprisePages - extraServicesPages;
+    // Page Reprise (insérée juste après la dernière page Services) si activée
+    const reprisePageNum = extraReprisePages > 0 ? servicesPageEnd + 1 : -1;
+    if (currentPreviewPage === reprisePageNum) {
+      return renderReprisePage(currentPreviewPage);
+    }
+    
+    // Pages après la zone services + reprise : décaler par extraInvestPages + extraServicesPages + extraReprisePages
+    const realPageNum = currentPreviewPage - extraInvestPages - extraServicesPages - extraReprisePages;
     
     // Vérifier si la page réelle existe dans la version
     const version = getCurrentVersion();
