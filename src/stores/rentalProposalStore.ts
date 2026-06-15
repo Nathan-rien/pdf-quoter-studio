@@ -326,6 +326,7 @@ export const initialRepriseData: RepriseData = {
     { grade: 'D', prixPartenaire: 0 },
   ],
   descriptions: [],
+  repriseDescription: '',
 };
 
 const initialState: RentalProposalState = {
