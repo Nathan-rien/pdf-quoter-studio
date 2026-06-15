@@ -1,43 +1,32 @@
-## Objectif
+## Modifications page Reprise (preview + export PDF)
 
-Sur la page Reprise insérée après la dernière page Invest (preview + export PDF), fusionner les "Lignes produits (Reprise)" et la "Synthèse reprise" dans **un seul tableau**, à la place du tableau de synthèse seul actuellement affiché.
+1. **Supprimer l'affichage VUN/VTN** sur les lignes produits : la cellule fusionnée (colSpan=4) "VUN x € · VTN x €" est remplacée par 4 cellules vides, quel que soit `repriseShowPrices`.
+2. **Déplacer les en-têtes A / B / C / D** : ils ne figurent plus dans le `<thead>` noir (qui ne contient plus que `Description` et `Quantités`, couvrant les 6 colonnes via colSpan adapté), mais sont rendus dans la ligne grise "SYNTHÈSE" (colonnes 3 à 6) en gras, juste au-dessus des lignes Total HT / TVA / Total TTC.
 
-## Layout proposé
-
-Un seul tableau bordé avec un en-tête noir unique :
+Résultat visuel cible (cf. screenshot fourni) :
 
 ```text
-| Description | Quantités | A | B | C | D |
+┌──────────────────────────────────────────────────────────┐
+│ Description          Quantités                            │  ← thead noir
+├──────────────────────────────────────────────────────────┤
+│ TEST produit 01        1                                  │
+│ TEST produit 02        1                                  │
+│ TEST produit 03        1                                  │
+├──────────────────────────────────────────────────────────┤
+│ SYNTHÈSE                       A     B     C     D        │  ← bandeau gris
+├──────────────────────────────────────────────────────────┤
+│ Total HT                    1544  1080   432   400        │
+│ TVA                          308   216    86    80        │
+│ Total TTC                   1852  1296   518   480        │  ← bandeau noir
+└──────────────────────────────────────────────────────────┘
 ```
-
-Sections successives dans le même `<tbody>` :
-
-1. **Lignes produits** (issues de `repriseData.lignes`, dans l'ordre)
-   - Séparateurs (`isSeparator: true`) → ligne grisée pleine largeur (colSpan=6) avec la désignation en gras.
-   - Lignes normales :
-     - col Description = `designation`
-     - col Quantités = `nb`
-     - cols A/B/C/D :
-       - si `matriceData.repriseShowPrices === true` → fusionnées (colSpan=4) affichant `VUN x,xx € · VTN x,xx €` aligné à droite
-       - sinon → cellules vides
-2. **Sous-en-tête "Synthèse"** : ligne de séparation discrète (fond gris clair) pour marquer la transition.
-3. **Synthèse reprise** (inchangée fonctionnellement) :
-   - Total HT (A/B/C/D)
-   - TVA (A/B/C/D)
-   - Total TTC (ligne noire, texte blanc)
-4. **Descriptions libres** (`repriseData.descriptions`) : `description` + `quantite`, cols A/B/C/D vides.
-
-Le titre "Synthèse reprise" au-dessus du tableau est conservé.
 
 ## Fichiers à modifier
 
-- `src/components/rental-proposal/RentalProposalPreview.tsx`
-  - `renderReprisePage` (≈ l. 1434-1490) : remplacer le `<tbody>` actuel par les 4 sections décrites, en utilisant `repriseData.lignes` et `matriceData.repriseShowPrices`.
-- `src/components/rental-proposal/RentalProposalExport.tsx`
-  - Bloc `repriseHTML` (≈ l. 547-596) : même fusion en HTML statique pour l'export PDF (`window.print()`).
+- `src/components/rental-proposal/RentalProposalPreview.tsx` — `renderReprisePage`
+- `src/components/rental-proposal/RentalProposalExport.tsx` — bloc `repriseHTML`
 
 ## Non-régression
 
-- Aucune modification des calculs (`reprise-calculations.ts`), du store, ni de l'onglet Reprise (édition).
-- Pagination, insertion après dernière page Invest, et toggle `showReprise` inchangés.
-- Formatage `fr-FR` 2 décimales conservé ; pas de nouvelle dépendance.
+- Toggle `repriseShowPrices` n'a plus d'effet sur cette page (VUN/VTN jamais affichés ici), l'onglet d'édition Reprise reste inchangé.
+- Calculs, pagination, insertion après dernière page Invest : inchangés.
