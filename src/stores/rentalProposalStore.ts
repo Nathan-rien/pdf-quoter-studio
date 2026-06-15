@@ -623,20 +623,29 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
 
       // ============ Reprise actions ============
       addRepriseLigne: () => {
-        set(state => ({
-          repriseData: {
-            ...state.repriseData,
-            lignes: [...state.repriseData.lignes, { designation: '', nb: 1, vun: null, vtn: 0 }],
-          },
-          hasUnsavedChanges: true,
-        }));
+        set(state => {
+          const current = state.repriseData.lignes;
+          const blanccoIdx = current.findIndex(l => l.isBlancco);
+          const newLigne: RepriseLigne = { designation: '', nb: 1, vun: null, vtn: 0 };
+          let next: RepriseLigne[];
+          if (blanccoIdx === -1) {
+            next = [...current, newLigne];
+          } else {
+            next = [...current.slice(0, blanccoIdx), newLigne, ...current.slice(blanccoIdx)];
+          }
+          return {
+            repriseData: { ...state.repriseData, lignes: ensureBlanccoLast(next) },
+            hasUnsavedChanges: true,
+          };
+        });
       },
 
       updateRepriseLigne: (index, updates) => {
         set(state => {
           const newLignes = [...state.repriseData.lignes];
           if (!newLignes[index]) return state;
-          newLignes[index] = { ...newLignes[index], ...updates };
+          const wasBlancco = !!newLignes[index].isBlancco;
+          newLignes[index] = { ...newLignes[index], ...updates, isBlancco: wasBlancco || !!updates.isBlancco };
           if (!newLignes[index].isSeparator) {
             const l = newLignes[index];
             const vun = l.vun ?? 0;
@@ -650,22 +659,30 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       },
 
       deleteRepriseLigne: (index) => {
-        set(state => ({
-          repriseData: {
-            ...state.repriseData,
-            lignes: state.repriseData.lignes.filter((_, i) => i !== index),
-          },
-          hasUnsavedChanges: true,
-        }));
+        set(state => {
+          const target = state.repriseData.lignes[index];
+          if (!target || target.isBlancco) return state;
+          return {
+            repriseData: {
+              ...state.repriseData,
+              lignes: state.repriseData.lignes.filter((_, i) => i !== index),
+            },
+            hasUnsavedChanges: true,
+          };
+        });
       },
 
       reorderRepriseLigne: (fromIndex, toIndex) => {
         set(state => {
-          const newLignes = [...state.repriseData.lignes];
+          const lignes = state.repriseData.lignes;
+          if (lignes[fromIndex]?.isBlancco) return state;
+          const lastEditableIdx = lignes.length - 2; // exclude Blancco at end
+          const clampedTo = Math.max(0, Math.min(toIndex, lastEditableIdx));
+          const newLignes = [...lignes];
           const [moved] = newLignes.splice(fromIndex, 1);
-          newLignes.splice(toIndex, 0, moved);
+          newLignes.splice(clampedTo, 0, moved);
           return {
-            repriseData: { ...state.repriseData, lignes: newLignes },
+            repriseData: { ...state.repriseData, lignes: ensureBlanccoLast(newLignes) },
             hasUnsavedChanges: true,
           };
         });
@@ -675,13 +692,16 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set(state => {
           const sep: RepriseLigne = { designation: '', nb: 0, vun: null, vtn: 0, isSeparator: true };
           const newLignes = [...state.repriseData.lignes];
-          if (atIndex !== undefined && atIndex >= 0 && atIndex <= newLignes.length) {
-            newLignes.splice(atIndex, 0, sep);
+          const maxInsert = Math.max(0, newLignes.length - 1); // never after Blancco
+          let insertAt: number;
+          if (atIndex !== undefined && atIndex >= 0) {
+            insertAt = Math.min(atIndex, maxInsert);
           } else {
-            newLignes.push(sep);
+            insertAt = maxInsert;
           }
+          newLignes.splice(insertAt, 0, sep);
           return {
-            repriseData: { ...state.repriseData, lignes: newLignes },
+            repriseData: { ...state.repriseData, lignes: ensureBlanccoLast(newLignes) },
             hasUnsavedChanges: true,
           };
         });
