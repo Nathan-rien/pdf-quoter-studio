@@ -349,6 +349,21 @@ export function RepriseTab() {
         </CardContent>
       </Card>
 
+      {/* Bloc 3.1 - Description libre (affichée sous le tableau dans le PDF) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AutoResizeTextarea
+            value={repriseData.repriseDescription || ''}
+            onChange={(e) => updateRepriseDescriptionText(e.target.value)}
+            placeholder="Texte libre affiché sous le tableau dans le PDF"
+            minRows={3}
+          />
+        </CardContent>
+      </Card>
+
       {/* Bloc 4 - Toggle d'affichage page PDF */}
       <Card>
         <CardContent className="p-4">
