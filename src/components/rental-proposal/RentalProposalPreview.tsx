@@ -1462,15 +1462,15 @@ export function RentalProposalPreview() {
                 </tr>
               );
             })}
-            {/* Sous-en-tête synthèse avec en-têtes de grades A/B/C/D */}
+            {/* Sous-en-tête grades avec en-têtes A/B/C/D */}
             <tr style={{ background: '#f3f4f6' }}>
-              <td style={{ padding: '4px 8px', fontWeight: 700, fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: '#374151' }}>Synthèse</td>
+              <td style={{ padding: '4px 8px', fontWeight: 700, fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: '#374151' }}>Grade</td>
               {(['A', 'B', 'C', 'D'] as const).map(g => (
                 <td key={g} style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 700, color: '#374151', width: 80 }}>{g}</td>
               ))}
               <td />
             </tr>
-            {/* Section 2 : Synthèse */}
+            {/* Section 2 : Grades */}
             <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>Total HT</td>
               {computedGrades.map(g => (
