@@ -578,7 +578,7 @@ export function RentalProposalExport() {
             <tbody>
               ${ligneRowsHTML}
               <tr style="background:#f3f4f6;">
-                <td style="padding:4px 8px; font-weight:700; font-size:9px; letter-spacing:0.4px; text-transform:uppercase; color:#374151;">Synthèse</td>
+                <td style="padding:4px 8px; font-weight:700; font-size:9px; letter-spacing:0.4px; text-transform:uppercase; color:#374151;">Grade</td>
                 <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">A</td>
                 <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">B</td>
                 <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">C</td>
