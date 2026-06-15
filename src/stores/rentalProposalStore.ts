@@ -1146,7 +1146,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
                 grades: Array.isArray(state.repriseData.grades) && state.repriseData.grades.length === 4
                   ? state.repriseData.grades
                   : initialRepriseData.grades,
-                lignes: Array.isArray(state.repriseData.lignes) ? state.repriseData.lignes : [],
+                lignes: ensureBlanccoLast(Array.isArray(state.repriseData.lignes) ? state.repriseData.lignes : []),
                 descriptions: Array.isArray(state.repriseData.descriptions) ? state.repriseData.descriptions : [],
                 marge: typeof state.repriseData.marge === 'number' ? state.repriseData.marge : 0.20,
                 margeIsOverridden: !!state.repriseData.margeIsOverridden,
