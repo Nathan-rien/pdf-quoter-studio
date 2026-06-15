@@ -606,8 +606,8 @@ export function RentalProposalExport() {
           </table>
         </div>
       `;
-      if (!extraPagesAfter[4]) extraPagesAfter[4] = [];
-      extraPagesAfter[4].push(repriseHTML);
+      if (!extraPagesAfter[5]) extraPagesAfter[5] = [];
+      extraPagesAfter[5].push(repriseHTML);
     }
 
     
@@ -749,7 +749,8 @@ export function RentalProposalExport() {
       for (let ci = 1; ci < servicesChunksExport.length; ci++) {
         extraServicesPages.push(renderChunkHTML(servicesChunksExport[ci], false));
       }
-      extraPagesAfter[5] = extraServicesPages;
+      if (!extraPagesAfter[5]) extraPagesAfter[5] = [];
+      extraPagesAfter[5] = [...extraServicesPages, ...extraPagesAfter[5]];
     }
     
     if (page4FlowElementIds.length > 0) {

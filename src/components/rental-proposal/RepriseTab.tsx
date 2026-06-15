@@ -50,22 +50,6 @@ export function RepriseTab() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Lignes produits (Reprise)</CardTitle>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="reprise-show-prices" className="text-sm text-muted-foreground">Afficher prix Investissement</Label>
-              <Switch
-                id="reprise-show-prices"
-                checked={matriceData.repriseShowPrices}
-                onCheckedChange={(c) => updateMatriceField('repriseShowPrices', c)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="reprise-show-offer" className="text-sm text-muted-foreground">Afficher montant Offre</Label>
-              <Switch
-                id="reprise-show-offer"
-                checked={matriceData.repriseShowOffer}
-                onCheckedChange={(c) => updateMatriceField('repriseShowOffer', c)}
-              />
-            </div>
             <Button variant="outline" size="sm" onClick={addRepriseLigne}>
               <Plus className="h-4 w-4 mr-2" />
               Ajouter
@@ -310,7 +294,6 @@ export function RepriseTab() {
               <TableHeader>
                 <TableRow className="bg-black hover:bg-black">
                   <TableHead className="text-white">Description</TableHead>
-                  <TableHead className="text-white text-right w-28">Quantités</TableHead>
                   {grades.map(g => (
                     <TableHead key={g} className="text-white text-right w-28">{g}</TableHead>
                   ))}
@@ -320,7 +303,6 @@ export function RepriseTab() {
               <TableBody>
                 <TableRow>
                   <TableCell className="font-medium">Total HT</TableCell>
-                  <TableCell />
                   {computedGrades.map(g => (
                     <TableCell key={g.grade} className="text-right">{formatNumber(g.totalHT)} €</TableCell>
                   ))}
@@ -328,7 +310,6 @@ export function RepriseTab() {
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">TVA</TableCell>
-                  <TableCell />
                   {computedGrades.map(g => (
                     <TableCell key={g.grade} className="text-right">{formatNumber(g.tva)} €</TableCell>
                   ))}
@@ -336,7 +317,6 @@ export function RepriseTab() {
                 </TableRow>
                 <TableRow className="bg-black hover:bg-black">
                   <TableCell className="font-bold text-white">Total TTC</TableCell>
-                  <TableCell />
                   {computedGrades.map(g => (
                     <TableCell key={g.grade} className="text-right font-bold text-white">{formatNumber(g.totalTTC)} €</TableCell>
                   ))}
@@ -350,16 +330,6 @@ export function RepriseTab() {
                         onChange={(e) => updateRepriseDescription(i, { description: e.target.value })}
                         placeholder="Description..."
                         className="h-8"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={d.quantite}
-                        onChange={(e) => updateRepriseDescription(i, { quantite: Math.max(0, parseInt(e.target.value) || 0) })}
-                        className="h-8 text-right"
                       />
                     </TableCell>
                     {grades.map(g => (
