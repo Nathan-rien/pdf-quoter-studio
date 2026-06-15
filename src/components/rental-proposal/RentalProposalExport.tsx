@@ -557,15 +557,15 @@ export function RentalProposalExport() {
         }
         return `<tr style="border-bottom:1px solid #e5e7eb;">
           <td style="padding:6px 8px; white-space:pre-wrap;">${esc(ligne.designation || '—')}</td>
-          <td style="padding:6px 8px; text-align:right;">${ligne.nb}</td>
           <td></td><td></td><td></td><td></td>
+          <td style="padding:6px 8px; text-align:right;">${ligne.nb}</td>
         </tr>`;
       }).join('');
       const descRowsHTML = repriseData.descriptions.map(d => `
         <tr style="border-bottom:1px solid #e5e7eb;">
           <td style="padding:6px 8px;">${esc(d.description || '—')}</td>
-          <td style="padding:6px 8px; text-align:right;">${d.quantite}</td>
           <td></td><td></td><td></td><td></td>
+          <td style="padding:6px 8px; text-align:right;">${d.quantite}</td>
         </tr>`).join('');
       const repriseHTML = `
         <div class="dynamic-content" style="position:absolute; left:5%; top:5%; width:90%; z-index:40;">
@@ -574,35 +574,38 @@ export function RentalProposalExport() {
             <thead>
               <tr style="background:#000; color:#fff;">
                 <th style="text-align:left; padding:6px 8px;">Description</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">A</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">B</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">C</th>
+                <th style="text-align:right; padding:6px 8px; width:80px;">D</th>
                 <th style="text-align:right; padding:6px 8px; width:80px;">Quantités</th>
-                <th colspan="4"></th>
               </tr>
             </thead>
             <tbody>
               ${ligneRowsHTML}
               <tr style="background:#f3f4f6;">
                 <td style="padding:4px 8px; font-weight:700; font-size:9px; letter-spacing:0.4px; text-transform:uppercase; color:#374151;">Synthèse</td>
-                <td></td>
                 <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">A</td>
                 <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">B</td>
                 <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">C</td>
                 <td style="padding:4px 8px; text-align:right; font-weight:700; color:#374151; width:80px;">D</td>
+                <td></td>
               </tr>
 
               <tr style="border-bottom:1px solid #e5e7eb;">
                 <td style="padding:6px 8px; font-weight:600;">Total HT</td>
-                <td></td>
                 ${gradeCells('totalHT')}
+                <td></td>
               </tr>
               <tr style="border-bottom:1px solid #e5e7eb;">
                 <td style="padding:6px 8px; font-weight:600;">TVA</td>
-                <td></td>
                 ${gradeCells('tva')}
+                <td></td>
               </tr>
               <tr style="background:#000; color:#fff; font-weight:700;">
                 <td style="padding:6px 8px;">Total TTC</td>
-                <td></td>
                 ${gradeCells('totalTTC', '#fff')}
+                <td></td>
               </tr>
               ${descRowsHTML}
             </tbody>
