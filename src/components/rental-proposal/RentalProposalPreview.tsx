@@ -1502,6 +1502,11 @@ export function RentalProposalPreview() {
             ))}
           </tbody>
         </table>
+        {repriseData.repriseDescription && repriseData.repriseDescription.trim() && (
+          <div style={{ marginTop: 12, fontSize: 10, whiteSpace: 'pre-wrap', color: '#111827' }}>
+            {repriseData.repriseDescription}
+          </div>
+        )}
       </div>
     );
     // Réutiliser le background de la page Invest (logos, etc.) pour cohérence visuelle

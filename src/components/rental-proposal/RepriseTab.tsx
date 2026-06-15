@@ -30,6 +30,7 @@ export function RepriseTab() {
     addRepriseDescription,
     updateRepriseDescription,
     deleteRepriseDescription,
+    updateRepriseDescriptionText,
   } = useRentalProposalStore();
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -345,6 +346,21 @@ export function RepriseTab() {
               </TableBody>
             </Table>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Bloc 3.1 - Description libre (affichée sous le tableau dans le PDF) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AutoResizeTextarea
+            value={repriseData.repriseDescription || ''}
+            onChange={(e) => updateRepriseDescriptionText(e.target.value)}
+            placeholder="Texte libre affiché sous le tableau dans le PDF"
+            rows={3}
+          />
         </CardContent>
       </Card>
 
