@@ -108,6 +108,7 @@ export interface RepriseData {
   margeIsOverridden: boolean;
   grades: RepriseGradeRow[];
   descriptions: RepriseDescriptionRow[];
+  repriseDescriptionTitle: string;
   repriseDescription: string;
 }
 
@@ -236,6 +237,7 @@ interface RentalProposalActions {
   addRepriseDescription: () => void;
   updateRepriseDescription: (index: number, updates: Partial<RepriseDescriptionRow>) => void;
   deleteRepriseDescription: (index: number) => void;
+  updateRepriseDescriptionTitle: (title: string) => void;
   updateRepriseDescriptionText: (text: string) => void;
   
   // Services inclus (bloc permanent)
@@ -346,6 +348,7 @@ export const initialRepriseData: RepriseData = {
     { grade: 'D', prixPartenaire: 0 },
   ],
   descriptions: [],
+  repriseDescriptionTitle: '',
   repriseDescription: '',
 };
 
@@ -758,6 +761,13 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             ...state.repriseData,
             descriptions: state.repriseData.descriptions.filter((_, i) => i !== index),
           },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      updateRepriseDescriptionTitle: (title) => {
+        set(state => ({
+          repriseData: { ...state.repriseData, repriseDescriptionTitle: title },
           hasUnsavedChanges: true,
         }));
       },

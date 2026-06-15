@@ -604,8 +604,11 @@ export function RentalProposalExport() {
               ${descRowsHTML}
             </tbody>
           </table>
-          ${repriseData.repriseDescription && repriseData.repriseDescription.trim() ? `
-            <div style="margin-top:12px; font-size:10px; white-space:pre-wrap; color:#111827;">${esc(repriseData.repriseDescription)}</div>
+          ${(repriseData.repriseDescriptionTitle?.trim() || repriseData.repriseDescription?.trim()) ? `
+            <div style="margin-top:12px; font-size:10px; white-space:pre-wrap; color:#111827;">
+              ${repriseData.repriseDescriptionTitle?.trim() ? `<div style="font-weight:700; margin-bottom:4px;">${esc(repriseData.repriseDescriptionTitle)}</div>` : ''}
+              ${repriseData.repriseDescription ? esc(repriseData.repriseDescription) : ''}
+            </div>
           ` : ''}
         </div>
       `;
