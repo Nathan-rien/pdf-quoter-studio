@@ -1018,7 +1018,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             ? { ...initialRepriseData, ...snapshot.repriseData,
                 grades: Array.isArray(snapshot.repriseData.grades) && snapshot.repriseData.grades.length === 4
                   ? snapshot.repriseData.grades : initialRepriseData.grades,
-                lignes: Array.isArray(snapshot.repriseData.lignes) ? snapshot.repriseData.lignes : [],
+                lignes: ensureBlanccoLast(Array.isArray(snapshot.repriseData.lignes) ? snapshot.repriseData.lignes : []),
                 descriptions: Array.isArray(snapshot.repriseData.descriptions) ? snapshot.repriseData.descriptions : [],
               }
             : initialRepriseData,
