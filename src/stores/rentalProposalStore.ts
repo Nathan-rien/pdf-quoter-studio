@@ -89,6 +89,7 @@ export interface RepriseData {
   margeIsOverridden: boolean;
   grades: RepriseGradeRow[];
   descriptions: RepriseDescriptionRow[];
+  repriseDescription: string;
 }
 
 // Options service pour le calcul des services inclus
