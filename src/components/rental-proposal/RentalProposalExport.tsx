@@ -556,28 +556,22 @@ export function RentalProposalExport() {
           return `<tr style="background:#f3f4f6;"><td colspan="6" style="padding:6px 8px; font-weight:700;">${esc(ligne.designation || '—')}</td></tr>`;
         }
         return `<tr style="border-bottom:1px solid #e5e7eb;">
-          <td style="padding:6px 8px; white-space:pre-wrap;">${esc(ligne.designation || '—')}</td>
-          <td></td><td></td><td></td><td></td>
+          <td colspan="5" style="padding:6px 8px; white-space:pre-wrap;">${esc(ligne.designation || '—')}</td>
           <td style="padding:6px 8px; text-align:right;">${ligne.nb}</td>
         </tr>`;
       }).join('');
       const descRowsHTML = repriseData.descriptions.map(d => `
         <tr style="border-bottom:1px solid #e5e7eb;">
-          <td style="padding:6px 8px;">${esc(d.description || '—')}</td>
-          <td></td><td></td><td></td><td></td>
+          <td colspan="5" style="padding:6px 8px;">${esc(d.description || '—')}</td>
           <td style="padding:6px 8px; text-align:right;">${d.quantite}</td>
         </tr>`).join('');
       const repriseHTML = `
         <div class="dynamic-content" style="position:absolute; left:5%; top:5%; width:90%; z-index:40;">
-          <div style="font-weight:bold; font-size:13px; margin-bottom:8px;">Synthèse reprise</div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:8px;">Votre reprise</div>
           <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #e5e7eb; border-radius:4px; overflow:hidden;">
             <thead>
               <tr style="background:#000; color:#fff;">
-                <th style="text-align:left; padding:6px 8px;">Description</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">A</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">B</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">C</th>
-                <th style="text-align:right; padding:6px 8px; width:80px;">D</th>
+                <th colspan="5" style="text-align:left; padding:6px 8px;">Description</th>
                 <th style="text-align:right; padding:6px 8px; width:80px;">Quantités</th>
               </tr>
             </thead>
