@@ -76,6 +76,9 @@ export interface RepriseLigne {
 
 export const BLANCCO_DEFAULT_DESIGNATION = 'Collect / Audit / Effacement données Blancco';
 
+export const REPRISE_DESC_TITLE_DEFAULT = 'Valorisation du parc selon typologie et état du matériel en seconde vie';
+export const REPRISE_DESC_TEXT_DEFAULT = "Cette cotation est une estimation de la valeur du matériel repris. Une valorisation définitive sera effectuée par le biais d'un virement en votre faveur après récupération et audit.";
+
 const createBlanccoLigne = (): RepriseLigne => ({
   designation: BLANCCO_DEFAULT_DESIGNATION,
   nb: 1,
@@ -348,8 +351,8 @@ export const initialRepriseData: RepriseData = {
     { grade: 'D', prixPartenaire: 0 },
   ],
   descriptions: [],
-  repriseDescriptionTitle: '',
-  repriseDescription: '',
+  repriseDescriptionTitle: REPRISE_DESC_TITLE_DEFAULT,
+  repriseDescription: REPRISE_DESC_TEXT_DEFAULT,
 };
 
 const initialState: RentalProposalState = {
@@ -1150,6 +1153,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             if (!state.repriseData || typeof state.repriseData !== 'object') {
               state.repriseData = initialRepriseData;
             } else {
+              const persistedTitle = typeof state.repriseData.repriseDescriptionTitle === 'string' ? state.repriseData.repriseDescriptionTitle : '';
+              const persistedText = typeof state.repriseData.repriseDescription === 'string' ? state.repriseData.repriseDescription : '';
               state.repriseData = {
                 ...initialRepriseData,
                 ...state.repriseData,
@@ -1160,6 +1165,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
                 descriptions: Array.isArray(state.repriseData.descriptions) ? state.repriseData.descriptions : [],
                 marge: typeof state.repriseData.marge === 'number' ? state.repriseData.marge : 0.20,
                 margeIsOverridden: !!state.repriseData.margeIsOverridden,
+                repriseDescriptionTitle: persistedTitle.trim() === '' ? REPRISE_DESC_TITLE_DEFAULT : persistedTitle,
+                repriseDescription: persistedText.trim() === '' ? REPRISE_DESC_TEXT_DEFAULT : persistedText,
               };
             }
 
