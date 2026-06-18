@@ -77,7 +77,7 @@ export interface RepriseLigne {
 export const BLANCCO_DEFAULT_DESIGNATION = 'Collect / Audit / Effacement données Blancco';
 
 export const REPRISE_DESC_TITLE_DEFAULT = 'Valorisation du parc selon typologie et état du matériel en seconde vie';
-export const REPRISE_DESC_TEXT_DEFAULT = "Cette cotation est une estimation de la valeur du matériel repris. Une valorisation définitive sera effectuée par le biais d'un virement en votre faveur après récupération et audit.";
+export const REPRISE_DESC_TEXT_DEFAULT = "Cette cotation est une estimation  de la valeur du matériel reprit. Une valorisation définitive sera effectuée par le biais d'un virement en votre faveur après récupération et audit.";
 
 const createBlanccoLigne = (): RepriseLigne => ({
   designation: BLANCCO_DEFAULT_DESIGNATION,
