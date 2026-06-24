@@ -411,6 +411,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             telephone: result.client.telephone || '',
             email: result.client.email || '',
             logoUrl: '',
+            siret: '',
           },
           matriceData: {
             ...initialMatriceData,
