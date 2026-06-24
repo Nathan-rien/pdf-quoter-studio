@@ -221,9 +221,18 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const [clientData, setClientData] = useState<ClientData>(DEFAULT_CLIENT);
   const [dataForm, setDataForm] = useState<ServiceDataFormValues>(DEFAULT_DATA);
   const [investForm, setInvestForm] = useState<InvestFormValues>(DEFAULT_INVEST);
+  const [activeTab, setActiveTab] = useState('client');
   const createProposal = useCreateServiceProposal();
 
+  function handleTabChange(tab: string) {
+    if (tab === 'preview-export') {
+      syncToRentalStore(clientData, investForm);
+    }
+    setActiveTab(tab);
+  }
+
   async function handleSave() {
+    syncToRentalStore(clientData, investForm);
     const totalServices = dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0);
     const totalInvest = investForm.invest_lines.reduce((s, l) => s + l.vtn, 0);
     await createProposal.mutateAsync({
