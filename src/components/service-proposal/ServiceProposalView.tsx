@@ -3,6 +3,7 @@ import { Plus, FileText, ChevronDown, ChevronUp, User, Trash2, Save, X } from 'l
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -20,6 +21,11 @@ import { ServiceProposalClientStep, ClientData } from './ServiceProposalClientSt
 import { ServiceProposalDataStep, ServiceDataFormValues } from './ServiceProposalDataStep';
 import { ServiceProposalInvestStep, InvestFormValues } from './ServiceProposalInvestStep';
 import { useServiceProposals, useCreateServiceProposal, useDeleteServiceProposal, ServiceProposal } from '@/hooks/useServiceProposals';
+import { TemplateSelector } from '@/components/rental-proposal/TemplateSelector';
+import { RentalProposalPreview } from '@/components/rental-proposal/RentalProposalPreview';
+import { RentalProposalExport } from '@/components/rental-proposal/RentalProposalExport';
+import { useRentalProposalStore } from '@/stores/rentalProposalStore';
+import { CommercialEntity } from '@/data/commerciaux';
 
 const DEFAULT_CLIENT: ClientData = {
   client_name: '',
@@ -28,6 +34,7 @@ const DEFAULT_CLIENT: ClientData = {
   client_phone: '',
   client_address: '',
   client_siret: '',
+  entity: '',
   commercial_id: '',
   commercial_name: '',
 };
@@ -59,6 +66,34 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
   validated: 'Validée',
   cancelled: 'Annulée',
 };
+
+function syncToRentalStore(clientData: ClientData, investForm: InvestFormValues) {
+  const store = useRentalProposalStore.getState();
+  store.updateClientData({
+    nom: clientData.client_name,
+    raisonSociale: clientData.client_company,
+    email: clientData.client_email,
+    telephone: clientData.client_phone,
+    adresse: clientData.client_address,
+    siret: clientData.client_siret,
+  });
+  if (clientData.entity) {
+    store.updateCommercialEntity(clientData.entity as CommercialEntity);
+  }
+  if (clientData.commercial_id) {
+    store.selectCommercial(clientData.commercial_id);
+  }
+  if (investForm.invest_lines.length > 0 && store.setLignesData) {
+    store.setLignesData(
+      investForm.invest_lines.map((line) => ({
+        designation: line.designation,
+        quantite: line.qty,
+        prixUnitaire: line.vun,
+        prixTotal: line.vtn,
+      }))
+    );
+  }
+}
 
 function ProposalRow({ proposal, onDelete }: { proposal: ServiceProposal; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -186,9 +221,18 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const [clientData, setClientData] = useState<ClientData>(DEFAULT_CLIENT);
   const [dataForm, setDataForm] = useState<ServiceDataFormValues>(DEFAULT_DATA);
   const [investForm, setInvestForm] = useState<InvestFormValues>(DEFAULT_INVEST);
+  const [activeTab, setActiveTab] = useState('client');
   const createProposal = useCreateServiceProposal();
 
+  function handleTabChange(tab: string) {
+    if (tab === 'preview-export') {
+      syncToRentalStore(clientData, investForm);
+    }
+    setActiveTab(tab);
+  }
+
   async function handleSave() {
+    syncToRentalStore(clientData, investForm);
     const totalServices = dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0);
     const totalInvest = investForm.invest_lines.reduce((s, l) => s + l.vtn, 0);
     await createProposal.mutateAsync({
@@ -224,11 +268,13 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         </Button>
       </div>
 
-      <Tabs defaultValue="client">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="w-full">
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
           <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
+          <TabsTrigger value="template" className="flex-1">Template</TabsTrigger>
+          <TabsTrigger value="preview-export" className="flex-1">Aperçu & Export</TabsTrigger>
         </TabsList>
         <TabsContent value="client">
           <ServiceProposalClientStep data={clientData} onChange={setClientData} />
@@ -238,6 +284,14 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         </TabsContent>
         <TabsContent value="invest">
           <ServiceProposalInvestStep data={investForm} onChange={setInvestForm} />
+        </TabsContent>
+        <TabsContent value="template">
+          <TemplateSelector />
+        </TabsContent>
+        <TabsContent value="preview-export" className="space-y-8">
+          <RentalProposalPreview />
+          <Separator />
+          <RentalProposalExport />
         </TabsContent>
       </Tabs>
 

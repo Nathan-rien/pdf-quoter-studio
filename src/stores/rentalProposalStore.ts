@@ -28,6 +28,7 @@ interface ClientData {
   telephone: string;
   email: string;
   logoUrl: string;
+  siret: string;
 }
 
 // NEW: Individual proposal type for multi-proposal support
@@ -204,6 +205,8 @@ interface RentalProposalActions {
   
   // Client data
   updateClientField: (field: keyof ClientData, value: string) => void;
+  updateClientData: (data: Partial<Pick<ClientData, 'nom' | 'raisonSociale' | 'email' | 'telephone' | 'adresse' | 'siret'>>) => void;
+  setLignesData: (lines: Array<{ designation: string; quantite: number; prixUnitaire: number | null; prixTotal: number }>) => void;
   
   // Proposal name
   updateProposalName: (name: string) => void;
@@ -298,6 +301,7 @@ const initialClientData: ClientData = {
   telephone: '',
   email: '',
   logoUrl: '',
+  siret: '',
 };
 
 const initialMatriceData: MatriceData = {
@@ -409,6 +413,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             telephone: result.client.telephone || '',
             email: result.client.email || '',
             logoUrl: '',
+            siret: '',
           },
           matriceData: {
             ...initialMatriceData,
@@ -995,6 +1000,34 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
 
       resetClientLogoOverride: () => {
         set({ clientLogoOverride: null, hasUnsavedChanges: true });
+      },
+
+      updateClientData: (data) => {
+        set(state => ({
+          clientData: { ...state.clientData, ...data },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      setLignesData: (lines) => {
+        set(state => {
+          const lignesData = lines.map(l => ({
+            reference: null as string | null,
+            designation: l.designation,
+            prixUnitaire: l.prixUnitaire ?? null,
+            quantite: l.quantite,
+            totalHT: l.prixTotal,
+          }));
+          const montantInvestissement = Math.round(
+            lignesData.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+          ) / 100;
+          return {
+            lignesData,
+            matriceData: { ...state.matriceData, montantInvestissement },
+            proposals: state.proposals.map(p => ({ ...p, montantInvestissement })),
+            hasUnsavedChanges: true,
+          };
+        });
       },
 
       markAsSaved: () => {
