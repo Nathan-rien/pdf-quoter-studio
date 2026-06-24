@@ -285,6 +285,14 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         <TabsContent value="invest">
           <ServiceProposalInvestStep data={investForm} onChange={setInvestForm} />
         </TabsContent>
+        <TabsContent value="template">
+          <TemplateSelector />
+        </TabsContent>
+        <TabsContent value="preview-export" className="space-y-8">
+          <RentalProposalPreview />
+          <Separator />
+          <RentalProposalExport />
+        </TabsContent>
       </Tabs>
 
       <div className="flex items-center justify-end gap-2 pt-3 border-t">
