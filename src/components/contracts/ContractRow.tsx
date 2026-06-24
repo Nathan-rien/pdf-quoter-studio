@@ -137,7 +137,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Partenaire financier</Label>
-              <Select value={financialPartner} onValueChange={setFinancialPartner}>
+              <Select key={`fp-${contract.id}`} value={financialPartner} onValueChange={setFinancialPartner}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
@@ -148,7 +148,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Durée (mois)</Label>
-              <Select value={durationMonths} onValueChange={setDurationMonths}>
+              <Select key={`dm-${contract.id}`} value={durationMonths} onValueChange={setDurationMonths}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>

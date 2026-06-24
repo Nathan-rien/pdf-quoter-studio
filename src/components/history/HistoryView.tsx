@@ -55,6 +55,8 @@ interface ProposalExportSummary {
   commercial_id: string | null;
   commercial_name: string | null;
   montant_investissement: number | null;
+  financial_partner: string | null;
+  duration_months: number | null;
   has_proposal_state: boolean;
 }
 
@@ -130,6 +132,8 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
         commercial_id: item.commercial_id,
         commercial_name: item.commercial_name,
         montant_investissement: item.montant_investissement,
+        financial_partner: item.proposal_state?.proposals?.[0]?.refinanceur ?? null,
+        duration_months: item.proposal_state?.proposals?.[0]?.duree ?? item.proposal_state?.matriceData?.duree ?? null,
         has_proposal_state: !!item.proposal_state,
       }));
       setExports(mapped);
@@ -382,6 +386,8 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                     commercialName={entry.commercial_name || undefined}
                     amountHt={entry.montant_investissement || undefined}
                     templateName={entry.template_name}
+                    financialPartner={entry.financial_partner || undefined}
+                    durationMonths={entry.duration_months || undefined}
                   />
                 </>
               )}
