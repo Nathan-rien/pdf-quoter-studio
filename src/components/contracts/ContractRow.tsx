@@ -87,10 +87,41 @@ export function ContractRow({ contract }: { contract: Contract }) {
             <div className="text-[11px] text-muted-foreground">{contract.template_name}</div>
           )}
         </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
+              title="Supprimer le contrat"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer le contrat ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Le contrat de <strong>{contract.client_name}</strong> sera définitivement supprimé. Cette action est irréversible.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteContract.mutate(contract.id)}
+                disabled={deleteContract.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleteContract.isPending ? 'Suppression…' : 'Supprimer'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <div className="text-muted-foreground">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="border-t border-border bg-muted/20 p-4 space-y-4">
