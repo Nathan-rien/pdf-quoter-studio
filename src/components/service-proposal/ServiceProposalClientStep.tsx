@@ -1,7 +1,8 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCommerciaux } from '@/hooks/useCommerciaux';
+import { Card, CardContent } from '@/components/ui/card';
+import { ENTITIES, CommercialEntity, getCommerciauxByEntity, getCommercialById } from '@/data/commerciaux';
 
 export interface ClientData {
   client_name: string;
@@ -10,6 +11,7 @@ export interface ClientData {
   client_phone: string;
   client_address: string;
   client_siret: string;
+  entity: CommercialEntity | '';
   commercial_id: string;
   commercial_name: string;
 }
@@ -20,16 +22,20 @@ interface ServiceProposalClientStepProps {
 }
 
 export function ServiceProposalClientStep({ data, onChange }: ServiceProposalClientStepProps) {
-  const { commerciaux } = useCommerciaux();
-
   function set(key: keyof ClientData, value: string) {
     onChange({ ...data, [key]: value });
   }
 
-  function handleCommercialChange(id: string) {
-    const c = commerciaux.find((c) => c.id === id);
-    onChange({ ...data, commercial_id: id, commercial_name: c ? c.nom : id });
+  function handleEntityChange(entity: CommercialEntity | '') {
+    onChange({ ...data, entity, commercial_id: '', commercial_name: '' });
   }
+
+  function handleCommercialChange(id: string) {
+    const c = getCommercialById(id);
+    onChange({ ...data, commercial_id: id, commercial_name: c ? c.nom : '' });
+  }
+
+  const selectedCommercial = data.commercial_id ? getCommercialById(data.commercial_id) : null;
 
   return (
     <div className="space-y-4">
@@ -101,23 +107,68 @@ export function ServiceProposalClientStep({ data, onChange }: ServiceProposalCli
             placeholder="000 000 000 00000"
           />
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="commercial_id">Commercial</Label>
-          <Select value={data.commercial_id} onValueChange={handleCommercialChange}>
-            <SelectTrigger id="commercial_id">
-              <SelectValue placeholder="Sélectionner un commercial" />
-            </SelectTrigger>
-            <SelectContent>
-              {commerciaux.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
+
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div>
+            <h4 className="text-sm font-medium">Commercial associé</h4>
+            <p className="text-xs text-muted-foreground">
+              Sélectionnez l'entité et le commercial en charge de cette proposition.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Entité</Label>
+              <Select value={data.entity} onValueChange={handleEntityChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une entité..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENTITIES.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Commercial</Label>
+              <Select
+                value={data.commercial_id}
+                onValueChange={handleCommercialChange}
+                disabled={!data.entity}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un commercial..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {data.entity &&
+                    getCommerciauxByEntity(data.entity as CommercialEntity).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nom}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {selectedCommercial && (
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <div className="font-medium">{selectedCommercial.nom}</div>
+              {selectedCommercial.telephone && (
+                <div className="text-muted-foreground">{selectedCommercial.telephone}</div>
+              )}
+              <div className="text-muted-foreground">{selectedCommercial.email}</div>
+              <div className="text-muted-foreground text-xs mt-1">{selectedCommercial.adresse}</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
