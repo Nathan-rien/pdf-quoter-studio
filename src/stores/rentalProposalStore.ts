@@ -28,6 +28,7 @@ interface ClientData {
   telephone: string;
   email: string;
   logoUrl: string;
+  siret: string;
 }
 
 // NEW: Individual proposal type for multi-proposal support
@@ -298,6 +299,7 @@ const initialClientData: ClientData = {
   telephone: '',
   email: '',
   logoUrl: '',
+  siret: '',
 };
 
 const initialMatriceData: MatriceData = {
