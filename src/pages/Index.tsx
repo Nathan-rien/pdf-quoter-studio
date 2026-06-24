@@ -49,6 +49,8 @@ export default function Index() {
         return <RentalWorkflow />;
       case 'contracts':
         return <ContractsView />;
+      case 'service-proposal':
+        return <ServiceProposalView />;
       case 'history':
         return (
           <HistoryView
