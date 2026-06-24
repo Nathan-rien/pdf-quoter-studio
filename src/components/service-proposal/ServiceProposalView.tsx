@@ -67,6 +67,34 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
   cancelled: 'Annulée',
 };
 
+function syncToRentalStore(clientData: ClientData, investForm: InvestFormValues) {
+  const store = useRentalProposalStore.getState();
+  store.updateClientData({
+    nom: clientData.client_name,
+    raisonSociale: clientData.client_company,
+    email: clientData.client_email,
+    telephone: clientData.client_phone,
+    adresse: clientData.client_address,
+    siret: clientData.client_siret,
+  });
+  if (clientData.entity) {
+    store.updateCommercialEntity(clientData.entity as CommercialEntity);
+  }
+  if (clientData.commercial_id) {
+    store.selectCommercial(clientData.commercial_id);
+  }
+  if (investForm.invest_lines.length > 0 && store.setLignesData) {
+    store.setLignesData(
+      investForm.invest_lines.map((line) => ({
+        designation: line.designation,
+        quantite: line.qty,
+        prixUnitaire: line.vun,
+        prixTotal: line.vtn,
+      }))
+    );
+  }
+}
+
 function ProposalRow({ proposal, onDelete }: { proposal: ServiceProposal; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
 
