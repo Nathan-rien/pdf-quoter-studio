@@ -386,6 +386,8 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                     commercialName={entry.commercial_name || undefined}
                     amountHt={entry.montant_investissement || undefined}
                     templateName={entry.template_name}
+                    financialPartner={entry.financial_partner || undefined}
+                    durationMonths={entry.duration_months || undefined}
                   />
                 </>
               )}
