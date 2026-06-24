@@ -32,6 +32,62 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          amount_ht: number | null
+          client_name: string
+          commercial_id: string
+          commercial_name: string | null
+          created_at: string
+          duration_months: number | null
+          financial_partner: string | null
+          id: string
+          implementation_month: string | null
+          proposal_id: string
+          template_name: string | null
+          updated_at: string
+          validated_at: string
+        }
+        Insert: {
+          amount_ht?: number | null
+          client_name: string
+          commercial_id: string
+          commercial_name?: string | null
+          created_at?: string
+          duration_months?: number | null
+          financial_partner?: string | null
+          id?: string
+          implementation_month?: string | null
+          proposal_id: string
+          template_name?: string | null
+          updated_at?: string
+          validated_at?: string
+        }
+        Update: {
+          amount_ht?: number | null
+          client_name?: string
+          commercial_id?: string
+          commercial_name?: string | null
+          created_at?: string
+          duration_months?: number | null
+          financial_partner?: string | null
+          id?: string
+          implementation_month?: string | null
+          proposal_id?: string
+          template_name?: string | null
+          updated_at?: string
+          validated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_exports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gantt_dependencies: {
         Row: {
           dependency_type: Database["public"]["Enums"]["gantt_dependency_type"]
@@ -432,6 +488,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_proposals: {
+        Row: {
+          client_address: string | null
+          client_company: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          client_siret: string | null
+          commercial_id: string
+          commercial_name: string | null
+          contract_duration: number | null
+          created_at: string
+          id: string
+          invest_lines: Json | null
+          payment_frequency: string | null
+          payment_mode: string | null
+          selected_services: Json | null
+          show_invest_price: boolean | null
+          show_offer_amount: boolean | null
+          start_date: string | null
+          status: string
+          total_invest_ht: number | null
+          total_services_ht: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          client_siret?: string | null
+          commercial_id: string
+          commercial_name?: string | null
+          contract_duration?: number | null
+          created_at?: string
+          id?: string
+          invest_lines?: Json | null
+          payment_frequency?: string | null
+          payment_mode?: string | null
+          selected_services?: Json | null
+          show_invest_price?: boolean | null
+          show_offer_amount?: boolean | null
+          start_date?: string | null
+          status?: string
+          total_invest_ht?: number | null
+          total_services_ht?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          client_siret?: string | null
+          commercial_id?: string
+          commercial_name?: string | null
+          contract_duration?: number | null
+          created_at?: string
+          id?: string
+          invest_lines?: Json | null
+          payment_frequency?: string | null
+          payment_mode?: string | null
+          selected_services?: Json | null
+          show_invest_price?: boolean | null
+          show_offer_amount?: boolean | null
+          start_date?: string | null
+          status?: string
+          total_invest_ht?: number | null
+          total_services_ht?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       template_versions: {
         Row: {
