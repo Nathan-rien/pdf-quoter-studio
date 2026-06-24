@@ -3,6 +3,7 @@ import { Plus, FileText, ChevronDown, ChevronUp, User, Trash2, Save, X } from 'l
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -20,6 +21,11 @@ import { ServiceProposalClientStep, ClientData } from './ServiceProposalClientSt
 import { ServiceProposalDataStep, ServiceDataFormValues } from './ServiceProposalDataStep';
 import { ServiceProposalInvestStep, InvestFormValues } from './ServiceProposalInvestStep';
 import { useServiceProposals, useCreateServiceProposal, useDeleteServiceProposal, ServiceProposal } from '@/hooks/useServiceProposals';
+import { TemplateSelector } from '@/components/rental-proposal/TemplateSelector';
+import { RentalProposalPreview } from '@/components/rental-proposal/RentalProposalPreview';
+import { RentalProposalExport } from '@/components/rental-proposal/RentalProposalExport';
+import { useRentalProposalStore } from '@/stores/rentalProposalStore';
+import { CommercialEntity } from '@/data/commerciaux';
 
 const DEFAULT_CLIENT: ClientData = {
   client_name: '',
