@@ -268,11 +268,13 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         </Button>
       </div>
 
-      <Tabs defaultValue="client">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="w-full">
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
           <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
+          <TabsTrigger value="template" className="flex-1">Template</TabsTrigger>
+          <TabsTrigger value="preview-export" className="flex-1">Aperçu & Export</TabsTrigger>
         </TabsList>
         <TabsContent value="client">
           <ServiceProposalClientStep data={clientData} onChange={setClientData} />
