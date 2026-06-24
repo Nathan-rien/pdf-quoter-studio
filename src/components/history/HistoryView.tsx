@@ -20,6 +20,7 @@ import {
   ChevronRight,
   RotateCcw,
 } from "lucide-react";
+import { ValidateProposalButton } from '@/components/history/ValidateProposalButton';
 import {
   AlertDialog,
   AlertDialogAction,
