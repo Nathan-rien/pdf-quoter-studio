@@ -55,10 +55,11 @@ export function ContractRow({ contract }: { contract: Contract }) {
 
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden">
-      <button
-        type="button"
+      <div
         onClick={() => setExpanded(!expanded)}
-        className="w-full grid grid-cols-[1fr_auto] gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left items-center"
+        className="w-full grid grid-cols-[1fr_auto_auto] gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left items-center cursor-pointer"
+        role="button"
+        tabIndex={0}
       >
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
