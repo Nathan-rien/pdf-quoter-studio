@@ -1002,6 +1002,34 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         set({ clientLogoOverride: null, hasUnsavedChanges: true });
       },
 
+      updateClientData: (data) => {
+        set(state => ({
+          clientData: { ...state.clientData, ...data },
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      setLignesData: (lines) => {
+        set(state => {
+          const lignesData = lines.map(l => ({
+            reference: null as string | null,
+            designation: l.designation,
+            prixUnitaire: l.prixUnitaire ?? null,
+            quantite: l.quantite,
+            totalHT: l.prixTotal,
+          }));
+          const montantInvestissement = Math.round(
+            lignesData.filter(l => !l.isSeparator).reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+          ) / 100;
+          return {
+            lignesData,
+            matriceData: { ...state.matriceData, montantInvestissement },
+            proposals: state.proposals.map(p => ({ ...p, montantInvestissement })),
+            hasUnsavedChanges: true,
+          };
+        });
+      },
+
       markAsSaved: () => {
         set({ hasUnsavedChanges: false });
       },
