@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { 
   FileText, 
+  FileCheck,
   History,
   Palette,
   Building2,
@@ -16,7 +17,9 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useContracts, isContractRenewingSoon } from "@/hooks/useContracts";
 
 const USEFUL_LINKS = [
   { label: "Projet prod", url: "https://quote-enricher.lovable.app/auth" },
