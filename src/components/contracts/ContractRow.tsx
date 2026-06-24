@@ -26,6 +26,7 @@ const DURATIONS = [12, 24, 36, 48, 60];
 export function ContractRow({ contract }: { contract: Contract }) {
   const [expanded, setExpanded] = useState(false);
   const updateContract = useUpdateContract();
+  const deleteContract = useDeleteContract();
   const renewing = isContractRenewingSoon(contract);
   const monthsLeft = getMonthsUntilRenewal(contract);
 
