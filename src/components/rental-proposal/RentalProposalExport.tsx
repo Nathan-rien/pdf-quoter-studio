@@ -248,7 +248,9 @@ export function RentalProposalExport() {
         printWindow.close();
         
         // Sauvegarder dans l'historique
-        await saveToHistory(htmlContent, 'success');
+        if (!isGenerated) {
+          await saveToHistory(htmlContent, 'success');
+        }
         
         setIsGenerating(false);
         setIsGenerated(true);
