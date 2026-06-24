@@ -375,6 +375,14 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                   >
                     {downloadingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                   </Button>
+                  <ValidateProposalButton
+                    proposalId={entry.id}
+                    clientName={entry.client_name || ''}
+                    commercialId={entry.commercial_id || ''}
+                    commercialName={entry.commercial_name || undefined}
+                    amountHt={entry.montant_investissement || undefined}
+                    templateName={entry.template_name}
+                  />
                 </>
               )}
               <Button
