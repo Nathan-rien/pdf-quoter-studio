@@ -205,6 +205,8 @@ interface RentalProposalActions {
   
   // Client data
   updateClientField: (field: keyof ClientData, value: string) => void;
+  updateClientData: (data: Partial<Pick<ClientData, 'nom' | 'raisonSociale' | 'email' | 'telephone' | 'adresse' | 'siret'>>) => void;
+  setLignesData: (lines: Array<{ designation: string; quantite: number; prixUnitaire: number | null; prixTotal: number }>) => void;
   
   // Proposal name
   updateProposalName: (name: string) => void;
