@@ -1019,7 +1019,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             totalHT: l.prixTotal,
           }));
           const montantInvestissement = Math.round(
-            lignesData.filter(l => !l.isSeparator).reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
+            lignesData.reduce((sum, ligne) => sum + (ligne.totalHT || 0), 0) * 100
           ) / 100;
           return {
             lignesData,
