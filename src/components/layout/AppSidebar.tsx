@@ -37,7 +37,7 @@ const TRANSPORT_LINKS = [
   { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
 ];
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'contracts' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -56,6 +56,9 @@ export function AppSidebar({
   isCommercial = false,
   onSignOut,
 }: AppSidebarProps) {
+  const { data: contracts = [] } = useContracts();
+  const renewingCount = contracts.filter(isContractRenewingSoon).length;
+
   return (
     <aside className="w-52 bg-card border-r border-border flex flex-col h-screen sticky top-0">
       {/* Logo */}
@@ -80,6 +83,20 @@ export function AppSidebar({
         >
           <Building2 className="h-3.5 w-3.5" />
           Proposition
+        </Button>
+
+        <Button
+          variant={currentView === 'contracts' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-2 h-8 text-sm"
+          onClick={() => onNavigate('contracts')}
+        >
+          <FileCheck className="h-3.5 w-3.5" />
+          <span className="flex-1 text-left">Contrats</span>
+          {renewingCount > 0 && (
+            <Badge className="h-5 px-1.5 text-[10px] bg-orange-500 hover:bg-orange-500 text-white border-transparent">
+              {renewingCount}
+            </Badge>
+          )}
         </Button>
 
         <Button

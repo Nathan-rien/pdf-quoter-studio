@@ -9,6 +9,7 @@ import { RentalWorkflow } from "@/components/rental-proposal/RentalWorkflow";
 import { AccessManagement } from "@/components/access/AccessManagement";
 import { StatisticsDashboard } from "@/components/admin/StatisticsDashboard";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
+import { ContractsView } from "@/components/contracts/ContractsView";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { MesInfosView } from "@/components/commercial/MesInfosView";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
@@ -45,6 +46,8 @@ export default function Index() {
         );
       case 'rental-workflow':
         return <RentalWorkflow />;
+      case 'contracts':
+        return <ContractsView />;
       case 'history':
         return (
           <HistoryView
