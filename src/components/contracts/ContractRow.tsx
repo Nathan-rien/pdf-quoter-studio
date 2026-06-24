@@ -1,13 +1,24 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Calendar, Building2, Clock, Bell } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar, Building2, Clock, Bell, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, isContractRenewingSoon, getMonthsUntilRenewal, Contract } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, Contract } from '@/hooks/useContracts';
 
 const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Credit Bail 1', 'Realease 2'];
 const DURATIONS = [12, 24, 36, 48, 60];
@@ -15,6 +26,7 @@ const DURATIONS = [12, 24, 36, 48, 60];
 export function ContractRow({ contract }: { contract: Contract }) {
   const [expanded, setExpanded] = useState(false);
   const updateContract = useUpdateContract();
+  const deleteContract = useDeleteContract();
   const renewing = isContractRenewingSoon(contract);
   const monthsLeft = getMonthsUntilRenewal(contract);
 
@@ -43,10 +55,11 @@ export function ContractRow({ contract }: { contract: Contract }) {
 
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden">
-      <button
-        type="button"
+      <div
         onClick={() => setExpanded(!expanded)}
-        className="w-full grid grid-cols-[1fr_auto] gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left items-center"
+        className="w-full grid grid-cols-[1fr_auto_auto] gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left items-center cursor-pointer"
+        role="button"
+        tabIndex={0}
       >
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -74,10 +87,41 @@ export function ContractRow({ contract }: { contract: Contract }) {
             <div className="text-[11px] text-muted-foreground">{contract.template_name}</div>
           )}
         </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
+              title="Supprimer le contrat"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer le contrat ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Le contrat de <strong>{contract.client_name}</strong> sera définitivement supprimé. Cette action est irréversible.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteContract.mutate(contract.id)}
+                disabled={deleteContract.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleteContract.isPending ? 'Suppression…' : 'Supprimer'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <div className="text-muted-foreground">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="border-t border-border bg-muted/20 p-4 space-y-4">
