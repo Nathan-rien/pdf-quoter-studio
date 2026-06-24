@@ -66,7 +66,7 @@ export function useCreateServiceProposal() {
     mutationFn: async (payload: Omit<ServiceProposal, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('service_proposals')
-        .insert(payload as unknown as Record<string, unknown>)
+        .insert(payload as any)
         .select()
         .single();
       if (error) throw error;
