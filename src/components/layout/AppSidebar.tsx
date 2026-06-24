@@ -38,7 +38,7 @@ const TRANSPORT_LINKS = [
   { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
 ];
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'contracts' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -84,6 +84,15 @@ export function AppSidebar({
         >
           <Building2 className="h-3.5 w-3.5" />
           Proposition
+        </Button>
+
+        <Button
+          variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-2 h-8 text-sm"
+          onClick={() => onNavigate('service-proposal')}
+        >
+          <Layers className="h-3.5 w-3.5" />
+          Prop. Services
         </Button>
 
         <Button
