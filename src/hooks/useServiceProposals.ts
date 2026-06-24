@@ -20,18 +20,18 @@ export interface InvestLine {
 export interface ServiceProposal {
   id: string;
   client_name: string;
-  client_company?: string;
-  client_email?: string;
-  client_phone?: string;
-  client_address?: string;
-  client_siret?: string;
+  client_company?: string | null;
+  client_email?: string | null;
+  client_phone?: string | null;
+  client_address?: string | null;
+  client_siret?: string | null;
   commercial_id: string;
-  commercial_name?: string;
+  commercial_name?: string | null;
   selected_services: ServiceLine[];
-  payment_frequency?: 'mensuel' | 'trimestriel';
-  payment_mode?: 'prelevement' | 'virement';
+  payment_frequency?: 'mensuel' | 'trimestriel' | null;
+  payment_mode?: 'prelevement' | 'virement' | null;
   start_date?: string | null;
-  contract_duration?: 12 | 24 | 36 | 48 | 60;
+  contract_duration?: number | null;
   invest_lines: InvestLine[];
   show_invest_price: boolean;
   show_offer_amount: boolean;
@@ -42,6 +42,8 @@ export interface ServiceProposal {
   updated_at: string;
 }
 
+type DbServiceProposal = Awaited<ReturnType<ReturnType<typeof supabase.from>['select']>>['data'] extends (infer T)[] | null ? NonNullable<T> : never;
+
 export function useServiceProposals() {
   return useQuery({
     queryKey: ['service_proposals'],
@@ -51,7 +53,7 @@ export function useServiceProposals() {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as ServiceProposal[];
+      return (data ?? []) as unknown as ServiceProposal[];
     },
     staleTime: 1000 * 60 * 2,
   });
@@ -62,9 +64,13 @@ export function useCreateServiceProposal() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (payload: Omit<ServiceProposal, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase.from('service_proposals').insert(payload).select().single();
+      const { data, error } = await supabase
+        .from('service_proposals')
+        .insert(payload as unknown as Record<string, unknown>)
+        .select()
+        .single();
       if (error) throw error;
-      return data as ServiceProposal;
+      return data as unknown as ServiceProposal;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service_proposals'] });
@@ -81,9 +87,14 @@ export function useUpdateServiceProposal() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<ServiceProposal, 'id' | 'created_at' | 'updated_at'>> }) => {
-      const { data, error } = await supabase.from('service_proposals').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase
+        .from('service_proposals')
+        .update(updates as unknown as Record<string, unknown>)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
-      return data as ServiceProposal;
+      return data as unknown as ServiceProposal;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service_proposals'] });
