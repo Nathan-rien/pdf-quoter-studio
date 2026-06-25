@@ -11,6 +11,9 @@ import { PDF_TEMPLATE_CONTRACT } from '@/lib/pdf-template-contract';
 import { PDF_TEMPLATE_ELEMENTS } from '@/lib/pdf-template-elements';
 import { toast } from 'sonner';
 
+let templatesMetadataLoaded = false;
+let templatesMetadataLoadPromise: Promise<void> | null = null;
+
 // Types pour la base de données
 interface DbTemplate {
   id: string;
@@ -149,9 +152,24 @@ export function useTemplateSync() {
   // Charger les templates depuis la base de données (SANS les pages pour éviter le timeout)
   const loadFromDatabase = useCallback(async () => {
     if (hasLoaded) return;
-    
-    try {
+
+    if (templatesMetadataLoaded) {
+      setIsLoading(false);
+      setHasLoaded(true);
+      return;
+    }
+
+    if (templatesMetadataLoadPromise) {
       setIsLoading(true);
+      await templatesMetadataLoadPromise;
+      setIsLoading(false);
+      setHasLoaded(true);
+      return;
+    }
+    
+    setIsLoading(true);
+    templatesMetadataLoadPromise = (async () => {
+      try {
       
       // Récupérer les templates
       const { data: templates, error: templatesError } = await supabase
@@ -167,6 +185,7 @@ export function useTemplateSync() {
       // Si pas de templates en base, garder le store tel quel (avec le template par défaut)
       if (!templates || templates.length === 0) {
         console.log('Aucun template en base, utilisation du store local');
+        templatesMetadataLoaded = true;
         setHasLoaded(true);
         return;
       }
@@ -187,16 +206,33 @@ export function useTemplateSync() {
       // Convertir sans les pages (lazy loading)
       const storeVersions = (versions || []).map(v => dbToStoreVersion({ ...v, pages: undefined }));
 
+      const currentState = useTemplateEditorStore.getState();
+      const mergedVersions = storeVersions.map(version => {
+        const existing = currentState.allVersions.find(v => v.id === version.id);
+        return existing?.pages?.length ? { ...version, pages: existing.pages } : version;
+      });
+
       // Mettre à jour le store avec les données de la base
       useTemplateEditorStore.setState({
         allTemplates: storeTemplates,
-        allVersions: storeVersions
+        allVersions: mergedVersions,
+        currentVersion: currentState.currentVersion
+          ? mergedVersions.find(v => v.id === currentState.currentVersion?.id) || currentState.currentVersion
+          : currentState.currentVersion,
       });
 
+      templatesMetadataLoaded = true;
       setHasLoaded(true);
       console.log(`Chargé ${storeTemplates.length} templates et ${storeVersions.length} versions (métadonnées) depuis la base`);
     } catch (error) {
       console.error('Erreur sync templates:', error);
+    } finally {
+        templatesMetadataLoadPromise = null;
+      }
+    })();
+
+    try {
+      await templatesMetadataLoadPromise;
     } finally {
       setIsLoading(false);
     }
