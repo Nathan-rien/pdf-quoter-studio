@@ -32,6 +32,8 @@ import { RentalProposalPreview } from '@/components/rental-proposal/RentalPropos
 import { RentalProposalExport } from '@/components/rental-proposal/RentalProposalExport';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { CommercialEntity } from '@/data/commerciaux';
+import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DEFAULT_CLIENT: ClientData = {
   client_name: '',
