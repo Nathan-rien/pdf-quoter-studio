@@ -104,22 +104,18 @@ export function ServiceProposalPreview() {
     loadPages();
   }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
 
-  if ((isLoading && !hasLoaded) || isLoadingVersion || !pagesLoaded) {
+  if (isLoading && !hasLoaded) {
     return <LoadingState message="Chargement du template..." />;
+  }
+
+  if (!pagesLoaded && activeTemplate) {
+    return <LoadingState message="Chargement des pages..." />;
   }
 
   // Version active
   const getCurrentVersion = (): TemplateVersion | null => {
     if (!activeTemplate) return null;
-    const fresh = useTemplateEditorStore.getState();
-    const versions = fresh.allVersions.filter((v) => v.templateId === activeTemplate.id);
-    const published = versions.filter((v) => v.status === 'publie');
-    let version: TemplateVersion | undefined;
-    if (published.length > 0) {
-      version = published.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
-    } else if (versions.length > 0) {
-      version = versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
-    }
+    const version = getTemplateLatestVersion(activeTemplate.id);
     return version && version.pages.length > 0 ? version : null;
   };
 
