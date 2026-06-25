@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, FileText, ChevronDown, ChevronUp, User, Trash2, Save, X } from 'lucide-react';
+import { Plus, FileText, ChevronDown, ChevronUp, User, Trash2, Save, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,7 +20,13 @@ import {
 import { ServiceProposalClientStep, ClientData } from './ServiceProposalClientStep';
 import { ServiceProposalDataStep, ServiceDataFormValues } from './ServiceProposalDataStep';
 import { ServiceProposalInvestStep, InvestFormValues } from './ServiceProposalInvestStep';
-import { useServiceProposals, useCreateServiceProposal, useDeleteServiceProposal, ServiceProposal } from '@/hooks/useServiceProposals';
+import {
+  useServiceProposals,
+  useCreateServiceProposal,
+  useUpdateServiceProposal,
+  useDeleteServiceProposal,
+  ServiceProposal,
+} from '@/hooks/useServiceProposals';
 import { TemplateSelector } from '@/components/rental-proposal/TemplateSelector';
 import { RentalProposalPreview } from '@/components/rental-proposal/RentalProposalPreview';
 import { RentalProposalExport } from '@/components/rental-proposal/RentalProposalExport';
@@ -69,33 +75,46 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
 
 function syncToRentalStore(clientData: ClientData, investForm: InvestFormValues) {
   const store = useRentalProposalStore.getState();
-  store.updateClientData({
-    nom: clientData.client_name,
-    raisonSociale: clientData.client_company,
-    email: clientData.client_email,
-    telephone: clientData.client_phone,
-    adresse: clientData.client_address,
-    siret: clientData.client_siret,
+  store.loadFromExport({
+    clientData: {
+      nom: clientData.client_name,
+      raisonSociale: clientData.client_company,
+      email: clientData.client_email,
+      telephone: clientData.client_phone,
+      adresse: clientData.client_address,
+      siret: clientData.client_siret,
+    },
+    commercialData: {
+      entity: (clientData.entity as CommercialEntity) || null,
+      commercialId: clientData.commercial_id || null,
+    },
+    matriceData: store.matriceData,
+    proposals: store.proposals,
+    lignesData: investForm.invest_lines.map((line) => ({
+      reference: null,
+      designation: line.designation,
+      prixUnitaire: line.vun,
+      quantite: line.qty,
+      totalHT: line.vtn,
+    })),
+    repriseData: store.repriseData,
+    servicesInclus: store.servicesInclus,
+    optionsServices: store.optionsServices,
+    nosOptions: store.nosOptions,
+    proposalName: clientData.client_company || clientData.client_name || 'Proposition Services',
+    selectedTemplateId: store.selectedTemplateId,
   });
-  if (clientData.entity) {
-    store.updateCommercialEntity(clientData.entity as CommercialEntity);
-  }
-  if (clientData.commercial_id) {
-    store.selectCommercial(clientData.commercial_id);
-  }
-  if (investForm.invest_lines.length > 0 && store.setLignesData) {
-    store.setLignesData(
-      investForm.invest_lines.map((line) => ({
-        designation: line.designation,
-        quantite: line.qty,
-        prixUnitaire: line.vun,
-        prixTotal: line.vtn,
-      }))
-    );
-  }
 }
 
-function ProposalRow({ proposal, onDelete }: { proposal: ServiceProposal; onDelete: (id: string) => void }) {
+function ProposalRow({
+  proposal,
+  onDelete,
+  onEdit,
+}: {
+  proposal: ServiceProposal;
+  onDelete: (id: string) => void;
+  onEdit: (proposal: ServiceProposal) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -138,6 +157,19 @@ function ProposalRow({ proposal, onDelete }: { proposal: ServiceProposal; onDele
         </div>
 
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(proposal);
+            }}
+            title="Modifier"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -217,12 +249,30 @@ function ProposalRow({ proposal, onDelete }: { proposal: ServiceProposal; onDele
   );
 }
 
-function CreateForm({ onClose }: { onClose: () => void }) {
-  const [clientData, setClientData] = useState<ClientData>(DEFAULT_CLIENT);
-  const [dataForm, setDataForm] = useState<ServiceDataFormValues>(DEFAULT_DATA);
-  const [investForm, setInvestForm] = useState<InvestFormValues>(DEFAULT_INVEST);
+function ProposalFormShell({
+  title,
+  clientData,
+  setClientData,
+  dataForm,
+  setDataForm,
+  investForm,
+  setInvestForm,
+  onClose,
+  onSave,
+  saving,
+}: {
+  title: string;
+  clientData: ClientData;
+  setClientData: (d: ClientData) => void;
+  dataForm: ServiceDataFormValues;
+  setDataForm: (d: ServiceDataFormValues) => void;
+  investForm: InvestFormValues;
+  setInvestForm: (d: InvestFormValues) => void;
+  onClose: () => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
   const [activeTab, setActiveTab] = useState('client');
-  const createProposal = useCreateServiceProposal();
 
   function handleTabChange(tab: string) {
     if (tab === 'preview-export') {
@@ -231,38 +281,10 @@ function CreateForm({ onClose }: { onClose: () => void }) {
     setActiveTab(tab);
   }
 
-  async function handleSave() {
-    syncToRentalStore(clientData, investForm);
-    const totalServices = dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0);
-    const totalInvest = investForm.invest_lines.reduce((s, l) => s + l.vtn, 0);
-    await createProposal.mutateAsync({
-      client_name: clientData.client_name || 'Sans nom',
-      client_company: clientData.client_company || null,
-      client_email: clientData.client_email || null,
-      client_phone: clientData.client_phone || null,
-      client_address: clientData.client_address || null,
-      client_siret: clientData.client_siret || null,
-      commercial_id: clientData.commercial_id || '',
-      commercial_name: clientData.commercial_name || null,
-      selected_services: dataForm.selected_services,
-      payment_frequency: dataForm.payment_frequency || null,
-      payment_mode: dataForm.payment_mode || null,
-      start_date: dataForm.start_date || null,
-      contract_duration: dataForm.contract_duration || null,
-      invest_lines: investForm.invest_lines,
-      show_invest_price: investForm.show_invest_price,
-      show_offer_amount: investForm.show_offer_amount,
-      total_services_ht: totalServices,
-      total_invest_ht: totalInvest,
-      status: 'draft',
-    });
-    onClose();
-  }
-
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Nouvelle proposition services</h2>
+        <h2 className="text-lg font-semibold">{title}</h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
@@ -297,21 +319,127 @@ function CreateForm({ onClose }: { onClose: () => void }) {
 
       <div className="flex items-center justify-end gap-2 pt-3 border-t">
         <Button variant="outline" onClick={onClose}>Annuler</Button>
-        <Button
-          onClick={handleSave}
-          disabled={createProposal.isPending}
-          className="gap-1"
-        >
+        <Button onClick={onSave} disabled={saving} className="gap-1">
           <Save className="h-4 w-4" />
-          {createProposal.isPending ? 'Enregistrement…' : 'Enregistrer'}
+          {saving ? 'Enregistrement…' : 'Enregistrer'}
         </Button>
       </div>
     </div>
   );
 }
 
+function buildPayload(
+  clientData: ClientData,
+  dataForm: ServiceDataFormValues,
+  investForm: InvestFormValues,
+) {
+  const totalServices = dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0);
+  const totalInvest = investForm.invest_lines.reduce((s, l) => s + l.vtn, 0);
+  return {
+    client_name: clientData.client_name || 'Sans nom',
+    client_company: clientData.client_company || null,
+    client_email: clientData.client_email || null,
+    client_phone: clientData.client_phone || null,
+    client_address: clientData.client_address || null,
+    client_siret: clientData.client_siret || null,
+    commercial_id: clientData.commercial_id || '',
+    commercial_name: clientData.commercial_name || null,
+    selected_services: dataForm.selected_services,
+    payment_frequency: (dataForm.payment_frequency || null) as 'mensuel' | 'trimestriel' | null,
+    payment_mode: (dataForm.payment_mode || null) as 'prelevement' | 'virement' | null,
+    start_date: dataForm.start_date || null,
+    contract_duration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
+    invest_lines: investForm.invest_lines,
+    show_invest_price: investForm.show_invest_price,
+    show_offer_amount: investForm.show_offer_amount,
+    total_services_ht: totalServices,
+    total_invest_ht: totalInvest,
+    status: 'draft' as const,
+  };
+}
+
+function CreateForm({ onClose }: { onClose: () => void }) {
+  const [clientData, setClientData] = useState<ClientData>(DEFAULT_CLIENT);
+  const [dataForm, setDataForm] = useState<ServiceDataFormValues>(DEFAULT_DATA);
+  const [investForm, setInvestForm] = useState<InvestFormValues>(DEFAULT_INVEST);
+  const createProposal = useCreateServiceProposal();
+
+  async function handleSave() {
+    syncToRentalStore(clientData, investForm);
+    await createProposal.mutateAsync(buildPayload(clientData, dataForm, investForm));
+    onClose();
+  }
+
+  return (
+    <ProposalFormShell
+      title="Nouvelle proposition services"
+      clientData={clientData}
+      setClientData={setClientData}
+      dataForm={dataForm}
+      setDataForm={setDataForm}
+      investForm={investForm}
+      setInvestForm={setInvestForm}
+      onClose={onClose}
+      onSave={handleSave}
+      saving={createProposal.isPending}
+    />
+  );
+}
+
+function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: () => void }) {
+  const [clientData, setClientData] = useState<ClientData>({
+    client_name: proposal.client_name ?? '',
+    client_company: proposal.client_company ?? '',
+    client_email: proposal.client_email ?? '',
+    client_phone: proposal.client_phone ?? '',
+    client_address: proposal.client_address ?? '',
+    client_siret: proposal.client_siret ?? '',
+    entity: '',
+    commercial_id: proposal.commercial_id ?? '',
+    commercial_name: proposal.commercial_name ?? '',
+  });
+  const [dataForm, setDataForm] = useState<ServiceDataFormValues>({
+    selected_services: proposal.selected_services ?? [],
+    payment_frequency: proposal.payment_frequency ?? '',
+    payment_mode: proposal.payment_mode ?? '',
+    start_date: proposal.start_date ?? '',
+    contract_duration: (proposal.contract_duration ?? '') as ServiceDataFormValues['contract_duration'],
+  });
+  const [investForm, setInvestForm] = useState<InvestFormValues>({
+    invest_lines: proposal.invest_lines ?? [],
+    show_invest_price: proposal.show_invest_price ?? true,
+    show_offer_amount: proposal.show_offer_amount ?? true,
+  });
+  const updateProposal = useUpdateServiceProposal();
+
+  async function handleSave() {
+    syncToRentalStore(clientData, investForm);
+    await updateProposal.mutateAsync({
+      id: proposal.id,
+      updates: buildPayload(clientData, dataForm, investForm),
+    });
+    onClose();
+  }
+
+  return (
+    <ProposalFormShell
+      title="Modifier la proposition"
+      clientData={clientData}
+      setClientData={setClientData}
+      dataForm={dataForm}
+      setDataForm={setDataForm}
+      investForm={investForm}
+      setInvestForm={setInvestForm}
+      onClose={onClose}
+      onSave={handleSave}
+      saving={updateProposal.isPending}
+    />
+  );
+}
+
 export function ServiceProposalView() {
   const [showForm, setShowForm] = useState(false);
+  const [editingProposal, setEditingProposal] = useState<ServiceProposal | null>(null);
   const { data: proposals = [], isLoading } = useServiceProposals();
   const deleteProposal = useDeleteServiceProposal();
 
@@ -322,6 +450,8 @@ export function ServiceProposalView() {
     }
     grouped.get(p.commercial_id)!.proposals.push(p);
   }
+
+  const formOpen = showForm || editingProposal !== null;
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -337,7 +467,7 @@ export function ServiceProposalView() {
             Créez des propositions de services indépendantes des propositions de location.
           </p>
         </div>
-        {!showForm && (
+        {!formOpen && (
           <Button onClick={() => setShowForm(true)} className="gap-1.5">
             <Plus className="h-4 w-4" />Nouvelle proposition
           </Button>
@@ -345,10 +475,13 @@ export function ServiceProposalView() {
       </div>
 
       {showForm && <CreateForm onClose={() => setShowForm(false)} />}
+      {editingProposal && (
+        <EditForm proposal={editingProposal} onClose={() => setEditingProposal(null)} />
+      )}
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground text-center py-12">Chargement…</div>
-      ) : proposals.length === 0 && !showForm ? (
+      ) : proposals.length === 0 && !formOpen ? (
         <div className="text-center py-12 space-y-2">
           <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
           <h3 className="font-medium">Aucune proposition services.</h3>
@@ -367,7 +500,12 @@ export function ServiceProposalView() {
               </div>
               <div className="space-y-2">
                 {pList.map((p) => (
-                  <ProposalRow key={p.id} proposal={p} onDelete={(id) => deleteProposal.mutate(id)} />
+                  <ProposalRow
+                    key={p.id}
+                    proposal={p}
+                    onDelete={(id) => deleteProposal.mutate(id)}
+                    onEdit={(prop) => setEditingProposal(prop)}
+                  />
                 ))}
               </div>
             </div>
