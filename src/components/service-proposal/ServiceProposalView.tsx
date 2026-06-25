@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, FileText, ChevronDown, ChevronUp, User, Trash2, Save, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,10 +28,10 @@ import {
   ServiceProposal,
 } from '@/hooks/useServiceProposals';
 import { TemplateSelector } from '@/components/rental-proposal/TemplateSelector';
-import { RentalProposalPreview } from '@/components/rental-proposal/RentalProposalPreview';
-import { RentalProposalExport } from '@/components/rental-proposal/RentalProposalExport';
+import { ServiceProposalPreview } from './ServiceProposalPreview';
+import { ServiceProposalExport } from './ServiceProposalExport';
+import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
-import { CommercialEntity } from '@/data/commerciaux';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -75,57 +75,32 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
   cancelled: 'Annulée',
 };
 
-function syncToRentalStore(clientData: ClientData, investForm: InvestFormValues) {
-  const store = useRentalProposalStore.getState();
-  store.loadFromExport({
-    clientData: {
-      nom: clientData.client_name,
-      raisonSociale: clientData.client_company,
-      email: clientData.client_email,
-      telephone: clientData.client_phone,
-      adresse: clientData.client_address,
-      siret: clientData.client_siret,
-    },
-    commercialData: {
-      entity: (clientData.entity as CommercialEntity) || null,
-      commercialId: clientData.commercial_id || null,
-    },
-    matriceData: {
-      ...store.matriceData,
-      montantInvestissement: investForm.invest_lines.reduce((sum, l) => sum + l.vtn, 0),
-    },
-    proposals: [{
-      ...store.proposals[0],
-      montantInvestissement: investForm.invest_lines.reduce((sum, l) => sum + l.vtn, 0),
-      duree: 36,
-    }],
-    lignesData: investForm.invest_lines.map((line) => ({
-      reference: null,
-      designation: line.designation,
-      prixUnitaire: line.vun,
-      quantite: line.qty,
-      totalHT: line.vtn,
-    })),
-    repriseData: {
-      lignes: [],
-      marge: 0.20,
-      margeIsOverridden: false,
-      grades: [
-        { grade: 'A', prixPartenaire: 0 },
-        { grade: 'B', prixPartenaire: 0 },
-        { grade: 'C', prixPartenaire: 0 },
-        { grade: 'D', prixPartenaire: 0 },
-      ],
-      descriptions: [],
-      repriseDescriptionTitle: '',
-      repriseDescription: '',
-    },
-    servicesInclus: store.servicesInclus,
-    optionsServices: [],
-    nosOptions: [],
-    proposalName: clientData.client_company || clientData.client_name || 'Proposition Services',
-    selectedTemplateId: store.selectedTemplateId,
+function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues) {
+  const store = useServiceProposalStore.getState();
+  store.updateClientData({
+    nom: clientData.client_name,
+    raisonSociale: clientData.client_company,
+    email: clientData.client_email,
+    telephone: clientData.client_phone,
+    adresse: clientData.client_address,
+    siret: clientData.client_siret,
   });
+  store.updateCommercialData({
+    entity: clientData.entity || null,
+    commercialId: clientData.commercial_id || null,
+  });
+  store.setLignesData(
+    investForm.invest_lines.map((l) => ({
+      id: l.id,
+      designation: l.designation,
+      quantite: l.qty,
+      prixUnitaire: l.vun,
+      totalHT: l.vtn,
+    })),
+  );
+  store.updateProposalName(
+    clientData.client_company || clientData.client_name || 'Proposition Services',
+  );
 }
 
 function ProposalRow({
@@ -297,12 +272,19 @@ function ProposalFormShell({
   initialTab?: string;
 }) {
   const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
-  const servicesInclus = useRentalProposalStore((s) => s.servicesInclus);
-  const updateServicesInclus = useRentalProposalStore((s) => s.updateServicesInclus);
+  const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
+  const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
+
+  // TemplateSelector écrit dans useRentalProposalStore.selectedTemplateId.
+  // On miroite cette valeur vers serviceProposalStore pour que l'aperçu/export l'utilisent.
+  const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
+  useEffect(() => {
+    useServiceProposalStore.getState().selectTemplate(rentalSelectedTemplateId ?? null);
+  }, [rentalSelectedTemplateId]);
 
   function handleTabChange(tab: string) {
-    if (tab === 'preview-export') {
-      syncToRentalStore(clientData, investForm);
+    if (tab === 'preview-export' || tab === 'template') {
+      syncToServiceStore(clientData, investForm);
     }
     setActiveTab(tab);
   }
@@ -359,9 +341,9 @@ function ProposalFormShell({
           <TemplateSelector />
         </TabsContent>
         <TabsContent value="preview-export" className="space-y-8">
-          <RentalProposalPreview />
+          <ServiceProposalPreview />
           <Separator />
-          <RentalProposalExport />
+          <ServiceProposalExport />
         </TabsContent>
       </Tabs>
 
@@ -414,7 +396,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const createProposal = useCreateServiceProposal();
 
   async function handleSave() {
-    syncToRentalStore(clientData, investForm);
+    syncToServiceStore(clientData, investForm);
     await createProposal.mutateAsync(buildPayload(clientData, dataForm, investForm));
     onClose();
   }
@@ -436,6 +418,11 @@ function CreateForm({ onClose }: { onClose: () => void }) {
 }
 
 function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: () => void }) {
+  // Préchargement du store autonome avec les données de la proposition existante
+  useEffect(() => {
+    useServiceProposalStore.getState().loadFromServiceProposal(proposal);
+  }, [proposal]);
+
   const [clientData, setClientData] = useState<ClientData>({
     client_name: proposal.client_name ?? '',
     client_company: proposal.client_company ?? '',
@@ -462,7 +449,7 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
   const updateProposal = useUpdateServiceProposal();
 
   async function handleSave() {
-    syncToRentalStore(clientData, investForm);
+    syncToServiceStore(clientData, investForm);
     await updateProposal.mutateAsync({
       id: proposal.id,
       updates: buildPayload(clientData, dataForm, investForm),
