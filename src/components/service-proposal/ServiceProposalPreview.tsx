@@ -1,16 +1,8 @@
 /**
  * Aperçu PDF pour une Proposition Services (standalone).
- *
- * Lit ses données EXCLUSIVEMENT depuis useServiceProposalStore.
- * Aucune dépendance à rentalProposalStore.
- *
- * Structure de pagination :
- *   - Pages template 1, 2, 3
- *   - Page custom "Vos services" (tableau)
- *   - Page custom "Services inclus" (texte préformaté)
- *   - Pages template 4..N (signature, conditions, etc.)
+ * Réécriture sans race condition : résolution unique de la version + lazy loading once.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +12,6 @@ import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import {
-  CANVAS_SCALE,
   CANVAS_DISPLAY_MAX_WIDTH,
   PREVIEW_FONT_SCALE,
   PREVIEW_ICON_SCALE,
@@ -43,11 +34,9 @@ import type {
 } from '@/types/template-editor';
 import type { PDFPageNumber } from '@/types/pdf-template';
 
-const TEMPLATE_PAGES_BEFORE = 3; // pages 1, 2, 3 du template
-const CUSTOM_SERVICES_PAGE_LABEL = 'services-table';
-const CUSTOM_INCLUS_PAGE_LABEL = 'services-inclus';
+const TEMPLATE_PAGES_BEFORE = 3;
 
-const formatNumber = (value: number | null) => {
+const formatNumber = (value: number | null | undefined) => {
   if (value === null || value === undefined) return '-';
   return new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 2,
@@ -57,6 +46,8 @@ const formatNumber = (value: number | null) => {
 
 export function ServiceProposalPreview() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [resolvedVersion, setResolvedVersion] = useState<TemplateVersion | null>(null);
+  const loadingRef = useRef(false);
 
   const { isLoading, hasLoaded, loadVersionPages } = useTemplateSync();
   const {
@@ -70,64 +61,65 @@ export function ServiceProposalPreview() {
 
   const { allTemplates, getActiveTemplate, getTemplateLatestVersion } =
     useTemplateEditorStore();
-  // Abonnement réactif aux versions : déclenche re-render quand les pages sont injectées
-  const allVersions = useTemplateEditorStore((s) => s.allVersions);
 
-  // Template actif
   const activeTemplate = useMemo(() => {
     if (selectedTemplateId) {
-      return allTemplates.find((t) => t.id === selectedTemplateId) || getActiveTemplate();
+      return allTemplates.find((t) => t.id === selectedTemplateId) ?? getActiveTemplate() ?? null;
     }
-    return getActiveTemplate();
+    return getActiveTemplate() ?? null;
   }, [selectedTemplateId, allTemplates, getActiveTemplate]);
 
-  // Lance le lazy loading si nécessaire — sans state intermédiaire
-  React.useEffect(() => {
-    if (!hasLoaded || !activeTemplate) return;
+  // Résolution unique de la version + lazy loading des pages
+  useEffect(() => {
+    if (!hasLoaded) return;
+    if (!activeTemplate) {
+      setResolvedVersion(null);
+      return;
+    }
+    if (loadingRef.current) return;
+
     const version = getTemplateLatestVersion(activeTemplate.id);
-    if (!version || version.pages.length > 0) return;
-    // Quand le chargement finit, allVersions change → re-render automatique
-    loadVersionPages(version.id);
+    if (!version) {
+      setResolvedVersion(null);
+      return;
+    }
+
+    if (version.pages.length > 0) {
+      setResolvedVersion(version);
+      return;
+    }
+
+    loadingRef.current = true;
+    Promise.resolve(loadVersionPages(version.id))
+      .then((pages: any) => {
+        loadingRef.current = false;
+        if (pages && pages.length > 0) {
+          const fresh = useTemplateEditorStore.getState();
+          const updated = fresh.allVersions.find((v) => v.id === version.id) ?? null;
+          setResolvedVersion(updated && updated.pages.length > 0 ? updated : null);
+        } else {
+          setResolvedVersion(null);
+        }
+      })
+      .catch(() => {
+        loadingRef.current = false;
+        setResolvedVersion(null);
+      });
   }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
 
-  // Version courante (réactive sur allVersions)
-  const currentVersion = useMemo((): TemplateVersion | null => {
-    if (!activeTemplate) return null;
-    const version =
-      allVersions.find((v) => v.templateId === activeTemplate.id && v.status === 'publie') ||
-      allVersions
-        .filter((v) => v.templateId === activeTemplate.id)
-        .sort((a, b) => b.versionNumber - a.versionNumber)[0] ||
-      null;
-    return version ?? null;
-  }, [activeTemplate, allVersions]);
-
-  if (isLoading && !hasLoaded) {
-    return <LoadingState message="Chargement du template..." />;
-  }
-
-  if (activeTemplate && (!currentVersion || currentVersion.pages.length === 0)) {
-    return <LoadingState message="Chargement des pages..." />;
-  }
-
-  const templatePagesTotal = currentVersion?.pages.length || 0;
+  const templatePagesTotal = resolvedVersion?.pages.length ?? 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
-
-  // Pages : [1..3 template] + [services-table] + [services-inclus] + [4..N template]
   const totalPages = TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter;
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
-    const version = currentVersion;
-    if (!version) return [];
-    const pageContent = version.pages.find((p) => p.pageNumber === pageNumber);
+    if (!resolvedVersion) return [];
+    const pageContent = resolvedVersion.pages.find((p) => p.pageNumber === pageNumber);
     if (!pageContent) return [];
     return sortElementsByZIndex(pageContent.elements.filter((el) => !el.isDynamic));
   };
 
-
   const previewZIndex = (el: EditableElement): number => (el.zIndex ?? 0) + 10;
 
-  // --- Rendu d'un élément du template (text / image / shape / icon) ---
   const renderTemplateElement = (element: EditableElement) => {
     const style: React.CSSProperties = {
       ...getSharedElementStyle({ element }),
@@ -199,7 +191,7 @@ export function ServiceProposalPreview() {
 
     if (element.type === 'shape') {
       const content = element.content as ShapeContent;
-      const baseStyle: React.CSSProperties = {
+      const s: React.CSSProperties = {
         ...style,
         backgroundColor:
           content.backgroundColor !== 'transparent' ? content.backgroundColor : undefined,
@@ -211,9 +203,9 @@ export function ServiceProposalPreview() {
         transform: `rotate(${content.rotation || 0}deg)`,
       };
       if (content.border?.enabled) {
-        baseStyle.border = `${content.border.width}px solid ${content.border.color}`;
+        s.border = `${content.border.width}px solid ${content.border.color}`;
       }
-      return <div key={element.id} style={baseStyle} />;
+      return <div key={element.id} style={s} />;
     }
 
     if (element.type === 'icon') {
@@ -240,7 +232,6 @@ export function ServiceProposalPreview() {
     return null;
   };
 
-  // --- Cadre d'une page A4 ---
   const PageFrame = ({
     pageNum,
     children,
@@ -261,7 +252,6 @@ export function ServiceProposalPreview() {
     </div>
   );
 
-  // --- Rendu d'une page template ---
   const renderTemplatePage = (templatePageNumber: number, displayPageNum: number) => {
     const elements = getStaticPageElements(templatePageNumber as PDFPageNumber);
     return (
@@ -272,8 +262,7 @@ export function ServiceProposalPreview() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">Page {templatePageNumber}</p>
-              <p className="text-sm mt-2">Aucun contenu dans le template</p>
+              <p className="text-sm">Page {templatePageNumber} — contenu vide</p>
             </div>
           </div>
         )}
@@ -281,13 +270,9 @@ export function ServiceProposalPreview() {
     );
   };
 
-  // --- Page custom "Vos services" ---
   const renderVosServicesPage = (displayPageNum: number) => (
     <PageFrame pageNum={displayPageNum}>
-      <div
-        className="absolute bg-white"
-        style={{ left: '3%', top: '5%', width: '94%' }}
-      >
+      <div className="absolute bg-white" style={{ left: '3%', top: '5%', width: '94%' }}>
         <div className="font-bold text-[13px] mb-1">Vos services</div>
         {lignesData.length > 0 ? (
           <div className="border rounded overflow-hidden">
@@ -333,13 +318,9 @@ export function ServiceProposalPreview() {
     </PageFrame>
   );
 
-  // --- Page custom "Services inclus" ---
   const renderServicesInclusPage = (displayPageNum: number) => (
     <PageFrame pageNum={displayPageNum}>
-      <div
-        className="absolute bg-white"
-        style={{ left: '3%', top: '5%', width: '94%' }}
-      >
+      <div className="absolute bg-white" style={{ left: '3%', top: '5%', width: '94%' }}>
         <div className="font-bold text-[13px] mb-2">Les services inclus dans votre offre</div>
         <div
           className="text-[10px] leading-relaxed whitespace-pre-wrap"
@@ -351,21 +332,12 @@ export function ServiceProposalPreview() {
     </PageFrame>
   );
 
-  // --- Dispatcher de page ---
   const renderPage = () => {
-    // Pages 1..TEMPLATE_PAGES_BEFORE : template pages 1..3
     if (currentPage >= 1 && currentPage <= TEMPLATE_PAGES_BEFORE) {
       return renderTemplatePage(currentPage, currentPage);
     }
-    // Page custom "Vos services"
-    if (currentPage === TEMPLATE_PAGES_BEFORE + 1) {
-      return renderVosServicesPage(currentPage);
-    }
-    // Page custom "Services inclus"
-    if (currentPage === TEMPLATE_PAGES_BEFORE + 2) {
-      return renderServicesInclusPage(currentPage);
-    }
-    // Pages template restantes (4..N)
+    if (currentPage === TEMPLATE_PAGES_BEFORE + 1) return renderVosServicesPage(currentPage);
+    if (currentPage === TEMPLATE_PAGES_BEFORE + 2) return renderServicesInclusPage(currentPage);
     const offset = currentPage - (TEMPLATE_PAGES_BEFORE + 2);
     const templatePageNumber = TEMPLATE_PAGES_BEFORE + offset;
     if (templatePageNumber <= templatePagesTotal) {
@@ -374,18 +346,18 @@ export function ServiceProposalPreview() {
     return (
       <PageFrame pageNum={currentPage}>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">Page {currentPage} n'existe pas</p>
-          </div>
+          <p className="text-sm text-muted-foreground">Page introuvable</p>
         </div>
       </PageFrame>
     );
   };
 
+  if (isLoading && !hasLoaded) {
+    return <LoadingState message="Chargement du template..." />;
+  }
+
   return (
     <div className="space-y-4">
-      {/* En-tête */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
@@ -403,7 +375,6 @@ export function ServiceProposalPreview() {
         </div>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-2 bg-muted/50 rounded-lg">
         <Button
           variant="ghost"
@@ -426,8 +397,13 @@ export function ServiceProposalPreview() {
         </Button>
       </div>
 
-      {/* Page rendue */}
-      <div className="flex justify-center">{renderPage()}</div>
+      <div className="flex justify-center">
+        {resolvedVersion === null && activeTemplate && loadingRef.current ? (
+          <LoadingState message="Chargement des pages..." />
+        ) : (
+          renderPage()
+        )}
+      </div>
     </div>
   );
 }
