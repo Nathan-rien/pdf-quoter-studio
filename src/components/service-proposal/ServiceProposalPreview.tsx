@@ -46,7 +46,7 @@ const formatNumber = (value: number | null | undefined) => {
 
 export function ServiceProposalPreview() {
   const [currentPage, setCurrentPage] = useState(1);
-  const loadAttemptedRef = useRef<Set<string>>(new Set());
+  const [loadTimeout, setLoadTimeout] = useState(false);
 
   const { isLoading, hasLoaded, isLoadingVersion, loadVersionPages } = useTemplateSync();
   const {
@@ -64,11 +64,14 @@ export function ServiceProposalPreview() {
   const allVersions = useTemplateEditorStore((s) => s.allVersions);
 
   const activeTemplate = useMemo(() => {
-    if (selectedTemplateId) {
-      const found = allTemplates.find((t) => t.id === selectedTemplateId);
-      if (found) return found;
+    let result = selectedTemplateId
+      ? (allTemplates.find((t) => t.id === selectedTemplateId) ?? null)
+      : null;
+    if (!result) {
+      result = allTemplates.find((t) => t.isActive) ?? allTemplates[0] ?? null;
     }
-    return allTemplates.find((t) => t.isActive) ?? allTemplates[0] ?? null;
+    console.log('[ServiceProposalPreview] selectedTemplateId:', selectedTemplateId, 'activeTemplate:', result?.name);
+    return result;
   }, [selectedTemplateId, allTemplates]);
 
   // Calcul de la version courante (publiée en priorité) depuis le store frais
@@ -83,20 +86,30 @@ export function ServiceProposalPreview() {
     return versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
   }, [activeTemplate, allVersions]);
 
-  // Lazy loading des pages : une seule tentative par version
   useEffect(() => {
-    if (!hasLoaded || !currentVersion) return;
-    if (currentVersion.pages.length > 0) return;
-    if (loadAttemptedRef.current.has(currentVersion.id)) return;
+    if (!hasLoaded) return;
+    if (!activeTemplate) return;
 
-    loadAttemptedRef.current.add(currentVersion.id);
-    loadVersionPages(currentVersion.id);
-  }, [hasLoaded, currentVersion, loadVersionPages]);
+    const freshState = useTemplateEditorStore.getState();
+    const versions = freshState.allVersions.filter((v) => v.templateId === activeTemplate.id);
+    if (versions.length === 0) return;
+
+    const published = versions.filter((v) => v.status === 'publie');
+    const version = published.length > 0
+      ? published.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b))
+      : versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
+
+    if (!version || version.pages.length > 0) return;
+
+    loadVersionPages(version.id);
+  }, [hasLoaded, activeTemplate, loadVersionPages]);
 
   const handleRetry = () => {
-    if (!currentVersion) return;
-    loadAttemptedRef.current.delete(currentVersion.id);
-    loadVersionPages(currentVersion.id);
+    if (!activeTemplate) return;
+    const freshState = useTemplateEditorStore.getState();
+    const versions = freshState.allVersions.filter((v) => v.templateId === activeTemplate.id);
+    const version = versions.find((v) => v.status === 'publie') ?? versions[0];
+    if (version) loadVersionPages(version.id);
   };
 
   const hasEmptyPages = !!currentVersion && currentVersion.pages.length > 0
