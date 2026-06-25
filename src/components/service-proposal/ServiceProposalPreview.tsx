@@ -10,7 +10,7 @@
  *   - Page custom "Services inclus" (texte préformaté)
  *   - Pages template 4..N (signature, conditions, etc.)
  */
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
