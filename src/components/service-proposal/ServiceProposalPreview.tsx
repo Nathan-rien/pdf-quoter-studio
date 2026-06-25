@@ -2,7 +2,7 @@
  * Aperçu PDF pour une Proposition Services (standalone).
  * Réécriture sans race condition : résolution unique de la version + lazy loading once.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, RefreshCw, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
