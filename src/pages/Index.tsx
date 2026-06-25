@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRentalProposalStore } from "@/stores/rentalProposalStore";
 import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar, ViewType } from "@/components/layout/AppSidebar";
@@ -26,6 +26,35 @@ export default function Index() {
   const canAccessAdmin = userRole === 'admin';
 
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useAdminNotifications(isAdmin);
+
+  // Nettoyer le localStorage corrompu par l'ancien code ServiceProposalView
+  // qui appelait loadFromExport sur rentalProposalStore.
+  // Temporaire : peut être retiré après un cycle de déploiement.
+  useEffect(() => {
+    const stored = localStorage.getItem('rental-proposal-storage');
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      if (
+        parsed?.state?.lignesData?.some((l: { designation?: string }) =>
+          ['Produit 1', 'Produit 2', 'Produit 3'].includes(l.designation ?? '')
+        )
+      ) {
+        const cleaned = {
+          ...parsed,
+          state: {
+            ...parsed.state,
+            lignesData: [],
+            pdfImportStatus: { isImported: false, fileName: null, source: null, importDate: null },
+          },
+        };
+        localStorage.setItem('rental-proposal-storage', JSON.stringify(cleaned));
+        window.location.reload();
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   const handleNavigateToHistory = (ids: string[]) => {
     setHighlightedIds(ids);
