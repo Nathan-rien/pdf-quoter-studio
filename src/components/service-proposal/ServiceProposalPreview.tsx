@@ -120,6 +120,12 @@ export function ServiceProposalPreview() {
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
   const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter);
 
+  useEffect(() => {
+    if (pagesReady) { setLoadTimeout(false); return; }
+    const t = setTimeout(() => setLoadTimeout(true), 5000);
+    return () => clearTimeout(t);
+  }, [pagesReady]);
+
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     if (!currentVersion) return [];
     const pageContent = currentVersion.pages.find((p) => p.pageNumber === pageNumber);
@@ -445,12 +451,17 @@ export function ServiceProposalPreview() {
             </Button>
           </div>
         ) : !pagesReady ? (
-          <div className="flex flex-col items-center gap-3">
+          loadTimeout ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <p className="text-sm text-muted-foreground">Le template n'a pas pu être chargé.</p>
+              <Button variant="outline" size="sm" onClick={handleRetry} disabled={isLoadingVersion}>
+                <RefreshCw className={isLoadingVersion ? 'animate-spin h-3 w-3' : 'h-3 w-3'} />
+                Réessayer
+              </Button>
+            </div>
+          ) : (
             <LoadingState message="Chargement des pages..." />
-            <Button variant="outline" size="sm" onClick={handleRetry} disabled={isLoadingVersion}>
-              <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} /> Réessayer
-            </Button>
-          </div>
+          )
         ) : (
           renderPage()
         )}
