@@ -38,7 +38,7 @@ const TRANSPORT_LINKS = [
   { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
 ];
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -77,6 +77,7 @@ export function AppSidebar({
 
       {/* Main navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* SECTION 1 — Location */}
         <Button
           variant={currentView === 'rental-proposal' || currentView === 'rental-workflow' ? 'secondary' : 'ghost'}
           className="w-full justify-start gap-2 h-8 text-sm"
@@ -84,15 +85,6 @@ export function AppSidebar({
         >
           <Building2 className="h-3.5 w-3.5" />
           Proposition
-        </Button>
-
-        <Button
-          variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
-          className="w-full justify-start gap-2 h-8 text-sm"
-          onClick={() => onNavigate('service-proposal')}
-        >
-          <Layers className="h-3.5 w-3.5" />
-          Prop. Services
         </Button>
 
         <Button
@@ -117,6 +109,41 @@ export function AppSidebar({
           <History className="h-3.5 w-3.5" />
           Historique
         </Button>
+
+        {/* SECTION 2 — Services */}
+        <div className="border-t border-border my-2" />
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
+          Services
+        </p>
+
+        <Button
+          variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-2 h-8 text-sm"
+          onClick={() => onNavigate('service-proposal')}
+        >
+          <Layers className="h-3.5 w-3.5" />
+          Prop. Services
+        </Button>
+
+        <Button
+          variant={currentView === 'service-contracts' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-2 h-8 text-sm"
+          onClick={() => onNavigate('service-contracts')}
+        >
+          <FileCheck className="h-3.5 w-3.5" />
+          Contrats Services
+        </Button>
+
+        <Button
+          variant={currentView === 'service-history' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-2 h-8 text-sm"
+          onClick={() => onNavigate('service-history')}
+        >
+          <History className="h-3.5 w-3.5" />
+          Historique Services
+        </Button>
+
+        <div className="border-t border-border my-2" />
 
         {/* Onglet Mes infos - visible pour les commerciaux et les admins */}
         {(isCommercial || isAdmin) && (
