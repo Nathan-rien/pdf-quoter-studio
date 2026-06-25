@@ -46,10 +46,9 @@ const formatNumber = (value: number | null | undefined) => {
 
 export function ServiceProposalPreview() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [resolvedVersion, setResolvedVersion] = useState<TemplateVersion | null>(null);
-  const loadingRef = useRef(false);
+  const loadAttemptedRef = useRef<Set<string>>(new Set());
 
-  const { isLoading, hasLoaded, loadVersionPages } = useTemplateSync();
+  const { isLoading, hasLoaded, isLoadingVersion, loadVersionPages } = useTemplateSync();
   const {
     clientData,
     lignesData,
@@ -59,61 +58,49 @@ export function ServiceProposalPreview() {
     totalInvest,
   } = useServiceProposalStore();
 
-  const { allTemplates, getActiveTemplate, getTemplateLatestVersion } =
-    useTemplateEditorStore();
+  // S'abonner explicitement à allTemplates et allVersions pour re-render quand les pages
+  // sont injectées dans le store par loadVersionPages
+  const allTemplates = useTemplateEditorStore((s) => s.allTemplates);
+  const allVersions = useTemplateEditorStore((s) => s.allVersions);
 
   const activeTemplate = useMemo(() => {
     if (selectedTemplateId) {
-      return allTemplates.find((t) => t.id === selectedTemplateId) ?? getActiveTemplate() ?? null;
+      const found = allTemplates.find((t) => t.id === selectedTemplateId);
+      if (found) return found;
     }
-    return getActiveTemplate() ?? null;
-  }, [selectedTemplateId, allTemplates, getActiveTemplate]);
+    return allTemplates.find((t) => t.isActive) ?? allTemplates[0] ?? null;
+  }, [selectedTemplateId, allTemplates]);
 
-  // Résolution unique de la version + lazy loading des pages
+  // Calcul de la version courante (publiée en priorité) depuis le store frais
+  const currentVersion = useMemo<TemplateVersion | null>(() => {
+    if (!activeTemplate) return null;
+    const versions = allVersions.filter((v) => v.templateId === activeTemplate.id);
+    if (versions.length === 0) return null;
+    const published = versions.filter((v) => v.status === 'publie');
+    if (published.length > 0) {
+      return published.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
+    }
+    return versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
+  }, [activeTemplate, allVersions]);
+
+  // Lazy loading des pages : une seule tentative par version
   useEffect(() => {
-    if (!hasLoaded) return;
-    if (!activeTemplate) {
-      setResolvedVersion(null);
-      return;
-    }
-    if (loadingRef.current) return;
+    if (!hasLoaded || !currentVersion) return;
+    if (currentVersion.pages.length > 0) return;
+    if (loadAttemptedRef.current.has(currentVersion.id)) return;
 
-    const version = getTemplateLatestVersion(activeTemplate.id);
-    if (!version) {
-      setResolvedVersion(null);
-      return;
-    }
+    loadAttemptedRef.current.add(currentVersion.id);
+    loadVersionPages(currentVersion.id);
+  }, [hasLoaded, currentVersion, loadVersionPages]);
 
-    if (version.pages.length > 0) {
-      setResolvedVersion(version);
-      return;
-    }
-
-    loadingRef.current = true;
-    Promise.resolve(loadVersionPages(version.id))
-      .then((pages: any) => {
-        loadingRef.current = false;
-        if (pages && pages.length > 0) {
-          const fresh = useTemplateEditorStore.getState();
-          const updated = fresh.allVersions.find((v) => v.id === version.id) ?? null;
-          setResolvedVersion(updated && updated.pages.length > 0 ? updated : null);
-        } else {
-          setResolvedVersion(null);
-        }
-      })
-      .catch(() => {
-        loadingRef.current = false;
-        setResolvedVersion(null);
-      });
-  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
-
-  const templatePagesTotal = resolvedVersion?.pages.length ?? 0;
+  const pagesReady = !!currentVersion && currentVersion.pages.length > 0;
+  const templatePagesTotal = currentVersion?.pages.length ?? 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
-  const totalPages = TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter;
+  const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
-    if (!resolvedVersion) return [];
-    const pageContent = resolvedVersion.pages.find((p) => p.pageNumber === pageNumber);
+    if (!currentVersion) return [];
+    const pageContent = currentVersion.pages.find((p) => p.pageNumber === pageNumber);
     if (!pageContent) return [];
     return sortElementsByZIndex(pageContent.elements.filter((el) => !el.isDynamic));
   };
@@ -398,7 +385,9 @@ export function ServiceProposalPreview() {
       </div>
 
       <div className="flex justify-center">
-        {resolvedVersion === null && activeTemplate && loadingRef.current ? (
+        {!activeTemplate ? (
+          <LoadingState message="Aucun template disponible" />
+        ) : !pagesReady && (isLoadingVersion || !hasLoaded) ? (
           <LoadingState message="Chargement des pages..." />
         ) : (
           renderPage()
