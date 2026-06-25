@@ -3,7 +3,7 @@
  * Réécriture sans race condition : résolution unique de la version + lazy loading once.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, RefreshCw, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,6 +92,15 @@ export function ServiceProposalPreview() {
     loadAttemptedRef.current.add(currentVersion.id);
     loadVersionPages(currentVersion.id);
   }, [hasLoaded, currentVersion, loadVersionPages]);
+
+  const handleRetry = () => {
+    if (!currentVersion) return;
+    loadAttemptedRef.current.delete(currentVersion.id);
+    loadVersionPages(currentVersion.id);
+  };
+
+  const hasEmptyPages = !!currentVersion && currentVersion.pages.length > 0
+    && currentVersion.pages.some((p) => !p.elements || p.elements.length === 0);
 
   const pagesReady = !!currentVersion && currentVersion.pages.length > 0;
   const templatePagesTotal = currentVersion?.pages.length ?? 0;
@@ -359,8 +368,36 @@ export function ServiceProposalPreview() {
           <Badge variant="outline" className="text-[10px]">
             {totalPages} page{totalPages > 1 ? 's' : ''}
           </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            disabled={!currentVersion || isLoadingVersion}
+            className="h-7 text-[10px]"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} />
+            Réessayer
+          </Button>
         </div>
       </div>
+
+      {hasEmptyPages && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-warning/10 border border-warning/30 rounded-lg">
+          <span className="text-xs text-foreground">
+            Certaines pages du template apparaissent vides. Relancez le chargement.
+          </span>
+          <Button
+            variant="warning"
+            size="sm"
+            onClick={handleRetry}
+            disabled={isLoadingVersion}
+            className="h-7 text-[10px]"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} />
+            Recharger les pages
+          </Button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-4 py-2 bg-muted/50 rounded-lg">
         <Button
@@ -388,9 +425,19 @@ export function ServiceProposalPreview() {
         {!activeTemplate ? (
           <LoadingState message="Aucun template disponible" />
         ) : !currentVersion ? (
-          <LoadingState message="Chargement de la version du template..." />
+          <div className="flex flex-col items-center gap-3">
+            <LoadingState message="Chargement de la version du template..." />
+            <Button variant="outline" size="sm" onClick={handleRetry} disabled>
+              <RefreshCw className="h-3 w-3" /> Réessayer
+            </Button>
+          </div>
         ) : !pagesReady ? (
-          <LoadingState message="Chargement des pages..." />
+          <div className="flex flex-col items-center gap-3">
+            <LoadingState message="Chargement des pages..." />
+            <Button variant="outline" size="sm" onClick={handleRetry} disabled={isLoadingVersion}>
+              <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} /> Réessayer
+            </Button>
+          </div>
         ) : (
           renderPage()
         )}
