@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  History as HistoryIcon, 
-  FileText, 
-  Download, 
+import {
+  History as HistoryIcon,
+  FileText,
+  Download,
   Calendar,
   Trash2,
   Loader2,
@@ -18,9 +18,7 @@ import {
   User,
   ChevronDown,
   ChevronRight,
-  RotateCcw,
 } from "lucide-react";
-import { ValidateProposalButton } from '@/components/history/ValidateProposalButton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,8 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-// Interface pour les données de liste (sans HTML volumineux)
-interface ProposalExportSummary {
+interface ServiceExportSummary {
   id: string;
   proposal_name: string;
   file_name: string;
@@ -50,21 +47,10 @@ interface ProposalExportSummary {
   template_name: string;
   status: string;
   row_count: number;
-  options_count: number;
   created_at: string;
   commercial_id: string | null;
   commercial_name: string | null;
   montant_investissement: number | null;
-  financial_partner: string | null;
-  duration_months: number | null;
-  has_proposal_state: boolean;
-}
-
-interface HistoryViewProps {
-  onSelectEntry?: (entry: ProposalExportSummary) => void;
-  onLoadProposal?: (proposalState: Record<string, any>) => void;
-  isAdmin?: boolean;
-  highlightedIds?: string[];
 }
 
 const MONTHS_FR = [
@@ -72,37 +58,30 @@ const MONTHS_FR = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
-export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, highlightedIds = [] }: HistoryViewProps) {
-  const [exports, setExports] = useState<ProposalExportSummary[]>([]);
+export function ServiceHistoryView() {
+  const [exports, setExports] = useState<ServiceExportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  
+
   // Filtres
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<string>('all');
-  const [filterCommercial, setFilterCommercial] = useState<string>('all');
-  
-  // Accordéons admin (groupement par commercial)
-  const [expandedCommercials, setExpandedCommercials] = useState<Set<string>>(new Set());
-  
+
   // États pour la visualisation
-  const [previewingEntry, setPreviewingEntry] = useState<ProposalExportSummary | null>(null);
+  const [previewingEntry, setPreviewingEntry] = useState<ServiceExportSummary | null>(null);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
-  const [loadingLoadId, setLoadingLoadId] = useState<string | null>(null);
-  const [confirmLoadEntry, setConfirmLoadEntry] = useState<ProposalExportSummary | null>(null);
 
-  // Charger le contenu HTML à la demande
   const fetchHtmlContent = async (id: string): Promise<string | null> => {
     const { data, error } = await supabase
       .from('proposal_exports')
       .select('pdf_html_content')
       .eq('id', id)
       .single();
-    
+
     if (error || !data) return null;
     return data.pdf_html_content;
   };
@@ -110,12 +89,12 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
   const fetchExports = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const { data, error: fetchError } = await supabase
         .from('proposal_exports')
-        .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, proposal_state')
-        .eq('proposal_type', 'location')
+        .select('id, proposal_name, file_name, client_name, template_name, status, row_count, created_at, commercial_id, commercial_name, montant_investissement')
+        .eq('proposal_type', 'service')
         .order('created_at', { ascending: false })
         .limit(200);
 
@@ -128,14 +107,10 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
         template_name: item.template_name,
         status: item.status,
         row_count: item.row_count,
-        options_count: item.options_count,
         created_at: item.created_at,
         commercial_id: item.commercial_id,
         commercial_name: item.commercial_name,
         montant_investissement: item.montant_investissement,
-        financial_partner: item.proposal_state?.proposals?.[0]?.refinanceur ?? null,
-        duration_months: item.proposal_state?.proposals?.[0]?.duree ?? item.proposal_state?.matriceData?.duree ?? null,
-        has_proposal_state: !!item.proposal_state,
       }));
       setExports(mapped);
     } catch (err) {
@@ -149,15 +124,6 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
   useEffect(() => {
     fetchExports();
   }, []);
-
-  // Auto-expand les commerciaux des highlighted entries
-  useEffect(() => {
-    if (highlightedIds.length > 0) {
-      const highlighted = exports.filter(e => highlightedIds.includes(e.id));
-      const commercialNames = new Set(highlighted.map(e => e.commercial_name || 'Sans commercial'));
-      setExpandedCommercials(prev => new Set([...prev, ...commercialNames]));
-    }
-  }, [highlightedIds, exports]);
 
   const formatDate = (dateStr: string) => {
     return new Intl.DateTimeFormat('fr-FR', {
@@ -176,38 +142,17 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     const date = new Date(entry.created_at);
     const monthMatch = filterMonth === 'all' || date.getMonth() === parseInt(filterMonth);
     const yearMatch = filterYear === 'all' || date.getFullYear() === parseInt(filterYear);
-    const commercialMatch = filterCommercial === 'all' || entry.commercial_name === filterCommercial;
-    const searchMatch = !searchQuery || 
+    const searchMatch = !searchQuery ||
       entry.proposal_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (entry.client_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (entry.commercial_name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return monthMatch && yearMatch && commercialMatch && searchMatch;
+    return monthMatch && yearMatch && searchMatch;
   });
 
   // Années disponibles pour le filtre
   const availableYears = [...new Set(exports.map(e => new Date(e.created_at).getFullYear()))].sort((a, b) => b - a);
-  
-  // Commerciaux disponibles
-  const availableCommercials = [...new Set(exports.map(e => e.commercial_name).filter(Boolean))].sort() as string[];
 
-  // Grouper par commercial pour la vue admin
-  const groupedByCommercial = filteredExports.reduce((acc, entry) => {
-    const key = entry.commercial_name || 'Sans commercial';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(entry);
-    return acc;
-  }, {} as Record<string, ProposalExportSummary[]>);
-
-  const toggleCommercial = (name: string) => {
-    setExpandedCommercials(prev => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
-  };
-
-  const handlePreview = async (entry: ProposalExportSummary) => {
+  const handlePreview = async (entry: ServiceExportSummary) => {
     setLoadingPreviewId(entry.id);
     try {
       const htmlContent = await fetchHtmlContent(entry.id);
@@ -229,29 +174,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     setPreviewContent(null);
   };
 
-  const handleLoadProposal = async (entry: ProposalExportSummary) => {
-    setLoadingLoadId(entry.id);
-    try {
-      const { data, error } = await supabase
-        .from('proposal_exports')
-        .select('proposal_state')
-        .eq('id', entry.id)
-        .single();
-      
-      if (error || !data || !(data as any).proposal_state) {
-        toast({ title: "Chargement impossible", description: "Les données de cette proposition ne sont pas disponibles.", variant: "destructive" });
-        return;
-      }
-      onLoadProposal?.((data as any).proposal_state);
-    } catch (err) {
-      toast({ title: "Erreur", description: "Impossible de charger la proposition.", variant: "destructive" });
-    } finally {
-      setLoadingLoadId(null);
-      setConfirmLoadEntry(null);
-    }
-  };
-
-  const handleDownload = async (entry: ProposalExportSummary) => {
+  const handleDownload = async (entry: ServiceExportSummary) => {
     setDownloadingId(entry.id);
     try {
       const htmlContent = await fetchHtmlContent(entry.id);
@@ -280,7 +203,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     }
   };
 
-  const handleDelete = async (entry: ProposalExportSummary) => {
+  const handleDelete = async (entry: ServiceExportSummary) => {
     setDeletingId(entry.id);
     try {
       const { error: deleteError } = await supabase.from('proposal_exports').delete().eq('id', entry.id);
@@ -294,16 +217,11 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     }
   };
 
-  // renderEntry extrait hors composant pour éviter la recréation dans render
-  const renderEntry = (entry: ProposalExportSummary) => {
-    const isHighlighted = highlightedIds.includes(entry.id);
+  const renderEntry = (entry: ServiceExportSummary) => {
     return (
       <Card
         key={entry.id}
-        className={cn(
-          "group hover:border-primary/30 transition-colors",
-          isHighlighted && "border-amber-400 bg-amber-50/30 dark:bg-amber-900/10"
-        )}
+        className="group hover:border-primary/30 transition-colors"
       >
         <CardContent className="p-3">
           <div className="flex items-start gap-3">
@@ -313,16 +231,13 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
             )}>
               {entry.status === 'success' ? <FileText className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
             </div>
-            
+
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <h3 className="font-medium text-sm truncate">{entry.proposal_name}</h3>
                 <Badge variant={entry.status === 'success' ? 'default' : 'destructive'} className="text-xs">
                   {entry.status === 'success' ? 'Succès' : 'Erreur'}
                 </Badge>
-                {isHighlighted && (
-                  <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">Nouveau</Badge>
-                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
                 <span className="flex items-center gap-1">
@@ -338,11 +253,10 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                 {entry.status === 'success' && (
                   <>
                     <span>{entry.row_count} lignes</span>
-                    <span>{entry.options_count} options</span>
                     <span className="text-muted-foreground/60">• {entry.template_name}</span>
                   </>
                 )}
-                {isAdmin && entry.commercial_name && (
+                {entry.commercial_name && (
                   <span className="flex items-center gap-0.5 text-primary/70">
                     <User className="h-2.5 w-2.5" />
                     {entry.commercial_name}
@@ -354,16 +268,6 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
             <div className="flex items-center gap-1">
               {entry.status === 'success' && (
                 <>
-                  {onLoadProposal && (
-                    <Button
-                      variant="ghost" size="icon" className="h-8 w-8"
-                      onClick={() => setConfirmLoadEntry(entry)}
-                      disabled={loadingLoadId === entry.id || !entry.has_proposal_state}
-                      title={entry.has_proposal_state ? "Charger pour modifier" : "Données non disponibles (ancien export)"}
-                    >
-                      {loadingLoadId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className={cn("h-3.5 w-3.5", !entry.has_proposal_state && "opacity-40")} />}
-                    </Button>
-                  )}
                   <Button
                     variant="ghost" size="icon" className="h-8 w-8"
                     onClick={() => handlePreview(entry)}
@@ -380,16 +284,6 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                   >
                     {downloadingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                   </Button>
-                  <ValidateProposalButton
-                    proposalId={entry.id}
-                    clientName={entry.client_name || ''}
-                    commercialId={entry.commercial_id || ''}
-                    commercialName={entry.commercial_name || undefined}
-                    amountHt={entry.montant_investissement || undefined}
-                    templateName={entry.template_name}
-                    financialPartner={entry.financial_partner || undefined}
-                    durationMonths={entry.duration_months || undefined}
-                  />
                 </>
               )}
               <Button
@@ -411,7 +305,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-in">
-        <h2 className="text-lg font-semibold">Historique des exports</h2>
+        <h2 className="text-lg font-semibold">Historique des propositions services</h2>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -422,7 +316,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
   if (error) {
     return (
       <div className="space-y-4 animate-fade-in">
-        <h2 className="text-lg font-semibold">Historique des exports</h2>
+        <h2 className="text-lg font-semibold">Historique des propositions services</h2>
         <Card>
           <CardContent className="py-8">
             <div className="text-center">
@@ -445,7 +339,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold mb-0.5">Historique des exports</h2>
+          <h2 className="text-lg font-semibold mb-0.5">Historique des propositions services</h2>
           <p className="text-muted-foreground text-sm">
             {filteredExports.length} proposition(s) {filteredExports.length !== exports.length ? `sur ${exports.length}` : 'exportée(s)'}
           </p>
@@ -488,19 +382,6 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
             ))}
           </SelectContent>
         </Select>
-        {isAdmin && availableCommercials.length > 0 && (
-          <Select value={filterCommercial} onValueChange={setFilterCommercial}>
-            <SelectTrigger className="h-8 w-44 text-sm">
-              <SelectValue placeholder="Commercial" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les commerciaux</SelectItem>
-              {availableCommercials.map(c => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
       </div>
 
       {/* Contenu */}
@@ -513,54 +394,12 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
               </div>
               <h3 className="font-medium text-sm mb-1">Aucun résultat</h3>
               <p className="text-xs text-muted-foreground">
-                {exports.length === 0 ? "Les propositions exportées apparaîtront ici." : "Aucun export ne correspond aux filtres sélectionnés."}
+                {exports.length === 0 ? "Les propositions services exportées apparaîtront ici." : "Aucun export ne correspond aux filtres sélectionnés."}
               </p>
             </div>
           </CardContent>
         </Card>
-      ) : isAdmin ? (
-        /* Vue Admin : groupée par commercial */
-        <div className="space-y-3">
-          {Object.entries(groupedByCommercial)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([commercialName, entries]) => {
-              const isExpanded = expandedCommercials.has(commercialName);
-              const hasHighlighted = entries.some(e => highlightedIds.includes(e.id));
-              return (
-                <Card key={commercialName} className={cn(hasHighlighted && "border-amber-300")}>
-                  <button
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors rounded-t-lg"
-                    onClick={() => toggleCommercial(commercialName)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-primary/10 text-primary">
-                        <User className="h-3.5 w-3.5" />
-                      </div>
-                      <span className="font-medium text-sm">{commercialName}</span>
-                      <Badge variant="secondary" className="text-xs">{entries.length}</Badge>
-                      {hasHighlighted && (
-                        <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">Nouveau</Badge>
-                      )}
-                    </div>
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                  {isExpanded && (
-                    <div className="px-3 pb-3 space-y-2 border-t">
-                      <div className="pt-2 space-y-2">
-                        {entries.map(entry => renderEntry(entry))}
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              );
-            })}
-        </div>
       ) : (
-        /* Vue commerciale : liste simple */
         <div className="space-y-3">
           {filteredExports.map((entry) => renderEntry(entry))}
         </div>
@@ -601,24 +440,6 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog de confirmation de chargement */}
-      <AlertDialog open={!!confirmLoadEntry} onOpenChange={(open) => !open && setConfirmLoadEntry(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Charger cette proposition ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              La proposition en cours sera remplacée par « {confirmLoadEntry?.proposal_name} ». Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmLoadEntry && handleLoadProposal(confirmLoadEntry)}>
-              Charger
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
