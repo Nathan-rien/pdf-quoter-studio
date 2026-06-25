@@ -2,8 +2,8 @@
  * Aperçu PDF pour une Proposition Services (standalone).
  * Réécriture sans race condition : résolution unique de la version + lazy loading once.
  */
-import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, RefreshCw, icons } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,9 +46,7 @@ const formatNumber = (value: number | null | undefined) => {
 
 export function ServiceProposalPreview() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [loadTimeout, setLoadTimeout] = useState(false);
 
-  const { isLoading, hasLoaded, isLoadingVersion, loadVersionPages } = useTemplateSync();
   const {
     clientData,
     lignesData,
@@ -58,73 +56,72 @@ export function ServiceProposalPreview() {
     totalInvest,
   } = useServiceProposalStore();
 
-  // S'abonner explicitement à allTemplates et allVersions pour re-render quand les pages
-  // sont injectées dans le store par loadVersionPages
-  const allTemplates = useTemplateEditorStore((s) => s.allTemplates);
-  const allVersions = useTemplateEditorStore((s) => s.allVersions);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [pagesLoaded, setPagesLoaded] = React.useState(false);
+  const { isLoading, hasLoaded, loadVersionPages, isLoadingVersion } = useTemplateSync();
+  const {
+    allTemplates,
+    getActiveTemplate,
+    getTemplateLatestVersion,
+  } = useTemplateEditorStore();
 
-  const activeTemplate = useMemo(() => {
-    let result = selectedTemplateId
-      ? (allTemplates.find((t) => t.id === selectedTemplateId) ?? null)
-      : null;
-    if (!result) {
-      result = allTemplates.find((t) => t.isActive) ?? allTemplates[0] ?? null;
+  const activeTemplate = React.useMemo(() => {
+    if (selectedTemplateId) {
+      const found = allTemplates.find((t) => t.id === selectedTemplateId);
+      if (found) return found;
     }
-    console.log('[ServiceProposalPreview] selectedTemplateId:', selectedTemplateId, 'activeTemplate:', result?.name);
-    return result;
-  }, [selectedTemplateId, allTemplates]);
+    return getActiveTemplate() ?? null;
+  }, [selectedTemplateId, allTemplates, getActiveTemplate]);
 
-  // Calcul de la version courante (publiée en priorité) depuis le store frais
-  const currentVersion = useMemo<TemplateVersion | null>(() => {
+  const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
     if (!activeTemplate) return null;
-    const versions = allVersions.filter((v) => v.templateId === activeTemplate.id);
-    if (versions.length === 0) return null;
-    const published = versions.filter((v) => v.status === 'publie');
-    if (published.length > 0) {
-      return published.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
-    }
-    return versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
-  }, [activeTemplate, allVersions]);
+    const version = getTemplateLatestVersion(activeTemplate.id);
+    return version && version.pages.length > 0 ? version : null;
+  }, [activeTemplate, getTemplateLatestVersion]);
 
-  useEffect(() => {
-    if (!hasLoaded) return;
-    if (!activeTemplate) return;
+  React.useEffect(() => {
+    const loadPages = async () => {
+      if (!hasLoaded) return;
+      if (!activeTemplate) {
+        setPagesLoaded(true);
+        return;
+      }
+      const version = getTemplateLatestVersion(activeTemplate.id);
+      if (!version) {
+        setPagesLoaded(true);
+        return;
+      }
+      if (version.pages.length === 0) {
+        const loadedPages = await loadVersionPages(version.id);
+        if (loadedPages && loadedPages.length > 0) {
+          setPagesLoaded(true);
+        } else {
+          console.warn('[ServiceProposalPreview] No pages loaded for version:', version.id);
+        }
+        return;
+      }
+      setPagesLoaded(true);
+    };
+    setPagesLoaded(false);
+    loadPages();
+  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
 
-    const freshState = useTemplateEditorStore.getState();
-    const versions = freshState.allVersions.filter((v) => v.templateId === activeTemplate.id);
-    if (versions.length === 0) return;
+  if ((isLoading && !hasLoaded) || isLoadingVersion || !pagesLoaded) {
+    return <LoadingState message="Chargement du template..." />;
+  }
 
-    const published = versions.filter((v) => v.status === 'publie');
-    const version = published.length > 0
-      ? published.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b))
-      : versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
-
-    if (!version || version.pages.length > 0) return;
-
-    loadVersionPages(version.id);
-  }, [hasLoaded, activeTemplate, loadVersionPages]);
+  const currentVersion = getCurrentVersion();
 
   const handleRetry = () => {
+    setPagesLoaded(false);
     if (!activeTemplate) return;
-    const freshState = useTemplateEditorStore.getState();
-    const versions = freshState.allVersions.filter((v) => v.templateId === activeTemplate.id);
-    const version = versions.find((v) => v.status === 'publie') ?? versions[0];
+    const version = getTemplateLatestVersion(activeTemplate.id);
     if (version) loadVersionPages(version.id);
   };
 
-  const hasEmptyPages = !!currentVersion && currentVersion.pages.length > 0
-    && currentVersion.pages.some((p) => !p.elements || p.elements.length === 0);
-
-  const pagesReady = !!currentVersion && currentVersion.pages.length > 0;
   const templatePagesTotal = currentVersion?.pages.length ?? 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
   const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter);
-
-  useEffect(() => {
-    if (pagesReady) { setLoadTimeout(false); return; }
-    const t = setTimeout(() => setLoadTimeout(true), 5000);
-    return () => clearTimeout(t);
-  }, [pagesReady]);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     if (!currentVersion) return [];
