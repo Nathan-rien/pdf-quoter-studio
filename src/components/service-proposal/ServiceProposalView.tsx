@@ -403,7 +403,7 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
     payment_frequency: proposal.payment_frequency ?? '',
     payment_mode: proposal.payment_mode ?? '',
     start_date: proposal.start_date ?? '',
-    contract_duration: proposal.contract_duration != null ? String(proposal.contract_duration) : '',
+    contract_duration: (proposal.contract_duration ?? '') as ServiceDataFormValues['contract_duration'],
   });
   const [investForm, setInvestForm] = useState<InvestFormValues>({
     invest_lines: proposal.invest_lines ?? [],
