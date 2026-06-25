@@ -285,6 +285,12 @@ function ProposalFormShell({
   function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
       syncToServiceStore(clientData, investForm);
+      // Sync selectedTemplateId depuis rentalProposalStore si pas encore défini
+      const serviceStore = useServiceProposalStore.getState();
+      const rentalTemplateId = useRentalProposalStore.getState().selectedTemplateId;
+      if (rentalTemplateId && !serviceStore.selectedTemplateId) {
+        serviceStore.selectTemplate(rentalTemplateId);
+      }
     }
     setActiveTab(tab);
   }
