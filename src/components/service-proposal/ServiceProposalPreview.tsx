@@ -10,7 +10,7 @@
  *   - Page custom "Services inclus" (texte préformaté)
  *   - Pages template 4..N (signature, conditions, etc.)
  */
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -70,6 +70,8 @@ export function ServiceProposalPreview() {
 
   const { allTemplates, getActiveTemplate, getTemplateLatestVersion } =
     useTemplateEditorStore();
+  // Abonnement réactif aux versions : déclenche re-render quand les pages sont injectées
+  const allVersions = useTemplateEditorStore((s) => s.allVersions);
 
   // Template actif
   const activeTemplate = useMemo(() => {
@@ -78,6 +80,21 @@ export function ServiceProposalPreview() {
     }
     return getActiveTemplate();
   }, [selectedTemplateId, allTemplates, getActiveTemplate]);
+
+  // Helper qui lit toujours depuis l'état frais du store
+  const getCurrentVersion = useCallback((): TemplateVersion | null => {
+    if (!activeTemplate) return null;
+    const fresh = useTemplateEditorStore.getState();
+    const version =
+      fresh.allVersions.find(
+        (v) => v.templateId === activeTemplate.id && v.status === 'publie',
+      ) ||
+      fresh.allVersions
+        .filter((v) => v.templateId === activeTemplate.id)
+        .sort((a, b) => b.versionNumber - a.versionNumber)[0] ||
+      null;
+    return version && version.pages.length > 0 ? version : null;
+  }, [activeTemplate, allVersions]);
 
   // Lazy loading des pages
   const [pagesLoaded, setPagesLoaded] = useState(false);
@@ -104,7 +121,7 @@ export function ServiceProposalPreview() {
     loadPages();
   }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
 
-  if (isLoading && !hasLoaded) {
+  if ((isLoading && !hasLoaded) || isLoadingVersion) {
     return <LoadingState message="Chargement du template..." />;
   }
 
@@ -112,16 +129,10 @@ export function ServiceProposalPreview() {
     return <LoadingState message="Chargement des pages..." />;
   }
 
-  // Version active
-  const getCurrentVersion = (): TemplateVersion | null => {
-    if (!activeTemplate) return null;
-    const version = getTemplateLatestVersion(activeTemplate.id);
-    return version && version.pages.length > 0 ? version : null;
-  };
-
   const currentVersion = getCurrentVersion();
   const templatePagesTotal = currentVersion?.pages.length || 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
+
 
   // Pages : [1..3 template] + [services-table] + [services-inclus] + [4..N template]
   const totalPages = TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter;
