@@ -423,7 +423,7 @@ export function ServiceProposalPreview() {
         </Button>
       </div>
 
-      <div className="flex justify-center">
+      <div className="mx-auto w-full" style={{ maxWidth: `${CANVAS_DISPLAY_MAX_WIDTH}px` }}>
         {renderPage()}
       </div>
     </div>
