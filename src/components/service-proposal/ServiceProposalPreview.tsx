@@ -387,7 +387,9 @@ export function ServiceProposalPreview() {
       <div className="flex justify-center">
         {!activeTemplate ? (
           <LoadingState message="Aucun template disponible" />
-        ) : !pagesReady && (isLoadingVersion || !hasLoaded) ? (
+        ) : !currentVersion ? (
+          <LoadingState message="Chargement de la version du template..." />
+        ) : !pagesReady ? (
           <LoadingState message="Chargement des pages..." />
         ) : (
           renderPage()
