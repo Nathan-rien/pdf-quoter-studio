@@ -82,6 +82,10 @@ export default function Index() {
         return <ContractsView />;
       case 'service-proposal':
         return <ServiceProposalView />;
+      case 'service-history':
+        return <ServiceHistoryView />;
+      case 'service-contracts':
+        return <ServiceContractsView />;
       case 'history':
         return (
           <HistoryView
