@@ -81,69 +81,49 @@ export function ServiceProposalPreview() {
     return getActiveTemplate();
   }, [selectedTemplateId, allTemplates, getActiveTemplate]);
 
-  // Helper qui lit toujours depuis l'état frais du store
-  const getCurrentVersion = useCallback((): TemplateVersion | null => {
+  // Lance le lazy loading si nécessaire — sans state intermédiaire
+  React.useEffect(() => {
+    if (!hasLoaded || !activeTemplate) return;
+    const version = getTemplateLatestVersion(activeTemplate.id);
+    if (!version || version.pages.length > 0) return;
+    // Quand le chargement finit, allVersions change → re-render automatique
+    loadVersionPages(version.id);
+  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
+
+  // Version courante (réactive sur allVersions)
+  const currentVersion = useMemo((): TemplateVersion | null => {
     if (!activeTemplate) return null;
-    const fresh = useTemplateEditorStore.getState();
     const version =
-      fresh.allVersions.find(
-        (v) => v.templateId === activeTemplate.id && v.status === 'publie',
-      ) ||
-      fresh.allVersions
+      allVersions.find((v) => v.templateId === activeTemplate.id && v.status === 'publie') ||
+      allVersions
         .filter((v) => v.templateId === activeTemplate.id)
         .sort((a, b) => b.versionNumber - a.versionNumber)[0] ||
       null;
-    return version && version.pages.length > 0 ? version : null;
+    return version ?? null;
   }, [activeTemplate, allVersions]);
 
-  // Lazy loading des pages
-  const [pagesLoaded, setPagesLoaded] = useState(false);
-  React.useEffect(() => {
-    setPagesLoaded(false);
-    const loadPages = async () => {
-      if (!hasLoaded) return;
-      if (!activeTemplate) {
-        setPagesLoaded(true);
-        return;
-      }
-      const version = getTemplateLatestVersion(activeTemplate.id);
-      if (!version) {
-        setPagesLoaded(true);
-        return;
-      }
-      if (version.pages.length === 0) {
-        const loaded = await loadVersionPages(version.id);
-        if (loaded && loaded.length > 0) setPagesLoaded(true);
-        return;
-      }
-      setPagesLoaded(true);
-    };
-    loadPages();
-  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
-
-  if ((isLoading && !hasLoaded) || isLoadingVersion) {
+  if (isLoading && !hasLoaded) {
     return <LoadingState message="Chargement du template..." />;
   }
 
-  if (!pagesLoaded && activeTemplate) {
+  if (activeTemplate && (!currentVersion || currentVersion.pages.length === 0)) {
     return <LoadingState message="Chargement des pages..." />;
   }
 
-  const currentVersion = getCurrentVersion();
   const templatePagesTotal = currentVersion?.pages.length || 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
-
 
   // Pages : [1..3 template] + [services-table] + [services-inclus] + [4..N template]
   const totalPages = TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter;
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
-    const version = getCurrentVersion();
+    const version = currentVersion;
     if (!version) return [];
     const pageContent = version.pages.find((p) => p.pageNumber === pageNumber);
     if (!pageContent) return [];
     return sortElementsByZIndex(pageContent.elements.filter((el) => !el.isDynamic));
   };
+
 
   const previewZIndex = (el: EditableElement): number => (el.zIndex ?? 0) + 10;
 
