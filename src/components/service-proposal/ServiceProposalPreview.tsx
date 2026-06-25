@@ -10,7 +10,7 @@
  *   - Page custom "Services inclus" (texte préformaté)
  *   - Pages template 4..N (signature, conditions, etc.)
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,7 @@ const formatNumber = (value: number | null) => {
 export function ServiceProposalPreview() {
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { isLoading, hasLoaded, loadVersionPages, isLoadingVersion } = useTemplateSync();
+  const { isLoading, hasLoaded, loadVersionPages } = useTemplateSync();
   const {
     clientData,
     lignesData,
