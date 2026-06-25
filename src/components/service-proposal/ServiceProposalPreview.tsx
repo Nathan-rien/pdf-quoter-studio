@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/ui/loading-state';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
+import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import {
@@ -51,10 +52,13 @@ export function ServiceProposalPreview() {
     clientData,
     lignesData,
     servicesInclus,
-    selectedTemplateId,
     proposalName,
     totalInvest,
   } = useServiceProposalStore();
+
+  // Lire selectedTemplateId directement depuis rentalProposalStore
+  // car c'est là que TemplateSelector écrit (comme dans RentalProposalPreview)
+  const selectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [pagesLoaded, setPagesLoaded] = React.useState(false);
