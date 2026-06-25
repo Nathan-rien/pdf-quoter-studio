@@ -275,23 +275,10 @@ function ProposalFormShell({
   const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
   const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
 
-  // TemplateSelector écrit dans useRentalProposalStore.selectedTemplateId.
-  // On miroite cette valeur vers serviceProposalStore pour que l'aperçu/export l'utilisent.
-  const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
-  useEffect(() => {
-    if (rentalSelectedTemplateId) {
-      useServiceProposalStore.getState().selectTemplate(rentalSelectedTemplateId);
-    }
-  }, [rentalSelectedTemplateId]);
 
   function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
       syncToServiceStore(clientData, investForm);
-      const serviceStore = useServiceProposalStore.getState();
-      const rentalTemplateId = useRentalProposalStore.getState().selectedTemplateId;
-      if (rentalTemplateId) {
-        serviceStore.selectTemplate(rentalTemplateId);
-      }
     }
     setActiveTab(tab);
   }
