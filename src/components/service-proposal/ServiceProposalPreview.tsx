@@ -93,6 +93,15 @@ export function ServiceProposalPreview() {
     loadVersionPages(currentVersion.id);
   }, [hasLoaded, currentVersion, loadVersionPages]);
 
+  const handleRetry = () => {
+    if (!currentVersion) return;
+    loadAttemptedRef.current.delete(currentVersion.id);
+    loadVersionPages(currentVersion.id);
+  };
+
+  const hasEmptyPages = !!currentVersion && currentVersion.pages.length > 0
+    && currentVersion.pages.some((p) => !p.elements || p.elements.length === 0);
+
   const pagesReady = !!currentVersion && currentVersion.pages.length > 0;
   const templatePagesTotal = currentVersion?.pages.length ?? 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
