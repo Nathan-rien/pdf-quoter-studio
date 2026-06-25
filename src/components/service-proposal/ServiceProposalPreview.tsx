@@ -3,7 +3,7 @@
  * Réécriture sans race condition : résolution unique de la version + lazy loading once.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, RefreshCw, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
