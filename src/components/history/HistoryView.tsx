@@ -115,6 +115,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
       const { data, error: fetchError } = await supabase
         .from('proposal_exports')
         .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, proposal_state')
+        .eq('proposal_type', 'location')
         .order('created_at', { ascending: false })
         .limit(200);
 

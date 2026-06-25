@@ -11,6 +11,8 @@ import { StatisticsDashboard } from "@/components/admin/StatisticsDashboard";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { ContractsView } from "@/components/contracts/ContractsView";
 import { ServiceProposalView } from "@/components/service-proposal/ServiceProposalView";
+import { ServiceHistoryView } from "@/components/service-proposal/ServiceHistoryView";
+import { ServiceContractsView } from "@/components/service-proposal/ServiceContractsView";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { MesInfosView } from "@/components/commercial/MesInfosView";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";

@@ -162,6 +162,7 @@ export function ServiceProposalExport() {
         selected_options_names: [],
         selected_nos_options_names: [],
         proposal_state: snapshot,
+        proposal_type: 'service',
       } as any);
     } catch (err) {
       console.error('Failed to save service proposal to history:', err);
