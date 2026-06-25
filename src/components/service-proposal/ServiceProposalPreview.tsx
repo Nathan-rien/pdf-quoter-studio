@@ -266,7 +266,7 @@ export function ServiceProposalPreview() {
     children: React.ReactNode;
   }) => (
     <div
-      className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden"
+      className="aspect-[210/297] bg-white rounded-lg ring-1 ring-border relative overflow-hidden w-full"
       style={{ maxWidth: CANVAS_DISPLAY_MAX_WIDTH }}
     >
       {children}
