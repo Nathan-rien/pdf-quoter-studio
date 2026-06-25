@@ -32,6 +32,8 @@ import { RentalProposalPreview } from '@/components/rental-proposal/RentalPropos
 import { RentalProposalExport } from '@/components/rental-proposal/RentalProposalExport';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { CommercialEntity } from '@/data/commerciaux';
+import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DEFAULT_CLIENT: ClientData = {
   client_name: '',
@@ -88,8 +90,15 @@ function syncToRentalStore(clientData: ClientData, investForm: InvestFormValues)
       entity: (clientData.entity as CommercialEntity) || null,
       commercialId: clientData.commercial_id || null,
     },
-    matriceData: store.matriceData,
-    proposals: store.proposals,
+    matriceData: {
+      ...store.matriceData,
+      montantInvestissement: investForm.invest_lines.reduce((sum, l) => sum + l.vtn, 0),
+    },
+    proposals: [{
+      ...store.proposals[0],
+      montantInvestissement: investForm.invest_lines.reduce((sum, l) => sum + l.vtn, 0),
+      duree: 36,
+    }],
     lignesData: investForm.invest_lines.map((line) => ({
       reference: null,
       designation: line.designation,
@@ -97,10 +106,23 @@ function syncToRentalStore(clientData: ClientData, investForm: InvestFormValues)
       quantite: line.qty,
       totalHT: line.vtn,
     })),
-    repriseData: store.repriseData,
+    repriseData: {
+      lignes: [],
+      marge: 0.20,
+      margeIsOverridden: false,
+      grades: [
+        { grade: 'A', prixPartenaire: 0 },
+        { grade: 'B', prixPartenaire: 0 },
+        { grade: 'C', prixPartenaire: 0 },
+        { grade: 'D', prixPartenaire: 0 },
+      ],
+      descriptions: [],
+      repriseDescriptionTitle: '',
+      repriseDescription: '',
+    },
     servicesInclus: store.servicesInclus,
-    optionsServices: store.optionsServices,
-    nosOptions: store.nosOptions,
+    optionsServices: [],
+    nosOptions: [],
     proposalName: clientData.client_company || clientData.client_name || 'Proposition Services',
     selectedTemplateId: store.selectedTemplateId,
   });
@@ -260,6 +282,7 @@ function ProposalFormShell({
   onClose,
   onSave,
   saving,
+  initialTab = 'client',
 }: {
   title: string;
   clientData: ClientData;
@@ -271,8 +294,11 @@ function ProposalFormShell({
   onClose: () => void;
   onSave: () => void;
   saving: boolean;
+  initialTab?: string;
 }) {
-  const [activeTab, setActiveTab] = useState('client');
+  const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
+  const servicesInclus = useRentalProposalStore((s) => s.servicesInclus);
+  const updateServicesInclus = useRentalProposalStore((s) => s.updateServicesInclus);
 
   function handleTabChange(tab: string) {
     if (tab === 'preview-export') {
@@ -294,6 +320,7 @@ function ProposalFormShell({
         <TabsList className="w-full">
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
+          <TabsTrigger value="services" className="flex-1">Services inclus</TabsTrigger>
           <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
           <TabsTrigger value="template" className="flex-1">Template</TabsTrigger>
           <TabsTrigger value="preview-export" className="flex-1">Aperçu & Export</TabsTrigger>
@@ -303,6 +330,27 @@ function ProposalFormShell({
         </TabsContent>
         <TabsContent value="data">
           <ServiceProposalDataStep data={dataForm} onChange={setDataForm} />
+        </TabsContent>
+        <TabsContent value="services">
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Services inclus</CardTitle>
+                <Badge variant="secondary" className="text-[10px]">Toujours affiché</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ce bloc apparaît systématiquement en haut de la page services.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <AutoResizeTextarea
+                value={servicesInclus.description}
+                onChange={(e) => updateServicesInclus(e.target.value)}
+                className="min-h-[120px] bg-background"
+                placeholder="Décrivez les services inclus…"
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="invest">
           <ServiceProposalInvestStep data={investForm} onChange={setInvestForm} />
@@ -327,6 +375,7 @@ function ProposalFormShell({
     </div>
   );
 }
+
 
 function buildPayload(
   clientData: ClientData,
