@@ -2,7 +2,7 @@
  * Aperçu PDF pour une Proposition Services (standalone).
  * Réécriture sans race condition : résolution unique de la version + lazy loading once.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, RefreshCw, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ const formatNumber = (value: number | null | undefined) => {
 
 export function ServiceProposalPreview() {
   const [currentPage, setCurrentPage] = useState(1);
-  const loadAttemptedRef = useRef<Set<string>>(new Set());
+  const [loadTimeout, setLoadTimeout] = useState(false);
 
   const { isLoading, hasLoaded, isLoadingVersion, loadVersionPages } = useTemplateSync();
   const {
@@ -64,11 +64,14 @@ export function ServiceProposalPreview() {
   const allVersions = useTemplateEditorStore((s) => s.allVersions);
 
   const activeTemplate = useMemo(() => {
-    if (selectedTemplateId) {
-      const found = allTemplates.find((t) => t.id === selectedTemplateId);
-      if (found) return found;
+    let result = selectedTemplateId
+      ? (allTemplates.find((t) => t.id === selectedTemplateId) ?? null)
+      : null;
+    if (!result) {
+      result = allTemplates.find((t) => t.isActive) ?? allTemplates[0] ?? null;
     }
-    return allTemplates.find((t) => t.isActive) ?? allTemplates[0] ?? null;
+    console.log('[ServiceProposalPreview] selectedTemplateId:', selectedTemplateId, 'activeTemplate:', result?.name);
+    return result;
   }, [selectedTemplateId, allTemplates]);
 
   // Calcul de la version courante (publiée en priorité) depuis le store frais
@@ -83,20 +86,30 @@ export function ServiceProposalPreview() {
     return versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
   }, [activeTemplate, allVersions]);
 
-  // Lazy loading des pages : une seule tentative par version
   useEffect(() => {
-    if (!hasLoaded || !currentVersion) return;
-    if (currentVersion.pages.length > 0) return;
-    if (loadAttemptedRef.current.has(currentVersion.id)) return;
+    if (!hasLoaded) return;
+    if (!activeTemplate) return;
 
-    loadAttemptedRef.current.add(currentVersion.id);
-    loadVersionPages(currentVersion.id);
-  }, [hasLoaded, currentVersion, loadVersionPages]);
+    const freshState = useTemplateEditorStore.getState();
+    const versions = freshState.allVersions.filter((v) => v.templateId === activeTemplate.id);
+    if (versions.length === 0) return;
+
+    const published = versions.filter((v) => v.status === 'publie');
+    const version = published.length > 0
+      ? published.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b))
+      : versions.reduce((a, b) => (a.versionNumber > b.versionNumber ? a : b));
+
+    if (!version || version.pages.length > 0) return;
+
+    loadVersionPages(version.id);
+  }, [hasLoaded, activeTemplate, loadVersionPages]);
 
   const handleRetry = () => {
-    if (!currentVersion) return;
-    loadAttemptedRef.current.delete(currentVersion.id);
-    loadVersionPages(currentVersion.id);
+    if (!activeTemplate) return;
+    const freshState = useTemplateEditorStore.getState();
+    const versions = freshState.allVersions.filter((v) => v.templateId === activeTemplate.id);
+    const version = versions.find((v) => v.status === 'publie') ?? versions[0];
+    if (version) loadVersionPages(version.id);
   };
 
   const hasEmptyPages = !!currentVersion && currentVersion.pages.length > 0
@@ -106,6 +119,12 @@ export function ServiceProposalPreview() {
   const templatePagesTotal = currentVersion?.pages.length ?? 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
   const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter);
+
+  useEffect(() => {
+    if (pagesReady) { setLoadTimeout(false); return; }
+    const t = setTimeout(() => setLoadTimeout(true), 5000);
+    return () => clearTimeout(t);
+  }, [pagesReady]);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     if (!currentVersion) return [];
@@ -432,12 +451,17 @@ export function ServiceProposalPreview() {
             </Button>
           </div>
         ) : !pagesReady ? (
-          <div className="flex flex-col items-center gap-3">
+          loadTimeout ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <p className="text-sm text-muted-foreground">Le template n'a pas pu être chargé.</p>
+              <Button variant="outline" size="sm" onClick={handleRetry} disabled={isLoadingVersion}>
+                <RefreshCw className={isLoadingVersion ? 'animate-spin h-3 w-3' : 'h-3 w-3'} />
+                Réessayer
+              </Button>
+            </div>
+          ) : (
             <LoadingState message="Chargement des pages..." />
-            <Button variant="outline" size="sm" onClick={handleRetry} disabled={isLoadingVersion}>
-              <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} /> Réessayer
-            </Button>
-          </div>
+          )
         ) : (
           renderPage()
         )}
