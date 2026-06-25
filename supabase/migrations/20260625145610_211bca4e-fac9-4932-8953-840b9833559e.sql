@@ -1,0 +1,1 @@
+ALTER TABLE public.proposal_exports ADD COLUMN IF NOT EXISTS proposal_type TEXT NOT NULL DEFAULT 'location' CHECK (proposal_type IN ('location', 'service'));
