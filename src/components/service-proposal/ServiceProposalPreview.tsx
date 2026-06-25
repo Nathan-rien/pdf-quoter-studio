@@ -68,10 +68,20 @@ export function ServiceProposalPreview() {
   const activeTemplate = React.useMemo(() => {
     if (selectedTemplateId) {
       const found = allTemplates.find((t) => t.id === selectedTemplateId);
-      if (found) return found;
+      if (found) {
+        console.log('[ServiceProposalPreview] Using selectedTemplateId:', selectedTemplateId, found.name);
+        return found;
+      }
     }
-    return getActiveTemplate() ?? null;
-  }, [selectedTemplateId, allTemplates, getActiveTemplate]);
+    const active = allTemplates.find((t) => t.isActive);
+    if (active) {
+      console.log('[ServiceProposalPreview] Fallback to active template:', active.name);
+      return active;
+    }
+    const first = allTemplates[0] ?? null;
+    console.log('[ServiceProposalPreview] Fallback to first template:', first?.name);
+    return first;
+  }, [selectedTemplateId, allTemplates]);
 
   const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
     if (!activeTemplate) return null;

@@ -279,16 +279,17 @@ function ProposalFormShell({
   // On miroite cette valeur vers serviceProposalStore pour que l'aperçu/export l'utilisent.
   const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   useEffect(() => {
-    useServiceProposalStore.getState().selectTemplate(rentalSelectedTemplateId ?? null);
+    if (rentalSelectedTemplateId) {
+      useServiceProposalStore.getState().selectTemplate(rentalSelectedTemplateId);
+    }
   }, [rentalSelectedTemplateId]);
 
   function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
       syncToServiceStore(clientData, investForm);
-      // Sync selectedTemplateId depuis rentalProposalStore si pas encore défini
       const serviceStore = useServiceProposalStore.getState();
       const rentalTemplateId = useRentalProposalStore.getState().selectedTemplateId;
-      if (rentalTemplateId && !serviceStore.selectedTemplateId) {
+      if (rentalTemplateId) {
         serviceStore.selectTemplate(rentalTemplateId);
       }
     }
@@ -427,6 +428,10 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
   // Préchargement du store autonome avec les données de la proposition existante
   useEffect(() => {
     useServiceProposalStore.getState().loadFromServiceProposal(proposal);
+    const rentalTemplateId = useRentalProposalStore.getState().selectedTemplateId;
+    if (rentalTemplateId) {
+      useServiceProposalStore.getState().selectTemplate(rentalTemplateId);
+    }
   }, [proposal]);
 
   const [clientData, setClientData] = useState<ClientData>({
