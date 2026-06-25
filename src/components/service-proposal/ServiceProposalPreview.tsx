@@ -425,9 +425,19 @@ export function ServiceProposalPreview() {
         {!activeTemplate ? (
           <LoadingState message="Aucun template disponible" />
         ) : !currentVersion ? (
-          <LoadingState message="Chargement de la version du template..." />
+          <div className="flex flex-col items-center gap-3">
+            <LoadingState message="Chargement de la version du template..." />
+            <Button variant="outline" size="sm" onClick={handleRetry} disabled>
+              <RefreshCw className="h-3 w-3" /> Réessayer
+            </Button>
+          </div>
         ) : !pagesReady ? (
-          <LoadingState message="Chargement des pages..." />
+          <div className="flex flex-col items-center gap-3">
+            <LoadingState message="Chargement des pages..." />
+            <Button variant="outline" size="sm" onClick={handleRetry} disabled={isLoadingVersion}>
+              <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} /> Réessayer
+            </Button>
+          </div>
         ) : (
           renderPage()
         )}
