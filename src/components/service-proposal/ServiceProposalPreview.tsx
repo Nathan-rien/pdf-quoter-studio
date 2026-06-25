@@ -368,8 +368,36 @@ export function ServiceProposalPreview() {
           <Badge variant="outline" className="text-[10px]">
             {totalPages} page{totalPages > 1 ? 's' : ''}
           </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            disabled={!currentVersion || isLoadingVersion}
+            className="h-7 text-[10px]"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} />
+            Réessayer
+          </Button>
         </div>
       </div>
+
+      {hasEmptyPages && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-warning/10 border border-warning/30 rounded-lg">
+          <span className="text-xs text-foreground">
+            Certaines pages du template apparaissent vides. Relancez le chargement.
+          </span>
+          <Button
+            variant="warning"
+            size="sm"
+            onClick={handleRetry}
+            disabled={isLoadingVersion}
+            className="h-7 text-[10px]"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoadingVersion ? 'animate-spin' : ''}`} />
+            Recharger les pages
+          </Button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-4 py-2 bg-muted/50 rounded-lg">
         <Button
