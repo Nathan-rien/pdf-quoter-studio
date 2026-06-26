@@ -73,7 +73,7 @@ export function DynamicZoneManager() {
     
     const newZone = addDynamicZone(selectedPageNumber, selectedZoneType, false);
     if (newZone) {
-      toast.success(`Zone "${AVAILABLE_ZONE_TYPES.find(z => z.type === selectedZoneType)?.label}" ajoutée`);
+      toast.success(`Zone "${availableZones.find(z => z.type === selectedZoneType)?.label}" ajoutée`);
       setAddDialogOpen(false);
       setSelectedZoneType(null);
     }
