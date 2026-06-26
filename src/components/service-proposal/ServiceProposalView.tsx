@@ -98,6 +98,14 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
       totalHT: l.vtn,
     })),
   );
+  store.setContractData({
+    selectedServices: dataForm.selected_services,
+    paymentFrequency: dataForm.payment_frequency || '',
+    paymentMode: dataForm.payment_mode || '',
+    contractDuration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
+    startDate: dataForm.start_date || '',
+    totalServicesHt: dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0),
+  });
   store.updateProposalName(
     clientData.client_company || clientData.client_name || 'Proposition Services',
   );
