@@ -108,10 +108,36 @@ export function TemplateListView() {
             Créez, modifiez et gérez vos templates de propositions commerciales
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nouveau template
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const res = await seedContratCadreTemplate();
+                  if (res.alreadyExists) {
+                    toast.info('Le template "Contrat Cadre Services" existe déjà.');
+                  } else {
+                    toast.success('Template "Contrat Cadre Services" créé avec succès.');
+                  }
+                } catch (e: any) {
+                  toast.error('Erreur lors de la création du template', { description: e?.message });
+                }
+              }}>
+                <FileText className="h-4 w-4 mr-2" />
+                Initialiser Contrat Cadre Services
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Grid de templates */}
