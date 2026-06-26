@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { seedContratCadreTemplate } from "@/lib/seedContratCadreTemplate";
+import { cn } from "@/lib/utils";
 
 export function TemplateEditorLayout() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
@@ -63,6 +64,7 @@ export function TemplateEditorLayout() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
   
   // Synchronisation avec le cloud
   const { isLoading, isSyncing, isLoadingVersion, syncAllToDatabase, saveTemplateToDatabase, loadVersionPages } = useTemplateSync();
@@ -121,8 +123,17 @@ export function TemplateEditorLayout() {
     loadPagesIfEmpty();
   }, [currentVersion?.id, currentVersion?.pages?.length, isLoadingVersion, loadVersionPages]);
 
-  const handleDiscard = () => {
+  const handleDiscard = async () => {
+    setIsDiscarding(true);
+    if (currentVersion) {
+      try {
+        await loadVersionPages(currentVersion.id);
+      } catch {
+        // Ignore error, proceed with discard
+      }
+    }
     discardChanges();
+    setIsDiscarding(false);
     toast.info("Modifications annulées");
   };
 
@@ -401,10 +412,10 @@ export function TemplateEditorLayout() {
                     size="sm"
                     className="h-7 text-xs"
                     onClick={handleDiscard}
-                    disabled={!hasUnsavedChanges}
+                    disabled={!hasUnsavedChanges || isDiscarding}
                   >
-                    <RotateCcw className="h-3 w-3 mr-1" />
-                    Annuler
+                    <RotateCcw className={cn("h-3 w-3 mr-1", isDiscarding && "animate-spin")} />
+                    {isDiscarding ? "Annulation..." : "Annuler"}
                   </Button>
 
                   <Button

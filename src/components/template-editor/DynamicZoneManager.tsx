@@ -50,6 +50,7 @@ export function DynamicZoneManager() {
     addDynamicZone,
     updateDynamicZone,
     removeDynamicZone,
+    moveDynamicZoneToPage,
     selectedDynamicZoneId,
     selectDynamicZone,
   } = useTemplateEditorStore();
@@ -57,12 +58,22 @@ export function DynamicZoneManager() {
   const isEditable = currentVersion?.status === 'brouillon';
   const dynamicZones = getDynamicZonesForCurrentPage();
 
+  const isServiceTemplate = currentVersion?.pages?.some(p =>
+    p.dynamicZones?.some(z => (z.type as string).startsWith('service_'))
+  ) || false;
+
+  const availableZones = AVAILABLE_ZONE_TYPES.filter(z =>
+    isServiceTemplate
+      ? (z.type as string).startsWith('service_')
+      : !((z.type as string).startsWith('service_'))
+  );
+
   const handleAddZone = () => {
     if (!selectedZoneType) return;
     
     const newZone = addDynamicZone(selectedPageNumber, selectedZoneType, false);
     if (newZone) {
-      toast.success(`Zone "${AVAILABLE_ZONE_TYPES.find(z => z.type === selectedZoneType)?.label}" ajoutée`);
+      toast.success(`Zone "${availableZones.find(z => z.type === selectedZoneType)?.label}" ajoutée`);
       setAddDialogOpen(false);
       setSelectedZoneType(null);
     }
@@ -159,6 +170,28 @@ export function DynamicZoneManager() {
                             onCheckedChange={(checked) => handleToggleRequired(zone.id, checked)}
                           />
                         </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px]">Déplacer vers</Label>
+                          <Select
+                            onValueChange={(pageNum) => {
+                              const success = moveDynamicZoneToPage(zone.id, parseInt(pageNum));
+                              if (success) toast.success(`Zone déplacée vers la page ${pageNum}`);
+                            }}
+                          >
+                            <SelectTrigger className="h-7 text-[10px]">
+                              <SelectValue placeholder="Choisir une page..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currentVersion?.pages
+                                .filter(p => p.pageNumber !== selectedPageNumber)
+                                .map(p => (
+                                  <SelectItem key={p.pageNumber} value={String(p.pageNumber)} className="text-[10px]">
+                                    Page {p.pageNumber} — {(p as any).title || `Page ${p.pageNumber}`}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="text-[9px] text-muted-foreground">
                           Source: {zone.sourceSheet}
                         </div>
@@ -206,7 +239,7 @@ export function DynamicZoneManager() {
                 <SelectValue placeholder="Type de zone..." />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_ZONE_TYPES.map((zoneType) => {
+                {availableZones.map((zoneType) => {
                   const Icon = ZONE_ICONS[zoneType.type];
                   return (
                     <SelectItem key={zoneType.type} value={zoneType.type}>
@@ -222,7 +255,7 @@ export function DynamicZoneManager() {
             
             {selectedZoneType && (
               <p className="mt-2 text-sm text-muted-foreground">
-                {AVAILABLE_ZONE_TYPES.find(z => z.type === selectedZoneType)?.description}
+                {availableZones.find(z => z.type === selectedZoneType)?.description}
               </p>
             )}
           </div>
