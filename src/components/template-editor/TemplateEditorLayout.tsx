@@ -411,10 +411,10 @@ export function TemplateEditorLayout() {
                     size="sm"
                     className="h-7 text-xs"
                     onClick={handleDiscard}
-                    disabled={!hasUnsavedChanges}
+                    disabled={!hasUnsavedChanges || isDiscarding}
                   >
-                    <RotateCcw className="h-3 w-3 mr-1" />
-                    Annuler
+                    <RotateCcw className={cn("h-3 w-3 mr-1", isDiscarding && "animate-spin")} />
+                    {isDiscarding ? "Annulation..." : "Annuler"}
                   </Button>
 
                   <Button
