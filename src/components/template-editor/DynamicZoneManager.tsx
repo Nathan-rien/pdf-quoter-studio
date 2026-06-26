@@ -255,7 +255,7 @@ export function DynamicZoneManager() {
             
             {selectedZoneType && (
               <p className="mt-2 text-sm text-muted-foreground">
-                {AVAILABLE_ZONE_TYPES.find(z => z.type === selectedZoneType)?.description}
+                {availableZones.find(z => z.type === selectedZoneType)?.description}
               </p>
             )}
           </div>
