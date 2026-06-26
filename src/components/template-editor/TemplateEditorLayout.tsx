@@ -122,8 +122,17 @@ export function TemplateEditorLayout() {
     loadPagesIfEmpty();
   }, [currentVersion?.id, currentVersion?.pages?.length, isLoadingVersion, loadVersionPages]);
 
-  const handleDiscard = () => {
+  const handleDiscard = async () => {
+    setIsDiscarding(true);
+    if (currentVersion) {
+      try {
+        await loadVersionPages(currentVersion.id);
+      } catch {
+        // Ignore error, proceed with discard
+      }
+    }
     discardChanges();
+    setIsDiscarding(false);
     toast.info("Modifications annulées");
   };
 
