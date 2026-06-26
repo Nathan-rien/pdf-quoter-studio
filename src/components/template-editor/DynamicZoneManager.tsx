@@ -50,6 +50,7 @@ export function DynamicZoneManager() {
     addDynamicZone,
     updateDynamicZone,
     removeDynamicZone,
+    moveDynamicZoneToPage,
     selectedDynamicZoneId,
     selectDynamicZone,
   } = useTemplateEditorStore();
