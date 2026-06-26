@@ -432,17 +432,9 @@ export function EditorCanvas() {
       newWidth = Math.min(newWidth, CANVAS_SCALE.width - newX);
       newHeight = Math.min(newHeight, CANVAS_SCALE.height - newY);
       
-      updateElementSize(selectedElementId, {
-        width: Math.round(newWidth),
-        height: Math.round(newHeight)
-      });
+      setLocalDragSize({ id: selectedElementId, width: Math.round(newWidth), height: Math.round(newHeight) });
       
-      if (newX !== element.position.x || newY !== element.position.y) {
-        updateElementPosition(selectedElementId, {
-          x: Math.round(newX),
-          y: Math.round(newY)
-        });
-      }
+      setLocalDragPos({ id: selectedElementId, x: Math.round(newX), y: Math.round(newY) });
       
       return;
     }
