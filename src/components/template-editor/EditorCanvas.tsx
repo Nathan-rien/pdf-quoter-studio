@@ -39,39 +39,23 @@ const ZONE_POSITIONS: Record<string, { top: string; height: string }> = {
 // CANVAS_SCALE importé depuis canvas-constants.ts pour garantir la synchronisation
 
 export function EditorCanvas() {
-  const { 
-    selectedPageNumber, 
-    currentVersion,
-    editorMode,
-    selectedElementId,
-    selectedElementIds,
-    selectedDynamicZoneId,
-    addElementMode,
-    selectedShapeType,
-    selectedIconName,
-    selectedLogoId,
-    inlineEditingElementId,
-    selectElement,
-    toggleElementSelection,
-    selectMultipleElements,
-    clearSelection,
-    selectDynamicZone,
-    addElement,
-    addShape,
-    addIcon,
-    addLogo,
-    setAddElementMode,
-    setInlineEditing,
-    updateElementPosition,
-    updateElementSize,
-    updateTextContent,
-    updateDynamicZonePosition,
-    moveSelectedElements,
-    copySelectedElements,
-    pasteElements,
-    deleteSelectedElements,
-    undo
-  } = useTemplateEditorStore();
+  const selectedPageNumber = useTemplateEditorStore(s => s.selectedPageNumber);
+  const currentVersion = useTemplateEditorStore(s => s.currentVersion);
+  const editorMode = useTemplateEditorStore(s => s.editorMode);
+  const selectedElementId = useTemplateEditorStore(s => s.selectedElementId);
+  const selectedElementIds = useTemplateEditorStore(s => s.selectedElementIds);
+  const selectedDynamicZoneId = useTemplateEditorStore(s => s.selectedDynamicZoneId);
+  const inlineEditingElementId = useTemplateEditorStore(s => s.inlineEditingElementId);
+  const addElementMode = useTemplateEditorStore(s => s.addElementMode);
+  const selectedShapeType = useTemplateEditorStore(s => s.selectedShapeType);
+  const selectedIconName = useTemplateEditorStore(s => s.selectedIconName);
+  const selectedLogoId = useTemplateEditorStore(s => s.selectedLogoId);
+
+  const { selectElement, toggleElementSelection, selectMultipleElements, clearSelection,
+    selectDynamicZone, addElement, addShape, addIcon, addLogo, setAddElementMode,
+    setInlineEditing, updateElementPosition, updateElementSize, updateTextContent,
+    updateDynamicZonePosition, moveSelectedElements, copySelectedElements,
+    pasteElements, deleteSelectedElements, undo } = useTemplateEditorStore.getState();
 
   // États pour le drag & drop
   const [isDragging, setIsDragging] = useState(false);
@@ -96,6 +80,9 @@ export function EditorCanvas() {
   // Drag threshold state
   const [pendingDrag, setPendingDrag] = useState<{ elementId: string; startX: number; startY: number; offsetX: number; offsetY: number } | null>(null);
   const DRAG_THRESHOLD = 5;
+
+  const [localDragPos, setLocalDragPos] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [localDragSize, setLocalDragSize] = useState<{ id: string; width: number; height: number } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -445,17 +432,9 @@ export function EditorCanvas() {
       newWidth = Math.min(newWidth, CANVAS_SCALE.width - newX);
       newHeight = Math.min(newHeight, CANVAS_SCALE.height - newY);
       
-      updateElementSize(selectedElementId, {
-        width: Math.round(newWidth),
-        height: Math.round(newHeight)
-      });
+      setLocalDragSize({ id: selectedElementId, width: Math.round(newWidth), height: Math.round(newHeight) });
       
-      if (newX !== element.position.x || newY !== element.position.y) {
-        updateElementPosition(selectedElementId, {
-          x: Math.round(newX),
-          y: Math.round(newY)
-        });
-      }
+      setLocalDragPos({ id: selectedElementId, x: Math.round(newX), y: Math.round(newY) });
       
       return;
     }
@@ -523,10 +502,7 @@ export function EditorCanvas() {
       const clampedX = Math.max(0, x);
       const clampedY = Math.max(0, y);
       
-      updateElementPosition(selectedElementId, { 
-        x: Math.round(clampedX), 
-        y: Math.round(clampedY) 
-      });
+      setLocalDragPos({ id: selectedElementId, x: Math.round(clampedX), y: Math.round(clampedY) });
     }
     
     // Drag d'une zone dynamique
@@ -556,7 +532,7 @@ export function EditorCanvas() {
       const y = ((e.clientY - canvasRect.top) / canvasRect.height) * CANVAS_SCALE.height;
       setLassoEnd({ x, y });
     }
-  }, [isDragging, isDraggingZone, isResizing, isLassoing, pendingDrag, lassoStart, selectedElementId, selectedDynamicZoneId, dragOffset, resizeStart, resizeHandle, pageContent, dynamicZones, updateElementPosition, updateElementSize, updateDynamicZonePosition]);
+  }, [isDragging, isDraggingZone, isResizing, isLassoing, pendingDrag, lassoStart, selectedElementId, selectedDynamicZoneId, dragOffset, resizeStart, resizeHandle, pageContent, dynamicZones, updateDynamicZonePosition]);
 
   const handleMouseUp = useCallback(() => {
     // Clear pending drag
@@ -606,7 +582,16 @@ export function EditorCanvas() {
     setResizeHandle(null);
     setResizeStart(null);
     setAlignmentGuides({});
-  }, [isLassoing, lassoStart, lassoEnd, pageContent, selectMultipleElements]);
+
+    if (localDragPos) {
+      updateElementPosition(localDragPos.id, { x: localDragPos.x, y: localDragPos.y });
+      setLocalDragPos(null);
+    }
+    if (localDragSize) {
+      updateElementSize(localDragSize.id, { width: localDragSize.width, height: localDragSize.height });
+      setLocalDragSize(null);
+    }
+  }, [isLassoing, lassoStart, lassoEnd, pageContent, selectMultipleElements, localDragPos, localDragSize, updateElementPosition, updateElementSize]);
 
   const handleMouseLeave = useCallback(() => {
     setPendingDrag(null);
@@ -1002,7 +987,14 @@ export function EditorCanvas() {
             .filter(e => !e.isDynamic)
             .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
             .map((element) => {
-              const style = getElementStyle({ ...element, type: element.type });
+              const isActiveDrag = localDragPos?.id === element.id || localDragSize?.id === element.id;
+              const displayPosition = isActiveDrag && localDragPos?.id === element.id
+                ? { x: localDragPos.x, y: localDragPos.y }
+                : element.position;
+              const displaySize = isActiveDrag && localDragSize?.id === element.id
+                ? { width: localDragSize.width, height: localDragSize.height }
+                : element.size;
+              const style = getSharedElementStyle({ element: { ...element, position: displayPosition, size: displaySize } });
               const isSelected = selectedElementIds.includes(element.id);
               const isPrimarySelected = selectedElementId === element.id;
               const isTextElement = element.type === 'text';
