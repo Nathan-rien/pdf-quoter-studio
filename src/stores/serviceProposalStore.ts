@@ -24,6 +24,13 @@ export interface LigneData {
   totalHT: number;
 }
 
+export interface SelectedService {
+  service_id: string;
+  label: string;
+  amount_ht: number;
+  scope: 'total' | 'parc';
+}
+
 export interface ServiceProposalStoreState {
   clientData: ClientData;
   commercialData: CommercialData;
@@ -32,6 +39,12 @@ export interface ServiceProposalStoreState {
   selectedTemplateId: string | null;
   proposalName: string;
   totalInvest: number;
+  selectedServices: SelectedService[];
+  paymentFrequency: string;
+  paymentMode: string;
+  contractDuration: number | null;
+  startDate: string;
+  totalServicesHt: number;
 }
 
 const DEFAULT_SERVICES_INCLUS_DESCRIPTION =
@@ -57,6 +70,12 @@ const initialState: ServiceProposalStoreState = {
   selectedTemplateId: null,
   proposalName: '',
   totalInvest: 0,
+  selectedServices: [],
+  paymentFrequency: '',
+  paymentMode: '',
+  contractDuration: null,
+  startDate: '',
+  totalServicesHt: 0,
 };
 
 interface ServiceProposalStoreActions {
@@ -66,6 +85,14 @@ interface ServiceProposalStoreActions {
   updateServicesInclus: (description: string) => void;
   selectTemplate: (id: string | null) => void;
   updateProposalName: (name: string) => void;
+  setContractData: (data: {
+    selectedServices: SelectedService[];
+    paymentFrequency: string;
+    paymentMode: string;
+    contractDuration: number | null;
+    startDate: string;
+    totalServicesHt: number;
+  }) => void;
   resetAll: () => void;
   loadFromServiceProposal: (proposal: ServiceProposal) => void;
 }
@@ -108,6 +135,8 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           proposalName: name,
         })),
 
+      setContractData: (data) => set((state) => ({ ...state, ...data })),
+
       resetAll: () => set(() => ({ ...initialState })),
 
       loadFromServiceProposal: (proposal) =>
@@ -133,10 +162,18 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           })),
           totalInvest:
             Math.round(proposal.invest_lines.reduce((sum, l) => sum + l.vtn, 0) * 100) / 100,
-          // servicesInclus non modifié : le texte libre reste tel quel
           servicesInclus: { description: DEFAULT_SERVICES_INCLUS_DESCRIPTION },
           proposalName: proposal.client_company || proposal.client_name || 'Proposition Services',
           selectedTemplateId: null,
+          selectedServices: proposal.selected_services ?? [],
+          paymentFrequency: proposal.payment_frequency ?? '',
+          paymentMode: proposal.payment_mode ?? '',
+          contractDuration: proposal.contract_duration ?? null,
+          startDate: proposal.start_date ?? '',
+          totalServicesHt:
+            Math.round(
+              (proposal.selected_services ?? []).reduce((s, l) => s + l.amount_ht, 0) * 100,
+            ) / 100,
         })),
     }),
     {
@@ -149,6 +186,12 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
         selectedTemplateId: state.selectedTemplateId,
         proposalName: state.proposalName,
         totalInvest: state.totalInvest,
+        selectedServices: state.selectedServices,
+        paymentFrequency: state.paymentFrequency,
+        paymentMode: state.paymentMode,
+        contractDuration: state.contractDuration,
+        startDate: state.startDate,
+        totalServicesHt: state.totalServicesHt,
       }),
     }
   )

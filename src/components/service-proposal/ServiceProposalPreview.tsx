@@ -54,6 +54,13 @@ export function ServiceProposalPreview() {
     servicesInclus,
     proposalName,
     totalInvest,
+    selectedServices,
+    paymentFrequency,
+    paymentMode,
+    contractDuration,
+    startDate,
+    totalServicesHt,
+    commercialData,
   } = useServiceProposalStore();
 
   // Lire selectedTemplateId directement depuis rentalProposalStore
@@ -278,8 +285,130 @@ export function ServiceProposalPreview() {
     </div>
   );
 
+  const renderServiceDynamicZone = (zone: { type: string; position?: { top?: number } }, key: string) => {
+    const topPct = `${zone.position?.top ?? (zone.type === 'service_client_info' ? 30 : zone.type === 'service_conditions' ? 10 : zone.type === 'service_invest_table' ? 5 : 65)}%`;
+
+    if (zone.type === 'service_client_info') {
+      return (
+        <div
+          key={key}
+          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', fontSize: '10px', lineHeight: 1.7, zIndex: 5 }}
+        >
+          <strong>{clientData.raisonSociale || clientData.nom}</strong>
+          <br />
+          {clientData.adresse}
+          <br />
+          SIRET : {clientData.siret}
+          <br />
+          Représentée par : {clientData.nom}
+        </div>
+      );
+    }
+
+    if (zone.type === 'service_conditions') {
+      return (
+        <div
+          key={key}
+          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', fontSize: '9px', lineHeight: 1.8, zIndex: 5 }}
+        >
+          Services : {selectedServices.map((s) => s.label).join(', ')}
+          <br />
+          Périodicité : {paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'}
+          <br />
+          Mode de règlement : {paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : '—'}
+          <br />
+          Durée : {contractDuration ? `${contractDuration} mois` : '—'}
+          <br />
+          Démarrage : {startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'}
+          <br />
+          Total HT services : {formatNumber(totalServicesHt)} €
+        </div>
+      );
+    }
+
+    if (zone.type === 'service_invest_table') {
+      return (
+        <div key={key} style={{ position: 'absolute', top: topPct, left: '3%', width: '94%', zIndex: 5 }}>
+          {lignesData.length > 0 ? (
+            <div className="border rounded overflow-hidden">
+              <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
+                <div className="col-span-6">Désignation</div>
+                <div className="col-span-2 text-center">Qté</div>
+                <div className="col-span-2 text-right">P.U. HT</div>
+                <div className="col-span-2 text-right">Total HT</div>
+              </div>
+              <div className="divide-y divide-border">
+                {lignesData.map((ligne) => (
+                  <div
+                    key={ligne.id}
+                    className="grid grid-cols-12 gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20"
+                  >
+                    <div className="col-span-6 break-words whitespace-pre-wrap leading-tight py-0.5">
+                      {ligne.designation || '-'}
+                    </div>
+                    <div className="col-span-2 text-center">{ligne.quantite}</div>
+                    <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
+                    <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-[9px] text-muted-foreground italic">Aucune ligne de service.</div>
+          )}
+          <div className="mt-2 flex justify-end">
+            <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
+              <div className="flex justify-between font-semibold text-[10px] gap-3">
+                <span>Total HT&nbsp;:&nbsp;</span>
+                <span>{formatNumber(totalInvest)} €</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (zone.type === 'service_signature') {
+      return (
+        <div
+          key={key}
+          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', fontSize: '9px', zIndex: 5 }}
+        >
+          <div className="flex justify-between gap-6">
+            <div className="flex-1">
+              La Société Groupe Cybertek SAS
+              <br />
+              Représentée par {commercialData?.commercialId || '—'}
+              <br />
+              Directeur Services et Solutions
+              <br />
+              <br />
+              <br />
+              Signature : _______________
+            </div>
+            <div className="flex-1">
+              La Société {clientData.raisonSociale || clientData.nom}
+              <br />
+              Représentée par {clientData.nom}
+              <br />
+              <br />
+              <br />
+              Signature : _______________
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const renderTemplatePage = (templatePageNumber: number, displayPageNum: number) => {
     const elements = getStaticPageElements(templatePageNumber as PDFPageNumber);
+    const pageDynamicZones =
+      currentVersion?.pages
+        .find((p) => p.pageNumber === (templatePageNumber as PDFPageNumber))
+        ?.dynamicZones?.filter((z) => (z.type as string).startsWith('service_')) ?? [];
     return (
       <PageFrame pageNum={displayPageNum}>
         {elements.length > 0 ? (
@@ -292,9 +421,11 @@ export function ServiceProposalPreview() {
             </div>
           </div>
         )}
+        {pageDynamicZones.map((z, i) => renderServiceDynamicZone(z as { type: string; position?: { top?: number } }, `dz-${i}`))}
       </PageFrame>
     );
   };
+
 
   const renderVosServicesPage = (displayPageNum: number) => (
     <PageFrame pageNum={displayPageNum}>

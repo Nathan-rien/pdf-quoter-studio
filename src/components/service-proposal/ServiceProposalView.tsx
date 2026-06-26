@@ -75,7 +75,7 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
   cancelled: 'Annulée',
 };
 
-function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues) {
+function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues, dataForm: ServiceDataFormValues) {
   const store = useServiceProposalStore.getState();
   store.updateClientData({
     nom: clientData.client_name,
@@ -98,6 +98,14 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
       totalHT: l.vtn,
     })),
   );
+  store.setContractData({
+    selectedServices: dataForm.selected_services,
+    paymentFrequency: dataForm.payment_frequency || '',
+    paymentMode: dataForm.payment_mode || '',
+    contractDuration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
+    startDate: dataForm.start_date || '',
+    totalServicesHt: dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0),
+  });
   store.updateProposalName(
     clientData.client_company || clientData.client_name || 'Proposition Services',
   );
@@ -278,7 +286,7 @@ function ProposalFormShell({
 
   function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
-      syncToServiceStore(clientData, investForm);
+      syncToServiceStore(clientData, investForm, dataForm);
     }
     setActiveTab(tab);
   }
@@ -390,7 +398,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const createProposal = useCreateServiceProposal();
 
   async function handleSave() {
-    syncToServiceStore(clientData, investForm);
+    syncToServiceStore(clientData, investForm, dataForm);
     await createProposal.mutateAsync(buildPayload(clientData, dataForm, investForm));
     onClose();
   }
@@ -447,7 +455,7 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
   const updateProposal = useUpdateServiceProposal();
 
   async function handleSave() {
-    syncToServiceStore(clientData, investForm);
+    syncToServiceStore(clientData, investForm, dataForm);
     await updateProposal.mutateAsync({
       id: proposal.id,
       updates: buildPayload(clientData, dataForm, investForm),
