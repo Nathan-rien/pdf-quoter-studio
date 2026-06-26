@@ -82,10 +82,25 @@ export function ElementProperties() {
   const selectedElementIds = useTemplateEditorStore(s => s.selectedElementIds);
   const hasUnsavedChanges = useTemplateEditorStore(s => s.hasUnsavedChanges);
 
-  const { updateTextContent, updateImageContent, updateShapeContent, updateElementPosition,
-    updateElementSize, deleteElement, duplicateElement, toggleAspectRatioLock, toggleElementLock,
-    updateIconContent, createNewVersion, getSelectedElement, bringToFront, sendToBack,
-    getSelectedElements, deleteSelectedElements, duplicateSelectedElements } = useTemplateEditorStore.getState();
+  const {
+    updateTextContent,
+    updateImageContent,
+    updateShapeContent,
+    updateElementPosition,
+    updateElementSize,
+    deleteElement,
+    duplicateElement,
+    toggleAspectRatioLock,
+    toggleElementLock,
+    updateIconContent,
+    createNewVersion,
+    getSelectedElement,
+    bringToFront,
+    sendToBack,
+    getSelectedElements,
+    deleteSelectedElements,
+    duplicateSelectedElements,
+  } = useTemplateEditorStore.getState();
 
   const selectedElement = getSelectedElement();
   const selectedElements = getSelectedElements();
