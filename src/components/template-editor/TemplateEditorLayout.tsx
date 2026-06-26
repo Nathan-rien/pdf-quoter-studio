@@ -63,6 +63,7 @@ export function TemplateEditorLayout() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
   
   // Synchronisation avec le cloud
   const { isLoading, isSyncing, isLoadingVersion, syncAllToDatabase, saveTemplateToDatabase, loadVersionPages } = useTemplateSync();
