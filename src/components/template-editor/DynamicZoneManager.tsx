@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AVAILABLE_ZONE_TYPES, DynamicZoneType } from "@/types/pdf-template";
-import { Plus, Trash2, Table, Settings, FileText, Lock } from "lucide-react";
+import { Plus, Trash2, Table, Settings, FileText, Lock, User, ListChecks, Pen } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,10 @@ const ZONE_ICONS: Record<DynamicZoneType, React.ComponentType<{ className?: stri
   invest_table: Table,
   options_block: Settings,
   location_block: FileText,
+  service_client_info: User,
+  service_invest_table: Table,
+  service_conditions: ListChecks,
+  service_signature: Pen,
 };
 
 export function DynamicZoneManager() {
