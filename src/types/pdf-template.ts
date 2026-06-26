@@ -10,13 +10,24 @@ export type PDFPageNumber = number;
 export type PDFPageType = 'static' | 'dynamic_partial' | 'dynamic_conditional';
 
 // Type de zone dynamique
-export type DynamicZoneType = 'invest_table' | 'options_block' | 'location_block';
+export type DynamicZoneType =
+  | 'invest_table'
+  | 'options_block'
+  | 'location_block'
+  | 'service_client_info'
+  | 'service_invest_table'
+  | 'service_conditions'
+  | 'service_signature';
 
 // Types de zone disponibles avec leurs métadonnées
 export const AVAILABLE_ZONE_TYPES: { type: DynamicZoneType; label: string; sourceSheet: string; description: string }[] = [
   { type: 'invest_table', label: 'Tableau Invest', sourceSheet: 'invest ', description: 'Tableau des produits/matériels' },
   { type: 'options_block', label: 'Bloc Options', sourceSheet: 'Options services ', description: 'Bloc services et options' },
-  { type: 'location_block', label: 'Bloc Location', sourceSheet: 'invest ', description: 'Bloc conditions de location (durée, montant, loyer)' }
+  { type: 'location_block', label: 'Bloc Location', sourceSheet: 'invest ', description: 'Bloc conditions de location (durée, montant, loyer)' },
+  { type: 'service_client_info', label: 'Infos Client (Services)', sourceSheet: 'client', description: 'Raison sociale, adresse, SIRET et contact du bénéficiaire' },
+  { type: 'service_invest_table', label: 'Tableau Produits (Services)', sourceSheet: 'invest_services', description: 'Tableau des lignes produits et services' },
+  { type: 'service_conditions', label: 'Conditions Contrat', sourceSheet: 'données', description: 'Durée, date démarrage, périodicité, mode règlement, services souscrits' },
+  { type: 'service_signature', label: 'Bloc Signature', sourceSheet: 'client', description: 'Bloc de signature avec noms du commercial et du client' }
 ];
 
 // Définition d'une zone dynamique
