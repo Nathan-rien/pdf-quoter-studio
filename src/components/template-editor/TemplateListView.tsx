@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock } from 'lucide-react';
+import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { DuplicateTemplateDialog } from './DuplicateTemplateDialog';
 import { CreateTemplateDialog } from './CreateTemplateDialog';
+import { seedContratCadreTemplate } from '@/lib/seedContratCadreTemplate';
 import type { PDFTemplate } from '@/types/template-editor';
 import { toast } from 'sonner';
 import {
