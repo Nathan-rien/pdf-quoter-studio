@@ -99,7 +99,7 @@ export function DynamicZoneManager() {
     updateDynamicZone(zoneId, { isRequired });
   };
 
-  if (dynamicZones.length === 0 && !isEditable) {
+  if (!currentVersion) {
     return null;
   }
 
