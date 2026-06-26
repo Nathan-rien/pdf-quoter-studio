@@ -591,6 +591,10 @@ export function EditorCanvas() {
       updateElementSize(localDragSize.id, { width: localDragSize.width, height: localDragSize.height });
       setLocalDragSize(null);
     }
+
+    if (localDragPos || localDragSize) {
+      useTemplateEditorStore.getState().commitPositionToHistory();
+    }
   }, [isLassoing, lassoStart, lassoEnd, pageContent, selectMultipleElements, localDragPos, localDragSize, updateElementPosition, updateElementSize]);
 
   const handleMouseLeave = useCallback(() => {
