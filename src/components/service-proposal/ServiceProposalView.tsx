@@ -75,7 +75,7 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
   cancelled: 'Annulée',
 };
 
-function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues) {
+function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues, dataForm: ServiceDataFormValues) {
   const store = useServiceProposalStore.getState();
   store.updateClientData({
     nom: clientData.client_name,
