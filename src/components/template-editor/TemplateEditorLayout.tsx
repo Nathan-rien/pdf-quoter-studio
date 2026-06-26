@@ -315,6 +315,21 @@ export function TemplateEditorLayout() {
                 <Cloud className="h-4 w-4 mr-2" />
                 {isSyncing ? 'Synchronisation...' : 'Sync vers le cloud'}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const res = await seedContratCadreTemplate();
+                  if (res.alreadyExists) {
+                    toast.info('Le template "Contrat Cadre Services" existe déjà.');
+                  } else {
+                    toast.success('Template "Contrat Cadre Services" créé avec succès.');
+                  }
+                } catch (e: any) {
+                  toast.error('Erreur lors de la création du template', { description: e?.message });
+                }
+              }}>
+                <FileText className="h-4 w-4 mr-2" />
+                Initialiser Contrat Cadre Services
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => setShowClearCacheDialog(true)}
