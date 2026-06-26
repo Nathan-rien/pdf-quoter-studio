@@ -170,6 +170,28 @@ export function DynamicZoneManager() {
                             onCheckedChange={(checked) => handleToggleRequired(zone.id, checked)}
                           />
                         </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px]">Déplacer vers</Label>
+                          <Select
+                            onValueChange={(pageNum) => {
+                              const success = moveDynamicZoneToPage(zone.id, parseInt(pageNum));
+                              if (success) toast.success(`Zone déplacée vers la page ${pageNum}`);
+                            }}
+                          >
+                            <SelectTrigger className="h-7 text-[10px]">
+                              <SelectValue placeholder="Choisir une page..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currentVersion?.pages
+                                .filter(p => p.pageNumber !== selectedPageNumber)
+                                .map(p => (
+                                  <SelectItem key={p.pageNumber} value={String(p.pageNumber)} className="text-[10px]">
+                                    Page {p.pageNumber} — {(p as any).title || `Page ${p.pageNumber}`}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="text-[9px] text-muted-foreground">
                           Source: {zone.sourceSheet}
                         </div>
