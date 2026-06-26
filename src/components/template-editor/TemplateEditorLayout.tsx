@@ -9,6 +9,7 @@ import { useTemplateSync } from "@/hooks/useTemplateSync";
 import { EditorSidebar } from "./EditorSidebar";
 import { EditorCanvas } from "./EditorCanvas";
 import { ElementProperties } from "./ElementProperties";
+import { DynamicZoneManager } from "./DynamicZoneManager";
 import { VersionHistory } from "./VersionHistory";
 import { PublishValidation } from "./PublishValidation";
 import { TemplateListView } from "./TemplateListView";
@@ -458,8 +459,9 @@ export function TemplateEditorLayout() {
               </div>
 
               {/* Panel droit - Propriétés - plus compact */}
-              <div className="col-span-2 overflow-auto">
+              <div className="col-span-2 overflow-auto space-y-2">
                 <ElementProperties />
+                <DynamicZoneManager />
               </div>
             </div>
           ) : (
