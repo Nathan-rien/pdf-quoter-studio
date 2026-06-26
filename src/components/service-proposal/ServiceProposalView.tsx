@@ -286,7 +286,7 @@ function ProposalFormShell({
 
   function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
-      syncToServiceStore(clientData, investForm);
+      syncToServiceStore(clientData, investForm, dataForm);
     }
     setActiveTab(tab);
   }
@@ -398,7 +398,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const createProposal = useCreateServiceProposal();
 
   async function handleSave() {
-    syncToServiceStore(clientData, investForm);
+    syncToServiceStore(clientData, investForm, dataForm);
     await createProposal.mutateAsync(buildPayload(clientData, dataForm, investForm));
     onClose();
   }
@@ -455,7 +455,7 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
   const updateProposal = useUpdateServiceProposal();
 
   async function handleSave() {
-    syncToServiceStore(clientData, investForm);
+    syncToServiceStore(clientData, investForm, dataForm);
     await updateProposal.mutateAsync({
       id: proposal.id,
       updates: buildPayload(clientData, dataForm, investForm),
