@@ -77,6 +77,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   // Historique (Undo)
   undo: () => boolean;
   canUndo: () => boolean;
+  commitPositionToHistory: () => void;
 
   // Ajout d'éléments
   setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape' | 'icon' | 'logo') => void;
@@ -217,13 +218,20 @@ let undoHistory: HistoryEntry[] = [];
 // Helper pour sauvegarder l'état actuel dans l'historique
 const saveToHistory = (state: TemplateEditorState) => {
   if (!state.currentVersion) return;
-  
+
+  const lastEntry = undoHistory[undoHistory.length - 1];
+  if (lastEntry) {
+    const lastPage = lastEntry.pages[0];
+    const currentPage = state.currentVersion.pages[0];
+    if (JSON.stringify(lastPage) === JSON.stringify(currentPage)) return; // Pas de doublon
+  }
+
   undoHistory.push({
     pages: JSON.parse(JSON.stringify(state.currentVersion.pages)),
     selectedElementId: state.selectedElementId,
     selectedElementIds: [...state.selectedElementIds]
   });
-  
+
   // Limiter la taille de l'historique
   if (undoHistory.length > MAX_HISTORY_SIZE) {
     undoHistory.shift();
@@ -2155,6 +2163,12 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   canUndo: () => {
     return undoHistory.length > 0;
+  },
+
+  commitPositionToHistory: () => {
+    const state = get();
+    if (!state.currentVersion) return;
+    saveToHistory(state);
   }
 }),
     {
