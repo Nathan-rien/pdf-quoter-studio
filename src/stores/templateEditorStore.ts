@@ -77,6 +77,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   // Historique (Undo)
   undo: () => boolean;
   canUndo: () => boolean;
+  commitPositionToHistory: () => void;
 
   // Ajout d'éléments
   setAddElementMode: (mode: 'none' | 'text' | 'image' | 'shape' | 'icon' | 'logo') => void;
