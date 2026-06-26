@@ -77,28 +77,15 @@ import { cn } from "@/lib/utils";
 export function ElementProperties() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { 
-    currentVersion,
-    hasUnsavedChanges,
-    updateTextContent,
-    updateImageContent,
-    updateShapeContent,
-    updateElementPosition,
-    updateElementSize,
-    deleteElement,
-    duplicateElement,
-    toggleAspectRatioLock,
-    toggleElementLock,
-    updateIconContent,
-    createNewVersion,
-    getSelectedElement,
-    bringToFront,
-    sendToBack,
-    selectedElementIds,
-    getSelectedElements,
-    deleteSelectedElements,
-    duplicateSelectedElements
-  } = useTemplateEditorStore();
+  const currentVersion = useTemplateEditorStore(s => s.currentVersion);
+  const selectedElementId = useTemplateEditorStore(s => s.selectedElementId);
+  const selectedElementIds = useTemplateEditorStore(s => s.selectedElementIds);
+  const hasUnsavedChanges = useTemplateEditorStore(s => s.hasUnsavedChanges);
+
+  const { updateTextContent, updateImageContent, updateShapeContent, updateElementPosition,
+    updateElementSize, deleteElement, duplicateElement, toggleAspectRatioLock, toggleElementLock,
+    updateIconContent, createNewVersion, getSelectedElement, bringToFront, sendToBack,
+    getSelectedElements, deleteSelectedElements, duplicateSelectedElements } = useTemplateEditorStore.getState();
 
   const selectedElement = getSelectedElement();
   const selectedElements = getSelectedElements();
