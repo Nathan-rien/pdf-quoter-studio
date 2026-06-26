@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock } from 'lucide-react';
+import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { DuplicateTemplateDialog } from './DuplicateTemplateDialog';
 import { CreateTemplateDialog } from './CreateTemplateDialog';
+import { seedContratCadreTemplate } from '@/lib/seedContratCadreTemplate';
 import type { PDFTemplate } from '@/types/template-editor';
 import { toast } from 'sonner';
 import {
@@ -24,6 +25,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function TemplateListView() {
   const [duplicateTemplate, setDuplicateTemplate] = useState<PDFTemplate | null>(null);
@@ -101,10 +108,36 @@ export function TemplateListView() {
             Créez, modifiez et gérez vos templates de propositions commerciales
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nouveau template
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const res = await seedContratCadreTemplate();
+                  if (res.alreadyExists) {
+                    toast.info('Le template "Contrat Cadre Services" existe déjà.');
+                  } else {
+                    toast.success('Template "Contrat Cadre Services" créé avec succès.');
+                  }
+                } catch (e: any) {
+                  toast.error('Erreur lors de la création du template', { description: e?.message });
+                }
+              }}>
+                <FileText className="h-4 w-4 mr-2" />
+                Initialiser Contrat Cadre Services
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Grid de templates */}
