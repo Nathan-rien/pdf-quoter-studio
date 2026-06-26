@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { seedContratCadreTemplate } from "@/lib/seedContratCadreTemplate";
+import { cn } from "@/lib/utils";
 
 export function TemplateEditorLayout() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
