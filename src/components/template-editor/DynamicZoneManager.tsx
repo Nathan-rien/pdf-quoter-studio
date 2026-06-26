@@ -58,6 +58,16 @@ export function DynamicZoneManager() {
   const isEditable = currentVersion?.status === 'brouillon';
   const dynamicZones = getDynamicZonesForCurrentPage();
 
+  const isServiceTemplate = currentVersion?.pages?.some(p =>
+    p.dynamicZones?.some(z => (z.type as string).startsWith('service_'))
+  ) || false;
+
+  const availableZones = AVAILABLE_ZONE_TYPES.filter(z =>
+    isServiceTemplate
+      ? (z.type as string).startsWith('service_')
+      : !((z.type as string).startsWith('service_'))
+  );
+
   const handleAddZone = () => {
     if (!selectedZoneType) return;
     
