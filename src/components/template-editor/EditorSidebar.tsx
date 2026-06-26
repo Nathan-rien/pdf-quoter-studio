@@ -193,11 +193,8 @@ export function EditorSidebar() {
                 const Icon = PAGE_ICONS[page.pageNumber] || FileText;
                 const deleteCheck = canDeletePage(page.pageNumber);
                 
-                // Trouver le titre de la page (pour les pages protégées, utiliser un titre par défaut)
-                const pageTitle = page.pageNumber === 4 ? 'Offre neuf + rachat' 
-                  : page.pageNumber === 5 ? 'Offre matériel neuf'
-                  : page.pageNumber === 6 ? 'Offre de services'
-                  : `Page ${page.pageNumber}`;
+                // Trouver le titre de la page (titre stocké ou fallback)
+                const pageTitle = (page as any).title || `Page ${page.pageNumber}`;
                 
                 return (
                   <div
