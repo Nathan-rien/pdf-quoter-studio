@@ -81,6 +81,9 @@ export function EditorCanvas() {
   const [pendingDrag, setPendingDrag] = useState<{ elementId: string; startX: number; startY: number; offsetX: number; offsetY: number } | null>(null);
   const DRAG_THRESHOLD = 5;
 
+  const [localDragPos, setLocalDragPos] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [localDragSize, setLocalDragSize] = useState<{ id: string; width: number; height: number } | null>(null);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
