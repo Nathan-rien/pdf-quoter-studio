@@ -239,7 +239,7 @@ export function DynamicZoneManager() {
                 <SelectValue placeholder="Type de zone..." />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_ZONE_TYPES.map((zoneType) => {
+                {availableZones.map((zoneType) => {
                   const Icon = ZONE_ICONS[zoneType.type];
                   return (
                     <SelectItem key={zoneType.type} value={zoneType.type}>
