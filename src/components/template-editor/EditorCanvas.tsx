@@ -39,39 +39,23 @@ const ZONE_POSITIONS: Record<string, { top: string; height: string }> = {
 // CANVAS_SCALE importé depuis canvas-constants.ts pour garantir la synchronisation
 
 export function EditorCanvas() {
-  const { 
-    selectedPageNumber, 
-    currentVersion,
-    editorMode,
-    selectedElementId,
-    selectedElementIds,
-    selectedDynamicZoneId,
-    addElementMode,
-    selectedShapeType,
-    selectedIconName,
-    selectedLogoId,
-    inlineEditingElementId,
-    selectElement,
-    toggleElementSelection,
-    selectMultipleElements,
-    clearSelection,
-    selectDynamicZone,
-    addElement,
-    addShape,
-    addIcon,
-    addLogo,
-    setAddElementMode,
-    setInlineEditing,
-    updateElementPosition,
-    updateElementSize,
-    updateTextContent,
-    updateDynamicZonePosition,
-    moveSelectedElements,
-    copySelectedElements,
-    pasteElements,
-    deleteSelectedElements,
-    undo
-  } = useTemplateEditorStore();
+  const selectedPageNumber = useTemplateEditorStore(s => s.selectedPageNumber);
+  const currentVersion = useTemplateEditorStore(s => s.currentVersion);
+  const editorMode = useTemplateEditorStore(s => s.editorMode);
+  const selectedElementId = useTemplateEditorStore(s => s.selectedElementId);
+  const selectedElementIds = useTemplateEditorStore(s => s.selectedElementIds);
+  const selectedDynamicZoneId = useTemplateEditorStore(s => s.selectedDynamicZoneId);
+  const inlineEditingElementId = useTemplateEditorStore(s => s.inlineEditingElementId);
+  const addElementMode = useTemplateEditorStore(s => s.addElementMode);
+  const selectedShapeType = useTemplateEditorStore(s => s.selectedShapeType);
+  const selectedIconName = useTemplateEditorStore(s => s.selectedIconName);
+  const selectedLogoId = useTemplateEditorStore(s => s.selectedLogoId);
+
+  const { selectElement, toggleElementSelection, selectMultipleElements, clearSelection,
+    selectDynamicZone, addElement, addShape, addIcon, addLogo, setAddElementMode,
+    setInlineEditing, updateElementPosition, updateElementSize, updateTextContent,
+    updateDynamicZonePosition, moveSelectedElements, copySelectedElements,
+    pasteElements, deleteSelectedElements, undo } = useTemplateEditorStore.getState();
 
   // États pour le drag & drop
   const [isDragging, setIsDragging] = useState(false);
