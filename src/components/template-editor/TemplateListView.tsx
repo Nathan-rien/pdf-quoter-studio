@@ -122,12 +122,8 @@ export function TemplateListView() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={async () => {
                 try {
-                  const res = await seedContratCadreTemplate();
-                  if (res.alreadyExists) {
-                    toast.info('Le template "Contrat Cadre Services" existe déjà.');
-                  } else {
-                    toast.success('Template "Contrat Cadre Services" créé avec succès.');
-                  }
+                  await seedContratCadreTemplate(true);
+                  toast.success('Template "Contrat Cadre Services" réinitialisé avec succès.');
                 } catch (e: any) {
                   toast.error('Erreur lors de la création du template', { description: e?.message });
                 }

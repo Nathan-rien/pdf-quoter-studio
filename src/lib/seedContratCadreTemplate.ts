@@ -291,10 +291,17 @@ function buildPages() {
   ];
 }
 
-export async function seedContratCadreTemplate(): Promise<
+export async function seedContratCadreTemplate(force = false): Promise<
   { alreadyExists: true; templateId: string }
   | { alreadyExists: false; templateId: string; versionId: string }
 > {
+  if (force) {
+    await supabase
+      .from("pdf_templates")
+      .delete()
+      .eq("name", "Contrat Cadre Services");
+  }
+
   const { data: existing, error: existingErr } = await supabase
     .from("pdf_templates")
     .select("id")
@@ -324,9 +331,8 @@ export async function seedContratCadreTemplate(): Promise<
     .insert({
       template_id: tpl.id,
       version_number: 1,
-      status: "publie",
+      status: "brouillon",
       pages: pages as unknown as never,
-      published_at: new Date().toISOString(),
     })
     .select("id")
     .single();
