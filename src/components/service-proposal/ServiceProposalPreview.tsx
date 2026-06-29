@@ -408,6 +408,43 @@ export function ServiceProposalPreview() {
     return null;
   };
 
+  const renderPage1ClientBlock = () => {
+    const selectedCommercial = commercialData?.commercialId
+      ? getCommercialById(commercialData.commercialId)
+      : null;
+
+    return (
+      <div className="absolute bottom-10 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-[9px] space-y-0.5">
+              {clientData.raisonSociale && <p className="font-bold">{clientData.raisonSociale}</p>}
+              <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+              <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+              {clientData.email && (
+                <p className="text-muted-foreground">{clientData.email}</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="font-medium text-[10px] mb-2">Votre interlocuteur</p>
+            {selectedCommercial ? (
+              <div className="text-[9px] space-y-0.5">
+                <p className="font-semibold">{selectedCommercial.nom}</p>
+                {selectedCommercial.telephone && (
+                  <p className="text-muted-foreground">{selectedCommercial.telephone}</p>
+                )}
+                <p className="text-muted-foreground">{selectedCommercial.email}</p>
+              </div>
+            ) : (
+              <p className="text-[9px] text-muted-foreground italic">Non sélectionné</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderTemplatePage = (templatePageNumber: number, displayPageNum: number) => {
     const elements = getStaticPageElements(templatePageNumber as PDFPageNumber);
     const pageDynamicZones =
