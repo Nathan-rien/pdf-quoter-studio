@@ -275,10 +275,10 @@ export function useTemplateSync() {
             dynamicZones: page.dynamicZones || []
           }));
         } else {
-          pages = createDefaultPages();
+          pages = [];
         }
       } else {
-        pages = createDefaultPages();
+        pages = [];
       }
 
       // Mettre à jour le store avec les pages chargées
@@ -286,6 +286,10 @@ export function useTemplateSync() {
       const updatedVersions = currentState.allVersions.map(v =>
         v.id === versionId ? { ...v, pages } : v
       );
+
+      if (!updatedVersions.some(v => v.id === versionId)) {
+        console.warn('[loadVersionPages] Version non trouvée dans allVersions:', versionId);
+      }
 
       // IMPORTANT: si la version courante est celle qu'on vient de charger,
       // il faut aussi mettre à jour currentVersion (sinon UI = pages(0) + boucle de reload).
