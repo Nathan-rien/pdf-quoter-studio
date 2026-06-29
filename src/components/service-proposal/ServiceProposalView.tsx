@@ -284,7 +284,7 @@ function ProposalFormShell({
   const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
   const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
   const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
-  const { saveTemplateToDatabase } = useTemplateSync();
+  const { saveVersionToDatabase } = useTemplateSync();
 
   async function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
