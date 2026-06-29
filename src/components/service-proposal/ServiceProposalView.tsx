@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FileText, ChevronDown, ChevronUp, User, Trash2, Save, X, Pencil } from 'lucide-react';
+import { Plus, FileText, ChevronDown, ChevronUp, User, Trash2, Save, X, Pencil, Briefcase, ChevronRight, Users, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
