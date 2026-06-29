@@ -74,6 +74,7 @@ export function ServiceProposalPreview() {
     allTemplates,
     getActiveTemplate,
     getTemplateLatestVersion,
+    currentVersion: editorCurrentVersion,
   } = useTemplateEditorStore();
 
   const activeTemplate = React.useMemo(() => {
