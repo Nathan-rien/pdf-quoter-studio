@@ -96,10 +96,15 @@ export function ServiceProposalPreview() {
   }, [selectedTemplateId, allTemplates]);
 
   const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
+    // Priorité 1 : version en cours d'édition dans l'éditeur (contient les zones dynamiques ajoutées)
+    if (editorCurrentVersion && activeTemplate && editorCurrentVersion.templateId === activeTemplate.id && editorCurrentVersion.pages.length > 0) {
+      return editorCurrentVersion;
+    }
+    // Priorité 2 : version chargée depuis Supabase via allVersions
     if (!activeTemplate) return null;
     const version = getTemplateLatestVersion(activeTemplate.id);
     return version && version.pages.length > 0 ? version : null;
-  }, [activeTemplate, getTemplateLatestVersion]);
+  }, [activeTemplate, getTemplateLatestVersion, editorCurrentVersion]);
 
   React.useEffect(() => {
     const loadPages = async () => {
