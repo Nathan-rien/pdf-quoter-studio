@@ -1688,15 +1688,37 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
         })),
         dynamicZones: (page.dynamicZones || []).map(zone => ({ ...zone }))
       }));
+    } else if (currentVersion && currentVersion.pages.length === 0) {
+      // Pages vides = pas encore chargées depuis Supabase (lazy loading)
+      const publishedWithPages = allVersions.find(
+        v => v.templateId === currentTemplateId &&
+             v.status === 'publie' &&
+             v.pages &&
+             v.pages.length > 0 &&
+             v.pages.some(p => p.elements && p.elements.length > 0)
+      );
+
+      if (publishedWithPages) {
+        basePages = publishedWithPages.pages.map(page => ({
+          ...page,
+          elements: (page.elements || []).map(el => ({
+            ...el,
+            id: `${el.id}-v${maxVersion + 1}`,
+            position: { ...el.position },
+            size: { ...el.size },
+            content: el.content ? JSON.parse(JSON.stringify(el.content)) : undefined
+          })),
+          dynamicZones: (page.dynamicZones || []).map(zone => ({ ...zone }))
+        }));
+      } else {
+        // Aucune version avec pages en mémoire - laisser vide pour chargement Supabase
+        basePages = currentVersion.pages;
+      }
     } else {
-      // Pages vides ou corrompues - recréer depuis le contrat PDF
-      console.log('Pages vides détectées, reconstruction depuis le contrat PDF');
-      basePages = PDF_TEMPLATE_CONTRACT.pages.map(pageConfig => ({
-        pageNumber: pageConfig.pageNumber as PDFPageNumber,
-        elements: PDF_TEMPLATE_ELEMENTS[pageConfig.pageNumber as PDFPageNumber] || [],
-        dynamicZones: pageConfig.dynamicZones as DynamicZone[]
-      }));
+      // Pas de version courante du tout
+      basePages = [];
     }
+
 
     const newVersion: TemplateVersion = {
       id: `version-${Date.now()}`,

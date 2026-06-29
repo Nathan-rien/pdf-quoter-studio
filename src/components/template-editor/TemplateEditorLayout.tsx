@@ -161,12 +161,23 @@ export function TemplateEditorLayout() {
     }
   };
 
-  const handleCreateVersion = () => {
-    const newVersion = createNewVersion();
-    if (newVersion) {
-      toast.success(`Version ${newVersion.versionNumber} créée (brouillon)`);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateVersion = async () => {
+    setIsCreating(true);
+    try {
+      if (currentVersion && (!currentVersion.pages || currentVersion.pages.length === 0)) {
+        await loadVersionPages(currentVersion.id);
+      }
+      const newVersion = createNewVersion();
+      if (newVersion) {
+        toast.success(`Version ${newVersion.versionNumber} créée (brouillon)`);
+      }
+    } finally {
+      setIsCreating(false);
     }
   };
+
 
   const handleBackToList = () => {
     if (hasUnsavedChanges) {
@@ -436,10 +447,12 @@ export function TemplateEditorLayout() {
                   size="sm"
                   className="h-7 text-xs"
                   onClick={handleCreateVersion}
+                  disabled={isCreating}
                 >
                   <Pencil className="h-3 w-3 mr-1" />
-                  Éditer
+                  {isCreating ? "Chargement..." : "Éditer"}
                 </Button>
+
               )}
             </div>
           )}
