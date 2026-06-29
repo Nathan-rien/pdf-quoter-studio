@@ -897,8 +897,8 @@ export function EditorCanvas() {
               onUnderline={handleToolbarUnderline}
               onBulletList={handleToolbarBulletList}
               onNumberedList={handleToolbarNumberedList}
-              onConfirm={handleExitInlineEditing}
-              onCancel={handleExitInlineEditing}
+              onConfirm={() => inlineEditorRef.current?.commit()}
+              onCancel={() => inlineEditorRef.current?.cancel()}
             />
           )}
 
