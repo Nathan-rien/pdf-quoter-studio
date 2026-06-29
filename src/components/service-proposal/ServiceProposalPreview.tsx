@@ -465,7 +465,7 @@ export function ServiceProposalPreview() {
         )}
         {pageDynamicZones.map((z, i) => renderServiceDynamicZone(z as { type: string; position?: { top?: number } }, `dz-${i}`))}
 
-        {templatePageNumber === 1 && renderPage1ClientBlock()}
+        {templatePageNumber === 1 && pageDynamicZones.every(z => z.type !== 'service_client_info') && renderPage1ClientBlock()}
         {templatePageNumber === 1 && (() => {
           const selectedCommercial = commercialData?.commercialId
             ? getCommercialById(commercialData.commercialId)
