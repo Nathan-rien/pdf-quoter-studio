@@ -426,6 +426,48 @@ export function ServiceProposalPreview() {
           </div>
         )}
         {pageDynamicZones.map((z, i) => renderServiceDynamicZone(z as { type: string; position?: { top?: number } }, `dz-${i}`))}
+
+        {templatePageNumber === 1 && (clientData.raisonSociale || clientData.nom) && (
+          <div style={{
+            position: 'absolute',
+            bottom: '6%',
+            left: '4%',
+            width: '92%',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            fontSize: '8px',
+            color: '#1f2937',
+            zIndex: 10,
+            backgroundColor: 'rgba(255,255,255,0.92)',
+            borderRadius: '4px',
+            padding: '6px 10px',
+            border: '1px solid rgba(0,0,0,0.1)'
+          }}>
+            <div>
+              <div style={{ fontWeight: 'bold', marginBottom: '2px', fontSize: '9px' }}>
+                {clientData.raisonSociale || clientData.nom}
+              </div>
+              {clientData.nom && clientData.raisonSociale && (
+                <div>{clientData.nom}</div>
+              )}
+              {clientData.adresse && (
+                <div style={{ color: '#6b7280' }}>{clientData.adresse}</div>
+              )}
+              {clientData.email && (
+                <div style={{ color: '#6b7280' }}>{clientData.email}</div>
+              )}
+            </div>
+            {commercialData?.commercialId && (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px', fontSize: '9px' }}>
+                  Votre interlocuteur
+                </div>
+                <div>{commercialData.commercialId}</div>
+              </div>
+            )}
+          </div>
+        )}
       </PageFrame>
     );
   };
