@@ -292,7 +292,7 @@ function ProposalFormShell({
       if (tab === 'preview-export') {
         const editorStore = useTemplateEditorStore.getState();
         if (editorStore.hasUnsavedChanges && editorStore.currentVersion) {
-          try { await saveTemplateToDatabase(editorStore.currentVersion); } catch (e) {}
+          try { await saveVersionToDatabase(editorStore.currentVersion); } catch (e) {}
         }
       }
     }
