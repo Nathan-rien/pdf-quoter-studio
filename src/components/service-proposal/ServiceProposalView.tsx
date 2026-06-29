@@ -513,31 +513,127 @@ export function ServiceProposalView() {
 
   const formOpen = showForm || editingProposal !== null;
 
-  return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Propositions Services</h2>
-            {proposals.length > 0 && (
-              <Badge variant="secondary" className="text-xs">{proposals.length}</Badge>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Créez des propositions de services indépendantes des propositions de location.
-          </p>
-        </div>
-        {!formOpen && (
-          <Button onClick={() => setShowForm(true)} className="gap-1.5">
-            <Plus className="h-4 w-4" />Nouvelle proposition
-          </Button>
+  const draftCount = proposals.filter((p) => p.status === 'draft').length;
+  const lastProposal = proposals[0];
+  const hasDraft = draftCount > 0;
+
+  if (formOpen) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        {showForm && <CreateForm onClose={() => setShowForm(false)} />}
+        {editingProposal && (
+          <EditForm proposal={editingProposal} onClose={() => setEditingProposal(null)} />
         )}
       </div>
+    );
+  }
 
-      {showForm && <CreateForm onClose={() => setShowForm(false)} />}
-      {editingProposal && (
-        <EditForm proposal={editingProposal} onClose={() => setEditingProposal(null)} />
-      )}
+  return (
+    <div className="space-y-4 animate-fade-in">
+      {/* Hero Section — same look as Proposition Location */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-accent via-accent/90 to-accent/80 p-5 text-accent-foreground">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNCAxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L2c+PC9zdmc+')] opacity-20" />
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-1.5 bg-accent-foreground/10 rounded-lg backdrop-blur-sm">
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <h1 className="text-xl font-bold">Proposition Services</h1>
+          </div>
+          <p className="text-accent-foreground/80 max-w-xl mb-4 text-sm">
+            Créez des propositions de services indépendantes des propositions de location.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="default"
+              onClick={() => setShowForm(true)}
+              className="gap-2 font-semibold shadow-lg"
+            >
+              <Plus className="h-4 w-4" />
+              Nouvelle proposition
+            </Button>
+            {hasDraft && lastProposal && (
+              <Button
+                variant="ghost"
+                size="default"
+                onClick={() => setEditingProposal(lastProposal)}
+                className="gap-2 text-accent-foreground hover:bg-accent-foreground/10"
+              >
+                <ChevronRight className="h-4 w-4" />
+                Reprendre la proposition en cours
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Status Cards */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Card>
+          <CardHeader className="pb-1 py-2 px-3">
+            <CardTitle className="text-sm">État actuel</CardTitle>
+            <p className="text-[10px] text-muted-foreground">Aperçu des propositions</p>
+          </CardHeader>
+          <CardContent className="space-y-1.5 px-3 pb-3">
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1.5">
+                <FileText className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium">Propositions</span>
+              </div>
+              <Badge variant={proposals.length > 0 ? 'success' : 'pending'} className="text-[10px] h-5">
+                {proposals.length}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1.5">
+                <Layers className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium">Brouillons</span>
+              </div>
+              <Badge variant={draftCount > 0 ? 'success' : 'pending'} className="text-[10px] h-5">
+                {draftCount}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between p-1.5 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1.5">
+                <Users className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-medium">Commerciaux</span>
+              </div>
+              <Badge variant={grouped.size > 0 ? 'success' : 'pending'} className="text-[10px] h-5">
+                {grouped.size}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-1 py-2 px-3">
+            <CardTitle className="text-sm">Workflow</CardTitle>
+            <p className="text-[10px] text-muted-foreground">4 étapes</p>
+          </CardHeader>
+          <CardContent className="px-3 pb-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">1</div>
+                <span>Client</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">2</div>
+                <span>Données & Services</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">3</div>
+                <span>Aperçu</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-medium">4</div>
+                <span>Export final</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground text-center py-12">Chargement…</div>
