@@ -318,13 +318,16 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     // Charger les versions de ce template
     const templateVersions = allVersions.filter(v => v.templateId === templateId);
     
-    // Sélectionner la version la plus récente (publiée en priorité, sinon brouillon)
+    // Sélectionner la version la plus récente (brouillon en priorité, sinon publiée)
+    const brouillonVersions = templateVersions.filter(v => v.status === 'brouillon');
     const publishedVersions = templateVersions.filter(v => v.status === 'publie');
-    const latestVersion = publishedVersions.length > 0 
-      ? publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
-      : templateVersions.length > 0 
-        ? templateVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
-        : createInitialVersion(templateId);
+    const latestVersion = brouillonVersions.length > 0
+      ? brouillonVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+      : publishedVersions.length > 0
+        ? publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+        : templateVersions.length > 0
+          ? templateVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b)
+          : createInitialVersion(templateId);
 
     set({
       viewMode: 'editor',
