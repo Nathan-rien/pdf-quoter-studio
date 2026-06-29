@@ -107,7 +107,7 @@ export function AppSidebar({
           onClick={() => onNavigate('history')}
         >
           <History className="h-3.5 w-3.5" />
-          Historique
+          Historique Location
         </Button>
 
         {/* SECTION 2 — Services */}
