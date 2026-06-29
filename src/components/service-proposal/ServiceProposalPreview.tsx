@@ -48,20 +48,18 @@ const formatNumber = (value: number | null | undefined) => {
 export function ServiceProposalPreview() {
   const [currentPage, setCurrentPage] = useState(1);
 
-  const {
-    clientData,
-    lignesData,
-    servicesInclus,
-    proposalName,
-    totalInvest,
-    selectedServices,
-    paymentFrequency,
-    paymentMode,
-    contractDuration,
-    startDate,
-    totalServicesHt,
-    commercialData,
-  } = useServiceProposalStore();
+  const clientData = useServiceProposalStore((s) => s.clientData);
+  const lignesData = useServiceProposalStore((s) => s.lignesData);
+  const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
+  const proposalName = useServiceProposalStore((s) => s.proposalName);
+  const totalInvest = useServiceProposalStore((s) => s.totalInvest);
+  const selectedServices = useServiceProposalStore((s) => s.selectedServices);
+  const paymentFrequency = useServiceProposalStore((s) => s.paymentFrequency);
+  const paymentMode = useServiceProposalStore((s) => s.paymentMode);
+  const contractDuration = useServiceProposalStore((s) => s.contractDuration);
+  const startDate = useServiceProposalStore((s) => s.startDate);
+  const totalServicesHt = useServiceProposalStore((s) => s.totalServicesHt);
+  const commercialData = useServiceProposalStore((s) => s.commercialData);
 
   // Lire selectedTemplateId directement depuis rentalProposalStore
   // car c'est là que TemplateSelector écrit (comme dans RentalProposalPreview)
