@@ -93,7 +93,7 @@ export function AppSidebar({
           onClick={() => onNavigate('contracts')}
         >
           <FileCheck className="h-3.5 w-3.5" />
-          <span className="flex-1 text-left">Contrats</span>
+          <span className="flex-1 text-left">Contrats Location</span>
           {renewingCount > 0 && (
             <Badge className="h-5 px-1.5 text-[10px] bg-orange-500 hover:bg-orange-500 text-white border-transparent">
               {renewingCount}
