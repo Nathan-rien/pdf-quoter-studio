@@ -1721,7 +1721,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
 
     const newVersion: TemplateVersion = {
-      id: `version-${Date.now()}`,
+      id: crypto.randomUUID(),
       templateId: currentTemplateId,
       versionNumber: maxVersion + 1,
       status: 'brouillon',
