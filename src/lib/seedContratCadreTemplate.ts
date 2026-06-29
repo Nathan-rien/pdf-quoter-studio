@@ -331,7 +331,8 @@ export async function seedContratCadreTemplate(force = false): Promise<
     .insert({
       template_id: tpl.id,
       version_number: 1,
-      status: "brouillon",
+      status: "publie",
+      published_at: new Date().toISOString(),
       pages: pages as unknown as never,
     })
     .select("id")
