@@ -766,7 +766,9 @@ export function EditorCanvas() {
       const target = e.target as HTMLElement;
       // Ne pas fermer si on clique sur la toolbar ou l'éditeur inline
       if (target.closest('[data-floating-toolbar]') || target.closest('[contenteditable]')) return;
-      handleExitInlineEditing();
+      // Commiter d'abord le texte AVANT de fermer l'éditeur
+      // sinon le démontage du composant annule le setTimeout de handleBlur
+      inlineEditorRef.current?.commit();
       return;
     }
     
