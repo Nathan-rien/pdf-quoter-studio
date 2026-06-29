@@ -77,14 +77,17 @@ export function AppSidebar({
 
       {/* Main navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {/* SECTION 1 — Location */}
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
+          Location
+        </p>
+
         <Button
           variant={currentView === 'rental-proposal' || currentView === 'rental-workflow' ? 'secondary' : 'ghost'}
           className="w-full justify-start gap-2 h-8 text-sm"
           onClick={() => onNavigate('rental-proposal')}
         >
           <Building2 className="h-3.5 w-3.5" />
-          Proposition Location
+          Proposition
         </Button>
 
         <Button
@@ -93,7 +96,7 @@ export function AppSidebar({
           onClick={() => onNavigate('contracts')}
         >
           <FileCheck className="h-3.5 w-3.5" />
-          <span className="flex-1 text-left">Contrats Location</span>
+          <span className="flex-1 text-left">Contrats</span>
           {renewingCount > 0 && (
             <Badge className="h-5 px-1.5 text-[10px] bg-orange-500 hover:bg-orange-500 text-white border-transparent">
               {renewingCount}
@@ -107,7 +110,7 @@ export function AppSidebar({
           onClick={() => onNavigate('history')}
         >
           <History className="h-3.5 w-3.5" />
-          Historique Location
+          Historique
         </Button>
 
         {/* SECTION 2 — Services (admin uniquement) */}
