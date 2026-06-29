@@ -122,6 +122,7 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
         });
         return;
       }
+      console.log('[PublishValidation] Version sauvée:', versionToSave.id, 'pages:', currentVersion.pages.length);
 
       // 3. Maintenant publier localement (cela mettra à jour le store)
       const result = publishVersion();
