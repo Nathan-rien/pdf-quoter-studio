@@ -447,10 +447,12 @@ export function TemplateEditorLayout() {
                   size="sm"
                   className="h-7 text-xs"
                   onClick={handleCreateVersion}
+                  disabled={isCreating}
                 >
                   <Pencil className="h-3 w-3 mr-1" />
-                  Éditer
+                  {isCreating ? "Chargement..." : "Éditer"}
                 </Button>
+
               )}
             </div>
           )}
