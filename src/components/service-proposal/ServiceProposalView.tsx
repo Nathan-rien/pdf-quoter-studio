@@ -286,6 +286,16 @@ function ProposalFormShell({
   const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
   const { saveVersionToDatabase } = useTemplateSync();
 
+  useEffect(() => {
+    const currentTemplateId = useRentalProposalStore.getState().selectedTemplateId;
+    if (currentTemplateId) return; // Déjà sélectionné
+    const allTemplates = useTemplateEditorStore.getState().allTemplates;
+    const contratTemplate = allTemplates.find(t => t.name === 'Contrat Cadre Services');
+    if (contratTemplate) {
+      useRentalProposalStore.getState().selectTemplateForProposal(contratTemplate.id);
+    }
+  }, []);
+
   async function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
       syncToServiceStore(clientData, investForm, dataForm);
