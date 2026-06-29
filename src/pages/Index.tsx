@@ -81,11 +81,12 @@ export default function Index() {
       case 'contracts':
         return <ContractsView />;
       case 'service-proposal':
-        return <ServiceProposalView />;
+        return isAdmin ? <ServiceProposalView /> : null;
       case 'service-history':
-        return <ServiceHistoryView />;
+        return isAdmin ? <ServiceHistoryView /> : null;
       case 'service-contracts':
-        return <ServiceContractsView />;
+        return isAdmin ? <ServiceContractsView /> : null;
+
       case 'history':
         return (
           <HistoryView

@@ -110,38 +110,44 @@ export function AppSidebar({
           Historique Location
         </Button>
 
-        {/* SECTION 2 — Services */}
-        <div className="border-t border-border my-2" />
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
-          Services
-        </p>
+        {/* SECTION 2 — Services (admin uniquement) */}
+        {isAdmin && (
+          <>
+            <div className="border-t border-border my-2" />
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
+              Services
+            </p>
 
-        <Button
-          variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
-          className="w-full justify-start gap-2 h-8 text-sm"
-          onClick={() => onNavigate('service-proposal')}
-        >
-          <Layers className="h-3.5 w-3.5" />
-          Prop. Services
-        </Button>
+            <Button
+              variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('service-proposal')}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Prop. Services
+            </Button>
 
-        <Button
-          variant={currentView === 'service-contracts' ? 'secondary' : 'ghost'}
-          className="w-full justify-start gap-2 h-8 text-sm"
-          onClick={() => onNavigate('service-contracts')}
-        >
-          <FileCheck className="h-3.5 w-3.5" />
-          Contrats Services
-        </Button>
+            <Button
+              variant={currentView === 'service-contracts' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('service-contracts')}
+            >
+              <FileCheck className="h-3.5 w-3.5" />
+              Contrats Services
+            </Button>
 
-        <Button
-          variant={currentView === 'service-history' ? 'secondary' : 'ghost'}
-          className="w-full justify-start gap-2 h-8 text-sm"
-          onClick={() => onNavigate('service-history')}
-        >
-          <History className="h-3.5 w-3.5" />
-          Historique Services
-        </Button>
+            <Button
+              variant={currentView === 'service-history' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('service-history')}
+            >
+              <History className="h-3.5 w-3.5" />
+              Historique Services
+            </Button>
+          </>
+        )}
+
+
 
         <div className="border-t border-border my-2" />
 
