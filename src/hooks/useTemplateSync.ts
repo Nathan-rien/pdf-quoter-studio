@@ -76,13 +76,13 @@ function dbToStoreVersion(db: DbVersion): TemplateVersion {
           dynamicZones: page.dynamicZones || []
         }));
       } else {
-        // Pages vides en base, utiliser les pages par défaut
-        console.log('Pages vides détectées, utilisation des pages par défaut');
-        pages = createDefaultPages();
+        // Pages vides en base — ne PAS substituer par les pages par défaut (qui sont celles du template Location)
+        console.log('Pages vides détectées, conservation d\'un tableau vide');
+        pages = [];
       }
     } else {
-      // Pas de pages en base, utiliser les pages par défaut
-      pages = createDefaultPages();
+      // Pas de pages en base — ne PAS substituer par les pages par défaut
+      pages = [];
     }
   }
   // Si db.pages === undefined (lazy loading), pages reste un tableau vide
