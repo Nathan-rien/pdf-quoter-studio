@@ -98,6 +98,7 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
         });
         return;
       }
+      console.log('[PublishValidation] Template sauvé:', toValidUUID(currentTemplate.id));
 
       // 2. Sauvegarder la version dans le cloud AVANT de changer le statut local
       const versionToSave = {
@@ -121,6 +122,7 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
         });
         return;
       }
+      console.log('[PublishValidation] Version sauvée:', versionToSave.id, 'pages:', currentVersion.pages.length);
 
       // 3. Maintenant publier localement (cela mettra à jour le store)
       const result = publishVersion();
