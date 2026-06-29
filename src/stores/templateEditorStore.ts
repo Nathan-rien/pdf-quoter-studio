@@ -1743,8 +1743,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
   publishVersion: () => {
     const { currentVersion, allVersions, allTemplates, currentTemplateId } = get();
-    if (!currentVersion || currentVersion.status !== 'brouillon') {
-      return { canPublish: false, errors: [{ type: 'page_count', message: 'Version non modifiable' }], warnings: [] };
+    if (!currentVersion) {
+      return { canPublish: false, errors: [{ type: 'page_count', message: 'Aucune version sélectionnée' }], warnings: [] };
     }
 
     // Validation obligatoire avant publication
@@ -1757,7 +1757,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     // Publier la version
     const publishedVersion: TemplateVersion = {
       ...currentVersion,
-      status: 'publie',
+      status: currentVersion.status,
       publishedAt: new Date(),
       dynamicZonesIntact: true
     };
@@ -1776,7 +1776,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       allTemplates: updatedTemplates,
       currentVersion: publishedVersion,
       hasUnsavedChanges: false,
-      editorMode: 'view'
+      editorMode: currentVersion.status === 'publie' ? 'view' : 'edit'
     });
 
     return validationResult;

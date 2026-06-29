@@ -104,7 +104,7 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
         id: toValidUUID(currentVersion.id),
         template_id: toValidUUID(currentVersion.templateId),
         version_number: currentVersion.versionNumber,
-        status: 'publie', // Marquer comme publié
+        status: currentVersion.status,
         pages: currentVersion.pages as any,
         created_by: currentVersion.createdBy || null,
         published_at: new Date().toISOString()
