@@ -32,6 +32,8 @@ import { ServiceProposalPreview } from './ServiceProposalPreview';
 import { ServiceProposalExport } from './ServiceProposalExport';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
+import { useTemplateEditorStore } from '@/stores/templateEditorStore';
+import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -282,11 +284,17 @@ function ProposalFormShell({
   const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
   const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
   const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
+  const { saveTemplateToDatabase } = useTemplateSync();
 
-
-  function handleTabChange(tab: string) {
+  async function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
       syncToServiceStore(clientData, investForm, dataForm);
+      if (tab === 'preview-export') {
+        const editorStore = useTemplateEditorStore.getState();
+        if (editorStore.hasUnsavedChanges && editorStore.currentVersion) {
+          try { await saveTemplateToDatabase(editorStore.currentVersion); } catch (e) {}
+        }
+      }
     }
     setActiveTab(tab);
   }
