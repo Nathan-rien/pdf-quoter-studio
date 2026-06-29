@@ -69,22 +69,6 @@ export function ServiceProposalInvestStep({ data, onChange }: ServiceProposalInv
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Switch
-              id="show_invest_price"
-              checked={data.show_invest_price}
-              onCheckedChange={(v) => onChange({ ...data, show_invest_price: v })}
-            />
-            <Label htmlFor="show_invest_price" className="cursor-pointer">Afficher prix Investissement</Label>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Switch
-              id="show_offer_amount"
-              checked={data.show_offer_amount}
-              onCheckedChange={(v) => onChange({ ...data, show_offer_amount: v })}
-            />
-            <Label htmlFor="show_offer_amount" className="cursor-pointer">Afficher montant Offre</Label>
-          </div>
           <Button type="button" size="sm" onClick={addLine} className="gap-1">
             <Plus className="h-4 w-4" />Ajouter
           </Button>
