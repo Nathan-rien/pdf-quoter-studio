@@ -1,17 +1,9 @@
-/**
- * Gestionnaire de zones dynamiques
- * Permet d'ajouter, modifier et supprimer des zones dynamiques sur une page
- */
-
 import { useState } from "react";
 import { useTemplateEditorStore } from "@/stores/templateEditorStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,266 +14,262 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AVAILABLE_ZONE_TYPES, DynamicZoneType } from "@/types/pdf-template";
-import { Plus, Trash2, Table, Settings, FileText, Lock, User, ListChecks, Pen } from "lucide-react";
+import type { DynamicZoneType } from "@/types/pdf-template";
+import { User, Table, ListChecks, FileSignature, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const ZONE_ICONS: Record<DynamicZoneType, React.ComponentType<{ className?: string }>> = {
-  invest_table: Table,
-  options_block: Settings,
-  location_block: FileText,
-  service_client_info: User,
-  service_invest_table: Table,
-  service_conditions: ListChecks,
-  service_signature: Pen,
-};
+const SERVICE_DATA_TYPES = [
+  {
+    type: "service_client_info" as DynamicZoneType,
+    label: "Client",
+    description: "Raison sociale, adresse, SIRET et contact du bénéficiaire",
+    sourceSheet: "client",
+    icon: User,
+    color: "text-blue-600 bg-blue-50 border-blue-200",
+    required: true,
+  },
+  {
+    type: "service_conditions" as DynamicZoneType,
+    label: "Données contrat",
+    description: "Durée, date de démarrage, périodicité, mode de règlement, services souscrits",
+    sourceSheet: "données",
+    icon: ListChecks,
+    color: "text-purple-600 bg-purple-50 border-purple-200",
+    required: false,
+  },
+  {
+    type: "service_invest_table" as DynamicZoneType,
+    label: "Tableau Invest",
+    description: "Tableau des lignes produits avec désignation, quantité et prix HT",
+    sourceSheet: "invest",
+    icon: Table,
+    color: "text-emerald-600 bg-emerald-50 border-emerald-200",
+    required: false,
+  },
+  {
+    type: "service_signature" as DynamicZoneType,
+    label: "Signatures",
+    description: "Bloc de signature avec les noms du commercial Cybertek et du client",
+    sourceSheet: "client",
+    icon: FileSignature,
+    color: "text-orange-600 bg-orange-50 border-orange-200",
+    required: true,
+  },
+];
 
 export function DynamicZoneManager() {
+  const [selectedType, setSelectedType] = useState<DynamicZoneType | null>(null);
+  const [selectedPage, setSelectedPage] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [zoneToDelete, setZoneToDelete] = useState<string | null>(null);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedZoneType, setSelectedZoneType] = useState<DynamicZoneType | null>(null);
 
   const {
     currentVersion,
     selectedPageNumber,
-    getDynamicZonesForCurrentPage,
     addDynamicZone,
-    updateDynamicZone,
     removeDynamicZone,
-    moveDynamicZoneToPage,
-    selectedDynamicZoneId,
-    selectDynamicZone,
+    getAllDynamicZones,
   } = useTemplateEditorStore();
-
-  const isEditable = currentVersion?.status === 'brouillon';
-  const dynamicZones = getDynamicZonesForCurrentPage();
-
-  const isServiceTemplate = currentVersion?.pages?.some(p =>
-    p.dynamicZones?.some(z => (z.type as string).startsWith('service_'))
-  ) || false;
-
-  const availableZones = AVAILABLE_ZONE_TYPES.filter(z =>
-    isServiceTemplate
-      ? (z.type as string).startsWith('service_')
-      : !((z.type as string).startsWith('service_'))
-  );
-
-  const handleAddZone = () => {
-    if (!selectedZoneType) return;
-    
-    const newZone = addDynamicZone(selectedPageNumber, selectedZoneType, false);
-    if (newZone) {
-      toast.success(`Zone "${availableZones.find(z => z.type === selectedZoneType)?.label}" ajoutée`);
-      setAddDialogOpen(false);
-      setSelectedZoneType(null);
-    }
-  };
-
-  const handleDeleteClick = (zoneId: string) => {
-    setZoneToDelete(zoneId);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (zoneToDelete) {
-      const success = removeDynamicZone(zoneToDelete);
-      if (success) {
-        toast.success("Zone dynamique supprimée");
-      }
-    }
-    setDeleteDialogOpen(false);
-    setZoneToDelete(null);
-  };
-
-  const handleToggleRequired = (zoneId: string, isRequired: boolean) => {
-    updateDynamicZone(zoneId, { isRequired });
-  };
 
   if (!currentVersion) {
     return null;
   }
 
+  const isEditable = currentVersion.status === "brouillon";
+  const allZones = getAllDynamicZones();
+
+  const getZonePage = (type: DynamicZoneType): number | null => {
+    const zone = allZones.find((z) => z.type === type);
+    return zone ? zone.pageNumber : null;
+  };
+
+  const handleConfirmAdd = () => {
+    if (!selectedType || !selectedPage) return;
+
+    const typeDef = SERVICE_DATA_TYPES.find((t) => t.type === selectedType);
+    if (!typeDef) return;
+
+    const existingZone = allZones.find((z) => z.type === selectedType);
+    if (existingZone) {
+      removeDynamicZone(existingZone.id);
+    }
+
+    const pageNum = parseInt(selectedPage, 10);
+    addDynamicZone(pageNum, selectedType, typeDef.required, typeDef.description);
+
+    toast.success(`Bloc "${typeDef.label}" ajouté sur la page ${pageNum}`);
+    setSelectedType(null);
+    setSelectedPage("");
+  };
+
+  const handleCardClick = (type: DynamicZoneType) => {
+    if (!isEditable) return;
+
+    if (selectedType === type) {
+      setSelectedType(null);
+      setSelectedPage("");
+    } else {
+      setSelectedType(type);
+      setSelectedPage(String(selectedPageNumber));
+    }
+  };
+
+  const handleDeleteZone = (type: DynamicZoneType) => {
+    const zone = allZones.find((z) => z.type === type);
+    if (!zone) return;
+    setZoneToDelete(zone.id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (zoneToDelete) {
+      removeDynamicZone(zoneToDelete);
+      toast.success("Zone supprimée");
+    }
+    setDeleteDialogOpen(false);
+    setZoneToDelete(null);
+  };
+
   return (
     <>
-      <Card className="mt-2">
-        <CardHeader className="pb-2 py-2 px-2">
-          <CardTitle className="text-xs flex items-center gap-1.5">
-            <Lock className="h-3 w-3" />
-            Zones dynamiques ({dynamicZones.length})
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xs uppercase text-muted-foreground tracking-wide">
+            Données dynamiques
           </CardTitle>
+          <p className="text-[10px] text-muted-foreground">
+            Cliquez sur un type pour l&apos;associer à une page du document.
+          </p>
         </CardHeader>
-        <CardContent className="px-2 py-2 space-y-2">
-          {dynamicZones.length === 0 ? (
-            <p className="text-[10px] text-muted-foreground text-center py-2">
-              Aucune zone dynamique sur cette page
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {dynamicZones.map((zone) => {
-                const Icon = ZONE_ICONS[zone.type];
-                const isSelected = selectedDynamicZoneId === zone.id;
-                
-                return (
-                  <div
-                    key={zone.id}
-                    className={cn(
-                      "p-2 rounded border cursor-pointer transition-colors",
-                      isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                    )}
-                    onClick={() => selectDynamicZone(isSelected ? null : zone.id)}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
-                        <span className="text-[10px] font-medium truncate">
-                          {zone.description}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {zone.isRequired && (
-                          <Badge variant="secondary" className="text-[8px] h-4 px-1">
+        <CardContent className="space-y-2">
+          {SERVICE_DATA_TYPES.map((typeDef) => {
+            const Icon = typeDef.icon;
+            const placedOnPage = getZonePage(typeDef.type);
+            const isSelected = selectedType === typeDef.type;
+            const isPlaced = placedOnPage !== null;
+
+            return (
+              <div key={typeDef.type}>
+                <div
+                  className={cn(
+                    "rounded-lg border p-3 transition-colors",
+                    isEditable ? "cursor-pointer" : "opacity-60 cursor-default",
+                    isSelected && "ring-2 ring-primary border-primary",
+                    isPlaced && !isSelected && "border-emerald-300 bg-emerald-50/50",
+                    !isPlaced && !isSelected && "border-border bg-card"
+                  )}
+                  onClick={() => handleCardClick(typeDef.type)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border",
+                        typeDef.color
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold">{typeDef.label}</span>
+                        {typeDef.required && (
+                          <Badge variant="secondary" className="text-[9px] h-4 px-1">
                             Requis
                           </Badge>
                         )}
-                        {isEditable && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(zone.id);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
+                        {isPlaced && (
+                          <Badge className="text-[9px] h-4 px-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
+                            <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                            Page {placedOnPage}
+                          </Badge>
                         )}
                       </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                        {typeDef.description}
+                      </p>
                     </div>
-                    
-                    {isSelected && isEditable && (
-                      <div className="mt-2 pt-2 border-t space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-[10px]">Obligatoire</Label>
-                          <Switch
-                            checked={zone.isRequired}
-                            onCheckedChange={(checked) => handleToggleRequired(zone.id, checked)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px]">Déplacer vers</Label>
-                          <Select
-                            onValueChange={(pageNum) => {
-                              const success = moveDynamicZoneToPage(zone.id, parseInt(pageNum));
-                              if (success) toast.success(`Zone déplacée vers la page ${pageNum}`);
-                            }}
-                          >
-                            <SelectTrigger className="h-7 text-[10px]">
-                              <SelectValue placeholder="Choisir une page..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {currentVersion?.pages
-                                .filter(p => p.pageNumber !== selectedPageNumber)
-                                .map(p => (
-                                  <SelectItem key={p.pageNumber} value={String(p.pageNumber)} className="text-[10px]">
-                                    Page {p.pageNumber} — {(p as any).title || `Page ${p.pageNumber}`}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="text-[9px] text-muted-foreground">
-                          Source: {zone.sourceSheet}
-                        </div>
-                      </div>
+                    {isPlaced && isEditable && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteZone(typeDef.type);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
 
-          {isEditable && (
-            <>
-              <Separator />
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-7 text-[10px] gap-1"
-                onClick={() => setAddDialogOpen(true)}
-              >
-                <Plus className="h-3 w-3" />
-                Ajouter une zone
-              </Button>
-            </>
-          )}
+                {isSelected && isEditable && (
+                  <div className="mt-2 pl-3 border-l-4 border-primary/30 bg-muted/30 rounded-r p-3 space-y-2">
+                    <p className="text-xs font-medium">Sur quelle page placer ce bloc ?</p>
+                    <Select value={selectedPage} onValueChange={setSelectedPage}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Choisir une page..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentVersion.pages.map((p) => (
+                          <SelectItem
+                            key={p.pageNumber}
+                            value={String(p.pageNumber)}
+                            className="text-xs"
+                          >
+                            Page {p.pageNumber} — {(p as any).title || `Page ${p.pageNumber}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs"
+                        disabled={!selectedPage}
+                        onClick={handleConfirmAdd}
+                      >
+                        Confirmer
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          setSelectedType(null);
+                          setSelectedPage("");
+                        }}
+                      >
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
-      {/* Dialog d'ajout de zone */}
-      <AlertDialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Ajouter une zone dynamique</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sélectionnez le type de zone à ajouter sur la page {selectedPageNumber}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <div className="py-4">
-            <Select
-              value={selectedZoneType || ""}
-              onValueChange={(value) => setSelectedZoneType(value as DynamicZoneType)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Type de zone..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableZones.map((zoneType) => {
-                  const Icon = ZONE_ICONS[zoneType.type];
-                  return (
-                    <SelectItem key={zoneType.type} value={zoneType.type}>
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        <span>{zoneType.label}</span>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            
-            {selectedZoneType && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                {availableZones.find(z => z.type === selectedZoneType)?.description}
-              </p>
-            )}
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAddZone} disabled={!selectedZoneType}>
-              Ajouter
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Dialog de confirmation de suppression */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer cette zone dynamique ?</AlertDialogTitle>
+            <AlertDialogTitle>Retirer cette zone ?</AlertDialogTitle>
             <AlertDialogDescription>
               Les données de cette zone ne seront plus injectées automatiquement lors de la génération du PDF.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
-              Supprimer
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Retirer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
