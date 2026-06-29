@@ -50,15 +50,13 @@ export function ServiceProposalExport() {
 
   useTemplateSync();
 
-  const {
-    clientData,
-    commercialData,
-    lignesData,
-    servicesInclus,
-    selectedTemplateId,
-    proposalName,
-    totalInvest,
-  } = useServiceProposalStore();
+  const clientData = useServiceProposalStore((s) => s.clientData);
+  const commercialData = useServiceProposalStore((s) => s.commercialData);
+  const lignesData = useServiceProposalStore((s) => s.lignesData);
+  const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
+  const selectedTemplateId = useServiceProposalStore((s) => s.selectedTemplateId);
+  const proposalName = useServiceProposalStore((s) => s.proposalName);
+  const totalInvest = useServiceProposalStore((s) => s.totalInvest);
 
   const { getActiveTemplate, getTemplateLatestVersion, allTemplates } =
     useTemplateEditorStore();
