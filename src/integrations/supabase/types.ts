@@ -88,6 +88,42 @@ export type Database = {
           },
         ]
       }
+      edi_import_lines: {
+        Row: {
+          date_reappro: string | null
+          ean: string
+          fournisseur_id: number | null
+          id: string
+          imported_at: string | null
+          prix_achat: number | null
+          ref_fseur: string | null
+          source_file: string | null
+          stock: number | null
+        }
+        Insert: {
+          date_reappro?: string | null
+          ean: string
+          fournisseur_id?: number | null
+          id?: string
+          imported_at?: string | null
+          prix_achat?: number | null
+          ref_fseur?: string | null
+          source_file?: string | null
+          stock?: number | null
+        }
+        Update: {
+          date_reappro?: string | null
+          ean?: string
+          fournisseur_id?: number | null
+          id?: string
+          imported_at?: string | null
+          prix_achat?: number | null
+          ref_fseur?: string | null
+          source_file?: string | null
+          stock?: number | null
+        }
+        Relationships: []
+      }
       gantt_dependencies: {
         Row: {
           dependency_type: Database["public"]["Enums"]["gantt_dependency_type"]
