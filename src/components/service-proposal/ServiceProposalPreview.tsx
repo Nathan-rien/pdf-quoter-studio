@@ -25,6 +25,7 @@ import {
   resolveImageUrl,
 } from '@/lib/template-render-utils';
 import { sanitizeHtml } from '@/lib/sanitize-html';
+import { getCommercialById } from '@/data/commerciaux';
 import type {
   EditableElement,
   TextContent,
