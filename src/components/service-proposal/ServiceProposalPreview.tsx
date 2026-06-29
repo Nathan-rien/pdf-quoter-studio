@@ -25,6 +25,7 @@ import {
   resolveImageUrl,
 } from '@/lib/template-render-utils';
 import { sanitizeHtml } from '@/lib/sanitize-html';
+import { getCommercialById } from '@/data/commerciaux';
 import type {
   EditableElement,
   TextContent,
@@ -407,6 +408,43 @@ export function ServiceProposalPreview() {
     return null;
   };
 
+  const renderPage1ClientBlock = () => {
+    const selectedCommercial = commercialData?.commercialId
+      ? getCommercialById(commercialData.commercialId)
+      : null;
+
+    return (
+      <div className="absolute bottom-10 left-4 right-4 bg-background/95 rounded-lg p-3 shadow-sm border z-40">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-[9px] space-y-0.5">
+              {clientData.raisonSociale && <p className="font-bold">{clientData.raisonSociale}</p>}
+              <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+              <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+              {clientData.email && (
+                <p className="text-muted-foreground">{clientData.email}</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="font-medium text-[10px] mb-2">Votre interlocuteur</p>
+            {selectedCommercial ? (
+              <div className="text-[9px] space-y-0.5">
+                <p className="font-semibold">{selectedCommercial.nom}</p>
+                {selectedCommercial.telephone && (
+                  <p className="text-muted-foreground">{selectedCommercial.telephone}</p>
+                )}
+                <p className="text-muted-foreground">{selectedCommercial.email}</p>
+              </div>
+            ) : (
+              <p className="text-[9px] text-muted-foreground italic">Non sélectionné</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderTemplatePage = (templatePageNumber: number, displayPageNum: number) => {
     const elements = getStaticPageElements(templatePageNumber as PDFPageNumber);
     const pageDynamicZones =
@@ -427,47 +465,19 @@ export function ServiceProposalPreview() {
         )}
         {pageDynamicZones.map((z, i) => renderServiceDynamicZone(z as { type: string; position?: { top?: number } }, `dz-${i}`))}
 
-        {templatePageNumber === 1 && (clientData.raisonSociale || clientData.nom) && (
-          <div style={{
-            position: 'absolute',
-            bottom: '6%',
-            left: '4%',
-            width: '92%',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            fontSize: '8px',
-            color: '#1f2937',
-            zIndex: 10,
-            backgroundColor: 'rgba(255,255,255,0.92)',
-            borderRadius: '4px',
-            padding: '6px 10px',
-            border: '1px solid rgba(0,0,0,0.1)'
-          }}>
-            <div>
-              <div style={{ fontWeight: 'bold', marginBottom: '2px', fontSize: '9px' }}>
-                {clientData.raisonSociale || clientData.nom}
-              </div>
-              {clientData.nom && clientData.raisonSociale && (
-                <div>{clientData.nom}</div>
-              )}
-              {clientData.adresse && (
-                <div style={{ color: '#6b7280' }}>{clientData.adresse}</div>
-              )}
-              {clientData.email && (
-                <div style={{ color: '#6b7280' }}>{clientData.email}</div>
-              )}
+        {templatePageNumber === 1 && renderPage1ClientBlock()}
+        {templatePageNumber === 1 && (() => {
+          const selectedCommercial = commercialData?.commercialId
+            ? getCommercialById(commercialData.commercialId)
+            : null;
+          return selectedCommercial?.adresse ? (
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center z-40">
+              <span className="text-[9px] text-muted-foreground">
+                {selectedCommercial.adresse}
+              </span>
             </div>
-            {commercialData?.commercialId && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '2px', fontSize: '9px' }}>
-                  Votre interlocuteur
-                </div>
-                <div>{commercialData.commercialId}</div>
-              </div>
-            )}
-          </div>
-        )}
+          ) : null;
+        })()}
       </PageFrame>
     );
   };
