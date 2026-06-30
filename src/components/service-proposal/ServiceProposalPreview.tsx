@@ -72,7 +72,7 @@ export function ServiceProposalPreview() {
   const {
     allTemplates,
     getActiveTemplate,
-    getTemplateLatestVersion,
+    getTemplatePublishedVersion,
     currentVersion: editorCurrentVersion,
   } = useTemplateEditorStore();
 
@@ -103,9 +103,9 @@ export function ServiceProposalPreview() {
     }
 
     if (!activeTemplate) return null;
-    const version = getTemplateLatestVersion(activeTemplate.id);
+    const version = getTemplatePublishedVersion(activeTemplate.id);
     return version && version.pages.length > 0 ? version : null;
-  }, [activeTemplate, getTemplateLatestVersion, editorCurrentVersion, isEditMode]);
+  }, [activeTemplate, getTemplatePublishedVersion, editorCurrentVersion, isEditMode]);
 
   React.useEffect(() => {
     const loadPages = async () => {
@@ -114,7 +114,7 @@ export function ServiceProposalPreview() {
         setPagesLoaded(true);
         return;
       }
-      const version = getTemplateLatestVersion(activeTemplate.id);
+      const version = getTemplatePublishedVersion(activeTemplate.id);
       if (!version) {
         setPagesLoaded(true);
         return;
@@ -132,7 +132,7 @@ export function ServiceProposalPreview() {
     };
     setPagesLoaded(false);
     loadPages();
-  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
+  }, [hasLoaded, activeTemplate, getTemplatePublishedVersion, loadVersionPages]);
 
   if ((isLoading && !hasLoaded) || isLoadingVersion || !pagesLoaded) {
     return <LoadingState message="Chargement du template..." />;
@@ -143,7 +143,7 @@ export function ServiceProposalPreview() {
   const handleRetry = () => {
     setPagesLoaded(false);
     if (!activeTemplate) return;
-    const version = getTemplateLatestVersion(activeTemplate.id);
+    const version = getTemplatePublishedVersion(activeTemplate.id);
     if (version) loadVersionPages(version.id);
   };
 
