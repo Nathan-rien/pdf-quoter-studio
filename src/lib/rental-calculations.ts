@@ -247,6 +247,7 @@ export function calculateAllMatriceValues(
     loyerServicesInclus,
     loyerMensuelInvestissement,
     loyerMensuel,
+    loyerTrimestriel: calculateLoyerTrimestriel(loyerMensuel),
     sommeLoyers,
     coutContrat,
     coutLocatifAnnuel,
