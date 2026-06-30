@@ -1,8 +1,8 @@
 /**
  * Composant d'export PDF pour une Proposition Services (standalone).
  *
- * Lit ses données EXCLUSIVEMENT depuis useServiceProposalStore.
- * Aucune dépendance à rentalProposalStore.
+ * Lit ses données métier depuis useServiceProposalStore.
+ * Le template sélectionné reste synchronisé avec rentalProposalStore, comme dans l'aperçu.
  *
  * Sections générées :
  *   - Pages du template (toutes)
