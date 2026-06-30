@@ -87,7 +87,7 @@ function buildPages() {
           sourceSheet: "client",
           isRequired: true,
           description: "Identité du bénéficiaire",
-          position: { top: 28, height: 18 },
+          position: { top: 82, height: 14 },
         },
       ],
       staticElements: [],

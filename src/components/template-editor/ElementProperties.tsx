@@ -80,7 +80,10 @@ export function ElementProperties() {
   const currentVersion = useTemplateEditorStore(s => s.currentVersion);
   const selectedElementId = useTemplateEditorStore(s => s.selectedElementId);
   const selectedElementIds = useTemplateEditorStore(s => s.selectedElementIds);
+  const selectedDynamicZoneId = useTemplateEditorStore(s => s.selectedDynamicZoneId);
+  const selectedPageNumber = useTemplateEditorStore(s => s.selectedPageNumber);
   const hasUnsavedChanges = useTemplateEditorStore(s => s.hasUnsavedChanges);
+  const updateDynamicZonePosition = useTemplateEditorStore(s => s.updateDynamicZonePosition);
 
   const {
     updateTextContent,
@@ -233,6 +236,92 @@ export function ElementProperties() {
         </CardContent>
       </Card>
     );
+  }
+
+  // Panel pour zone dynamique sélectionnée
+  if (!selectedElement && selectedDynamicZoneId) {
+    const page = currentVersion?.pages.find(p => p.pageNumber === selectedPageNumber);
+    const zone = page?.dynamicZones.find(z => z.id === selectedDynamicZoneId);
+    if (zone) {
+      const top = zone.position?.top ?? 30;
+      const height = zone.position?.height ?? 40;
+      return (
+        <Card className="h-full">
+          <CardHeader className="pb-2 py-2 px-3">
+            <div className="flex items-center justify-between gap-1 flex-wrap">
+              <CardTitle className="text-xs flex items-center gap-1 shrink-0">
+                <Layers className="h-3 w-3" />
+                Zone dynamique
+              </CardTitle>
+              <Badge variant={isEditable ? "secondary" : "outline"} className="text-[9px] h-4">
+                {isEditable ? "Modifiable" : "Lecture seule"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 py-2 space-y-3">
+            <div className="text-[10px] text-muted-foreground leading-tight">
+              {zone.description}
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <div>
+                <Label className="text-[10px]">Position verticale (Top %)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(top)}
+                  disabled={!isEditable}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                    updateDynamicZonePosition(zone.id, { top: v, height });
+                  }}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px]">Hauteur (%)</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  max={100}
+                  step={1}
+                  value={Math.round(height)}
+                  disabled={!isEditable}
+                  onChange={(e) => {
+                    const v = Math.max(5, Math.min(100, Number(e.target.value) || 5));
+                    updateDynamicZonePosition(zone.id, { top, height: v });
+                  }}
+                  className="h-7 text-xs"
+                />
+              </div>
+              {isEditable && (
+                <div className="grid grid-cols-3 gap-1 pt-1">
+                  <Button size="sm" variant="outline" className="h-6 text-[10px]"
+                    onClick={() => updateDynamicZonePosition(zone.id, { top: 5, height })}>
+                    Haut
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-6 text-[10px]"
+                    onClick={() => updateDynamicZonePosition(zone.id, { top: 50 - height / 2, height })}>
+                    Centre
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-6 text-[10px]"
+                    onClick={() => updateDynamicZonePosition(zone.id, { top: 95 - height, height })}>
+                    Bas
+                  </Button>
+                </div>
+              )}
+            </div>
+            {!isEditable && (
+              <p className="text-[10px] text-muted-foreground italic">
+                Créez un brouillon pour modifier la position.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
   }
 
   if (!selectedElement) {
