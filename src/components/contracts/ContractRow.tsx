@@ -18,7 +18,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, Contract } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { calculateLoyerTrimestriel } from '@/lib/rental-calculations';
+import { cn } from '@/lib/utils';
+
 
 const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Credit Bail 1', 'Realease 2'];
 const DURATIONS = [12, 24, 36, 48, 60];
@@ -37,9 +40,18 @@ export function ContractRow({ contract }: { contract: Contract }) {
   const [durationMonths, setDurationMonths] = useState(
     contract.duration_months ? String(contract.duration_months) : ''
   );
+  const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>(
+    contract.payment_frequency ?? 'mensuel'
+  );
 
   const endDate = implementationMonth && durationMonths
     ? addMonths(parseISO(`${implementationMonth}-01`), parseInt(durationMonths))
+    : null;
+
+  const displayedAmount = contract.amount_ht != null
+    ? (paymentFrequency === 'trimestriel'
+        ? (calculateLoyerTrimestriel(contract.amount_ht) ?? contract.amount_ht * 3)
+        : contract.amount_ht)
     : null;
 
   function handleSave() {
@@ -49,9 +61,11 @@ export function ContractRow({ contract }: { contract: Contract }) {
         implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
         financial_partner: financialPartner || null,
         duration_months: durationMonths ? parseInt(durationMonths) : null,
+        payment_frequency: paymentFrequency,
       },
     });
   }
+
 
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden">

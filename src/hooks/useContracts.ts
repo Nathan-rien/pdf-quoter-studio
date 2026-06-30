@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInMonths, addMonths, parseISO } from 'date-fns';
 
+export type PaymentFrequency = 'mensuel' | 'trimestriel';
+
 export interface Contract {
   id: string;
   proposal_id: string;
@@ -14,10 +16,12 @@ export interface Contract {
   implementation_month?: string | null;
   financial_partner?: string | null;
   duration_months?: number | null;
+  payment_frequency?: PaymentFrequency;
   validated_at: string;
   created_at: string;
   updated_at: string;
 }
+
 
 export function isContractRenewingSoon(contract: Contract): boolean {
   if (!contract.implementation_month || !contract.duration_months) return false;
@@ -76,7 +80,7 @@ export function useUpdateContract() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: { implementation_month?: string | null; financial_partner?: string | null; duration_months?: number | null } }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: { implementation_month?: string | null; financial_partner?: string | null; duration_months?: number | null; payment_frequency?: PaymentFrequency } }) => {
       const { data, error } = await supabase.from('contracts').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as Contract;
