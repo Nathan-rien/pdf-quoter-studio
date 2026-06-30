@@ -91,7 +91,6 @@ export function RentalProposalPreview() {
   const { 
     getActiveTemplate,
     allTemplates,
-    getTemplateLatestVersion,
     getTemplatePublishedVersion,
     preparePreviewEditing, 
     getCurrentVersionForPreview,
