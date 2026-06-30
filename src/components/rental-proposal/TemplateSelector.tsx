@@ -13,7 +13,7 @@ const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}
 
 export function TemplateSelector() {
   const { selectedTemplateId, selectTemplateForProposal } = useRentalProposalStore();
-  const { allTemplates, getTemplateLatestVersion } = useTemplateEditorStore();
+  const { allTemplates, getTemplatePublishedVersion } = useTemplateEditorStore();
   const { isLoading, hasLoaded, loadVersionPages } = useTemplateSync();
   
   // Track requested version IDs to prevent duplicate requests
@@ -21,8 +21,8 @@ export function TemplateSelector() {
 
   // Filtrer uniquement les templates actifs ou publiés
   const availableTemplates = allTemplates.filter(template => {
-    const version = getTemplateLatestVersion(template.id);
-    return version && version.status === 'publie';
+    const version = getTemplatePublishedVersion(template.id);
+    return !!version;
   });
 
   // Lazy load pages for published versions that don't have pages loaded yet
@@ -30,8 +30,8 @@ export function TemplateSelector() {
     if (!hasLoaded) return;
 
     const versionsToPreload = availableTemplates
-      .map(t => getTemplateLatestVersion(t.id))
-      .filter((v): v is TemplateVersion => !!v && v.status === 'publie')
+      .map(t => getTemplatePublishedVersion(t.id))
+      .filter((v): v is TemplateVersion => !!v)
       .filter(v => !v.pages || v.pages.length === 0)
       .filter(v => isUuid(v.id))
       .filter(v => !requestedRef.current.has(v.id));
@@ -47,7 +47,7 @@ export function TemplateSelector() {
     })();
 
     return () => { cancelled = true; };
-  }, [hasLoaded, availableTemplates, getTemplateLatestVersion, loadVersionPages]);
+  }, [hasLoaded, availableTemplates, getTemplatePublishedVersion, loadVersionPages]);
 
   if (isLoading && !hasLoaded) {
     return (
@@ -90,7 +90,7 @@ export function TemplateSelector() {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {availableTemplates.map((template) => {
-            const version = getTemplateLatestVersion(template.id);
+            const version = getTemplatePublishedVersion(template.id);
             const isSelected = selectedTemplateId === template.id;
 
             return (
