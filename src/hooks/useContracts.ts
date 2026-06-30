@@ -4,10 +4,12 @@ import { useToast } from '@/hooks/use-toast';
 import { differenceInMonths, addMonths, parseISO } from 'date-fns';
 
 export type PaymentFrequency = 'mensuel' | 'trimestriel';
+export type ProposalType = 'location' | 'service';
 
 export interface Contract {
   id: string;
   proposal_id: string;
+  proposal_type: ProposalType;
   client_name: string;
   commercial_id: string;
   commercial_name?: string;
@@ -42,13 +44,14 @@ export function getMonthsUntilRenewal(contract: Contract): number | null {
   } catch { return null; }
 }
 
-export function useContracts() {
+export function useContracts(proposalType: ProposalType = 'location') {
   return useQuery({
-    queryKey: ['contracts'],
+    queryKey: ['contracts', proposalType],
     queryFn: async (): Promise<Contract[]> => {
       const { data, error } = await supabase
         .from('contracts')
         .select('*')
+        .eq('proposal_type', proposalType)
         .order('validated_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as Contract[];
@@ -56,6 +59,7 @@ export function useContracts() {
     staleTime: 1000 * 60 * 2,
   });
 }
+
 
 export function useValidateProposal() {
   const queryClient = useQueryClient();
