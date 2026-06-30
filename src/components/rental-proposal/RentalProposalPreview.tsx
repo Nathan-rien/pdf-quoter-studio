@@ -115,7 +115,8 @@ export function RentalProposalPreview() {
     if (isEditMode) {
       return getCurrentVersionForPreview() || null;
     }
-    // Relecture depuis le store après loadVersionPages
+    // Dans le parcours Proposition, ne jamais reprendre la version courante de l'éditeur :
+    // elle peut être un brouillon. On force la dernière version publiée disponible.
     const version = getTemplateLatestVersion(activeTemplate.id);
     return version && version.pages.length > 0 ? version : null;
   }, [activeTemplate, isEditMode, getCurrentVersionForPreview, getTemplateLatestVersion]);
