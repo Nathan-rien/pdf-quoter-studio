@@ -295,15 +295,28 @@ function ProposalFormShell({
   const getTemplatePublishedVersion = useTemplateEditorStore((s) => s.getTemplatePublishedVersion);
   const { saveVersionToDatabase } = useTemplateSync();
 
+  const hasAutoSelectedRef = useRef(false);
+
   useEffect(() => {
-    if (selectedRentalTemplateId) return; // Déjà sélectionné
+    if (hasAutoSelectedRef.current) return;
+
+    const currentTemplate = allTemplates.find(t => t.id === selectedRentalTemplateId);
+    const isAlreadyContratCadre = currentTemplate?.name === 'Contrat Cadre Services';
+
+    if (isAlreadyContratCadre) {
+      hasAutoSelectedRef.current = true;
+      return;
+    }
+
     const contratTemplate = allTemplates.find(
       t => t.name === 'Contrat Cadre Services' && !!getTemplatePublishedVersion(t.id)
     );
+
     if (contratTemplate) {
       useRentalProposalStore.getState().selectTemplateForProposal(contratTemplate.id);
+      hasAutoSelectedRef.current = true;
     }
-  }, [selectedRentalTemplateId, allTemplates, getTemplatePublishedVersion]);
+  }, [allTemplates, getTemplatePublishedVersion, selectedRentalTemplateId]);
 
   async function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
