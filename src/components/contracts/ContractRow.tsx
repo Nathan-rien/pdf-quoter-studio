@@ -104,7 +104,20 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
             <div className="text-[11px] text-muted-foreground">{contract.template_name}</div>
           )}
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
+          title="Visualiser la proposition"
+          onClick={(e) => {
+            e.stopPropagation();
+            onVisualize?.(contract);
+          }}
+        >
+          <Eye className="w-4 h-4" />
+        </Button>
         <AlertDialog>
+
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
