@@ -55,6 +55,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   
   // Édition inline
   setInlineEditing: (elementId: string | null) => void;
+  setShouldOpenPublishDialog: (value: boolean) => void;
 
   // Getter pour l'élément sélectionné (dynamique)
   getSelectedElement: () => EditableElement | null;
