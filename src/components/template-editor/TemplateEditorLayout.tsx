@@ -86,7 +86,9 @@ export function TemplateEditorLayout() {
     setAddElementMode,
     backToList,
     getTemplateVersions,
-    renameTemplate
+    renameTemplate,
+    shouldOpenPublishDialog,
+    setShouldOpenPublishDialog
   } = useTemplateEditorStore();
 
   // Récupérer le template courant
