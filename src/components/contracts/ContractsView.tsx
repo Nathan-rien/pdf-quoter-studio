@@ -67,7 +67,7 @@ function CommercialGroup({
 }
 
 export function ContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
-  const { data: contracts = [], isLoading, error } = useContracts();
+  const { data: contracts = [], isLoading, error } = useContracts('location');
   const { toast } = useToast();
   const groups = groupByCommercial(contracts);
   const totalRenewing = contracts.filter(isContractRenewingSoon).length;
