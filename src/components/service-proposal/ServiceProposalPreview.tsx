@@ -72,7 +72,7 @@ export function ServiceProposalPreview() {
   const {
     allTemplates,
     getActiveTemplate,
-    getTemplateLatestVersion,
+    getTemplatePublishedVersion,
     currentVersion: editorCurrentVersion,
   } = useTemplateEditorStore();
 
@@ -84,26 +84,28 @@ export function ServiceProposalPreview() {
         return found;
       }
     }
-    const active = allTemplates.find((t) => t.isActive);
+    const active = allTemplates.find((t) => t.isActive && !!getTemplatePublishedVersion(t.id));
     if (active) {
       console.log('[ServiceProposalPreview] Fallback to active template:', active.name);
       return active;
     }
-    const first = allTemplates[0] ?? null;
-    console.log('[ServiceProposalPreview] Fallback to first template:', first?.name);
+    const first = allTemplates.find((t) => !!getTemplatePublishedVersion(t.id)) ?? null;
+    console.log('[ServiceProposalPreview] Fallback to first published template:', first?.name);
     return first;
-  }, [selectedTemplateId, allTemplates]);
+  }, [selectedTemplateId, allTemplates, getTemplatePublishedVersion]);
 
   const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
-    // Priorité 1 : version en cours d'édition dans l'éditeur (contient les zones dynamiques ajoutées)
-    if (editorCurrentVersion && activeTemplate && editorCurrentVersion.templateId === activeTemplate.id && editorCurrentVersion.pages.length > 0) {
+    // Dans le parcours Proposition, on doit toujours utiliser la dernière version publiée.
+    // La version courante de l'éditeur peut être un ancien brouillon (ex: v10) et ne doit
+    // pas masquer la version publiée disponible pour les devis (ex: v11).
+    if (isEditMode && editorCurrentVersion && activeTemplate && editorCurrentVersion.templateId === activeTemplate.id && editorCurrentVersion.pages.length > 0) {
       return editorCurrentVersion;
     }
-    // Priorité 2 : version chargée depuis Supabase via allVersions
+
     if (!activeTemplate) return null;
-    const version = getTemplateLatestVersion(activeTemplate.id);
+    const version = getTemplatePublishedVersion(activeTemplate.id);
     return version && version.pages.length > 0 ? version : null;
-  }, [activeTemplate, getTemplateLatestVersion, editorCurrentVersion]);
+  }, [activeTemplate, getTemplatePublishedVersion, editorCurrentVersion, isEditMode]);
 
   React.useEffect(() => {
     const loadPages = async () => {
@@ -112,7 +114,7 @@ export function ServiceProposalPreview() {
         setPagesLoaded(true);
         return;
       }
-      const version = getTemplateLatestVersion(activeTemplate.id);
+      const version = getTemplatePublishedVersion(activeTemplate.id);
       if (!version) {
         setPagesLoaded(true);
         return;
@@ -130,7 +132,7 @@ export function ServiceProposalPreview() {
     };
     setPagesLoaded(false);
     loadPages();
-  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
+  }, [hasLoaded, activeTemplate, getTemplatePublishedVersion, loadVersionPages]);
 
   if ((isLoading && !hasLoaded) || isLoadingVersion || !pagesLoaded) {
     return <LoadingState message="Chargement du template..." />;
@@ -141,7 +143,7 @@ export function ServiceProposalPreview() {
   const handleRetry = () => {
     setPagesLoaded(false);
     if (!activeTemplate) return;
-    const version = getTemplateLatestVersion(activeTemplate.id);
+    const version = getTemplatePublishedVersion(activeTemplate.id);
     if (version) loadVersionPages(version.id);
   };
 

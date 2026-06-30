@@ -70,7 +70,7 @@ export function RentalProposalExport() {
 
   const investShowPrices = matriceData.investShowPrices;
 
-  const { getActiveTemplate, getTemplateLatestVersion, allTemplates } = useTemplateEditorStore();
+  const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } = useTemplateEditorStore();
   
   // Utiliser le template sélectionné dans le workflow, ou fallback sur le template actif
   const activeTemplate = useMemo(() => {
@@ -86,7 +86,7 @@ export function RentalProposalExport() {
   const selectedNosOptions = nosOptions.filter(opt => opt.selected);
   
   // Utiliser le nombre réel de pages de la version publiée
-  const latestVersion = activeTemplate ? getTemplateLatestVersion(activeTemplate.id) : null;
+  const latestVersion = activeTemplate ? getTemplatePublishedVersion(activeTemplate.id) : null;
   const totalPages = latestVersion?.pages.length || DEFAULT_CONTRACT_PAGES;
 
   const formatNumber = (value: number | null) => {

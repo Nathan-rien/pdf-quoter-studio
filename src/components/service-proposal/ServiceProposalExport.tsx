@@ -1,8 +1,8 @@
 /**
  * Composant d'export PDF pour une Proposition Services (standalone).
  *
- * Lit ses données EXCLUSIVEMENT depuis useServiceProposalStore.
- * Aucune dépendance à rentalProposalStore.
+ * Lit ses données métier depuis useServiceProposalStore.
+ * Le template sélectionné reste synchronisé avec rentalProposalStore, comme dans l'aperçu.
  *
  * Sections générées :
  *   - Pages du template (toutes)
@@ -31,6 +31,7 @@ import {
   Calculator,
 } from 'lucide-react';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
+import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,24 +56,27 @@ export function ServiceProposalExport() {
   const lignesData = useServiceProposalStore((s) => s.lignesData);
   const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
   const selectedTemplateId = useServiceProposalStore((s) => s.selectedTemplateId);
+  const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   const proposalName = useServiceProposalStore((s) => s.proposalName);
   const totalInvest = useServiceProposalStore((s) => s.totalInvest);
 
-  const { getActiveTemplate, getTemplateLatestVersion, allTemplates } =
+  const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } =
     useTemplateEditorStore();
 
+  const effectiveTemplateId = rentalSelectedTemplateId || selectedTemplateId;
+
   const activeTemplate = useMemo(() => {
-    if (selectedTemplateId) {
+    if (effectiveTemplateId) {
       return (
-        allTemplates.find((t) => t.id === selectedTemplateId) ||
+        allTemplates.find((t) => t.id === effectiveTemplateId) ||
         getActiveTemplate()
       );
     }
     return getActiveTemplate();
-  }, [selectedTemplateId, allTemplates, getActiveTemplate]);
+  }, [effectiveTemplateId, allTemplates, getActiveTemplate]);
 
   const latestVersion = activeTemplate
-    ? getTemplateLatestVersion(activeTemplate.id)
+    ? getTemplatePublishedVersion(activeTemplate.id)
     : null;
   const totalPages = latestVersion?.pages.length || 0;
 
@@ -137,7 +141,7 @@ export function ServiceProposalExport() {
               commercialData,
               lignesData,
               servicesInclus,
-              selectedTemplateId,
+              selectedTemplateId: effectiveTemplateId,
               proposalName,
               totalInvest,
             }

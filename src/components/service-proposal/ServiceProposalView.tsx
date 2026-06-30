@@ -79,6 +79,12 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
 
 function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues, dataForm: ServiceDataFormValues) {
   const store = useServiceProposalStore.getState();
+  const selectedTemplateId = useRentalProposalStore.getState().selectedTemplateId;
+
+  if (selectedTemplateId) {
+    store.selectTemplate(selectedTemplateId);
+  }
+
   store.updateClientData({
     nom: clientData.client_name,
     raisonSociale: clientData.client_company,
@@ -284,17 +290,20 @@ function ProposalFormShell({
   const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
   const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
   const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
+  const selectedRentalTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
+  const allTemplates = useTemplateEditorStore((s) => s.allTemplates);
+  const getTemplatePublishedVersion = useTemplateEditorStore((s) => s.getTemplatePublishedVersion);
   const { saveVersionToDatabase } = useTemplateSync();
 
   useEffect(() => {
-    const currentTemplateId = useRentalProposalStore.getState().selectedTemplateId;
-    if (currentTemplateId) return; // Déjà sélectionné
-    const allTemplates = useTemplateEditorStore.getState().allTemplates;
-    const contratTemplate = allTemplates.find(t => t.name === 'Contrat Cadre Services');
+    if (selectedRentalTemplateId) return; // Déjà sélectionné
+    const contratTemplate = allTemplates.find(
+      t => t.name === 'Contrat Cadre Services' && !!getTemplatePublishedVersion(t.id)
+    );
     if (contratTemplate) {
       useRentalProposalStore.getState().selectTemplateForProposal(contratTemplate.id);
     }
-  }, []);
+  }, [selectedRentalTemplateId, allTemplates, getTemplatePublishedVersion]);
 
   async function handleTabChange(tab: string) {
     if (tab === 'preview-export' || tab === 'template') {
