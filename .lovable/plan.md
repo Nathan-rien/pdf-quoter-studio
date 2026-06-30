@@ -1,29 +1,35 @@
-## Objectif
-Faire charger l’aperçu PDF de **Propositions Services** de façon fiable, en affichant les pages du template sélectionné puis les pages spécifiques “Vos services” et “Services inclus”.
+## Problème
 
-## Diagnostic
-Le composant `ServiceProposalPreview.tsx` fige une copie locale `resolvedVersion` et utilise `loadingRef.current` dans le rendu. Comme une ref ne déclenche pas de re-render, l’interface peut rester bloquée sur “Chargement des pages…” ou afficher des pages vides même après le chargement. Le rendu devrait relire la version fraîche directement depuis `useTemplateEditorStore`, comme le fait déjà l’aperçu standard.
+Dans Proposition Services, l'aperçu affiche uniquement un bloc client minimal (raison sociale, adresse, SIRET, « Représentée par ») — sans email, téléphone, ni bloc « Votre interlocuteur ». Dans Proposition Location, l'aperçu affiche correctement le bloc complet client + interlocuteur identique à ce que produit l'export PDF.
 
-## Plan de correction
-1. **Remplacer la résolution locale fragile dans `ServiceProposalPreview.tsx`**
-   - Supprimer `resolvedVersion` et `loadingRef`.
-   - S’abonner explicitement à `allVersions` pour forcer le re-render quand `loadVersionPages` injecte les pages.
-   - Calculer `currentVersion` via `useMemo` depuis `activeTemplate` + `allVersions`, en priorité sur la version publiée la plus récente.
+## Cause
 
-2. **Fiabiliser le lazy loading des pages template**
-   - Ajouter un état simple `pagesLoaded` / `isLoadingPages`.
-   - Quand les métadonnées sont chargées et que la version existe mais `pages.length === 0`, appeler `loadVersionPages(version.id)` une seule fois pour cette version.
-   - Recalculer automatiquement `currentVersion` après mise à jour du store.
+`src/components/service-proposal/ServiceProposalPreview.tsx` contient deux logiques concurrentes pour la page 1 :
 
-3. **Corriger les états de rendu**
-   - Afficher “Chargement du template…” tant que les métadonnées ne sont pas prêtes.
-   - Afficher “Chargement des pages…” pendant le lazy loading.
-   - Afficher un état explicite si aucun template/version n’est disponible, au lieu de générer une pagination incohérente.
+1. `renderPage1ClientBlock()` (lignes 413-448) — bloc complet client + interlocuteur, identique à Location.
+2. La zone dynamique `service_client_info` (lignes 298-310) — bloc minimal (raison sociale, adresse, SIRET, « Représentée par »).
 
-4. **Préserver la structure PDF demandée**
-   - Garder l’ordre : pages template 1 à 3, page “Vos services”, page “Services inclus”, puis les pages template restantes.
-   - Maintenir le rendu des éléments texte/image/shape/icon existants.
+Ligne 470 :
+```
+templatePageNumber === 1 && pageDynamicZones.every(z => z.type !== 'service_client_info') && renderPage1ClientBlock()
+```
+Comme le template « Contrat Cadre Services » contient une zone `service_client_info`, le bloc complet est supprimé et seul le bloc minimal s'affiche. L'export PDF, lui, génère toujours le bloc complet → désynchronisation aperçu / export.
 
-5. **Vérifier**
-   - Contrôler que l’onglet “Aperçu & Export” ne reste plus bloqué en chargement.
-   - Vérifier que la page 1 affiche les éléments du template et que la pagination inclut les 2 pages services.
+## Correction
+
+Aligner le rendu de la zone dynamique `service_client_info` sur celui de `renderPage1ClientBlock` (et donc sur celui de l'export et de Location). Un seul fichier modifié :
+
+**`src/components/service-proposal/ServiceProposalPreview.tsx`**
+
+- Dans `renderServiceDynamicZone`, remplacer le rendu du bloc `service_client_info` par exactement la même structure que `renderPage1ClientBlock` :
+  - colonne gauche : raison sociale, nom, adresse, email, téléphone
+  - colonne droite : « Votre interlocuteur » avec nom / téléphone / email du commercial sélectionné (via `getCommercialById(commercialData.commercialId)`)
+  - sous le bloc, ligne adresse de l'entité commerciale en bas de page
+- Conserver le positionnement piloté par la zone (`top` issu de `zone.position?.top`, ou valeur par défaut actuelle) afin de respecter la position définie dans le template.
+- Le fallback ligne 470 (`pageDynamicZones.every(z => z.type !== 'service_client_info')`) reste inchangé : si aucune zone n'est définie dans le template, `renderPage1ClientBlock` continue de s'afficher.
+
+Aucune autre modification (export, store, template) — la logique d'export produit déjà le bloc complet ; seul l'aperçu était incohérent.
+
+## Résultat attendu
+
+L'aperçu Proposition Services affichera, sur la page 1, le même bloc complet que Proposition Location et que le PDF exporté : informations client (raison sociale, nom, adresse, email, téléphone) à gauche et « Votre interlocuteur » avec les coordonnées du commercial à droite.

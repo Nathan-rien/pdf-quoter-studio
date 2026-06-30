@@ -296,18 +296,45 @@ export function ServiceProposalPreview() {
     const topPct = `${zone.position?.top ?? (zone.type === 'service_client_info' ? 30 : zone.type === 'service_conditions' ? 10 : zone.type === 'service_invest_table' ? 5 : 65)}%`;
 
     if (zone.type === 'service_client_info') {
+      const selectedCommercial = commercialData?.commercialId
+        ? getCommercialById(commercialData.commercialId)
+        : null;
       return (
         <div
           key={key}
-          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', fontSize: '10px', lineHeight: 1.7, zIndex: 5 }}
+          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', zIndex: 5 }}
         >
-          <strong>{clientData.raisonSociale || clientData.nom}</strong>
-          <br />
-          {clientData.adresse}
-          <br />
-          SIRET : {clientData.siret}
-          <br />
-          Représentée par : {clientData.nom}
+          <div className="bg-background/95 rounded-lg p-3 shadow-sm border">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-[9px] space-y-0.5">
+                  {clientData.raisonSociale && <p className="font-bold">{clientData.raisonSociale}</p>}
+                  <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
+                  <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
+                  {clientData.email && (
+                    <p className="text-muted-foreground">{clientData.email}</p>
+                  )}
+                  {clientData.telephone && (
+                    <p className="text-muted-foreground">{clientData.telephone}</p>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-[10px] mb-2">Votre interlocuteur</p>
+                {selectedCommercial ? (
+                  <div className="text-[9px] space-y-0.5">
+                    <p className="font-semibold">{selectedCommercial.nom}</p>
+                    {selectedCommercial.telephone && (
+                      <p className="text-muted-foreground">{selectedCommercial.telephone}</p>
+                    )}
+                    <p className="text-muted-foreground">{selectedCommercial.email}</p>
+                  </div>
+                ) : (
+                  <p className="text-[9px] text-muted-foreground italic">Non sélectionné</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
