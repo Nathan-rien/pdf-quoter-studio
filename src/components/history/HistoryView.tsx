@@ -112,14 +112,29 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     setError(null);
     
     try {
-      const { data, error: fetchError } = await supabase
-        .from('proposal_exports')
-        .select('id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, proposal_state')
-        .eq('proposal_type', 'location')
-        .order('created_at', { ascending: false })
-        .limit(200);
+      const selectColumns = 'id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, proposal_state';
+      const batchSize = 1000;
+      let allData: any[] = [];
+      let from = 0;
+      let hasMore = true;
 
-      if (fetchError) throw fetchError;
+      while (hasMore) {
+        const { data, error: fetchError } = await supabase
+          .from('proposal_exports')
+          .select(selectColumns)
+          .eq('proposal_type', 'location')
+          .order('created_at', { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (fetchError) throw fetchError;
+        if (!data || data.length === 0) { hasMore = false; break; }
+        allData = allData.concat(data);
+        if (data.length < batchSize) hasMore = false;
+        from += batchSize;
+      }
+
+      const data = allData;
+
       const mapped = (data || []).map((item: any) => ({
         id: item.id,
         proposal_name: item.proposal_name,
