@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Calendar, Building2, Clock, Bell, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar, Building2, Clock, Bell, Trash2, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Credit Bail 1', 'Realease 2'];
 const DURATIONS = [12, 24, 36, 48, 60];
 
-export function ContractRow({ contract }: { contract: Contract }) {
+export function ContractRow({ contract, onVisualize }: { contract: Contract; onVisualize?: (contract: Contract) => void }) {
   const [expanded, setExpanded] = useState(false);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
