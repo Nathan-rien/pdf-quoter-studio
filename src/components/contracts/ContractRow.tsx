@@ -18,7 +18,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, Contract } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { calculateLoyerTrimestriel } from '@/lib/rental-calculations';
+import { cn } from '@/lib/utils';
+
 
 const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Credit Bail 1', 'Realease 2'];
 const DURATIONS = [12, 24, 36, 48, 60];
@@ -37,9 +40,18 @@ export function ContractRow({ contract }: { contract: Contract }) {
   const [durationMonths, setDurationMonths] = useState(
     contract.duration_months ? String(contract.duration_months) : ''
   );
+  const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>(
+    contract.payment_frequency ?? 'mensuel'
+  );
 
   const endDate = implementationMonth && durationMonths
     ? addMonths(parseISO(`${implementationMonth}-01`), parseInt(durationMonths))
+    : null;
+
+  const displayedAmount = contract.amount_ht != null
+    ? (paymentFrequency === 'trimestriel'
+        ? (calculateLoyerTrimestriel(contract.amount_ht) ?? contract.amount_ht * 3)
+        : contract.amount_ht)
     : null;
 
   function handleSave() {
@@ -49,9 +61,11 @@ export function ContractRow({ contract }: { contract: Contract }) {
         implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
         financial_partner: financialPartner || null,
         duration_months: durationMonths ? parseInt(durationMonths) : null,
+        payment_frequency: paymentFrequency,
       },
     });
   }
+
 
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden">
@@ -76,9 +90,12 @@ export function ContractRow({ contract }: { contract: Contract }) {
               <Calendar className="h-3 w-3" />
               {format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
             </span>
-            {contract.amount_ht != null && (
-              <span>{contract.amount_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
+            {displayedAmount != null && (
+              <span>
+                {displayedAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € ({paymentFrequency})
+              </span>
             )}
+
             {contract.financial_partner && <span>{contract.financial_partner}</span>}
             {contract.duration_months && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.duration_months} mois</span>}
             {endDate && <span>→ {format(endDate, 'MM/yyyy', { locale: fr })}</span>}
@@ -125,7 +142,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
 
       {expanded && (
         <div className="border-t border-border bg-muted/20 p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Mois de mise en place</Label>
               <Input
@@ -157,7 +174,28 @@ export function ContractRow({ contract }: { contract: Contract }) {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Périodicité</Label>
+              <div className="flex gap-2">
+                {(['mensuel', 'trimestriel'] as PaymentFrequency[]).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setPaymentFrequency(f)}
+                    className={cn(
+                      'h-9 px-4 rounded-full text-sm font-medium border transition-colors capitalize',
+                      paymentFrequency === f
+                        ? 'bg-black text-white border-black'
+                        : 'bg-background text-foreground border-border hover:bg-muted'
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
           {endDate && (
             <div className="text-xs text-muted-foreground">
               Date de fin estimée : <strong>{format(endDate, 'MMMM yyyy', { locale: fr })}</strong>

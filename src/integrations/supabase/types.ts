@@ -43,6 +43,7 @@ export type Database = {
           financial_partner: string | null
           id: string
           implementation_month: string | null
+          payment_frequency: string | null
           proposal_id: string
           template_name: string | null
           updated_at: string
@@ -58,6 +59,7 @@ export type Database = {
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
+          payment_frequency?: string | null
           proposal_id: string
           template_name?: string | null
           updated_at?: string
@@ -73,6 +75,7 @@ export type Database = {
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
+          payment_frequency?: string | null
           proposal_id?: string
           template_name?: string | null
           updated_at?: string
