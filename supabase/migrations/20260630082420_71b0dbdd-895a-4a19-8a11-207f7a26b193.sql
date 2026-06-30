@@ -1,0 +1,1 @@
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS payment_frequency TEXT DEFAULT 'mensuel' CHECK (payment_frequency IN ('mensuel', 'trimestriel'));
