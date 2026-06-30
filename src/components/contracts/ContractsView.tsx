@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, User, FileText, Bell } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useContracts, isContractRenewingSoon, Contract } from '@/hooks/useContracts';
 import { ContractRow } from './ContractRow';
 import { ContractRenewalAlert } from './ContractRenewalAlert';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 function groupByCommercial(contracts: Contract[]) {
   const map = new Map<string, { name: string; contracts: Contract[] }>();
@@ -21,7 +24,16 @@ function groupByCommercial(contracts: Contract[]) {
   }));
 }
 
-function CommercialGroup({ commercialName, contracts }: { commercialId: string; commercialName: string; contracts: Contract[] }) {
+function CommercialGroup({
+  commercialName,
+  contracts,
+  onVisualize,
+}: {
+  commercialId: string;
+  commercialName: string;
+  contracts: Contract[];
+  onVisualize?: (contract: Contract) => void;
+}) {
   const [open, setOpen] = useState(true);
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
 
@@ -47,7 +59,7 @@ function CommercialGroup({ commercialName, contracts }: { commercialId: string; 
       </button>
       {open && (
         <div className="space-y-2 pl-2">
-          {contracts.map((c) => <ContractRow key={c.id} contract={c} />)}
+          {contracts.map((c) => <ContractRow key={c.id} contract={c} onVisualize={onVisualize} />)}
         </div>
       )}
     </div>
@@ -56,8 +68,42 @@ function CommercialGroup({ commercialName, contracts }: { commercialId: string; 
 
 export function ContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
   const { data: contracts = [], isLoading, error } = useContracts();
+  const { toast } = useToast();
   const groups = groupByCommercial(contracts);
   const totalRenewing = contracts.filter(isContractRenewingSoon).length;
+
+  const [previewContract, setPreviewContract] = useState<Contract | null>(null);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const handleVisualize = async (contract: Contract) => {
+    setPreviewContract(contract);
+    setPreviewContent(null);
+    setLoadingPreview(true);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('proposal_exports')
+        .select('pdf_html_content')
+        .eq('id', contract.proposal_id)
+        .single();
+      if (fetchError || !data?.pdf_html_content) {
+        toast({ title: 'Visualisation indisponible', description: "Le contenu de la proposition n'est plus disponible.", variant: 'destructive' });
+        setPreviewContract(null);
+        return;
+      }
+      setPreviewContent(data.pdf_html_content);
+    } catch {
+      toast({ title: 'Erreur', description: "Impossible de charger l'aperçu.", variant: 'destructive' });
+      setPreviewContract(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewContract(null);
+    setPreviewContent(null);
+  };
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement des contrats…</p>;
   if (error) return <p className="text-sm text-destructive">Erreur lors du chargement des contrats.</p>;
@@ -101,9 +147,29 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
             commercialId={g.commercialId}
             commercialName={g.commercialName}
             contracts={g.contracts}
+            onVisualize={handleVisualize}
           />
         ))}
       </div>
+
+      <Dialog open={!!previewContract} onOpenChange={(open) => !open && handleClosePreview()}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="p-4 border-b shrink-0">
+            <DialogTitle className="truncate">
+              {previewContract?.client_name} — {previewContract?.template_name ?? 'Proposition'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {loadingPreview ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : previewContent ? (
+              <iframe srcDoc={previewContent} className="w-full h-full border-0" title="Aperçu de la proposition" />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
