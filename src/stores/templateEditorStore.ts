@@ -1788,7 +1788,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     // Publier la version
     const publishedVersion: TemplateVersion = {
       ...currentVersion,
-      status: currentVersion.status,
+      status: 'publie',
       publishedAt: new Date(),
       dynamicZonesIntact: true
     };
@@ -1807,7 +1807,7 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       allTemplates: updatedTemplates,
       currentVersion: publishedVersion,
       hasUnsavedChanges: false,
-      editorMode: currentVersion.status === 'publie' ? 'view' : 'edit'
+      editorMode: 'view'
     });
 
     return validationResult;

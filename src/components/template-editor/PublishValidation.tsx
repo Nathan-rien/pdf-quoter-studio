@@ -100,12 +100,12 @@ export function PublishValidation({ open, onOpenChange }: PublishValidationProps
       }
       console.log('[PublishValidation] Template sauvé:', toValidUUID(currentTemplate.id));
 
-      // 2. Sauvegarder la version dans le cloud AVANT de changer le statut local
+      // 2. Sauvegarder la version dans le cloud avec le statut publié
       const versionToSave = {
         id: toValidUUID(currentVersion.id),
         template_id: toValidUUID(currentVersion.templateId),
         version_number: currentVersion.versionNumber,
-        status: currentVersion.status,
+        status: 'publie',
         pages: currentVersion.pages as any,
         created_by: currentVersion.createdBy || null,
         published_at: new Date().toISOString()
