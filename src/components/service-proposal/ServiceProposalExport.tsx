@@ -31,6 +31,7 @@ import {
   Calculator,
 } from 'lucide-react';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
+import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,24 +56,27 @@ export function ServiceProposalExport() {
   const lignesData = useServiceProposalStore((s) => s.lignesData);
   const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
   const selectedTemplateId = useServiceProposalStore((s) => s.selectedTemplateId);
+  const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   const proposalName = useServiceProposalStore((s) => s.proposalName);
   const totalInvest = useServiceProposalStore((s) => s.totalInvest);
 
-  const { getActiveTemplate, getTemplateLatestVersion, allTemplates } =
+  const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } =
     useTemplateEditorStore();
 
+  const effectiveTemplateId = rentalSelectedTemplateId || selectedTemplateId;
+
   const activeTemplate = useMemo(() => {
-    if (selectedTemplateId) {
+    if (effectiveTemplateId) {
       return (
-        allTemplates.find((t) => t.id === selectedTemplateId) ||
+        allTemplates.find((t) => t.id === effectiveTemplateId) ||
         getActiveTemplate()
       );
     }
     return getActiveTemplate();
-  }, [selectedTemplateId, allTemplates, getActiveTemplate]);
+  }, [effectiveTemplateId, allTemplates, getActiveTemplate]);
 
   const latestVersion = activeTemplate
-    ? getTemplateLatestVersion(activeTemplate.id)
+    ? getTemplatePublishedVersion(activeTemplate.id)
     : null;
   const totalPages = latestVersion?.pages.length || 0;
 
