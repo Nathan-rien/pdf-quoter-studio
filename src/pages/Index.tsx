@@ -24,6 +24,7 @@ import cbproLogo from "@/assets/cbpro-logo.svg.asset.json";
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
   const [highlightedIds, setHighlightedIds] = useState<string[]>([]);
+  const [isManualEntry, setIsManualEntry] = useState(false);
   const { isAdmin, isCommercial, userRole, signOut } = useAuth();
   const canAccessAdmin = userRole === 'admin';
 
@@ -70,16 +71,25 @@ export default function Index() {
           <RentalProposalDashboard
             onNewProposal={() => {
               useRentalProposalStore.getState().startNewProposal();
+              setIsManualEntry(false);
               setCurrentView('rental-workflow');
             }}
-            onResumeProposal={() => setCurrentView('rental-workflow')}
+            onResumeProposal={() => { setIsManualEntry(false); setCurrentView('rental-workflow'); }}
             onViewHistory={() => setCurrentView('history')}
           />
         );
       case 'rental-workflow':
-        return <RentalWorkflow />;
+        return <RentalWorkflow isManualEntry={isManualEntry} />;
       case 'contracts':
-        return <ContractsView />;
+        return (
+          <ContractsView
+            onCreateManual={() => {
+              useRentalProposalStore.getState().startManualEntry();
+              setIsManualEntry(true);
+              setCurrentView('rental-workflow');
+            }}
+          />
+        );
       case 'service-proposal':
         return isAdmin ? <ServiceProposalView /> : null;
       case 'service-history':

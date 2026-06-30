@@ -37,7 +37,7 @@ const SOURCE_TEMPLATE_MAP: Record<string, string> = {
   'dental': '1bc823c7-1771-4939-8179-177193917944',
 };
 
-export function RentalWorkflow() {
+export function RentalWorkflow({ isManualEntry = false }: { isManualEntry?: boolean } = {}) {
   const { isAdmin, isCommercial } = useAuth();
   const { commercial } = useCommercialIdentity();
 
@@ -70,8 +70,13 @@ export function RentalWorkflow() {
   }, [skipTemplateStep, autoTemplateId, selectTemplateForProposal]);
 
   const WORKFLOW_STEPS = useMemo(
-    () => skipTemplateStep ? ALL_WORKFLOW_STEPS.filter(s => s.id !== 'template') : ALL_WORKFLOW_STEPS,
-    [skipTemplateStep]
+    () => {
+      let steps = ALL_WORKFLOW_STEPS;
+      if (isManualEntry) steps = steps.filter(s => s.id !== 'import');
+      if (skipTemplateStep) steps = steps.filter(s => s.id !== 'template');
+      return steps;
+    },
+    [skipTemplateStep, isManualEntry]
   );
 
   const currentStepIndex = WORKFLOW_STEPS.findIndex(s => s.id === currentStep);

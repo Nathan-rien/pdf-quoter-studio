@@ -290,6 +290,7 @@ interface RentalProposalActions {
   // Reset
   resetAll: () => void;
   startNewProposal: () => void;
+  startManualEntry: () => void;
 }
 
 const initialClientData: ClientData = {
@@ -1048,6 +1049,23 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           ...initialState,
           servicesInclus: currentServicesInclus,
           isActive: true,
+        });
+      },
+
+      startManualEntry: () => {
+        const currentServicesInclus = get().servicesInclus;
+        set({
+          ...initialState,
+          servicesInclus: currentServicesInclus,
+          pdfImportStatus: {
+            isImported: true,
+            fileName: 'Saisie manuelle',
+            source: null,
+            importDate: new Date().toISOString(),
+          },
+          currentStep: 'data',
+          isActive: true,
+          hasUnsavedChanges: true,
         });
       },
 

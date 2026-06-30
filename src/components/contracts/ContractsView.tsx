@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, User, FileText, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useContracts, isContractRenewingSoon, Contract } from '@/hooks/useContracts';
 import { ContractRow } from './ContractRow';
 import { ContractRenewalAlert } from './ContractRenewalAlert';
@@ -53,7 +54,7 @@ function CommercialGroup({ commercialName, contracts }: { commercialId: string; 
   );
 }
 
-export function ContractsView() {
+export function ContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
   const { data: contracts = [], isLoading, error } = useContracts();
   const groups = groupByCommercial(contracts);
   const totalRenewing = contracts.filter(isContractRenewingSoon).length;
@@ -63,15 +64,22 @@ export function ContractsView() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-bold">Contrats</h1>
-          {contracts.length > 0 && <Badge variant="secondary">{contracts.length}</Badge>}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <h1 className="text-xl font-bold">Contrats</h1>
+            {contracts.length > 0 && <Badge variant="secondary">{contracts.length}</Badge>}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
-        </p>
+        {onCreateManual && (
+          <Button size="sm" onClick={onCreateManual} className="shrink-0">
+            + Créer un contrat manuellement
+          </Button>
+        )}
       </div>
 
       {totalRenewing > 0 && <ContractRenewalAlert />}
