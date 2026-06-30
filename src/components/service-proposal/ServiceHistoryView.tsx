@@ -38,6 +38,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { ValidateProposalButton } from "@/components/history/ValidateProposalButton";
+
 
 interface ServiceExportSummary {
   id: string;
