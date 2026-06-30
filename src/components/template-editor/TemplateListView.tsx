@@ -194,6 +194,19 @@ export function TemplateListView() {
                   <Edit className="h-3.5 w-3.5 mr-1.5" />
                   Éditer
                 </Button>
+                {latestVersion && latestVersion.status === 'brouillon' && (
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => {
+                      setShouldOpenPublishDialog(true);
+                      handleEditTemplate(template);
+                    }}
+                  >
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    Publier
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   size="sm"
