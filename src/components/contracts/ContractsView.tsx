@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, User, FileText, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useContracts, isContractRenewingSoon, Contract } from '@/hooks/useContracts';
 import { ContractRow } from './ContractRow';
 import { ContractRenewalAlert } from './ContractRenewalAlert';
