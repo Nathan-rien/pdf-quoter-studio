@@ -598,6 +598,10 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     set({ inlineEditingElementId: elementId });
   },
 
+  setShouldOpenPublishDialog: (value) => {
+    set({ shouldOpenPublishDialog: value });
+  },
+
   // Édition (protégée)
   updateTextContent: (elementId, content) => {
     const state = get();
