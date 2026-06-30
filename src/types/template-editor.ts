@@ -215,4 +215,5 @@ export interface TemplateEditorState {
   selectedLogoId: string | null;
   selectedIconName: string | null;
   inlineEditingElementId: string | null; // Élément en cours d'édition inline
+  shouldOpenPublishDialog: boolean; // Ouvrir le dialog de publication après sélection depuis la liste
 }
