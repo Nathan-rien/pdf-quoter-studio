@@ -63,15 +63,22 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-bold">Contrats</h1>
-          {contracts.length > 0 && <Badge variant="secondary">{contracts.length}</Badge>}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <h1 className="text-xl font-bold">Contrats</h1>
+            {contracts.length > 0 && <Badge variant="secondary">{contracts.length}</Badge>}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
-        </p>
+        {onCreateManual && (
+          <Button size="sm" onClick={onCreateManual} className="shrink-0">
+            + Créer un contrat manuellement
+          </Button>
+        )}
       </div>
 
       {totalRenewing > 0 && <ContractRenewalAlert />}
