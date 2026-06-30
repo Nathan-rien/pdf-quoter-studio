@@ -90,9 +90,12 @@ export function ContractRow({ contract }: { contract: Contract }) {
               <Calendar className="h-3 w-3" />
               {format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
             </span>
-            {contract.amount_ht != null && (
-              <span>{contract.amount_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
+            {displayedAmount != null && (
+              <span>
+                {displayedAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € ({paymentFrequency})
+              </span>
             )}
+
             {contract.financial_partner && <span>{contract.financial_partner}</span>}
             {contract.duration_months && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.duration_months} mois</span>}
             {endDate && <span>→ {format(endDate, 'MM/yyyy', { locale: fr })}</span>}
@@ -139,7 +142,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
 
       {expanded && (
         <div className="border-t border-border bg-muted/20 p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Mois de mise en place</Label>
               <Input
@@ -171,7 +174,28 @@ export function ContractRow({ contract }: { contract: Contract }) {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Périodicité</Label>
+              <div className="flex gap-2">
+                {(['mensuel', 'trimestriel'] as PaymentFrequency[]).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setPaymentFrequency(f)}
+                    className={cn(
+                      'h-9 px-4 rounded-full text-sm font-medium border transition-colors capitalize',
+                      paymentFrequency === f
+                        ? 'bg-black text-white border-black'
+                        : 'bg-background text-foreground border-border hover:bg-muted'
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
           {endDate && (
             <div className="text-xs text-muted-foreground">
               Date de fin estimée : <strong>{format(endDate, 'MMMM yyyy', { locale: fr })}</strong>
