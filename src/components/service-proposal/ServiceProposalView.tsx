@@ -506,11 +506,20 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
   );
 }
 
-export function ServiceProposalView() {
+export function ServiceProposalView({ autoOpenCreate = false, onAutoOpenHandled }: { autoOpenCreate?: boolean; onAutoOpenHandled?: () => void } = {}) {
   const [showForm, setShowForm] = useState(false);
   const [editingProposal, setEditingProposal] = useState<ServiceProposal | null>(null);
   const { data: proposals = [], isLoading } = useServiceProposals();
   const deleteProposal = useDeleteServiceProposal();
+
+  useEffect(() => {
+    if (autoOpenCreate) {
+      setShowForm(true);
+      onAutoOpenHandled?.();
+    }
+  }, [autoOpenCreate, onAutoOpenHandled]);
+
+
 
   const grouped = new Map<string, { name: string; proposals: ServiceProposal[] }>();
   for (const p of proposals) {

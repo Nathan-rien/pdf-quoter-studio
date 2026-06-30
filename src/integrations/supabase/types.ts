@@ -45,6 +45,7 @@ export type Database = {
           implementation_month: string | null
           payment_frequency: string | null
           proposal_id: string
+          proposal_type: string
           template_name: string | null
           updated_at: string
           validated_at: string
@@ -61,6 +62,7 @@ export type Database = {
           implementation_month?: string | null
           payment_frequency?: string | null
           proposal_id: string
+          proposal_type?: string
           template_name?: string | null
           updated_at?: string
           validated_at?: string
@@ -77,6 +79,7 @@ export type Database = {
           implementation_month?: string | null
           payment_frequency?: string | null
           proposal_id?: string
+          proposal_type?: string
           template_name?: string | null
           updated_at?: string
           validated_at?: string

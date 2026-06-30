@@ -38,6 +38,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { ValidateProposalButton } from "@/components/history/ValidateProposalButton";
+
 
 interface ServiceExportSummary {
   id: string;
@@ -284,8 +286,18 @@ export function ServiceHistoryView() {
                   >
                     {downloadingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                   </Button>
+                  <ValidateProposalButton
+                    proposalId={entry.id}
+                    clientName={entry.client_name || entry.proposal_name}
+                    commercialId={entry.commercial_id || ''}
+                    commercialName={entry.commercial_name || undefined}
+                    amountHt={entry.montant_investissement ?? undefined}
+                    templateName={entry.template_name}
+                    proposalType="service"
+                  />
                 </>
               )}
+
               <Button
                 variant="ghost" size="icon"
                 className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"

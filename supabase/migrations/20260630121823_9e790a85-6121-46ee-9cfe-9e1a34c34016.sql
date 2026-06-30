@@ -1,0 +1,2 @@
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS proposal_type TEXT NOT NULL DEFAULT 'location' CHECK (proposal_type IN ('location', 'service'));
+CREATE INDEX IF NOT EXISTS contracts_proposal_type_idx ON public.contracts(proposal_type);

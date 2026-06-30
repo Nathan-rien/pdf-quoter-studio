@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -67,7 +67,7 @@ function CommercialGroup({
 }
 
 export function ContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
-  const { data: contracts = [], isLoading, error } = useContracts();
+  const { data: contracts = [], isLoading, error } = useContracts('location');
   const { toast } = useToast();
   const groups = groupByCommercial(contracts);
   const totalRenewing = contracts.filter(isContractRenewingSoon).length;
@@ -122,10 +122,12 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
           </p>
         </div>
         {onCreateManual && (
-          <Button size="sm" onClick={onCreateManual} className="shrink-0">
-            + Créer un contrat manuellement
+          <Button variant="outline" size="sm" onClick={onCreateManual} className="shrink-0 gap-1">
+            <Plus className="h-4 w-4" />
+            Créer un contrat manuellement
           </Button>
         )}
+
       </div>
 
       {totalRenewing > 0 && <ContractRenewalAlert />}
