@@ -102,6 +102,14 @@ export function calculateSommeLoyers(
 }
 
 /**
+ * Calcule le loyer trimestriel (mensuel × 3)
+ */
+export function calculateLoyerTrimestriel(loyerMensuel: number | null): number | null {
+  if (loyerMensuel === null) return null;
+  return Math.round(loyerMensuel * 3 * 100) / 100;
+}
+
+/**
  * Calcule le coût du contrat
  * Formule: Somme des Loyers - Montant Investissement
  */
