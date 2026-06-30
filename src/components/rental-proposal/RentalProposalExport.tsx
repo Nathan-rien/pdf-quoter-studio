@@ -878,6 +878,10 @@ export function RentalProposalExport() {
               <span className="font-medium text-primary">{formatNumber(calculatedValues.loyerMensuel)} €</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-muted-foreground">Loyer trimestriel :</span>
+              <span className="font-medium text-primary">{formatNumber(calculatedValues.loyerTrimestriel)} €</span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-muted-foreground">Avec services :</span>
               <span className="font-medium text-primary">{formatNumber(calculatedValues.loyerServicesInclus)} €</span>
             </div>
