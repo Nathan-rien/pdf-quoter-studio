@@ -1052,6 +1052,23 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         });
       },
 
+      startManualEntry: () => {
+        const currentServicesInclus = get().servicesInclus;
+        set({
+          ...initialState,
+          servicesInclus: currentServicesInclus,
+          pdfImportStatus: {
+            isImported: true,
+            fileName: 'Saisie manuelle',
+            source: null,
+            importDate: new Date().toISOString(),
+          },
+          currentStep: 'data',
+          isActive: true,
+          hasUnsavedChanges: true,
+        });
+      },
+
       loadFromExport: (snapshot) => {
         set({
           clientData: snapshot.clientData ?? initialClientData,
