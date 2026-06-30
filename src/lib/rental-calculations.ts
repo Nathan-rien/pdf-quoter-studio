@@ -186,6 +186,7 @@ export interface CalculatedMatriceValues {
   loyerServicesInclus: number | null;
   loyerMensuelInvestissement: number | null;
   loyerMensuel: number | null;
+  loyerTrimestriel: number | null;
   sommeLoyers: number | null;
   coutContrat: number | null;
   coutLocatifAnnuel: number | null;
