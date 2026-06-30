@@ -43,6 +43,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   getActiveTemplate: () => PDFTemplate | null;
   getTemplateVersions: (templateId: string) => TemplateVersion[];
   getTemplateLatestVersion: (templateId: string) => TemplateVersion | null;
+  getTemplatePublishedVersion: (templateId: string) => TemplateVersion | null;
 
   // Actions de navigation
   setSelectedPage: (pageNumber: PDFPageNumber) => void;
@@ -500,6 +501,23 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       return publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
     }
     return versions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
+  },
+
+  getTemplatePublishedVersion: (templateId) => {
+    const publishedVersions = get().allVersions.filter(
+      v => v.templateId === templateId && v.status === 'publie'
+    );
+    if (publishedVersions.length === 0) return null;
+
+    return publishedVersions.reduce((a, b) => {
+      if (a.versionNumber !== b.versionNumber) {
+        return a.versionNumber > b.versionNumber ? a : b;
+      }
+
+      const aPublishedAt = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const bPublishedAt = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return aPublishedAt >= bPublishedAt ? a : b;
+    });
   },
 
   // === Actions Navigation (existantes) ===
