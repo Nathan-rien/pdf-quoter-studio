@@ -122,10 +122,12 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
           </p>
         </div>
         {onCreateManual && (
-          <Button size="sm" onClick={onCreateManual} className="shrink-0">
-            + Créer un contrat manuellement
+          <Button variant="outline" size="sm" onClick={onCreateManual} className="shrink-0 gap-1">
+            <Plus className="h-4 w-4" />
+            Créer un contrat manuellement
           </Button>
         )}
+
       </div>
 
       {totalRenewing > 0 && <ContractRenewalAlert />}
