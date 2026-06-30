@@ -93,11 +93,24 @@ export default function Index() {
           />
         );
       case 'service-proposal':
-        return isAdmin ? <ServiceProposalView /> : null;
+        return isAdmin ? (
+          <ServiceProposalView
+            autoOpenCreate={serviceAutoOpenCreate}
+            onAutoOpenHandled={() => setServiceAutoOpenCreate(false)}
+          />
+        ) : null;
       case 'service-history':
         return isAdmin ? <ServiceHistoryView /> : null;
       case 'service-contracts':
-        return isAdmin ? <ServiceContractsView /> : null;
+        return isAdmin ? (
+          <ServiceContractsView
+            onCreateManual={() => {
+              setServiceAutoOpenCreate(true);
+              setCurrentView('service-proposal');
+            }}
+          />
+        ) : null;
+
 
       case 'history':
         return (
