@@ -70,8 +70,13 @@ export function RentalWorkflow({ isManualEntry = false }: { isManualEntry?: bool
   }, [skipTemplateStep, autoTemplateId, selectTemplateForProposal]);
 
   const WORKFLOW_STEPS = useMemo(
-    () => skipTemplateStep ? ALL_WORKFLOW_STEPS.filter(s => s.id !== 'template') : ALL_WORKFLOW_STEPS,
-    [skipTemplateStep]
+    () => {
+      let steps = ALL_WORKFLOW_STEPS;
+      if (isManualEntry) steps = steps.filter(s => s.id !== 'import');
+      if (skipTemplateStep) steps = steps.filter(s => s.id !== 'template');
+      return steps;
+    },
+    [skipTemplateStep, isManualEntry]
   );
 
   const currentStepIndex = WORKFLOW_STEPS.findIndex(s => s.id === currentStep);
