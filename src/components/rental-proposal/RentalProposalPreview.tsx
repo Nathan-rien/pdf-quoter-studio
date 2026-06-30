@@ -91,7 +91,8 @@ export function RentalProposalPreview() {
   const { 
     getActiveTemplate,
     allTemplates,
-    getTemplateLatestVersion, 
+    getTemplateLatestVersion,
+    getTemplatePublishedVersion,
     preparePreviewEditing, 
     getCurrentVersionForPreview,
     updateElementFromPreview,
@@ -117,9 +118,9 @@ export function RentalProposalPreview() {
     }
     // Dans le parcours Proposition, ne jamais reprendre la version courante de l'éditeur :
     // elle peut être un brouillon. On force la dernière version publiée disponible.
-    const version = getTemplateLatestVersion(activeTemplate.id);
+    const version = getTemplatePublishedVersion(activeTemplate.id);
     return version && version.pages.length > 0 ? version : null;
-  }, [activeTemplate, isEditMode, getCurrentVersionForPreview, getTemplateLatestVersion]);
+  }, [activeTemplate, isEditMode, getCurrentVersionForPreview, getTemplatePublishedVersion]);
   
   // Helper pour trouver la page d'injection d'un type de zone
   const getInjectionPageForZoneType = React.useCallback((zoneType: DynamicZoneType): number | null => {
@@ -153,7 +154,7 @@ export function RentalProposalPreview() {
         return;
       }
       
-      const version = getTemplateLatestVersion(activeTemplate.id);
+      const version = getTemplatePublishedVersion(activeTemplate.id);
       if (!version) {
         setPagesLoaded(true);
         return;
@@ -183,7 +184,7 @@ export function RentalProposalPreview() {
     // Reset pagesLoaded si le template sélectionné change
     setPagesLoaded(false);
     loadPages();
-  }, [hasLoaded, activeTemplate, getTemplateLatestVersion, loadVersionPages]);
+  }, [hasLoaded, activeTemplate, getTemplatePublishedVersion, loadVersionPages]);
   
   // Afficher un état de chargement si les templates ou les pages ne sont pas encore chargés
   // Ce return conditionnel est maintenant APRÈS tous les hooks
