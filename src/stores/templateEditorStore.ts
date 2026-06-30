@@ -274,7 +274,8 @@ const initialState: TemplateEditorState = {
   selectedShapeType: null,
   selectedIconName: null,
   selectedLogoId: null,
-  inlineEditingElementId: null
+  inlineEditingElementId: null,
+  shouldOpenPublishDialog: false
 };
 
 // Helper pour convertir les strings en dates lors de la désérialisation
