@@ -290,6 +290,7 @@ interface RentalProposalActions {
   // Reset
   resetAll: () => void;
   startNewProposal: () => void;
+  startManualEntry: () => void;
 }
 
 const initialClientData: ClientData = {
