@@ -95,15 +95,17 @@ export function ServiceProposalPreview() {
   }, [selectedTemplateId, allTemplates]);
 
   const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
-    // Priorité 1 : version en cours d'édition dans l'éditeur (contient les zones dynamiques ajoutées)
-    if (editorCurrentVersion && activeTemplate && editorCurrentVersion.templateId === activeTemplate.id && editorCurrentVersion.pages.length > 0) {
+    // Dans le parcours Proposition, on doit toujours utiliser la dernière version publiée.
+    // La version courante de l'éditeur peut être un ancien brouillon (ex: v10) et ne doit
+    // pas masquer la version publiée disponible pour les devis (ex: v11).
+    if (isEditMode && editorCurrentVersion && activeTemplate && editorCurrentVersion.templateId === activeTemplate.id && editorCurrentVersion.pages.length > 0) {
       return editorCurrentVersion;
     }
-    // Priorité 2 : version chargée depuis Supabase via allVersions
+
     if (!activeTemplate) return null;
     const version = getTemplateLatestVersion(activeTemplate.id);
     return version && version.pages.length > 0 ? version : null;
-  }, [activeTemplate, getTemplateLatestVersion, editorCurrentVersion]);
+  }, [activeTemplate, getTemplateLatestVersion, editorCurrentVersion, isEditMode]);
 
   React.useEffect(() => {
     const loadPages = async () => {
