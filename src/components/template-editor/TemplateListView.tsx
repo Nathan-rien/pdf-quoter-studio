@@ -42,7 +42,8 @@ export function TemplateListView() {
     allTemplates, 
     selectTemplate, 
     deleteTemplate,
-    getTemplateLatestVersion
+    getTemplateLatestVersion,
+    setShouldOpenPublishDialog
   } = useTemplateEditorStore();
 
   const { deleteTemplateFromDatabase } = useTemplateSync();
