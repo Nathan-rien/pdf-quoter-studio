@@ -495,16 +495,10 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     const versions = get().allVersions.filter(v => v.templateId === templateId);
     if (versions.length === 0) return null;
     
-    const brouillonVersions = versions.filter(v => v.status === 'brouillon');
-    if (brouillonVersions.length > 0) {
-      return brouillonVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
-    }
-
     const publishedVersions = versions.filter(v => v.status === 'publie');
     if (publishedVersions.length > 0) {
       return publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
     }
-
     return versions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
   },
 

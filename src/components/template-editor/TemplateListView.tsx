@@ -40,9 +40,9 @@ export function TemplateListView() {
   
   const { 
     allTemplates, 
+    allVersions,
     selectTemplate, 
     deleteTemplate,
-    getTemplateLatestVersion,
     setShouldOpenPublishDialog
   } = useTemplateEditorStore();
 
@@ -87,8 +87,20 @@ export function TemplateListView() {
   };
 
   const getLatestVersionInfo = (template: PDFTemplate) => {
-    const latestVersion = getTemplateLatestVersion(template.id);
-    return latestVersion;
+    const versions = allVersions.filter((v) => v.templateId === template.id);
+    if (versions.length === 0) return null;
+
+    const draftVersions = versions.filter((v) => v.status === 'brouillon');
+    if (draftVersions.length > 0) {
+      return draftVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
+    }
+
+    const publishedVersions = versions.filter((v) => v.status === 'publie');
+    if (publishedVersions.length > 0) {
+      return publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
+    }
+
+    return versions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
   };
 
   const formatDate = (date: Date) => {
