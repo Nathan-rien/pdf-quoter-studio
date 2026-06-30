@@ -71,16 +71,25 @@ export default function Index() {
           <RentalProposalDashboard
             onNewProposal={() => {
               useRentalProposalStore.getState().startNewProposal();
+              setIsManualEntry(false);
               setCurrentView('rental-workflow');
             }}
-            onResumeProposal={() => setCurrentView('rental-workflow')}
+            onResumeProposal={() => { setIsManualEntry(false); setCurrentView('rental-workflow'); }}
             onViewHistory={() => setCurrentView('history')}
           />
         );
       case 'rental-workflow':
-        return <RentalWorkflow />;
+        return <RentalWorkflow isManualEntry={isManualEntry} />;
       case 'contracts':
-        return <ContractsView />;
+        return (
+          <ContractsView
+            onCreateManual={() => {
+              useRentalProposalStore.getState().startManualEntry();
+              setIsManualEntry(true);
+              setCurrentView('rental-workflow');
+            }}
+          />
+        );
       case 'service-proposal':
         return isAdmin ? <ServiceProposalView /> : null;
       case 'service-history':
