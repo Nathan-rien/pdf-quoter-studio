@@ -84,15 +84,15 @@ export function ServiceProposalPreview() {
         return found;
       }
     }
-    const active = allTemplates.find((t) => t.isActive);
+    const active = allTemplates.find((t) => t.isActive && !!getTemplatePublishedVersion(t.id));
     if (active) {
       console.log('[ServiceProposalPreview] Fallback to active template:', active.name);
       return active;
     }
-    const first = allTemplates[0] ?? null;
-    console.log('[ServiceProposalPreview] Fallback to first template:', first?.name);
+    const first = allTemplates.find((t) => !!getTemplatePublishedVersion(t.id)) ?? null;
+    console.log('[ServiceProposalPreview] Fallback to first published template:', first?.name);
     return first;
-  }, [selectedTemplateId, allTemplates]);
+  }, [selectedTemplateId, allTemplates, getTemplatePublishedVersion]);
 
   const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
     // Dans le parcours Proposition, on doit toujours utiliser la dernière version publiée.
