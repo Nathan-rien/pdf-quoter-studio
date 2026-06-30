@@ -25,8 +25,10 @@ export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('rental-proposal');
   const [highlightedIds, setHighlightedIds] = useState<string[]>([]);
   const [isManualEntry, setIsManualEntry] = useState(false);
+  const [serviceAutoOpenCreate, setServiceAutoOpenCreate] = useState(false);
   const { isAdmin, isCommercial, userRole, signOut } = useAuth();
   const canAccessAdmin = userRole === 'admin';
+
 
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useAdminNotifications(isAdmin);
 
