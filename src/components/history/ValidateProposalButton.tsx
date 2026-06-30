@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useValidateProposal } from '@/hooks/useContracts';
+import { useValidateProposal, ProposalType } from '@/hooks/useContracts';
 
 interface ValidateProposalButtonProps {
   proposalId: string;
@@ -23,6 +23,7 @@ interface ValidateProposalButtonProps {
   templateName?: string;
   financialPartner?: string;
   durationMonths?: number;
+  proposalType?: ProposalType;
   onValidated?: (contractId: string) => void;
 }
 
@@ -35,6 +36,7 @@ export function ValidateProposalButton({
   templateName,
   financialPartner,
   durationMonths,
+  proposalType = 'location',
   onValidated,
 }: ValidateProposalButtonProps) {
   const [open, setOpen] = useState(false);
@@ -43,6 +45,7 @@ export function ValidateProposalButton({
   async function handleConfirm() {
     const result = await validateProposal.mutateAsync({
       proposal_id: proposalId,
+      proposal_type: proposalType,
       client_name: clientName,
       commercial_id: commercialId,
       commercial_name: commercialName,
@@ -54,6 +57,7 @@ export function ValidateProposalButton({
     setOpen(false);
     onValidated?.(result.id);
   }
+
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
