@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock, Settings } from 'lucide-react';
+import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock, Settings, Upload } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
