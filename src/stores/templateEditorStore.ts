@@ -55,6 +55,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   
   // Édition inline
   setInlineEditing: (elementId: string | null) => void;
+  setShouldOpenPublishDialog: (value: boolean) => void;
 
   // Getter pour l'élément sélectionné (dynamique)
   getSelectedElement: () => EditableElement | null;
@@ -274,7 +275,8 @@ const initialState: TemplateEditorState = {
   selectedShapeType: null,
   selectedIconName: null,
   selectedLogoId: null,
-  inlineEditingElementId: null
+  inlineEditingElementId: null,
+  shouldOpenPublishDialog: false
 };
 
 // Helper pour convertir les strings en dates lors de la désérialisation
@@ -594,6 +596,10 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
   // Édition inline
   setInlineEditing: (elementId) => {
     set({ inlineEditingElementId: elementId });
+  },
+
+  setShouldOpenPublishDialog: (value) => {
+    set({ shouldOpenPublishDialog: value });
   },
 
   // Édition (protégée)

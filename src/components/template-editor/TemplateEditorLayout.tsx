@@ -86,7 +86,9 @@ export function TemplateEditorLayout() {
     setAddElementMode,
     backToList,
     getTemplateVersions,
-    renameTemplate
+    renameTemplate,
+    shouldOpenPublishDialog,
+    setShouldOpenPublishDialog
   } = useTemplateEditorStore();
 
   // Récupérer le template courant
@@ -123,6 +125,14 @@ export function TemplateEditorLayout() {
     
     loadPagesIfEmpty();
   }, [currentVersion?.id, currentVersion?.pages?.length, isLoadingVersion, loadVersionPages]);
+
+  // Auto-ouvrir le dialog de publication quand on arrive depuis la liste avec "Publier"
+  useEffect(() => {
+    if (shouldOpenPublishDialog && currentVersion?.status === 'brouillon') {
+      setShowPublishDialog(true);
+      setShouldOpenPublishDialog(false);
+    }
+  }, [shouldOpenPublishDialog, currentVersion?.status, setShouldOpenPublishDialog]);
 
   const handleDiscard = async () => {
     setIsDiscarding(true);

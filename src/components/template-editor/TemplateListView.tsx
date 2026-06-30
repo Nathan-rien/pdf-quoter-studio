@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock, Settings } from 'lucide-react';
+import { Plus, Copy, Edit, Trash2, CheckCircle, FileText, Clock, Settings, Upload } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +42,8 @@ export function TemplateListView() {
     allTemplates, 
     selectTemplate, 
     deleteTemplate,
-    getTemplateLatestVersion
+    getTemplateLatestVersion,
+    setShouldOpenPublishDialog
   } = useTemplateEditorStore();
 
   const { deleteTemplateFromDatabase } = useTemplateSync();
@@ -194,6 +195,19 @@ export function TemplateListView() {
                   <Edit className="h-3.5 w-3.5 mr-1.5" />
                   Éditer
                 </Button>
+                {latestVersion && latestVersion.status === 'brouillon' && (
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => {
+                      setShouldOpenPublishDialog(true);
+                      handleEditTemplate(template);
+                    }}
+                  >
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    Publier
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   size="sm"
