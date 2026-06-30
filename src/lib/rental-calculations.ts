@@ -102,6 +102,14 @@ export function calculateSommeLoyers(
 }
 
 /**
+ * Calcule le loyer trimestriel (mensuel × 3)
+ */
+export function calculateLoyerTrimestriel(loyerMensuel: number | null): number | null {
+  if (loyerMensuel === null) return null;
+  return Math.round(loyerMensuel * 3 * 100) / 100;
+}
+
+/**
  * Calcule le coût du contrat
  * Formule: Somme des Loyers - Montant Investissement
  */
@@ -178,6 +186,7 @@ export interface CalculatedMatriceValues {
   loyerServicesInclus: number | null;
   loyerMensuelInvestissement: number | null;
   loyerMensuel: number | null;
+  loyerTrimestriel: number | null;
   sommeLoyers: number | null;
   coutContrat: number | null;
   coutLocatifAnnuel: number | null;
@@ -238,6 +247,7 @@ export function calculateAllMatriceValues(
     loyerServicesInclus,
     loyerMensuelInvestissement,
     loyerMensuel,
+    loyerTrimestriel: calculateLoyerTrimestriel(loyerMensuel),
     sommeLoyers,
     coutContrat,
     coutLocatifAnnuel,
