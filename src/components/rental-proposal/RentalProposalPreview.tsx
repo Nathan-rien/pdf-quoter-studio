@@ -273,18 +273,10 @@ export function RentalProposalPreview() {
     // IMPORTANT: Relire DIRECTEMENT depuis le store Zustand pour obtenir les données fraîches
     // après le lazy loading (évite le problème de closure stale)
     const freshState = useTemplateEditorStore.getState();
-    const templateVersions = freshState.allVersions.filter(v => v.templateId === template.id);
-    const publishedVersions = templateVersions.filter(v => v.status === 'publie');
-    
-    let version: TemplateVersion | undefined;
-    if (publishedVersions.length > 0) {
-      version = publishedVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
-    } else if (templateVersions.length > 0) {
-      version = templateVersions.reduce((a, b) => a.versionNumber > b.versionNumber ? a : b);
-    }
+    const version = freshState.getTemplatePublishedVersion(template.id);
     
     if (!version || version.pages.length === 0) {
-      console.warn(`[Preview] Page ${pageNumber}: No version or empty pages (versions: ${templateVersions.length})`);
+      console.warn(`[Preview] Page ${pageNumber}: No published version or empty pages`);
       return [];
     }
     
