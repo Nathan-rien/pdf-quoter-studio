@@ -53,7 +53,7 @@ function CommercialGroup({ commercialName, contracts }: { commercialId: string; 
   );
 }
 
-export function ContractsView() {
+export function ContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
   const { data: contracts = [], isLoading, error } = useContracts();
   const groups = groupByCommercial(contracts);
   const totalRenewing = contracts.filter(isContractRenewingSoon).length;
