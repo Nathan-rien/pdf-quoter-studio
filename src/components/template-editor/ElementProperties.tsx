@@ -80,7 +80,10 @@ export function ElementProperties() {
   const currentVersion = useTemplateEditorStore(s => s.currentVersion);
   const selectedElementId = useTemplateEditorStore(s => s.selectedElementId);
   const selectedElementIds = useTemplateEditorStore(s => s.selectedElementIds);
+  const selectedDynamicZoneId = useTemplateEditorStore(s => s.selectedDynamicZoneId);
+  const selectedPageNumber = useTemplateEditorStore(s => s.selectedPageNumber);
   const hasUnsavedChanges = useTemplateEditorStore(s => s.hasUnsavedChanges);
+  const updateDynamicZonePosition = useTemplateEditorStore(s => s.updateDynamicZonePosition);
 
   const {
     updateTextContent,
