@@ -264,42 +264,61 @@ export function ServiceProposalExport() {
     };
 
     const renderClientZone = (zone: DynamicZone) => `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 100%; overflow: hidden;">
-          <div style="font-size: 8px; line-height: 1.25; overflow: hidden;">
-            ${clientData.raisonSociale ? `<p style="font-weight: 700; margin: 0;">${escapeText(clientData.raisonSociale)}</p>` : ''}
-            <p style="font-weight: 600; margin: 0;">${escapeText(clientData.nom || 'Nom du client')}</p>
-            <p style="color: #6b7280; margin: 1px 0;">${escapeText(clientData.adresse || 'Adresse')}</p>
-            ${clientData.email ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(clientData.email)}</p>` : ''}
-            ${clientData.telephone ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(clientData.telephone)}</p>` : ''}
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 10px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; height: 100%; overflow: hidden;">
+          <div style="padding-right: 12px; overflow: hidden;">
+            <p style="font-size: 7px; color: #6b7280; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 3px 0; font-weight: 600;">Bénéficiaire</p>
+            <div style="font-size: 8px; line-height: 1.3; color: #4b5563;">
+              ${clientData.raisonSociale ? `<p style="font-weight: 700; font-size: 9px; color: #1f2937; margin: 0;">${escapeText(clientData.raisonSociale)}</p>` : ''}
+              ${clientData.nom ? `<p style="margin: 1px 0; font-weight: 600;">${escapeText(clientData.nom)}</p>` : ''}
+              ${clientData.adresse ? `<p style="margin: 1px 0;">${escapeText(clientData.adresse)}</p>` : ''}
+              ${clientData.email ? `<p style="margin: 1px 0;">${escapeText(clientData.email)}</p>` : ''}
+              ${clientData.telephone ? `<p style="margin: 1px 0;">${escapeText(clientData.telephone)}</p>` : ''}
+            </div>
           </div>
-          <div style="overflow: hidden;">
-            <p style="font-weight: 600; font-size: 9px; margin: 0 0 4px 0;">Votre interlocuteur</p>
+          <div style="border-left: 1px solid #e5e7eb; padding-left: 12px; overflow: hidden;">
+            <p style="font-size: 7px; color: #6b7280; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 3px 0; font-weight: 600;">Votre interlocuteur</p>
             ${
               selectedCommercial
                 ? `
-              <div style="font-size: 8px; line-height: 1.25;">
-                <p style="font-weight: 600; margin: 0;">${escapeText(selectedCommercial.nom)}</p>
-                ${selectedCommercial.telephone ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
-                <p style="color: #6b7280; margin: 1px 0;">${escapeText(selectedCommercial.email)}</p>
-                ${entityLabel ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(entityLabel)}</p>` : ''}
+              <div style="font-size: 8px; line-height: 1.3; color: #4b5563;">
+                <p style="font-weight: 700; font-size: 9px; color: #1f2937; margin: 0;">${escapeText(selectedCommercial.nom)}</p>
+                ${selectedCommercial.telephone ? `<p style="margin: 1px 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
+                ${selectedCommercial.email ? `<p style="margin: 1px 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
+                ${entityLabel ? `<p style="margin: 1px 0;">${escapeText(entityLabel)}</p>` : ''}
               </div>
             `
-                : '<p style="font-size: 8px; color: #9ca3af; font-style: italic;">Non sélectionné</p>'
+                : '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Non sélectionné</p>'
             }
           </div>
         </div>
       </div>
     `;
 
+    const conditionsRows: Array<[string, string, boolean?]> = [
+      ['Services', selectedServices.map((s) => s.label).join(', ') || '—'],
+      ['Périodicité', paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'],
+      ['Mode de règlement', paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : '—'],
+      ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
+      ['Démarrage', startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'],
+      ['Total HT services', `${formatNumber(totalServicesHt)} €`, true],
+    ];
+
     const renderConditionsZone = (zone: DynamicZone) => `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; font-size: 9px; line-height: 1.6; color: #1f2937;">
-        Services : ${escapeText(selectedServices.map((s) => s.label).join(', '))}<br />
-        Périodicité : ${paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'}<br />
-        Mode de règlement : ${paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : '—'}<br />
-        Durée : ${contractDuration ? `${contractDuration} mois` : '—'}<br />
-        Démarrage : ${startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'}<br />
-        Total HT services : ${formatNumber(totalServicesHt)} €
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+        <table style="width: 100%; border-collapse: collapse; font-size: 9px; background: white; border: 1px solid #e5e7eb;">
+          <tbody>
+            ${conditionsRows
+              .map(
+                ([label, value, bold]) => `
+              <tr>
+                <td style="width: 38%; padding: 4px 8px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">${escapeText(label)}</td>
+                <td style="padding: 4px 8px; color: #1f2937; border: 1px solid #e5e7eb; ${bold ? 'font-weight: 700; text-align: right;' : ''}">${escapeText(value)}</td>
+              </tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>
       </div>
     `;
 
@@ -308,10 +327,10 @@ export function ServiceProposalExport() {
         <table style="width: 100%; border-collapse: collapse; font-size: 8px; background: white;">
           <thead>
             <tr style="background: #f3f4f6;">
-              <th style="padding: 4px 6px; text-align: left; font-weight: 600;">Désignation</th>
-              <th style="padding: 4px 6px; text-align: center; width: 50px;">Qté</th>
-              <th style="padding: 4px 6px; text-align: right; width: 75px;">P.U. HT</th>
-              <th style="padding: 4px 6px; text-align: right; width: 75px;">Total HT</th>
+              <th style="padding: 5px 8px; text-align: left; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb;">Désignation</th>
+              <th style="padding: 5px 8px; text-align: center; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 40px;">Qté</th>
+              <th style="padding: 5px 8px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 70px;">P.U. HT</th>
+              <th style="padding: 5px 8px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 80px;">Total HT</th>
             </tr>
           </thead>
           <tbody>
@@ -319,29 +338,30 @@ export function ServiceProposalExport() {
               lignesData.length > 0
                 ? lignesData
                     .map(
-                      (l) => `
-              <tr>
-                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; word-wrap: break-word; white-space: pre-wrap;">${escapeText(l.designation || '-')}</td>
-                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: center;">${escapeText(l.quantite)}</td>
-                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(l.prixUnitaire)}</td>
-                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(l.totalHT)}</td>
+                      (l, idx) => `
+              <tr style="background: ${idx % 2 === 1 ? '#fafafa' : 'white'};">
+                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; vertical-align: top; word-wrap: break-word; white-space: pre-wrap;">${escapeText(l.designation || '-')}</td>
+                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: center; vertical-align: top;">${escapeText(l.quantite)}</td>
+                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top;">${formatNumber(l.prixUnitaire)}</td>
+                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top; font-weight: 600;">${formatNumber(l.totalHT)}</td>
               </tr>`,
                     )
                     .join('')
-                : '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #9ca3af; font-style: italic;">Aucune ligne de service</td></tr>'
+                : '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #9ca3af; font-style: italic; border: 1px solid #e5e7eb;">Aucune ligne de service</td></tr>'
             }
           </tbody>
         </table>
         <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 10px; min-width: 180px;">
-            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 10px; color: #1e40af; gap: 12px;">
-              <span>Total HT :</span>
-              <span>${formatNumber(totalInvest)} €</span>
+          <div style="border: 1px solid #d1d5db; background: white; padding: 6px 10px; min-width: 180px;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; gap: 12px;">
+              <span style="font-weight: 700; color: #374151;">Total HT</span>
+              <span style="font-weight: 700; color: #1f2937;">${formatNumber(totalInvest)} €</span>
             </div>
           </div>
         </div>
       </div>
     `;
+
 
     const renderSignatureZone = (zone: DynamicZone) => `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; font-size: 9px; color: #1f2937;">
