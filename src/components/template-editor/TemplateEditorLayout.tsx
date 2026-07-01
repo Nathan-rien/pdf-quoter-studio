@@ -351,7 +351,9 @@ export function TemplateEditorLayout() {
               <DropdownMenuItem onClick={async () => {
                 try {
                   await seedContratCadreTemplate(true);
-                  toast.success('Template "Contrat Cadre Services" réinitialisé avec succès.');
+                  toast.success('Template "Contrat Cadre Services" réinitialisé — rechargement...');
+                  // Force reload pour repartir sur la nouvelle v1 publiée
+                  setTimeout(() => window.location.reload(), 800);
                 } catch (e: any) {
                   toast.error('Erreur lors de la création du template', { description: e?.message });
                 }

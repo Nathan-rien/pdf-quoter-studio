@@ -1,35 +1,40 @@
-## Problème
+## Contexte
 
-Dans Proposition Services, l'aperçu affiche uniquement un bloc client minimal (raison sociale, adresse, SIRET, « Représentée par ») — sans email, téléphone, ni bloc « Votre interlocuteur ». Dans Proposition Location, l'aperçu affiche correctement le bloc complet client + interlocuteur identique à ce que produit l'export PDF.
+Deux problèmes distincts :
 
-## Cause
+1. **« Initialiser Contrat Cadre Services » ne fait rien de visible.** `seedContratCadreTemplate(true)` supprime bien l'ancien template et en recrée un nouveau (v1 publié, avec `service_client_info` à `top: 82, height: 14`). Mais l'éditeur est toujours ouvert sur l'**ancien** template (v15 brouillon), dont l'ID vient de disparaître. La liste des templates n'est pas rechargée et l'utilisateur reste sur une v15 orpheline → il ne voit aucun changement.
 
-`src/components/service-proposal/ServiceProposalPreview.tsx` contient deux logiques concurrentes pour la page 1 :
+2. **Les zones dynamiques sont trop grandes.** Les hauteurs par défaut (`service_client_info: 14%`, `service_conditions: 22%`, `service_invest_table: 35%`, `service_signature: 28%`, et les fallbacks `ZONE_POSITIONS` à `40%`) rendent la boîte orange très haute dans l'éditeur. Comme le rendu (aperçu + PDF) positionne le bloc à `top` mais avec sa **propre** hauteur de contenu compacte, le résultat visuel ne colle pas avec le rectangle affiché dans l'éditeur → positionnement peu précis.
 
-1. `renderPage1ClientBlock()` (lignes 413-448) — bloc complet client + interlocuteur, identique à Location.
-2. La zone dynamique `service_client_info` (lignes 298-310) — bloc minimal (raison sociale, adresse, SIRET, « Représentée par »).
+## Correctifs
 
-Ligne 470 :
-```
-templatePageNumber === 1 && pageDynamicZones.every(z => z.type !== 'service_client_info') && renderPage1ClientBlock()
-```
-Comme le template « Contrat Cadre Services » contient une zone `service_client_info`, le bloc complet est supprimé et seul le bloc minimal s'affiche. L'export PDF, lui, génère toujours le bloc complet → désynchronisation aperçu / export.
+### 1. Réduire la hauteur par défaut des zones dynamiques
 
-## Correction
+**`src/lib/seedContratCadreTemplate.ts`** — ajuster les `position.height` pour qu'ils correspondent à la hauteur réelle du bloc rendu :
+- `service_client_info` (page 1) : `top: 82, height: 10` (au lieu de 14) — le bloc client compact fait ~10% de la page A4.
+- `service_conditions` (page 4) : `top: 50, height: 12` (au lieu de `top: 42, height: 22`) — 6 lignes de texte compact.
+- `service_invest_table` (page 6) : `top: 10, height: 25` (au lieu de 35) — hauteur estimée pour un tableau moyen ; l'utilisateur peut agrandir si besoin.
+- `service_signature` (page 6) : `top: 70, height: 15` (au lieu de `top: 62, height: 28`).
 
-Aligner le rendu de la zone dynamique `service_client_info` sur celui de `renderPage1ClientBlock` (et donc sur celui de l'export et de Location). Un seul fichier modifié :
+**`src/components/template-editor/EditorCanvas.tsx`** — la constante `ZONE_POSITIONS` (fallback) : abaisser la hauteur par défaut de `40%` à `12%` pour toutes les nouvelles zones ajoutées manuellement, afin que le bloc orange dans l'éditeur soit proche du rendu réel.
 
-**`src/components/service-proposal/ServiceProposalPreview.tsx`**
+**`src/components/service-proposal/ServiceProposalPreview.tsx`** — dans `renderServiceDynamicZone`, les fallbacks de `topPct` restent inchangés (déjà cohérents). Aucune modification de rendu nécessaire.
 
-- Dans `renderServiceDynamicZone`, remplacer le rendu du bloc `service_client_info` par exactement la même structure que `renderPage1ClientBlock` :
-  - colonne gauche : raison sociale, nom, adresse, email, téléphone
-  - colonne droite : « Votre interlocuteur » avec nom / téléphone / email du commercial sélectionné (via `getCommercialById(commercialData.commercialId)`)
-  - sous le bloc, ligne adresse de l'entité commerciale en bas de page
-- Conserver le positionnement piloté par la zone (`top` issu de `zone.position?.top`, ou valeur par défaut actuelle) afin de respecter la position définie dans le template.
-- Le fallback ligne 470 (`pageDynamicZones.every(z => z.type !== 'service_client_info')`) reste inchangé : si aucune zone n'est définie dans le template, `renderPage1ClientBlock` continue de s'afficher.
+### 2. Corriger « Initialiser Contrat Cadre Services »
 
-Aucune autre modification (export, store, template) — la logique d'export produit déjà le bloc complet ; seul l'aperçu était incohérent.
+**`src/components/template-editor/TemplateEditorLayout.tsx`** — après l'appel `await seedContratCadreTemplate(true)` :
+- Recharger la liste des templates (`loadTemplates()` du store).
+- Appeler `selectTemplate(<nouveauTemplateId>)` pour sélectionner explicitement la nouvelle version publiée v1.
+- Afficher un toast de succès (« Template réinitialisé — v1 publiée sélectionnée »).
+
+Cela évite que l'utilisateur reste bloqué sur une version orpheline.
+
+### 3. (Optionnel) Auto-sélection Services
+
+`ServiceProposalView.tsx` sélectionne déjà « Contrat Cadre Services » par nom via useRef → l'aperçu Proposition Services reprendra automatiquement le nouveau template après ré-initialisation.
 
 ## Résultat attendu
 
-L'aperçu Proposition Services affichera, sur la page 1, le même bloc complet que Proposition Location et que le PDF exporté : informations client (raison sociale, nom, adresse, email, téléphone) à gauche et « Votre interlocuteur » avec les coordonnées du commercial à droite.
+- Les rectangles orange dans l'éditeur ont désormais une hauteur proche du bloc réellement rendu → glisser une zone à `top: 82%` la place visuellement au même endroit que dans l'aperçu et le PDF exporté.
+- Le bouton « Initialiser Contrat Cadre Services » recharge la liste et bascule immédiatement l'éditeur sur la nouvelle v1 publiée avec les positions corrigées.
+- Aucune modification de logique métier (rendu aperçu, export PDF, données) — uniquement des dimensions par défaut et du refresh d'UI.
