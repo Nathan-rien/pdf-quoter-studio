@@ -1,0 +1,1 @@
+ALTER TABLE public.proposal_exports ADD COLUMN IF NOT EXISTS loyer_mensuel_ht numeric;
