@@ -65,6 +65,7 @@ function buildPages() {
       elements: [
         rectEl("p1-banner", 20, 20, 754, 40),
         textEl("p1-title", 30, 25, 734, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, align: "left" }),
+        textEl("p1-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
         textEl("p1-ss", 40, 80, 714, 15, "ENTRE LES SOUSSIGNEES :", { bold: true }),
         textEl(
           "p1-cybertek",
