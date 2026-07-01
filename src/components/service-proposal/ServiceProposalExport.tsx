@@ -257,9 +257,8 @@ export function ServiceProposalExport() {
         `top: ${zone.position?.top ?? fallbackTop}%`,
         'left: 4%',
         'right: 4%',
-        `height: ${zone.position?.height ?? fallbackHeight}%`,
+        `min-height: ${zone.position?.height ?? fallbackHeight}%`,
         'z-index: 1000',
-        'overflow: hidden',
       ].join('; ');
     };
 
