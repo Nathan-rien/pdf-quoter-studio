@@ -310,15 +310,30 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Loyer trimestriel HT (€)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={quarterlyRent}
-                onChange={(e) => setQuarterlyRent(e.target.value)}
-                placeholder="0.00"
-                className="h-9 text-sm"
-              />
+              <Label className="text-xs">Loyer HT (issu de la proposition)</Label>
+              {hasProposalRent ? (
+                <div className="h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3">
+                  <span>Mensuel <strong>{(monthlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                  <span className="text-muted-foreground">·</span>
+                  <span>Trimestriel <strong>{(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualMonthlyRent}
+                    onChange={(e) => setManualMonthlyRent(e.target.value)}
+                    placeholder="Loyer mensuel HT"
+                    className="h-9 text-sm"
+                  />
+                  {monthlyRent != null && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Trimestriel : {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                    </p>
+                  )}
+                </>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Mois de mise en place</Label>
