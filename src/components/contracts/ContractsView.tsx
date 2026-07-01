@@ -183,12 +183,25 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
             Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
           </p>
         </div>
-        {onCreateManual && (
-          <Button variant="outline" size="sm" onClick={onCreateManual} className="shrink-0 gap-1">
-            <Plus className="h-4 w-4" />
-            Créer un contrat manuellement
+        <div className="flex items-center gap-2 shrink-0">
+          {onCreateManual && (
+            <Button variant="outline" size="sm" onClick={onCreateManual} className="gap-1">
+              <Plus className="h-4 w-4" />
+              Créer un contrat manuellement
+            </Button>
+          )}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleCreateQuick}
+            disabled={createQuick.isPending}
+            className="gap-1"
+          >
+            <Zap className="h-4 w-4" />
+            {createQuick.isPending ? 'Création…' : 'Créer contrat rapide'}
           </Button>
-        )}
+        </div>
+
 
       </div>
 
