@@ -149,6 +149,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
         commercial_id: item.commercial_id,
         commercial_name: item.commercial_name,
         montant_investissement: item.montant_investissement,
+        loyer_mensuel_ht: item.loyer_mensuel_ht ?? null,
         financial_partner: item.proposal_state?.proposals?.[0]?.refinanceur ?? null,
         duration_months: item.proposal_state?.proposals?.[0]?.duree ?? item.proposal_state?.matriceData?.duree ?? null,
         has_proposal_state: !!item.proposal_state,
