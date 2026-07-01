@@ -474,15 +474,13 @@ export function ServiceProposalPreview() {
                 </tr>
               )}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} style={{ padding: '4px 5px', border: '1px solid #d1d5db', textAlign: 'right', fontWeight: 700, color: '#374151', background: 'white' }}>Total HT</td>
+                <td style={{ padding: '4px 5px', border: '1px solid #d1d5db', textAlign: 'right', fontWeight: 700, color: '#1f2937', background: 'white' }}>{formatNumber(totalInvest)} €</td>
+              </tr>
+            </tfoot>
           </table>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-            <div style={{ border: '1px solid #d1d5db', background: 'white', padding: '4px 8px', minWidth: '150px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', gap: '12px' }}>
-                <span style={{ fontWeight: 700, color: '#374151' }}>Total HT</span>
-                <span style={{ fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInvest)} €</span>
-              </div>
-            </div>
-          </div>
         </div>
       );
     }
@@ -562,10 +560,24 @@ export function ServiceProposalPreview() {
 
   const renderTemplatePage = (templatePageNumber: number, displayPageNum: number) => {
     const elements = getStaticPageElements(templatePageNumber as PDFPageNumber);
-    const pageDynamicZones =
+    const rawPageDynamicZones =
       currentVersion?.pages
         .find((p) => p.pageNumber === (templatePageNumber as PDFPageNumber))
         ?.dynamicZones?.filter((z) => (z.type as string).startsWith('service_')) ?? [];
+    const pageDynamicZones = templatePageNumber === 1 && rawPageDynamicZones.every((z) => z.type !== 'service_client_info')
+      ? [
+          ...rawPageDynamicZones,
+          {
+            id: 'fallback_service_client_info_page1',
+            pageNumber: 1,
+            type: 'service_client_info' as const,
+            sourceSheet: 'client',
+            isRequired: true,
+            description: 'Informations client',
+            position: { top: 82, height: 10 },
+          },
+        ]
+      : rawPageDynamicZones;
     const positionedPageDynamicZones = layoutServiceZones(pageDynamicZones);
     return (
       <PageFrame pageNum={displayPageNum}>
@@ -581,7 +593,6 @@ export function ServiceProposalPreview() {
         )}
         {positionedPageDynamicZones.map((z, i) => renderServiceDynamicZone(z, `dz-${i}`))}
 
-        {templatePageNumber === 1 && pageDynamicZones.every(z => z.type !== 'service_client_info') && renderPage1ClientBlock()}
         {templatePageNumber === 1 && (() => {
           const selectedCommercial = commercialData?.commercialId
             ? getCommercialById(commercialData.commercialId)
