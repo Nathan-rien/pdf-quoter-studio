@@ -352,7 +352,7 @@ export function ServiceProposalExport() {
 
     const renderConditionsZone = (zone: PositionedDynamicZone) => `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 700; color: #1f2937; margin: 0 0 8px 0;">Vos modalités de règlement</p>
+        <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #1f2937; margin: 0 0 4px 0;">Vos modalités de règlement</p>
         <table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
           <tbody>
             ${conditionsRows
