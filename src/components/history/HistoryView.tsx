@@ -55,6 +55,7 @@ interface ProposalExportSummary {
   commercial_id: string | null;
   commercial_name: string | null;
   montant_investissement: number | null;
+  loyer_mensuel_ht: number | null;
   financial_partner: string | null;
   duration_months: number | null;
   has_proposal_state: boolean;
