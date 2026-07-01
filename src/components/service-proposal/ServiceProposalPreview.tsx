@@ -23,6 +23,7 @@ import {
   getSharedElementStyle,
   sortElementsByZIndex,
   resolveImageUrl,
+  substituteDynamicPlaceholders,
 } from '@/lib/template-render-utils';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import { getCommercialById } from '@/data/commerciaux';
