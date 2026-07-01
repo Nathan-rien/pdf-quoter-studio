@@ -80,15 +80,16 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
   const manualRentNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
   const manualQuarterlyNumber = manualQuarterlyRent.trim() === '' ? null : Number(manualQuarterlyRent);
-  const monthlyRent: number | null =
-    (!isQuick && typeof proposalRent === 'number' ? proposalRent : null) ??
-    (manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null) ??
-    (contract.monthly_rent_ht ?? null);
+  const proposalMonthlyRent = !isQuick && proposalRent?.monthly != null ? proposalRent.monthly : null;
+  const proposalQuarterlyRent = !isQuick && proposalRent?.quarterly != null ? proposalRent.quarterly : null;
+  const validManualMonthlyRent = manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null;
+  const validManualQuarterlyRent = manualQuarterlyNumber != null && !Number.isNaN(manualQuarterlyNumber) ? manualQuarterlyNumber : null;
+  const monthlyRent: number | null = proposalMonthlyRent ?? validManualMonthlyRent ?? contract.monthly_rent_ht ?? null;
   const quarterlyRent: number | null = isQuick
-    ? (manualQuarterlyNumber != null && !Number.isNaN(manualQuarterlyNumber) ? manualQuarterlyNumber : (contract.quarterly_rent_ht ?? null))
-    : (monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null);
+    ? (validManualQuarterlyRent ?? contract.quarterly_rent_ht ?? null)
+    : (proposalQuarterlyRent ?? (monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null));
   const displayedAmount = paymentFrequency === 'trimestriel' ? quarterlyRent : monthlyRent;
-  const hasProposalRent = !isQuick && typeof proposalRent === 'number';
+  const hasProposalRent = !isQuick && (proposalRent?.monthly != null || proposalRent?.quarterly != null);
 
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
 
@@ -353,7 +354,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">{isQuick ? 'Loyer HT' : 'Loyer HT (issu de la proposition)'}</Label>
+              <Label className="text-xs">{isQuick ? 'Loyer HT' : 'Loyers HT (issus de la proposition)'}</Label>
               {isQuick ? (
                 <div className="grid grid-cols-2 gap-2">
                   <Input
@@ -381,19 +382,24 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 </div>
               ) : (
                 <>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={manualMonthlyRent}
-                    onChange={(e) => setManualMonthlyRent(e.target.value)}
-                    placeholder="Loyer mensuel HT"
-                    className="h-9 text-sm"
-                  />
-                  {monthlyRent != null && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Trimestriel : {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-                    </p>
-                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={manualMonthlyRent}
+                      onChange={(e) => setManualMonthlyRent(e.target.value)}
+                      placeholder="Loyer mensuel HT"
+                      className="h-9 text-sm"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={manualQuarterlyRent}
+                      onChange={(e) => setManualQuarterlyRent(e.target.value)}
+                      placeholder="Loyer trimestriel HT"
+                      className="h-9 text-sm"
+                    />
+                  </div>
                 </>
               )}
             </div>
