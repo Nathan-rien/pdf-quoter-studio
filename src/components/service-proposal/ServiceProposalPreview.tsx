@@ -35,7 +35,7 @@ import type {
   IconContent,
   TemplateVersion,
 } from '@/types/template-editor';
-import type { PDFPageNumber } from '@/types/pdf-template';
+import type { DynamicZone, PDFPageNumber } from '@/types/pdf-template';
 
 const TEMPLATE_PAGES_BEFORE = 3;
 
@@ -293,8 +293,37 @@ export function ServiceProposalPreview() {
     </div>
   );
 
-  const renderServiceDynamicZone = (zone: { type: string; position?: { top?: number } }, key: string) => {
-    const topPct = `${zone.position?.top ?? (zone.type === 'service_client_info' ? 30 : zone.type === 'service_conditions' ? 10 : zone.type === 'service_invest_table' ? 5 : 65)}%`;
+  const getServiceZoneStyle = (zone: DynamicZone): React.CSSProperties => {
+    const fallbackTop =
+      zone.type === 'service_client_info'
+        ? 82
+        : zone.type === 'service_conditions'
+          ? 10
+          : zone.type === 'service_invest_table'
+            ? 5
+            : 65;
+    const fallbackHeight =
+      zone.type === 'service_client_info'
+        ? 10
+        : zone.type === 'service_conditions'
+          ? 12
+          : zone.type === 'service_invest_table'
+            ? 28
+            : 18;
+
+    return {
+      position: 'absolute',
+      top: `${zone.position?.top ?? fallbackTop}%`,
+      left: '4%',
+      right: '4%',
+      height: `${zone.position?.height ?? fallbackHeight}%`,
+      zIndex: 1000,
+      overflow: 'hidden',
+    };
+  };
+
+  const renderServiceDynamicZone = (zone: DynamicZone, key: string) => {
+    const zoneStyle = getServiceZoneStyle(zone);
 
     if (zone.type === 'service_client_info') {
       const selectedCommercial = commercialData?.commercialId
@@ -303,12 +332,12 @@ export function ServiceProposalPreview() {
       return (
         <div
           key={key}
-          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', zIndex: 5 }}
+          style={zoneStyle}
         >
-          <div className="bg-background/95 rounded-lg p-3 shadow-sm border">
+          <div className="h-full bg-background/95 rounded-lg p-2 shadow-sm border overflow-hidden">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-[9px] space-y-0.5">
+                <div className="text-[8px] space-y-0.5 leading-tight">
                   {clientData.raisonSociale && <p className="font-bold">{clientData.raisonSociale}</p>}
                   <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
                   <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
@@ -321,9 +350,9 @@ export function ServiceProposalPreview() {
                 </div>
               </div>
               <div>
-                <p className="font-medium text-[10px] mb-2">Votre interlocuteur</p>
+                <p className="font-medium text-[9px] mb-1">Votre interlocuteur</p>
                 {selectedCommercial ? (
-                  <div className="text-[9px] space-y-0.5">
+                  <div className="text-[8px] space-y-0.5 leading-tight">
                     <p className="font-semibold">{selectedCommercial.nom}</p>
                     {selectedCommercial.telephone && (
                       <p className="text-muted-foreground">{selectedCommercial.telephone}</p>
@@ -344,7 +373,7 @@ export function ServiceProposalPreview() {
       return (
         <div
           key={key}
-          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', fontSize: '9px', lineHeight: 1.8, zIndex: 5 }}
+          style={{ ...zoneStyle, fontSize: '9px', lineHeight: 1.6 }}
         >
           Services : {selectedServices.map((s) => s.label).join(', ')}
           <br />
@@ -363,7 +392,7 @@ export function ServiceProposalPreview() {
 
     if (zone.type === 'service_invest_table') {
       return (
-        <div key={key} style={{ position: 'absolute', top: topPct, left: '3%', width: '94%', zIndex: 5 }}>
+        <div key={key} style={zoneStyle}>
           {lignesData.length > 0 ? (
             <div className="border rounded overflow-hidden">
               <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
@@ -407,7 +436,7 @@ export function ServiceProposalPreview() {
       return (
         <div
           key={key}
-          style={{ position: 'absolute', top: topPct, left: '5%', width: '90%', fontSize: '9px', zIndex: 5 }}
+          style={{ ...zoneStyle, fontSize: '9px' }}
         >
           <div className="flex justify-between gap-6">
             <div className="flex-1">
@@ -493,7 +522,7 @@ export function ServiceProposalPreview() {
             </div>
           </div>
         )}
-        {pageDynamicZones.map((z, i) => renderServiceDynamicZone(z as { type: string; position?: { top?: number } }, `dz-${i}`))}
+        {pageDynamicZones.map((z, i) => renderServiceDynamicZone(z, `dz-${i}`))}
 
         {templatePageNumber === 1 && pageDynamicZones.every(z => z.type !== 'service_client_info') && renderPage1ClientBlock()}
         {templatePageNumber === 1 && (() => {
