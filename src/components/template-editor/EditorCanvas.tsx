@@ -189,6 +189,53 @@ export function EditorCanvas() {
     }
   }, [selectedElementIds]);
 
+  // Listener global pour Ctrl+C / Ctrl+V afin que le collage fonctionne
+  // même après un changement de page (le focus du conteneur peut être perdu).
+  useEffect(() => {
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'c' && key !== 'v') return;
+
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          tag === 'SELECT' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+      const state = useTemplateEditorStore.getState();
+      if (state.inlineEditingElementId) return;
+
+      if (key === 'c') {
+        if (state.selectedElementIds.length > 0) {
+          state.copySelectedElements();
+          toast.success(`${state.selectedElementIds.length} élément(s) copié(s)`);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (key === 'v') {
+        if (state.currentVersion?.status === 'brouillon' && state.editorMode === 'edit') {
+          const pasted = state.pasteElements();
+          if (pasted.length > 0) {
+            toast.success(`${pasted.length} élément(s) collé(s)`);
+          }
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onWindowKeyDown);
+    return () => window.removeEventListener('keydown', onWindowKeyDown);
+  }, []);
+
   // Fonction pour repositionner la toolbar dynamiquement
   const repositionToolbar = useCallback(() => {
     if (!inlineEditingElementId || !canvasRef.current || !toolbarRef.current || !editingElementRef.current) {
