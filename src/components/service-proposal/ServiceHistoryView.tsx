@@ -325,6 +325,16 @@ export function ServiceHistoryView({ onLoadProposal }: ServiceHistoryViewProps =
                     templateName={entry.template_name}
                     proposalType="service"
                   />
+                  {onLoadProposal && (
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8"
+                      onClick={() => setConfirmLoadEntry(entry)}
+                      disabled={loadingLoadId === entry.id}
+                      title="Charger dans l'éditeur"
+                    >
+                      {loadingLoadId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
                 </>
               )}
 
