@@ -236,7 +236,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
               </span>
             )}
-            {contract.financial_partner && <span>{contract.financial_partner}</span>}
+            {!hideFinancialPartner && contract.financial_partner && <span>{contract.financial_partner}</span>}
             {contract.duration_months && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.duration_months} mois</span>}
             {endDate && <span>→ {format(endDate, 'MM/yyyy', { locale: fr })}</span>}
             {contract.attachment_url && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />PDF joint</span>}
