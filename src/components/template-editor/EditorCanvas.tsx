@@ -36,6 +36,9 @@ const ZONE_POSITIONS: Record<string, { top: string; height: string }> = {
   'nos_options': { top: '66%', height: '22%' },
 };
 
+// Hauteur par défaut réduite pour les nouvelles zones (précision de positionnement)
+const DEFAULT_ZONE_FALLBACK = { top: '30%', height: '12%' };
+
 // CANVAS_SCALE importé depuis canvas-constants.ts pour garantir la synchronisation
 
 export function EditorCanvas() {
