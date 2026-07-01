@@ -330,37 +330,42 @@ export function ServiceProposalPreview() {
         ? getCommercialById(commercialData.commercialId)
         : null;
       return (
-        <div
-          key={key}
-          style={zoneStyle}
-        >
-          <div className="h-full bg-background/95 rounded-lg p-2 shadow-sm border overflow-hidden">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-[8px] space-y-0.5 leading-tight">
-                  {clientData.raisonSociale && <p className="font-bold">{clientData.raisonSociale}</p>}
-                  <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
-                  <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
-                  {clientData.email && (
-                    <p className="text-muted-foreground">{clientData.email}</p>
+        <div key={key} style={zoneStyle}>
+          <div
+            className="h-full bg-white overflow-hidden"
+            style={{
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              padding: '6px 10px',
+            }}
+          >
+            <div className="grid grid-cols-2 h-full">
+              <div style={{ paddingRight: '12px' }}>
+                <p style={{ fontSize: '7px', color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0 0 3px 0', fontWeight: 600 }}>
+                  Bénéficiaire
+                </p>
+                <div style={{ fontSize: '8px', lineHeight: 1.3, color: '#4b5563' }}>
+                  {clientData.raisonSociale && (
+                    <p style={{ fontWeight: 700, fontSize: '9px', color: '#1f2937', margin: 0 }}>{clientData.raisonSociale}</p>
                   )}
-                  {clientData.telephone && (
-                    <p className="text-muted-foreground">{clientData.telephone}</p>
-                  )}
+                  {clientData.nom && <p style={{ margin: '1px 0', fontWeight: 600 }}>{clientData.nom}</p>}
+                  {clientData.adresse && <p style={{ margin: '1px 0' }}>{clientData.adresse}</p>}
+                  {clientData.email && <p style={{ margin: '1px 0' }}>{clientData.email}</p>}
+                  {clientData.telephone && <p style={{ margin: '1px 0' }}>{clientData.telephone}</p>}
                 </div>
               </div>
-              <div>
-                <p className="font-medium text-[9px] mb-1">Votre interlocuteur</p>
+              <div style={{ borderLeft: '1px solid #e5e7eb', paddingLeft: '12px' }}>
+                <p style={{ fontSize: '7px', color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0 0 3px 0', fontWeight: 600 }}>
+                  Votre interlocuteur
+                </p>
                 {selectedCommercial ? (
-                  <div className="text-[8px] space-y-0.5 leading-tight">
-                    <p className="font-semibold">{selectedCommercial.nom}</p>
-                    {selectedCommercial.telephone && (
-                      <p className="text-muted-foreground">{selectedCommercial.telephone}</p>
-                    )}
-                    <p className="text-muted-foreground">{selectedCommercial.email}</p>
+                  <div style={{ fontSize: '8px', lineHeight: 1.3, color: '#4b5563' }}>
+                    <p style={{ fontWeight: 700, fontSize: '9px', color: '#1f2937', margin: 0 }}>{selectedCommercial.nom}</p>
+                    {selectedCommercial.telephone && <p style={{ margin: '1px 0' }}>{selectedCommercial.telephone}</p>}
+                    {selectedCommercial.email && <p style={{ margin: '1px 0' }}>{selectedCommercial.email}</p>}
                   </div>
                 ) : (
-                  <p className="text-[9px] text-muted-foreground italic">Non sélectionné</p>
+                  <p style={{ fontSize: '8px', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Non sélectionné</p>
                 )}
               </div>
             </div>
@@ -370,22 +375,26 @@ export function ServiceProposalPreview() {
     }
 
     if (zone.type === 'service_conditions') {
+      const rows: Array<[string, string, boolean?]> = [
+        ['Services', selectedServices.map((s) => s.label).join(', ') || '—'],
+        ['Périodicité', paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'],
+        ['Mode de règlement', paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : '—'],
+        ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
+        ['Démarrage', startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'],
+        ['Total HT services', `${formatNumber(totalServicesHt)} €`, true],
+      ];
       return (
-        <div
-          key={key}
-          style={{ ...zoneStyle, fontSize: '9px', lineHeight: 1.6 }}
-        >
-          Services : {selectedServices.map((s) => s.label).join(', ')}
-          <br />
-          Périodicité : {paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'}
-          <br />
-          Mode de règlement : {paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : '—'}
-          <br />
-          Durée : {contractDuration ? `${contractDuration} mois` : '—'}
-          <br />
-          Démarrage : {startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'}
-          <br />
-          Total HT services : {formatNumber(totalServicesHt)} €
+        <div key={key} style={zoneStyle}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px', background: 'white', border: '1px solid #e5e7eb' }}>
+            <tbody>
+              {rows.map(([label, value, bold]) => (
+                <tr key={label}>
+                  <td style={{ width: '38%', padding: '4px 8px', background: '#f9fafb', fontWeight: 600, color: '#374151', border: '1px solid #e5e7eb' }}>{label}</td>
+                  <td style={{ padding: '4px 8px', color: '#1f2937', border: '1px solid #e5e7eb', fontWeight: bold ? 700 : 400, textAlign: bold ? 'right' : 'left' }}>{value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       );
     }
@@ -393,44 +402,44 @@ export function ServiceProposalPreview() {
     if (zone.type === 'service_invest_table') {
       return (
         <div key={key} style={zoneStyle}>
-          {lignesData.length > 0 ? (
-            <div className="border rounded overflow-hidden">
-              <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
-                <div className="col-span-6">Désignation</div>
-                <div className="col-span-2 text-center">Qté</div>
-                <div className="col-span-2 text-right">P.U. HT</div>
-                <div className="col-span-2 text-right">Total HT</div>
-              </div>
-              <div className="divide-y divide-border">
-                {lignesData.map((ligne) => (
-                  <div
-                    key={ligne.id}
-                    className="grid grid-cols-12 gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20"
-                  >
-                    <div className="col-span-6 break-words whitespace-pre-wrap leading-tight py-0.5">
-                      {ligne.designation || '-'}
-                    </div>
-                    <div className="col-span-2 text-center">{ligne.quantite}</div>
-                    <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
-                    <div className="col-span-2 text-right font-medium">{formatNumber(ligne.totalHT)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-[9px] text-muted-foreground italic">Aucune ligne de service.</div>
-          )}
-          <div className="mt-2 flex justify-end">
-            <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
-              <div className="flex justify-between font-semibold text-[10px] gap-3">
-                <span>Total HT&nbsp;:&nbsp;</span>
-                <span>{formatNumber(totalInvest)} €</span>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', background: 'white' }}>
+            <thead>
+              <tr style={{ background: '#f3f4f6' }}>
+                <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb' }}>Désignation</th>
+                <th style={{ padding: '5px 8px', textAlign: 'center', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '40px' }}>Qté</th>
+                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '70px' }}>P.U. HT</th>
+                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '80px' }}>Total HT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lignesData.length > 0 ? (
+                lignesData.map((ligne, idx) => (
+                  <tr key={ligne.id} style={{ background: idx % 2 === 1 ? '#fafafa' : 'white' }}>
+                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', verticalAlign: 'top', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{ligne.designation || '-'}</td>
+                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', textAlign: 'center', verticalAlign: 'top' }}>{ligne.quantite}</td>
+                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top' }}>{formatNumber(ligne.prixUnitaire)}</td>
+                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top', fontWeight: 600 }}>{formatNumber(ligne.totalHT)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} style={{ padding: '8px', textAlign: 'center', color: '#9ca3af', fontStyle: 'italic', border: '1px solid #e5e7eb' }}>Aucune ligne de service</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <div style={{ border: '1px solid #d1d5db', background: 'white', padding: '6px 10px', minWidth: '180px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', gap: '12px' }}>
+                <span style={{ fontWeight: 700, color: '#374151' }}>Total HT</span>
+                <span style={{ fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInvest)} €</span>
               </div>
             </div>
           </div>
         </div>
       );
     }
+
 
     if (zone.type === 'service_signature') {
       return (
