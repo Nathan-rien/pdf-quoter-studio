@@ -80,7 +80,10 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
 
   function handleSave() {
     const selected = commerciaux.find((c) => c.id === commercialId);
-    const rentNumber = monthlyRent.trim() === '' ? null : Number(monthlyRent);
+    const rentNumber = quarterlyRent.trim() === '' ? null : Number(quarterlyRent);
+    const monthlyRentValue = rentNumber != null && !Number.isNaN(rentNumber)
+      ? Math.round((rentNumber / 3) * 100) / 100
+      : null;
     updateContract.mutate({
       id: contract.id,
       updates: {
@@ -91,7 +94,7 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
         commercial_id: commercialId || contract.commercial_id,
         commercial_name: selected?.nom ?? contract.commercial_name,
         contract_number: contractNumber.trim() || null,
-        monthly_rent_ht: rentNumber != null && !Number.isNaN(rentNumber) ? rentNumber : null,
+        monthly_rent_ht: monthlyRentValue,
       },
     });
   }
