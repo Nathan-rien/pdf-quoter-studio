@@ -9,7 +9,7 @@ export type ProposalType = 'location' | 'service';
 
 export interface Contract {
   id: string;
-  proposal_id: string;
+  proposal_id: string | null;
   proposal_type: ProposalType;
   client_name: string;
   commercial_id: string;
@@ -22,6 +22,8 @@ export interface Contract {
   payment_frequency?: PaymentFrequency;
   contract_number?: string | null;
   monthly_rent_ht?: number | null;
+  quarterly_rent_ht?: number | null;
+  is_quick_contract?: boolean;
   attachment_url?: string | null;
   attachment_name?: string | null;
   validated_at: string;
