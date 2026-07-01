@@ -16,10 +16,12 @@ import { useToast } from '@/hooks/use-toast';
 function groupByCommercial(contracts: Contract[]) {
   const map = new Map<string, { name: string; contracts: Contract[] }>();
   for (const c of contracts) {
-    if (!map.has(c.commercial_id)) {
-      map.set(c.commercial_id, { name: c.commercial_name ?? c.commercial_id, contracts: [] });
+    const key = c.is_quick_contract ? '__quick__' : c.commercial_id;
+    const name = c.is_quick_contract ? 'Contrats rapides' : (c.commercial_name ?? c.commercial_id);
+    if (!map.has(key)) {
+      map.set(key, { name, contracts: [] });
     }
-    map.get(c.commercial_id)!.contracts.push(c);
+    map.get(key)!.contracts.push(c);
   }
   return Array.from(map.entries()).map(([id, val]) => ({
     commercialId: id,
