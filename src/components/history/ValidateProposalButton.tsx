@@ -52,6 +52,7 @@ export function ValidateProposalButton({
       commercial_id: commercialId,
       commercial_name: commercialName,
       amount_ht: amountHt,
+      monthly_rent_ht: monthlyRentHt,
       template_name: templateName,
       financial_partner: financialPartner ?? null,
       duration_months: durationMonths ?? null,
