@@ -305,12 +305,12 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Loyer mensuel HT (€)</Label>
+              <Label className="text-xs">Loyer trimestriel HT (€)</Label>
               <Input
                 type="number"
                 step="0.01"
-                value={monthlyRent}
-                onChange={(e) => setMonthlyRent(e.target.value)}
+                value={quarterlyRent}
+                onChange={(e) => setQuarterlyRent(e.target.value)}
                 placeholder="0.00"
                 className="h-9 text-sm"
               />
