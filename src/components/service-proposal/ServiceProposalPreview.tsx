@@ -38,6 +38,12 @@ import type {
 import type { DynamicZone, PDFPageNumber } from '@/types/pdf-template';
 
 const TEMPLATE_PAGES_BEFORE = 3;
+const SERVICE_ZONE_GAP_PERCENT = 1.25;
+
+type PositionedDynamicZone = DynamicZone & {
+  layoutTop?: number;
+  layoutMinHeight?: number;
+};
 
 const formatNumber = (value: number | null | undefined) => {
   if (value === null || value === undefined) return '-';
@@ -293,35 +299,77 @@ export function ServiceProposalPreview() {
     </div>
   );
 
-  const getServiceZoneStyle = (zone: DynamicZone): React.CSSProperties => {
-    const fallbackTop =
-      zone.type === 'service_client_info'
-        ? 82
-        : zone.type === 'service_conditions'
-          ? 10
-          : zone.type === 'service_invest_table'
-            ? 5
-            : 65;
-    const fallbackHeight =
-      zone.type === 'service_client_info'
+  const getFallbackZoneTop = (zone: DynamicZone): number =>
+    zone.type === 'service_client_info'
+      ? 82
+      : zone.type === 'service_conditions'
         ? 10
-        : zone.type === 'service_conditions'
-          ? 12
-          : zone.type === 'service_invest_table'
-            ? 28
-            : 18;
+        : zone.type === 'service_invest_table'
+          ? 5
+          : 65;
 
+  const getFallbackZoneHeight = (zone: DynamicZone): number =>
+    zone.type === 'service_client_info'
+      ? 10
+      : zone.type === 'service_conditions'
+        ? 16
+        : zone.type === 'service_invest_table'
+          ? 30
+          : 18;
+
+  const getZoneTop = (zone: DynamicZone): number => zone.position?.top ?? getFallbackZoneTop(zone);
+  const getZoneMinHeight = (zone: DynamicZone): number => zone.position?.height ?? getFallbackZoneHeight(zone);
+
+  const estimateTextVisualLines = (text: string): number =>
+    Math.max(
+      1,
+      text
+        .split('\n')
+        .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 72)), 0),
+    );
+
+  const estimateServiceZoneHeight = (zone: DynamicZone): number => {
+    const minHeight = getZoneMinHeight(zone);
+    if (zone.type === 'service_invest_table') {
+      const visualRows = lignesData.length > 0
+        ? lignesData.reduce((total, ligne) => total + estimateTextVisualLines(ligne.designation || '-'), 0)
+        : 1;
+      return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
+    }
+    if (zone.type === 'service_conditions') return Math.max(minHeight, 17);
+    if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
+    if (zone.type === 'service_signature') return Math.max(minHeight, 14);
+    return minHeight;
+  };
+
+  const layoutServiceZones = (zones: DynamicZone[]): PositionedDynamicZone[] => {
+    let currentBottom = 0;
+    return [...zones]
+      .sort((a, b) => getZoneTop(a) - getZoneTop(b))
+      .map((zone) => {
+        const minHeight = getZoneMinHeight(zone);
+        const estimatedHeight = estimateServiceZoneHeight(zone);
+        const naturalTop = getZoneTop(zone);
+        const adjustedTop = Math.max(naturalTop, currentBottom > 0 ? currentBottom + SERVICE_ZONE_GAP_PERCENT : naturalTop);
+        const safeTop = Math.min(adjustedTop, Math.max(1, 96 - minHeight));
+        currentBottom = Math.max(currentBottom, safeTop + estimatedHeight);
+        return { ...zone, layoutTop: safeTop, layoutMinHeight: minHeight };
+      });
+  };
+
+  const getServiceZoneStyle = (zone: PositionedDynamicZone): React.CSSProperties => {
     return {
       position: 'absolute',
-      top: `${zone.position?.top ?? fallbackTop}%`,
+      top: `${zone.layoutTop ?? getZoneTop(zone)}%`,
       left: '4%',
       right: '4%',
-      minHeight: `${zone.position?.height ?? fallbackHeight}%`,
+      minHeight: `${zone.layoutMinHeight ?? getZoneMinHeight(zone)}%`,
       zIndex: 1000,
+      overflow: 'visible',
     };
   };
 
-  const renderServiceDynamicZone = (zone: DynamicZone, key: string) => {
+  const renderServiceDynamicZone = (zone: PositionedDynamicZone, key: string) => {
     const zoneStyle = getServiceZoneStyle(zone);
 
     if (zone.type === 'service_client_info') {
@@ -331,14 +379,14 @@ export function ServiceProposalPreview() {
       return (
         <div key={key} style={zoneStyle}>
           <div
-            className="h-full bg-white overflow-hidden"
+            className="bg-white"
             style={{
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               padding: '6px 10px',
             }}
           >
-            <div className="grid grid-cols-2 h-full">
+            <div className="grid grid-cols-2">
               <div style={{ paddingRight: '12px' }}>
                 <p style={{ fontSize: '7px', color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0 0 3px 0', fontWeight: 600 }}>
                   Bénéficiaire
@@ -384,12 +432,12 @@ export function ServiceProposalPreview() {
       ];
       return (
         <div key={key} style={zoneStyle}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px', background: 'white', border: '1px solid #e5e7eb' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', lineHeight: 1.2, background: 'white', border: '1px solid #e5e7eb', tableLayout: 'fixed' }}>
             <tbody>
               {rows.map(([label, value, bold]) => (
                 <tr key={label}>
-                  <td style={{ width: '38%', padding: '4px 8px', background: '#f9fafb', fontWeight: 600, color: '#374151', border: '1px solid #e5e7eb' }}>{label}</td>
-                  <td style={{ padding: '4px 8px', color: '#1f2937', border: '1px solid #e5e7eb', fontWeight: bold ? 700 : 400, textAlign: bold ? 'right' : 'left' }}>{value}</td>
+                  <td style={{ width: '38%', padding: '3px 6px', background: '#f9fafb', fontWeight: 600, color: '#374151', border: '1px solid #e5e7eb', verticalAlign: 'top' }}>{label}</td>
+                  <td style={{ padding: '3px 6px', color: '#1f2937', border: '1px solid #e5e7eb', fontWeight: bold ? 700 : 400, textAlign: bold ? 'right' : 'left', overflowWrap: 'anywhere', verticalAlign: 'top' }}>{value}</td>
                 </tr>
               ))}
             </tbody>
@@ -401,23 +449,23 @@ export function ServiceProposalPreview() {
     if (zone.type === 'service_invest_table') {
       return (
         <div key={key} style={zoneStyle}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', background: 'white' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '7.2px', lineHeight: 1.15, background: 'white', tableLayout: 'fixed' }}>
             <thead>
               <tr style={{ background: '#f3f4f6' }}>
-                <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb' }}>Désignation</th>
-                <th style={{ padding: '5px 8px', textAlign: 'center', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '40px' }}>Qté</th>
-                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '70px' }}>P.U. HT</th>
-                <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '80px' }}>Total HT</th>
+                <th style={{ padding: '3px 5px', textAlign: 'left', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb' }}>Désignation</th>
+                <th style={{ padding: '3px 5px', textAlign: 'center', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '34px' }}>Qté</th>
+                <th style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '56px' }}>P.U. HT</th>
+                <th style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '64px' }}>Total HT</th>
               </tr>
             </thead>
             <tbody>
               {lignesData.length > 0 ? (
                 lignesData.map((ligne, idx) => (
                   <tr key={ligne.id} style={{ background: idx % 2 === 1 ? '#fafafa' : 'white' }}>
-                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', verticalAlign: 'top', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{ligne.designation || '-'}</td>
-                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', textAlign: 'center', verticalAlign: 'top' }}>{ligne.quantite}</td>
-                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top' }}>{formatNumber(ligne.prixUnitaire)}</td>
-                    <td style={{ padding: '5px 8px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top', fontWeight: 600 }}>{formatNumber(ligne.totalHT)}</td>
+                    <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', verticalAlign: 'top', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{ligne.designation || '-'}</td>
+                    <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', textAlign: 'center', verticalAlign: 'top' }}>{ligne.quantite}</td>
+                    <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top' }}>{formatNumber(ligne.prixUnitaire)}</td>
+                    <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top', fontWeight: 600 }}>{formatNumber(ligne.totalHT)}</td>
                   </tr>
                 ))
               ) : (
@@ -426,15 +474,13 @@ export function ServiceProposalPreview() {
                 </tr>
               )}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} style={{ padding: '4px 5px', border: '1px solid #d1d5db', textAlign: 'right', fontWeight: 700, color: '#374151', background: 'white' }}>Total HT</td>
+                <td style={{ padding: '4px 5px', border: '1px solid #d1d5db', textAlign: 'right', fontWeight: 700, color: '#1f2937', background: 'white' }}>{formatNumber(totalInvest)} €</td>
+              </tr>
+            </tfoot>
           </table>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-            <div style={{ border: '1px solid #d1d5db', background: 'white', padding: '6px 10px', minWidth: '180px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', gap: '12px' }}>
-                <span style={{ fontWeight: 700, color: '#374151' }}>Total HT</span>
-                <span style={{ fontWeight: 700, color: '#1f2937' }}>{formatNumber(totalInvest)} €</span>
-              </div>
-            </div>
-          </div>
         </div>
       );
     }
@@ -514,10 +560,25 @@ export function ServiceProposalPreview() {
 
   const renderTemplatePage = (templatePageNumber: number, displayPageNum: number) => {
     const elements = getStaticPageElements(templatePageNumber as PDFPageNumber);
-    const pageDynamicZones =
+    const rawPageDynamicZones =
       currentVersion?.pages
         .find((p) => p.pageNumber === (templatePageNumber as PDFPageNumber))
         ?.dynamicZones?.filter((z) => (z.type as string).startsWith('service_')) ?? [];
+    const pageDynamicZones = templatePageNumber === 1 && rawPageDynamicZones.every((z) => z.type !== 'service_client_info')
+      ? [
+          ...rawPageDynamicZones,
+          {
+            id: 'fallback_service_client_info_page1',
+            pageNumber: 1,
+            type: 'service_client_info' as const,
+            sourceSheet: 'client',
+            isRequired: true,
+            description: 'Informations client',
+            position: { top: 82, height: 10 },
+          },
+        ]
+      : rawPageDynamicZones;
+    const positionedPageDynamicZones = layoutServiceZones(pageDynamicZones);
     return (
       <PageFrame pageNum={displayPageNum}>
         {elements.length > 0 ? (
@@ -530,9 +591,8 @@ export function ServiceProposalPreview() {
             </div>
           </div>
         )}
-        {pageDynamicZones.map((z, i) => renderServiceDynamicZone(z, `dz-${i}`))}
+        {positionedPageDynamicZones.map((z, i) => renderServiceDynamicZone(z, `dz-${i}`))}
 
-        {templatePageNumber === 1 && pageDynamicZones.every(z => z.type !== 'service_client_info') && renderPage1ClientBlock()}
         {templatePageNumber === 1 && (() => {
           const selectedCommercial = commercialData?.commercialId
             ? getCommercialById(commercialData.commercialId)
