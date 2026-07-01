@@ -23,6 +23,7 @@ import {
   getSharedElementStyle,
   sortElementsByZIndex,
   resolveImageUrl,
+  substituteDynamicPlaceholders,
 } from '@/lib/template-render-utils';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import { getCommercialById } from '@/data/commerciaux';
@@ -176,11 +177,11 @@ export function ServiceProposalPreview() {
       const inner = content.htmlContent ? (
         <div
           style={{ paddingLeft: `${indentPx}px` }}
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.htmlContent) }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(substituteDynamicPlaceholders(content.htmlContent)) }}
         />
       ) : (
         <>
-          {(content.text || '').split('\n').map((line, i) => (
+          {substituteDynamicPlaceholders(content.text || '').split('\n').map((line, i) => (
             <div key={i} style={{ paddingLeft: `${indentPx}px` }}>
               {content.listType === 'bullet' && '• '}
               {content.listType === 'numbered' && `${i + 1}. `}
