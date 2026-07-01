@@ -101,7 +101,14 @@ export default function Index() {
           />
         ) : null;
       case 'service-history':
-        return isAdmin ? <ServiceHistoryView /> : null;
+        return isAdmin ? (
+          <ServiceHistoryView
+            onLoadProposal={(snapshot) => {
+              useServiceProposalStore.getState().loadFromExport(snapshot);
+              setCurrentView('service-proposal');
+            }}
+          />
+        ) : null;
       case 'service-contracts':
         return isAdmin ? (
           <ServiceContractsView
