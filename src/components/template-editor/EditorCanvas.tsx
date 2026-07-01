@@ -516,7 +516,7 @@ export function EditorCanvas() {
       const canvasRect = canvasRef.current.getBoundingClientRect();
       const yPercent = ((e.clientY - canvasRect.top - dragOffset.y) / canvasRect.height) * 100;
       
-      const defaultPosition = ZONE_POSITIONS[zone.id] || { top: '30%', height: '40%' };
+      const defaultPosition = ZONE_POSITIONS[zone.id] || DEFAULT_ZONE_FALLBACK;
       const currentHeight = zone.position?.height || parseFloat(defaultPosition.height);
       
       // Clamper entre 5% et (100% - height)
@@ -957,7 +957,7 @@ export function EditorCanvas() {
 
           {/* Zones dynamiques (affichées en premier pour être en fond) */}
           {dynamicZones.map((zone) => {
-            const defaultPosition = ZONE_POSITIONS[zone.id] || { top: '30%', height: '40%' };
+            const defaultPosition = ZONE_POSITIONS[zone.id] || DEFAULT_ZONE_FALLBACK;
             const customPosition = zone.position;
             const topValue = customPosition ? `${customPosition.top}%` : defaultPosition.top;
             const heightValue = customPosition ? `${customPosition.height}%` : defaultPosition.height;
