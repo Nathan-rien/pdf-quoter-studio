@@ -1,38 +1,31 @@
-## Problème
+## Objectif
 
-Dans la fiche contrat Location, le champ **"Loyer trimestriel HT (€)"** est prérempli avec **9500 × 3** parce que le contrat n'a jamais reçu le vrai loyer mensuel : à la validation, on lui passe `montant_investissement` (9500 €) dans `amount_ht`. Ensuite `ContractRow` utilise `contract.amount_ht` en fallback quand `monthly_rent_ht` est vide, d'où l'affichage `9 500,00 € (mensuel)` dans l'en-tête et `28 500` dans le champ trimestriel.
+Pour chaque contrat Location, afficher automatiquement le **loyer mensuel HT** et le **loyer trimestriel HT** issus de la **proposition validée associée** (via `contract.proposal_id → proposal_exports`), au lieu d'un champ manuel qui reprenait à tort le montant d'investissement.
 
-## Correctif
+## Comportement cible
 
-### 1. Persister le vrai loyer mensuel dès l'export d'une Proposition Location
+- Ligne contrat : affichage lecture seule "Loyer mensuel HT : X € · Loyer trimestriel HT : Y €" à côté du badge de périodicité. Le badge Mensuel/Trimestriel continue de piloter quel montant est mis en avant.
+- La valeur provient toujours de la 1re proposition retenue dans `proposal_exports.proposal_state` (même calcul que la matrice : `getAllProposalsCalculations()[0].calculations.loyerMensuel`), le trimestriel étant `mensuel × 3` via `calculateLoyerTrimestriel`.
+- Contrats **manuels** (sans `proposal_id` exploitable) ou anciens contrats dont la proposition n'a plus de `proposal_state` : afficher "—" et conserver un petit champ éditable "Loyer mensuel HT" pour saisir la valeur à la main (stockée dans `contracts.monthly_rent_ht`, déjà existant).
+- Suppression du champ éditable "Loyer trimestriel HT (€)" actuel, qui prête à confusion.
 
-- Migration : ajouter `loyer_mensuel_ht numeric` sur `public.proposal_exports` (nullable).
-- `src/components/rental-proposal/RentalProposalExport.tsx` : lors de l'insert dans `proposal_exports`, calculer le loyer mensuel de la 1ʳᵉ proposition via `calculateAllMatriceValues(...)` (mêmes inputs que la matrice) et écrire `loyer_mensuel_ht`.
+## Détails techniques
 
-### 2. Transmettre ce loyer à la création de contrat
+1. `src/hooks/useContracts.ts`
+   - Ajouter un hook `useContractProposalRent(proposalId)` : `SELECT proposal_state FROM proposal_exports WHERE id = proposalId` puis calcule le loyer mensuel via `getAllProposalsCalculations` (importé de `@/lib/rental-calculations` — vérifier la signature exacte, sinon reproduire le calcul depuis `proposal_state.proposals[0]` + `matriceData`). Mise en cache React Query par `proposalId`.
+   - Ne pas modifier la table `contracts`. `monthly_rent_ht` reste utilisé uniquement comme fallback manuel.
 
-- `src/components/history/HistoryView.tsx` : sélectionner `loyer_mensuel_ht`, l'ajouter à l'interface interne, le passer à `<ValidateProposalButton monthlyRentHt=… />`.
-- `src/components/history/ValidateProposalButton.tsx` : accepter `monthlyRentHt`, l'inclure dans l'appel `validateProposal.mutateAsync({... monthly_rent_ht })`.
-- `src/hooks/useContracts.ts` (`useValidateProposal`) : accepter `monthly_rent_ht` et l'insérer dans `contracts`. Garder `amount_ht` inchangé (reste = investissement pour compat historique/stats).
+2. `src/components/contracts/ContractRow.tsx`
+   - Appeler le nouveau hook avec `contract.proposal_id` (skip si contrat manuel).
+   - Calculer `mensuel = proposalRent ?? contract.monthly_rent_ht ?? null` et `trimestriel = mensuel != null ? mensuel * 3 : null`.
+   - Remplacer le bloc "Loyer trimestriel HT (€)" par l'affichage lecture seule + champ manuel uniquement si `proposalRent` est absent.
+   - Adapter `displayedAmount` (badge Mensuel/Trimestriel) pour utiliser `mensuel`/`trimestriel` dérivés.
 
-### 3. Nettoyer l'affichage dans la fiche contrat
+3. Nettoyage lié aux changements précédents
+   - `RentalProposalExport.tsx` : conserver l'écriture de `loyer_mensuel_ht` (utile comme cache/backfill futur), mais ce champ n'est plus la source d'affichage.
+   - `ValidateProposalButton.tsx` / `HistoryView.tsx` : garder le passage de `monthlyRentHt` pour prérempler `contracts.monthly_rent_ht` à la création, en cachet de secours si la proposition est supprimée plus tard.
 
-`src/components/contracts/ContractRow.tsx` :
-- Retirer le fallback `contract.amount_ht` pour le loyer :
-  - `effectiveRent` = `contract.monthly_rent_ht` uniquement.
-  - Valeur initiale du champ "Loyer trimestriel HT" = `calculateLoyerTrimestriel(monthly_rent_ht)` si présent, sinon vide.
-  - En-tête : n'afficher le badge `€ (mensuel/trimestriel)` que si `monthly_rent_ht` est renseigné.
-- Résultat : les contrats existants (sans `monthly_rent_ht`) affichent un champ vide à compléter au lieu du faux montant. Les nouveaux contrats validés depuis l'historique sont préremplis avec le vrai loyer.
+## Hors périmètre
 
-### 4. Backfill léger (optionnel, à confirmer)
-
-Pour les contrats déjà validés depuis un export qui possédait `proposal_state`, on peut, dans une migration data séparée, recalculer et remplir `contracts.monthly_rent_ht`. Non inclus par défaut pour éviter d'écraser des saisies manuelles ; à faire seulement si vous le demandez.
-
-## Fichiers modifiés
-
-- migration Supabase (colonne `loyer_mensuel_ht`)
-- `src/components/rental-proposal/RentalProposalExport.tsx`
-- `src/components/history/HistoryView.tsx`
-- `src/components/history/ValidateProposalButton.tsx`
-- `src/hooks/useContracts.ts`
-- `src/components/contracts/ContractRow.tsx`
+- Pas de modification de schéma DB.
+- Pas de recalcul en masse pour les contrats existants : la valeur est calculée à la volée à chaque affichage.

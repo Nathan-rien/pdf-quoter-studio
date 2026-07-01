@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, Contract, PaymentFrequency } from '@/hooks/useContracts';
 import { calculateLoyerTrimestriel } from '@/lib/rental-calculations';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,10 +56,11 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
-  const [quarterlyRent, setQuarterlyRent] = useState<string>(
-    contract.monthly_rent_ht != null
-      ? String(calculateLoyerTrimestriel(contract.monthly_rent_ht))
-      : ''
+  const { data: proposalRent } = useContractProposalRent(contract.proposal_id);
+
+  // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
+  const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
+    contract.monthly_rent_ht != null ? String(contract.monthly_rent_ht) : ''
   );
 
   const [uploading, setUploading] = useState(false);
@@ -69,20 +70,24 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
     ? addMonths(parseISO(`${implementationMonth}-01`), parseInt(durationMonths))
     : null;
 
-  const effectiveRent = contract.monthly_rent_ht ?? null;
-  const displayedAmount = effectiveRent != null
-    ? (paymentFrequency === 'trimestriel'
-        ? (calculateLoyerTrimestriel(effectiveRent) ?? effectiveRent * 3)
-        : effectiveRent)
-    : null;
+  // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
+  const manualRentNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
+  const monthlyRent: number | null =
+    (typeof proposalRent === 'number' ? proposalRent : null) ??
+    (manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null) ??
+    (contract.monthly_rent_ht ?? null);
+  const quarterlyRent = monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null;
+  const displayedAmount = paymentFrequency === 'trimestriel' ? quarterlyRent : monthlyRent;
+  const hasProposalRent = typeof proposalRent === 'number';
 
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
 
   function handleSave() {
     const selected = commerciaux.find((c) => c.id === commercialId);
-    const rentNumber = quarterlyRent.trim() === '' ? null : Number(quarterlyRent);
-    const monthlyRentValue = rentNumber != null && !Number.isNaN(rentNumber)
-      ? Math.round((rentNumber / 3) * 100) / 100
+    // Loyer mensuel manuel : conservé uniquement quand aucune proposition n'apporte la valeur
+    const manualNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
+    const manualMonthlyValue = manualNumber != null && !Number.isNaN(manualNumber)
+      ? Math.round(manualNumber * 100) / 100
       : null;
     updateContract.mutate({
       id: contract.id,
@@ -94,7 +99,7 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
         commercial_id: commercialId || contract.commercial_id,
         commercial_name: selected?.nom ?? contract.commercial_name,
         contract_number: contractNumber.trim() || null,
-        monthly_rent_ht: monthlyRentValue,
+        monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
       },
     });
   }
@@ -210,9 +215,9 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
               <Calendar className="h-3 w-3" />
               {format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
             </span>
-            {displayedAmount != null && (
+            {monthlyRent != null && (
               <span>
-                {displayedAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € ({paymentFrequency})
+                Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
               </span>
             )}
             {contract.financial_partner && <span>{contract.financial_partner}</span>}
@@ -305,15 +310,30 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Loyer trimestriel HT (€)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={quarterlyRent}
-                onChange={(e) => setQuarterlyRent(e.target.value)}
-                placeholder="0.00"
-                className="h-9 text-sm"
-              />
+              <Label className="text-xs">Loyer HT (issu de la proposition)</Label>
+              {hasProposalRent ? (
+                <div className="h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3">
+                  <span>Mensuel <strong>{(monthlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                  <span className="text-muted-foreground">·</span>
+                  <span>Trimestriel <strong>{(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualMonthlyRent}
+                    onChange={(e) => setManualMonthlyRent(e.target.value)}
+                    placeholder="Loyer mensuel HT"
+                    className="h-9 text-sm"
+                  />
+                  {monthlyRent != null && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Trimestriel : {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                    </p>
+                  )}
+                </>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Mois de mise en place</Label>
