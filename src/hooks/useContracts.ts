@@ -174,6 +174,17 @@ export function useContractProposalRent(proposalId: string | null | undefined) {
       if (typeof cached === 'number' && !Number.isNaN(cached)) return cached;
 
       const state = (data as any).proposal_state;
+      if (!state) return null;
+
+      // Service proposal: derive monthly rent from totalServicesHt + paymentFrequency
+      if (state.kind === 'service-proposal') {
+        const total = Number(state.totalServicesHt);
+        if (!Number.isFinite(total) || total <= 0) return null;
+        const freq = state.paymentFrequency;
+        if (freq === 'trimestriel') return total / 3;
+        return total; // 'mensuel' or default
+      }
+
       const proposal = state?.proposals?.[0];
       if (!proposal) return null;
       const optionsPrices = Array.isArray(state?.optionsServices)
@@ -196,3 +207,4 @@ export function useContractProposalRent(proposalId: string | null | undefined) {
     },
   });
 }
+
