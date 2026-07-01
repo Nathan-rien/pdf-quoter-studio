@@ -432,7 +432,7 @@ export function ServiceProposalPreview() {
       ];
       return (
         <div key={key} style={zoneStyle}>
-          <p style={{ fontSize: '10px', fontWeight: 700, color: '#1f2937', margin: '0 0 4px 0' }}>
+          <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '28px', fontWeight: 700, color: '#1f2937', margin: '0 0 8px 0' }}>
             Vos modalités de règlement
           </p>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', lineHeight: 1.2, background: 'white', border: '1px solid #e5e7eb', tableLayout: 'fixed' }}>
