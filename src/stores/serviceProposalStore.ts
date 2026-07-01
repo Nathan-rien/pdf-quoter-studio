@@ -95,6 +95,7 @@ interface ServiceProposalStoreActions {
   }) => void;
   resetAll: () => void;
   loadFromServiceProposal: (proposal: ServiceProposal) => void;
+  loadFromExport: (snapshot: Record<string, any>) => void;
 }
 
 export type ServiceProposalStore = ServiceProposalStoreState & ServiceProposalStoreActions;
