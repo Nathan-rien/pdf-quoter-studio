@@ -56,10 +56,11 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
-  const [quarterlyRent, setQuarterlyRent] = useState<string>(
-    contract.monthly_rent_ht != null
-      ? String(calculateLoyerTrimestriel(contract.monthly_rent_ht))
-      : ''
+  const { data: proposalRent } = useContractProposalRent(contract.proposal_id);
+
+  // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
+  const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
+    contract.monthly_rent_ht != null ? String(contract.monthly_rent_ht) : ''
   );
 
   const [uploading, setUploading] = useState(false);
@@ -69,12 +70,15 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
     ? addMonths(parseISO(`${implementationMonth}-01`), parseInt(durationMonths))
     : null;
 
-  const effectiveRent = contract.monthly_rent_ht ?? null;
-  const displayedAmount = effectiveRent != null
-    ? (paymentFrequency === 'trimestriel'
-        ? (calculateLoyerTrimestriel(effectiveRent) ?? effectiveRent * 3)
-        : effectiveRent)
-    : null;
+  // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
+  const manualRentNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
+  const monthlyRent: number | null =
+    (typeof proposalRent === 'number' ? proposalRent : null) ??
+    (manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null) ??
+    (contract.monthly_rent_ht ?? null);
+  const quarterlyRent = monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null;
+  const displayedAmount = paymentFrequency === 'trimestriel' ? quarterlyRent : monthlyRent;
+  const hasProposalRent = typeof proposalRent === 'number';
 
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
 
