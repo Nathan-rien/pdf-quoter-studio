@@ -156,33 +156,47 @@ export function useDeleteContract() {
   });
 }
 
+export interface ContractProposalRent {
+  monthly: number | null;
+  quarterly: number | null;
+}
+
+function normalizeMoney(value: unknown): number | null {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? Math.round(num * 100) / 100 : null;
+}
+
 export function useContractProposalRent(proposalId: string | null | undefined) {
   return useQuery({
     queryKey: ['contract-proposal-rent', proposalId],
     enabled: !!proposalId,
     staleTime: 1000 * 60 * 5,
-    queryFn: async (): Promise<number | null> => {
+    queryFn: async (): Promise<ContractProposalRent | null> => {
       if (!proposalId) return null;
       const { data, error } = await supabase
         .from('proposal_exports')
-        .select('proposal_state, loyer_mensuel_ht')
+        .select('proposal_state, loyer_mensuel_ht, montant_investissement')
         .eq('id', proposalId)
         .maybeSingle();
       if (error || !data) return null;
 
-      const cached = (data as any).loyer_mensuel_ht;
-      if (typeof cached === 'number' && !Number.isNaN(cached)) return cached;
+      const cached = normalizeMoney((data as any).loyer_mensuel_ht);
+      if (cached != null) return { monthly: cached, quarterly: Math.round(cached * 3 * 100) / 100 };
 
       const state = (data as any).proposal_state;
       if (!state) return null;
 
-      // Service proposal: derive monthly rent from totalServicesHt + paymentFrequency
+      // Service proposal: keep the exact amount entered in the services proposal,
+      // then expose both monthly and quarterly displays for contract rows.
       if (state.kind === 'service-proposal') {
-        const total = Number(state.totalServicesHt);
-        if (!Number.isFinite(total) || total <= 0) return null;
+        const total =
+          normalizeMoney(state.totalServicesHt) ??
+          normalizeMoney((data as any).montant_investissement) ??
+          normalizeMoney(state.totalInvest);
+        if (total == null) return null;
         const freq = state.paymentFrequency;
-        if (freq === 'trimestriel') return total / 3;
-        return total; // 'mensuel' or default
+        if (freq === 'trimestriel') return { monthly: Math.round((total / 3) * 100) / 100, quarterly: total };
+        return { monthly: total, quarterly: Math.round(total * 3 * 100) / 100 };
       }
 
       const proposal = state?.proposals?.[0];
@@ -200,7 +214,9 @@ export function useContractProposalRent(proposalId: string | null | undefined) {
           proposal.coefficientOverride
         );
         const loyer = calc?.loyerMensuel;
-        return typeof loyer === 'number' && !Number.isNaN(loyer) ? loyer : null;
+        return typeof loyer === 'number' && !Number.isNaN(loyer)
+          ? { monthly: loyer, quarterly: Math.round(loyer * 3 * 100) / 100 }
+          : null;
       } catch {
         return null;
       }
