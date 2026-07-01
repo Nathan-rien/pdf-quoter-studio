@@ -18,6 +18,7 @@ import {
   User,
   ChevronDown,
   ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -55,17 +56,23 @@ interface ServiceExportSummary {
   montant_investissement: number | null;
 }
 
+interface ServiceHistoryViewProps {
+  onLoadProposal?: (snapshot: Record<string, any>) => void;
+}
+
 const MONTHS_FR = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
-export function ServiceHistoryView() {
+export function ServiceHistoryView({ onLoadProposal }: ServiceHistoryViewProps = {}) {
   const [exports, setExports] = useState<ServiceExportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [loadingLoadId, setLoadingLoadId] = useState<string | null>(null);
+  const [confirmLoadEntry, setConfirmLoadEntry] = useState<ServiceExportSummary | null>(null);
 
   // Filtres
   const [searchQuery, setSearchQuery] = useState('');
@@ -174,6 +181,29 @@ export function ServiceHistoryView() {
   const handleClosePreview = () => {
     setPreviewingEntry(null);
     setPreviewContent(null);
+  };
+
+  const handleLoadProposal = async (entry: ServiceExportSummary) => {
+    if (!onLoadProposal) return;
+    setLoadingLoadId(entry.id);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('proposal_exports')
+        .select('proposal_state')
+        .eq('id', entry.id)
+        .single();
+      if (fetchError || !data?.proposal_state) {
+        toast({ title: 'Chargement impossible', description: "Cette proposition ne contient pas d'état sauvegardé.", variant: 'destructive' });
+        return;
+      }
+      onLoadProposal(data.proposal_state as Record<string, any>);
+      toast({ title: 'Proposition chargée', description: `« ${entry.proposal_name} » a été chargée dans l'éditeur.` });
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible de charger la proposition.', variant: 'destructive' });
+    } finally {
+      setLoadingLoadId(null);
+      setConfirmLoadEntry(null);
+    }
   };
 
   const handleDownload = async (entry: ServiceExportSummary) => {
@@ -295,6 +325,16 @@ export function ServiceHistoryView() {
                     templateName={entry.template_name}
                     proposalType="service"
                   />
+                  {onLoadProposal && (
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8"
+                      onClick={() => setConfirmLoadEntry(entry)}
+                      disabled={loadingLoadId === entry.id}
+                      title="Charger dans l'éditeur"
+                    >
+                      {loadingLoadId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
                 </>
               )}
 
@@ -452,6 +492,23 @@ export function ServiceHistoryView() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmLoadEntry} onOpenChange={(open) => !open && setConfirmLoadEntry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Charger cette proposition ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La proposition en cours sera remplacée par « {confirmLoadEntry?.proposal_name} ». Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmLoadEntry && handleLoadProposal(confirmLoadEntry)}>
+              Charger
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

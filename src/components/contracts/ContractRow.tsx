@@ -33,7 +33,7 @@ function sanitizeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
 }
 
-export function ContractRow({ contract, onVisualize, defaultExpanded = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean }) {
+export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
@@ -107,7 +107,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false }: 
       updates: {
         client_name: isQuick ? (clientName.trim() || 'Nouveau contrat') : contract.client_name,
         implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
-        financial_partner: financialPartner || null,
+        financial_partner: hideFinancialPartner ? contract.financial_partner ?? null : (financialPartner || null),
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
         commercial_id: isQuick ? 'quick' : (commercialId || contract.commercial_id),
@@ -236,7 +236,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false }: 
                 Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
               </span>
             )}
-            {contract.financial_partner && <span>{contract.financial_partner}</span>}
+            {!hideFinancialPartner && contract.financial_partner && <span>{contract.financial_partner}</span>}
             {contract.duration_months && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.duration_months} mois</span>}
             {endDate && <span>→ {format(endDate, 'MM/yyyy', { locale: fr })}</span>}
             {contract.attachment_url && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />PDF joint</span>}
@@ -406,6 +406,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false }: 
                 className="h-9 text-sm"
               />
             </div>
+            {!hideFinancialPartner && (
             <div className="space-y-1.5">
               <Label className="text-xs">Partenaire financier</Label>
               {isQuick ? (
@@ -426,6 +427,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false }: 
                 </Select>
               )}
             </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs">Durée (mois)</Label>
               {isQuick ? (

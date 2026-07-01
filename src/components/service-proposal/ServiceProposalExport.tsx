@@ -156,6 +156,12 @@ export function ServiceProposalExport() {
               selectedTemplateId: effectiveTemplateId,
               proposalName,
               totalInvest,
+              selectedServices,
+              paymentFrequency,
+              paymentMode,
+              contractDuration,
+              startDate,
+              totalServicesHt,
             }
           : null;
 
