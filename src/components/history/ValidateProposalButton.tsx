@@ -20,6 +20,7 @@ interface ValidateProposalButtonProps {
   commercialId: string;
   commercialName?: string;
   amountHt?: number;
+  monthlyRentHt?: number;
   templateName?: string;
   financialPartner?: string;
   durationMonths?: number;
