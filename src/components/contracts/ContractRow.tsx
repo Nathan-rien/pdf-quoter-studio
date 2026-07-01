@@ -59,7 +59,7 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
   const [quarterlyRent, setQuarterlyRent] = useState<string>(
     contract.monthly_rent_ht != null
       ? String(calculateLoyerTrimestriel(contract.monthly_rent_ht))
-      : (contract.amount_ht != null ? String(calculateLoyerTrimestriel(contract.amount_ht)) : '')
+      : ''
   );
 
   const [uploading, setUploading] = useState(false);
@@ -69,7 +69,7 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
     ? addMonths(parseISO(`${implementationMonth}-01`), parseInt(durationMonths))
     : null;
 
-  const effectiveRent = contract.monthly_rent_ht ?? contract.amount_ht ?? null;
+  const effectiveRent = contract.monthly_rent_ht ?? null;
   const displayedAmount = effectiveRent != null
     ? (paymentFrequency === 'trimestriel'
         ? (calculateLoyerTrimestriel(effectiveRent) ?? effectiveRent * 3)
