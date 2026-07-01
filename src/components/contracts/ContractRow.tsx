@@ -107,7 +107,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       updates: {
         client_name: isQuick ? (clientName.trim() || 'Nouveau contrat') : contract.client_name,
         implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
-        financial_partner: financialPartner || null,
+        financial_partner: hideFinancialPartner ? contract.financial_partner ?? null : (financialPartner || null),
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
         commercial_id: isQuick ? 'quick' : (commercialId || contract.commercial_id),
