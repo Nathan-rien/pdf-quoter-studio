@@ -156,7 +156,7 @@ export function ServiceProposalPreview() {
 
   const templatePagesTotal = currentVersion?.pages.length ?? 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
-  const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter);
+  const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 1 + templatePagesAfter);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     if (!currentVersion) return [];
@@ -610,53 +610,8 @@ export function ServiceProposalPreview() {
   };
 
 
-  const renderVosServicesPage = (displayPageNum: number) => (
-    <PageFrame pageNum={displayPageNum}>
-      <div className="absolute bg-white" style={{ left: '3%', top: '5%', width: '94%' }}>
-        <div className="font-bold text-[13px] mb-1">Vos services</div>
-        {lignesData.length > 0 ? (
-          <div className="border rounded overflow-hidden">
-            <div className="grid grid-cols-12 gap-1 bg-muted px-2 py-1 text-[8px] font-medium">
-              <div className="col-span-6">Désignation</div>
-              <div className="col-span-2 text-center">Qté</div>
-              <div className="col-span-2 text-right">P.U. HT</div>
-              <div className="col-span-2 text-right">Total HT</div>
-            </div>
-            <div className="divide-y divide-border">
-              {lignesData.map((ligne) => (
-                <div
-                  key={ligne.id}
-                  className="grid grid-cols-12 gap-1 px-2 py-1 text-[8px] items-start bg-white even:bg-muted/20"
-                >
-                  <div className="col-span-6 break-words whitespace-pre-wrap leading-tight py-0.5">
-                    {ligne.designation || '-'}
-                  </div>
-                  <div className="col-span-2 text-center">{ligne.quantite}</div>
-                  <div className="col-span-2 text-right">{formatNumber(ligne.prixUnitaire)}</div>
-                  <div className="col-span-2 text-right font-medium">
-                    {formatNumber(ligne.totalHT)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="text-[9px] text-muted-foreground italic mt-4">
-            Aucune ligne de service.
-          </div>
-        )}
 
-        <div className="mt-2 flex justify-end">
-          <div className="bg-primary/5 rounded-lg p-2 min-w-[180px]">
-            <div className="flex justify-between font-semibold text-[10px] gap-3">
-              <span>Total HT&nbsp;:&nbsp;</span>
-              <span>{formatNumber(totalInvest)} €</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </PageFrame>
-  );
+
 
   const renderServicesInclusPage = (displayPageNum: number) => (
     <PageFrame pageNum={displayPageNum}>
@@ -676,9 +631,8 @@ export function ServiceProposalPreview() {
     if (currentPage >= 1 && currentPage <= TEMPLATE_PAGES_BEFORE) {
       return renderTemplatePage(currentPage, currentPage);
     }
-    if (currentPage === TEMPLATE_PAGES_BEFORE + 1) return renderVosServicesPage(currentPage);
-    if (currentPage === TEMPLATE_PAGES_BEFORE + 2) return renderServicesInclusPage(currentPage);
-    const offset = currentPage - (TEMPLATE_PAGES_BEFORE + 2);
+    if (currentPage === TEMPLATE_PAGES_BEFORE + 1) return renderServicesInclusPage(currentPage);
+    const offset = currentPage - (TEMPLATE_PAGES_BEFORE + 1);
     const templatePageNumber = TEMPLATE_PAGES_BEFORE + offset;
     if (templatePageNumber <= templatePagesTotal) {
       return renderTemplatePage(templatePageNumber, currentPage);

@@ -6,8 +6,7 @@
  *
  * Sections générées :
  *   - Pages du template (toutes)
- *   - Page custom "Vos services" insérée après la page 3 du template
- *   - Page custom "Services inclus" insérée juste après
+ *   - Page custom "Services inclus" insérée après la page 3 du template
  *   - Pas de Votre offre, pas de loyer mensuel, pas de reprise, pas d'Avantages/Conditions
  */
 import React, { useState, useMemo, useCallback } from 'react';
@@ -481,50 +480,6 @@ export function ServiceProposalExport() {
       `;
     }
 
-    // ---------- Page custom "Vos services" ----------
-    const tableRowsHTML = lignesData
-      .map(
-        (l) => `
-      <tr>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; word-wrap: break-word; white-space: pre-wrap; max-width: 60%;">${l.designation || '-'}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${l.quantite}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(l.prixUnitaire)}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(l.totalHT)}</td>
-      </tr>`,
-      )
-      .join('');
-
-    const vosServicesPageHTML = `
-      <div class="dynamic-content" style="position: absolute; left: 5%; right: 5%; top: 6%; z-index: 40;">
-        <h2 style="font-weight: 700; font-size: 14px; color: #1f2937; margin: 0 0 12px 0;">Vos services</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 9px; background: white;">
-          <thead>
-            <tr style="background: #f3f4f6;">
-              <th style="padding: 8px; text-align: left; font-weight: 600;">Désignation</th>
-              <th style="padding: 8px; text-align: center; width: 60px;">Qté</th>
-              <th style="padding: 8px; text-align: right; width: 90px;">P.U. HT</th>
-              <th style="padding: 8px; text-align: right; width: 90px;">Total HT</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              tableRowsHTML ||
-              '<tr><td colspan="4" style="padding: 12px; text-align: center; color: #9ca3af; font-style: italic;">Aucune ligne de service</td></tr>'
-            }
-          </tbody>
-        </table>
-
-        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
-          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; min-width: 220px;">
-            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 11px; color: #1e40af;">
-              <span>Total HT :</span>
-              <span>${formatNumber(totalInvest)} €</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
     // ---------- Page custom "Services inclus" ----------
     const servicesInclusEscaped = (servicesInclus.description || '')
       .replace(/&/g, '&amp;')
@@ -543,7 +498,6 @@ export function ServiceProposalExport() {
 
     // Insertion après la page 3 du template
     extraPagesAfter[SERVICES_INSERTION_AFTER_PAGE] = [
-      vosServicesPageHTML,
       servicesInclusPageHTML,
     ];
 
