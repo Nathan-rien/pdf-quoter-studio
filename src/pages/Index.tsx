@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRentalProposalStore } from "@/stores/rentalProposalStore";
+import { useServiceProposalStore } from "@/stores/serviceProposalStore";
 import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar, ViewType } from "@/components/layout/AppSidebar";
 import { RentalProposalDashboard } from "@/components/dashboard/RentalProposalDashboard";
