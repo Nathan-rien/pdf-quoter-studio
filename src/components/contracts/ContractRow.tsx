@@ -84,9 +84,10 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
 
   function handleSave() {
     const selected = commerciaux.find((c) => c.id === commercialId);
-    const rentNumber = quarterlyRent.trim() === '' ? null : Number(quarterlyRent);
-    const monthlyRentValue = rentNumber != null && !Number.isNaN(rentNumber)
-      ? Math.round((rentNumber / 3) * 100) / 100
+    // Loyer mensuel manuel : conservé uniquement quand aucune proposition n'apporte la valeur
+    const manualNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
+    const manualMonthlyValue = manualNumber != null && !Number.isNaN(manualNumber)
+      ? Math.round(manualNumber * 100) / 100
       : null;
     updateContract.mutate({
       id: contract.id,
@@ -98,7 +99,7 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
         commercial_id: commercialId || contract.commercial_id,
         commercial_name: selected?.nom ?? contract.commercial_name,
         contract_number: contractNumber.trim() || null,
-        monthly_rent_ht: monthlyRentValue,
+        monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
       },
     });
   }
