@@ -123,3 +123,44 @@ export function useDeleteContract() {
     },
   });
 }
+
+export function useContractProposalRent(proposalId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['contract-proposal-rent', proposalId],
+    enabled: !!proposalId,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async (): Promise<number | null> => {
+      if (!proposalId) return null;
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('proposal_state, loyer_mensuel_ht')
+        .eq('id', proposalId)
+        .maybeSingle();
+      if (error || !data) return null;
+
+      const cached = (data as any).loyer_mensuel_ht;
+      if (typeof cached === 'number' && !Number.isNaN(cached)) return cached;
+
+      const state = (data as any).proposal_state;
+      const proposal = state?.proposals?.[0];
+      if (!proposal) return null;
+      const optionsPrices = Array.isArray(state?.optionsServices)
+        ? state.optionsServices.filter((o: any) => o.selected).map((o: any) => o.priceTotal ?? 0)
+        : [];
+      try {
+        const calc = calculateAllMatriceValues(
+          proposal.montantInvestissement,
+          proposal.duree,
+          proposal.refinanceur,
+          proposal.margeAppliquee,
+          optionsPrices,
+          proposal.coefficientOverride
+        );
+        const loyer = calc?.loyerMensuel;
+        return typeof loyer === 'number' && !Number.isNaN(loyer) ? loyer : null;
+      } catch {
+        return null;
+      }
+    },
+  });
+}
