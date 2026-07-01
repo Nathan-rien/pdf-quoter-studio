@@ -56,10 +56,10 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
-  const [monthlyRent, setMonthlyRent] = useState<string>(
+  const [quarterlyRent, setQuarterlyRent] = useState<string>(
     contract.monthly_rent_ht != null
-      ? String(contract.monthly_rent_ht)
-      : (contract.amount_ht != null ? String(contract.amount_ht) : '')
+      ? String(calculateLoyerTrimestriel(contract.monthly_rent_ht))
+      : (contract.amount_ht != null ? String(calculateLoyerTrimestriel(contract.amount_ht)) : '')
   );
 
   const [uploading, setUploading] = useState(false);
@@ -80,7 +80,10 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
 
   function handleSave() {
     const selected = commerciaux.find((c) => c.id === commercialId);
-    const rentNumber = monthlyRent.trim() === '' ? null : Number(monthlyRent);
+    const rentNumber = quarterlyRent.trim() === '' ? null : Number(quarterlyRent);
+    const monthlyRentValue = rentNumber != null && !Number.isNaN(rentNumber)
+      ? Math.round((rentNumber / 3) * 100) / 100
+      : null;
     updateContract.mutate({
       id: contract.id,
       updates: {
@@ -91,7 +94,7 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
         commercial_id: commercialId || contract.commercial_id,
         commercial_name: selected?.nom ?? contract.commercial_name,
         contract_number: contractNumber.trim() || null,
-        monthly_rent_ht: rentNumber != null && !Number.isNaN(rentNumber) ? rentNumber : null,
+        monthly_rent_ht: monthlyRentValue,
       },
     });
   }
@@ -302,12 +305,12 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Loyer mensuel HT (€)</Label>
+              <Label className="text-xs">Loyer trimestriel HT (€)</Label>
               <Input
                 type="number"
                 step="0.01"
-                value={monthlyRent}
-                onChange={(e) => setMonthlyRent(e.target.value)}
+                value={quarterlyRent}
+                onChange={(e) => setQuarterlyRent(e.target.value)}
                 placeholder="0.00"
                 className="h-9 text-sm"
               />
