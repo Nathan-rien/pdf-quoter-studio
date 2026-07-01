@@ -120,6 +120,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false }: 
   }
 
   async function handleDownloadProposal() {
+    if (!contract.proposal_id) return;
     setDownloadingProposal(true);
     try {
       const { data, error } = await supabase
