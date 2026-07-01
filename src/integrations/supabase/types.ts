@@ -481,6 +481,7 @@ export type Database = {
           created_by: string | null
           file_name: string
           id: string
+          loyer_mensuel_ht: number | null
           montant_investissement: number | null
           options_count: number | null
           pdf_html_content: string | null
@@ -502,6 +503,7 @@ export type Database = {
           created_by?: string | null
           file_name: string
           id?: string
+          loyer_mensuel_ht?: number | null
           montant_investissement?: number | null
           options_count?: number | null
           pdf_html_content?: string | null
@@ -523,6 +525,7 @@ export type Database = {
           created_by?: string | null
           file_name?: string
           id?: string
+          loyer_mensuel_ht?: number | null
           montant_investissement?: number | null
           options_count?: number | null
           pdf_html_content?: string | null

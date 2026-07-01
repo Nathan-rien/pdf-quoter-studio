@@ -1,79 +1,38 @@
-## Objectif
-Enrichir la page **Contrats Location** avec édition avancée, filtres, pièces jointes et téléchargement de la proposition liée.
+## Problème
 
----
+Dans la fiche contrat Location, le champ **"Loyer trimestriel HT (€)"** est prérempli avec **9500 × 3** parce que le contrat n'a jamais reçu le vrai loyer mensuel : à la validation, on lui passe `montant_investissement` (9500 €) dans `amount_ht`. Ensuite `ContractRow` utilise `contract.amount_ht` en fallback quand `monthly_rent_ht` est vide, d'où l'affichage `9 500,00 € (mensuel)` dans l'en-tête et `28 500` dans le champ trimestriel.
 
-## 1. Migration base de données (`contracts`)
-Ajouter les colonnes suivantes :
-- `contract_number` (text, nullable) — numéro de contrat libre
-- `monthly_rent_ht` (numeric, nullable) — loyer mensuel HT (initialisé depuis `amount_ht` pour les contrats existants ; éditable indépendamment)
-- `attachment_url` (text, nullable) — chemin du PDF importé
-- `attachment_name` (text, nullable) — nom d'origine du fichier
+## Correctif
 
-Créer un **bucket Storage** `contract-attachments` (privé) + policies RLS : chaque utilisateur authentifié peut uploader/lire les fichiers du dossier `contracts/<contract_id>/…`.
+### 1. Persister le vrai loyer mensuel dès l'export d'une Proposition Location
 
-Le champ `commercial_id` / `commercial_name` existe déjà — pas de migration nécessaire pour le point 1.
+- Migration : ajouter `loyer_mensuel_ht numeric` sur `public.proposal_exports` (nullable).
+- `src/components/rental-proposal/RentalProposalExport.tsx` : lors de l'insert dans `proposal_exports`, calculer le loyer mensuel de la 1ʳᵉ proposition via `calculateAllMatriceValues(...)` (mêmes inputs que la matrice) et écrire `loyer_mensuel_ht`.
 
----
+### 2. Transmettre ce loyer à la création de contrat
 
-## 2. Édition du commercial (point 1)
-Dans `ContractRow.tsx` (panneau déplié) :
-- Ajouter un `Select` **Commercial en charge** peuplé via `useCommerciaux()` (tous les commerciaux actifs, tri alphabétique).
-- Sauvegarde via `useUpdateContract` (ajouter `commercial_id` + `commercial_name` dans le payload autorisé).
-- Après sauvegarde : `invalidateQueries(['contracts'])` — le contrat migre automatiquement vers le nouveau groupe commercial dans `ContractsView`.
+- `src/components/history/HistoryView.tsx` : sélectionner `loyer_mensuel_ht`, l'ajouter à l'interface interne, le passer à `<ValidateProposalButton monthlyRentHt=… />`.
+- `src/components/history/ValidateProposalButton.tsx` : accepter `monthlyRentHt`, l'inclure dans l'appel `validateProposal.mutateAsync({... monthly_rent_ht })`.
+- `src/hooks/useContracts.ts` (`useValidateProposal`) : accepter `monthly_rent_ht` et l'insérer dans `contracts`. Garder `amount_ht` inchangé (reste = investissement pour compat historique/stats).
 
-Mettre à jour `useUpdateContract` (hook `useContracts.ts`) pour accepter les nouveaux champs : `commercial_id`, `commercial_name`, `contract_number`, `monthly_rent_ht`, `attachment_url`, `attachment_name`.
+### 3. Nettoyer l'affichage dans la fiche contrat
 
----
+`src/components/contracts/ContractRow.tsx` :
+- Retirer le fallback `contract.amount_ht` pour le loyer :
+  - `effectiveRent` = `contract.monthly_rent_ht` uniquement.
+  - Valeur initiale du champ "Loyer trimestriel HT" = `calculateLoyerTrimestriel(monthly_rent_ht)` si présent, sinon vide.
+  - En-tête : n'afficher le badge `€ (mensuel/trimestriel)` que si `monthly_rent_ht` est renseigné.
+- Résultat : les contrats existants (sans `monthly_rent_ht`) affichent un champ vide à compléter au lieu du faux montant. Les nouveaux contrats validés depuis l'historique sont préremplis avec le vrai loyer.
 
-## 3. Filtres en haut de page (point 2)
-Dans `ContractsView.tsx`, ajouter une barre de filtres au-dessus des groupes :
-- **Enseigne** (Select) : Toutes / Cybertek Pro / Grosbill Pro — dérivée via `useCommerciaux().getCommercialById(contract.commercial_id)?.entity`.
-- **Partenaire financier** (Select) : Tous + liste distincte des `financial_partner` présents dans les contrats.
-- **Commercial** (Select) : Tous + liste des commerciaux ayant au moins un contrat.
+### 4. Backfill léger (optionnel, à confirmer)
 
-Filtres combinables (AND). Le comptage (`Badge`) et le `groupByCommercial` s'appliquent sur la liste filtrée. Reset via bouton "Réinitialiser" quand au moins un filtre est actif.
+Pour les contrats déjà validés depuis un export qui possédait `proposal_state`, on peut, dans une migration data séparée, recalculer et remplir `contracts.monthly_rent_ht`. Non inclus par défaut pour éviter d'écraser des saisies manuelles ; à faire seulement si vous le demandez.
 
----
+## Fichiers modifiés
 
-## 4. Loyer mensualité (point 3)
-Dans le panneau déplié de `ContractRow.tsx` :
-- Ajouter un champ **Loyer mensuel HT** (`Input type="number"`) initialisé avec `contract.monthly_rent_ht ?? contract.amount_ht`.
-- Sauvegardé via `useUpdateContract`.
-- Affichage collapsed : remplacer `displayedAmount` (basé sur `amount_ht`) par `monthly_rent_ht ?? amount_ht`, avec la conversion trimestrielle existante (`calculateLoyerTrimestriel`).
-- Le champ **Numéro de contrat** (point 6) est ajouté à côté, même grid.
-
----
-
-## 5. Téléchargement de la proposition (point 4)
-Ajouter dans la ligne de contrat un bouton **Télécharger** (icône `Download`) à côté de "Visualiser" :
-- Fetch `proposal_exports.pdf_html_content` par `contract.proposal_id`.
-- Ouvre le HTML dans une nouvelle fenêtre puis déclenche `window.print()` (même mécanisme que l'export PDF actuel du projet — conforme à la contrainte `pdf-generation-print-constraint`).
-- Nom de fenêtre construit depuis `client_name + template_name` (aligné avec `proposal-export-filename-logic`).
-- Toast d'erreur si `pdf_html_content` est absent (contrats créés manuellement).
-
----
-
-## 6. Import d'un fichier PDF (point 5)
-Dans le panneau déplié :
-- Bouton **Importer PDF** avec `<input type="file" accept="application/pdf">` (limite 20 Mo côté client).
-- Upload vers `contract-attachments/contracts/<contract.id>/<timestamp>-<sanitized_name>.pdf`.
-- Sauvegarde `attachment_url` (chemin storage) + `attachment_name` via `useUpdateContract`.
-- Si un fichier existe déjà : afficher son nom + bouton **Télécharger** (URL signée 60 s) + bouton **Remplacer** + bouton **Supprimer** (supprime aussi le fichier du bucket).
-- Validation MIME + extension `.pdf` côté client, toast en cas de rejet.
-
----
-
-## 7. Numéro de contrat (point 6)
-Champ **Numéro de contrat** (`Input` texte) dans le panneau déplié, sauvegardé via `useUpdateContract`.
-Affiché en ligne collapsed sous forme de petite chip grise `#N°XXXX` à côté du nom client quand renseigné.
-
----
-
-## Impact typages
-- `useContracts.ts` : étendre l'interface `Contract` avec les nouveaux champs (`contract_number`, `monthly_rent_ht`, `attachment_url`, `attachment_name`) et la signature de `useUpdateContract`.
-- `src/types/contracts.ts` : mêmes ajouts pour rester aligné.
-
-## Portée non concernée
-- Les Contrats Services ne sont pas modifiés (seule la vue Location est visée par la demande).
-- Pas de changement sur la génération de proposition initiale, l'historique, ou l'éditeur de template.
+- migration Supabase (colonne `loyer_mensuel_ht`)
+- `src/components/rental-proposal/RentalProposalExport.tsx`
+- `src/components/history/HistoryView.tsx`
+- `src/components/history/ValidateProposalButton.tsx`
+- `src/hooks/useContracts.ts`
+- `src/components/contracts/ContractRow.tsx`

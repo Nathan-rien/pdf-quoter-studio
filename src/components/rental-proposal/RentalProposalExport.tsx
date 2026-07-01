@@ -118,6 +118,10 @@ export function RentalProposalExport() {
       
       // Calculer le montant d'investissement (depuis la première proposition ou le store)
       const montantInvest = matriceData.montantInvestissement;
+
+      // Extraire le loyer mensuel HT de la 1re proposition pour préremplir un futur contrat
+      const allProps = getAllProposalsCalculations();
+      const loyerMensuelHt = allProps[0]?.calculations?.loyerMensuel ?? null;
       
       // Construire le snapshot de l'état pour pouvoir recharger la proposition
       const store = useRentalProposalStore.getState();
@@ -148,6 +152,7 @@ export function RentalProposalExport() {
         commercial_id: commercial?.id || null,
         commercial_name: commercial?.nom || null,
         montant_investissement: montantInvest || null,
+        loyer_mensuel_ht: loyerMensuelHt,
         selected_options_names: selectedOptions.map(o => o.name).filter(Boolean),
         selected_nos_options_names: selectedNosOptions.map(o => o.name).filter(Boolean),
         proposal_state: proposalStateSnapshot,

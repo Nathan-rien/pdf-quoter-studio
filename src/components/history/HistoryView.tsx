@@ -55,6 +55,7 @@ interface ProposalExportSummary {
   commercial_id: string | null;
   commercial_name: string | null;
   montant_investissement: number | null;
+  loyer_mensuel_ht: number | null;
   financial_partner: string | null;
   duration_months: number | null;
   has_proposal_state: boolean;
@@ -112,7 +113,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     setError(null);
     
     try {
-      const selectColumns = 'id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, proposal_state';
+      const selectColumns = 'id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, loyer_mensuel_ht, proposal_state';
       const batchSize = 1000;
       let allData: any[] = [];
       let from = 0;
@@ -148,6 +149,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
         commercial_id: item.commercial_id,
         commercial_name: item.commercial_name,
         montant_investissement: item.montant_investissement,
+        loyer_mensuel_ht: item.loyer_mensuel_ht ?? null,
         financial_partner: item.proposal_state?.proposals?.[0]?.refinanceur ?? null,
         duration_months: item.proposal_state?.proposals?.[0]?.duree ?? item.proposal_state?.matriceData?.duree ?? null,
         has_proposal_state: !!item.proposal_state,
@@ -401,6 +403,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                     commercialId={entry.commercial_id || ''}
                     commercialName={entry.commercial_name || undefined}
                     amountHt={entry.montant_investissement || undefined}
+                    monthlyRentHt={entry.loyer_mensuel_ht ?? undefined}
                     templateName={entry.template_name}
                     financialPartner={entry.financial_partner || undefined}
                     durationMonths={entry.duration_months || undefined}
