@@ -1,17 +1,25 @@
 ## Objectif
-Supprimer la page 4 du template "Contrat Cadre Services" qui duplique le tableau des services déjà présent en page 3.
+
+Aligner l'affichage du bloc « Les services inclus dans votre offre » dans **Propositions Services** sur celui de **Proposition Location** : titre avec icône fichier + carte bordée « Services location » (en-tête gris + liste à puces).
 
 ## Modifications
 
-1. **`src/lib/seedContratCadreTemplate.ts`**
-   - Retirer la définition de la page 4 (celle contenant la zone dynamique `service_invest_table` en doublon).
-   - Renuméroter les pages suivantes (5→4, 6→5) pour conserver une séquence continue.
-   - Mettre à jour le total des pages du template si stocké dans les métadonnées.
+### 1. `src/components/service-proposal/ServiceProposalPreview.tsx` — `renderServicesInclusPage`
+Remplacer le rendu texte brut actuel par :
+- Titre avec icône `FileCheck` + « Les services inclus dans votre offre »
+- Carte bordée `border rounded` contenant :
+  - En-tête `bg-muted` avec pastille verticale + libellé « Services location »
+  - Corps avec la description en puces (`•`) + support sous-items `- ` indentés (identique à `renderServiceBloc` du Location, lignes 1114–1136).
 
-2. **Bouton "Initialiser Contrat Cadre Services"** (déjà présent dans `TemplateEditorLayout.tsx`)
-   - Aucune modification nécessaire ; l'utilisateur devra cliquer dessus (avec force overwrite) pour régénérer le template à 5 pages.
+### 2. `src/components/service-proposal/ServiceProposalExport.tsx` — bloc `servicesInclusPageHTML`
+Remplacer le paragraphe `white-space: pre-wrap` par le même markup HTML que `servicesLocationHTML` du RentalProposalExport (lignes 635–645) :
+- Conteneur bordé
+- En-tête gris avec pastille + « Services location »
+- Corps blanc, chaque ligne rendue en `<div>• …</div>` (indentation pour `- `)
 
-## Note
-La modification ne concerne que le seeder du template. Le rendu (`ServiceProposalPreview.tsx` / `ServiceProposalExport.tsx`) reste inchangé car il itère dynamiquement sur les pages du template : supprimer la page 4 dans le seed suffit à faire disparaître le tableau dupliqué du PDF généré.
+Le titre de page « Les services inclus dans votre offre » (avec icône SVG) est conservé au-dessus, comme aujourd'hui.
 
-Après implémentation, il faudra cliquer sur "Initialiser Contrat Cadre Services" pour appliquer le nouveau template.
+### Hors périmètre
+- Aucun changement au store, aux types, ni au template.
+- Aucun impact sur la Proposition Location.
+- Le contenu par défaut de `servicesInclus.description` reste inchangé.

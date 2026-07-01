@@ -481,10 +481,19 @@ export function ServiceProposalExport() {
     }
 
     // ---------- Page custom "Services inclus" ----------
-    const servicesInclusEscaped = (servicesInclus.description || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const servicesInclusLinesHTML = (servicesInclus.description || '')
+      .split('\n')
+      .map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return '';
+        const isSubItem = trimmed.startsWith('- ');
+        const text = escapeHtml(isSubItem ? trimmed : `• ${trimmed}`);
+        return `<div style="line-height: 1.4;${isSubItem ? ' padding-left: 10px;' : ''}">${text}</div>`;
+      })
+      .join('');
 
     const servicesInclusPageHTML = `
       <div class="dynamic-content" style="position: absolute; left: 5%; right: 5%; top: 6%; z-index: 40;">
@@ -492,7 +501,15 @@ export function ServiceProposalExport() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
           <h2 style="font-weight: 700; font-size: 14px; color: #1f2937; margin: 0;">Les services inclus dans votre offre</h2>
         </div>
-        <div style="font-size: 10px; line-height: 1.6; color: #1f2937; white-space: pre-wrap;">${servicesInclusEscaped}</div>
+        <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+          <div style="background: #f3f4f6; padding: 6px 12px; display: flex; align-items: center; gap: 8px;">
+            <div style="width: 8px; height: 16px; background: #374151; border-radius: 2px;"></div>
+            <span style="font-weight: 600; font-size: 11px;">Services location</span>
+          </div>
+          <div style="padding: 6px 12px; background: white; color: #4b5563; font-size: 9px;">
+            ${servicesInclusLinesHTML}
+          </div>
+        </div>
       </div>
     `;
 
