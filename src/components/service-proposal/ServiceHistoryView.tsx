@@ -183,6 +183,29 @@ export function ServiceHistoryView({ onLoadProposal }: ServiceHistoryViewProps =
     setPreviewContent(null);
   };
 
+  const handleLoadProposal = async (entry: ServiceExportSummary) => {
+    if (!onLoadProposal) return;
+    setLoadingLoadId(entry.id);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('proposal_exports')
+        .select('proposal_state')
+        .eq('id', entry.id)
+        .single();
+      if (fetchError || !data?.proposal_state) {
+        toast({ title: 'Chargement impossible', description: "Cette proposition ne contient pas d'état sauvegardé.", variant: 'destructive' });
+        return;
+      }
+      onLoadProposal(data.proposal_state as Record<string, any>);
+      toast({ title: 'Proposition chargée', description: `« ${entry.proposal_name} » a été chargée dans l'éditeur.` });
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible de charger la proposition.', variant: 'destructive' });
+    } finally {
+      setLoadingLoadId(null);
+      setConfirmLoadEntry(null);
+    }
+  };
+
   const handleDownload = async (entry: ServiceExportSummary) => {
     setDownloadingId(entry.id);
     try {
