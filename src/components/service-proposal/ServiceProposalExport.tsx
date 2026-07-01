@@ -397,15 +397,13 @@ export function ServiceProposalExport() {
                 : '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #9ca3af; font-style: italic; border: 1px solid #e5e7eb;">Aucune ligne de service</td></tr>'
             }
           </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="padding: 4px 5px; border: 1px solid #d1d5db; text-align: right; font-weight: 700; color: #374151; background: white;">Total HT</td>
+              <td style="padding: 4px 5px; border: 1px solid #d1d5db; text-align: right; font-weight: 700; color: #1f2937; background: white;">${formatNumber(totalInvest)} €</td>
+            </tr>
+          </tfoot>
         </table>
-        <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
-          <div style="border: 1px solid #d1d5db; background: white; padding: 4px 8px; min-width: 150px;">
-            <div style="display: flex; justify-content: space-between; font-size: 8.5px; gap: 12px;">
-              <span style="font-weight: 700; color: #374151;">Total HT</span>
-              <span style="font-weight: 700; color: #1f2937;">${formatNumber(totalInvest)} €</span>
-            </div>
-          </div>
-        </div>
       </div>
     `;
 
@@ -442,35 +440,38 @@ export function ServiceProposalExport() {
         .map((zone) => ({ ...zone, pageNumber: page.pageNumber })),
     ) ?? [];
 
-    const serviceZonesByPage = serviceZones.reduce<Record<number, Array<DynamicZone & { pageNumber: number }>>>((acc, zone) => {
+    const hasPage1ClientZone = serviceZones.some(
+      (zone) => zone.pageNumber === 1 && zone.type === 'service_client_info',
+    );
+
+    const zonesToRender = hasPage1ClientZone
+      ? serviceZones
+      : [
+          ...serviceZones,
+          {
+            id: 'fallback_service_client_info_page1',
+            pageNumber: 1,
+            type: 'service_client_info' as const,
+            sourceSheet: 'client',
+            isRequired: true,
+            description: 'Informations client',
+            position: { top: 82, height: 10 },
+          },
+        ];
+
+    const serviceZonesByPage = zonesToRender.reduce<Record<number, Array<DynamicZone & { pageNumber: number }>>>((acc, zone) => {
       acc[zone.pageNumber] = [...(acc[zone.pageNumber] || []), zone];
       return acc;
     }, {});
 
     Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
       layoutServiceZones(zones).forEach((zone) => {
-      const html = renderServiceZone(zone);
-      if (!html) return;
+        const html = renderServiceZone(zone);
+        if (!html) return;
         const page = Number(pageNumber);
         dynamicContent[page] = `${dynamicContent[page] || ''}${html}`;
       });
     });
-
-    const hasPage1ClientZone = serviceZones.some(
-      (zone) => zone.pageNumber === 1 && zone.type === 'service_client_info',
-    );
-
-    if (!hasPage1ClientZone) {
-      dynamicContent[1] = `${dynamicContent[1] || ''}${renderClientZone({
-        id: 'fallback_service_client_info_page1',
-        pageNumber: 1,
-        type: 'service_client_info',
-        sourceSheet: 'client',
-        isRequired: true,
-        description: 'Informations client',
-        position: { top: 82, height: 10 },
-      })}`;
-    }
 
     if (selectedCommercial?.adresse) {
       dynamicContent[1] = `${dynamicContent[1] || ''}
