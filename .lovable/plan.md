@@ -1,26 +1,29 @@
-## Problème
+## Objectif
+Faire réapparaître la zone dynamique client dans l’aperçu et le PDF des Propositions Services, sans relancer d’initialisation ni écraser les modifications déjà faites dans le template.
 
-En édition inline sur le canvas du template editor, `Ctrl+V` ne colle rien quand la source vient d'un autre champ de l'application. Le `InlineTextEditor` s'appuie sur le comportement natif de `contentEditable` sans gérer explicitement l'événement `paste`. Selon le format présent dans le presse-papiers (HTML complexe, fragments contenteditable, MIME non-`text/html` propre), le navigateur peut n'insérer aucun nœud, ou insérer un nœud immédiatement re-nettoyé, donnant l'impression que « rien ne se passe ».
+## Plan
+1. **Ne pas toucher au seed / initialisation du template**
+   - Aucun appel à “Initialiser Contrat Cadre Services”.
+   - Aucune modification destructive des versions/templates existants.
 
-## Correction proposée
+2. **Corriger le rendu des zones dynamiques dans l’aperçu Services**
+   - Dans `ServiceProposalPreview.tsx`, remplacer le rendu actuel des zones dynamiques Services par un rendu basé sur la vraie zone du template :
+     - utiliser `zone.position.top` et `zone.position.height`,
+     - utiliser les mêmes marges/largeurs que l’éditeur (`left: 4%`, `right: 4%`),
+     - donner un `z-index` suffisamment élevé pour que la zone client ne soit pas masquée par les éléments statiques de couverture.
+   - Conserver le fallback de bloc client uniquement si aucune zone `service_client_info` n’existe sur la page 1.
 
-Ajouter un handler `onPaste` explicite dans `src/components/template-editor/InlineTextEditor.tsx` :
+3. **Corriger aussi l’export PDF Services**
+   - Dans `ServiceProposalExport.tsx`, générer le contenu dynamique depuis les `dynamicZones` du template publié au lieu d’injecter systématiquement le bloc client en bas de page 1.
+   - Pour chaque zone `service_*`, injecter le contenu au même endroit que l’aperçu, avec la même hauteur et la même largeur.
+   - Garder un fallback non destructif pour page 1 seulement si le template publié ne contient aucune zone `service_client_info`.
 
-1. `e.preventDefault()` + `e.stopPropagation()` pour ne jamais laisser passer l'événement vers le canvas.
-2. Lire d'abord `clipboardData.getData('text/html')` :
-   - Passer par `sanitizeHtml(...)` (déjà importé) pour ne garder que les balises autorisées.
-   - Insérer via `document.execCommand('insertHTML', false, cleanHtml)` afin que la sélection courante reçoive le contenu.
-3. Fallback `text/plain` :
-   - Utiliser `document.execCommand('insertText', false, plain)` (convertit les sauts de ligne en `<br>` correctement dans un contentEditable).
-4. Si les deux formats sont vides, ne rien faire (au lieu de casser la sélection).
-5. Marquer le contenu comme modifié pour que le commit au blur envoie bien la nouvelle valeur au store.
+4. **Préserver les modifications du template**
+   - Le correctif ne modifie que le code de rendu aperçu/export.
+   - Les positions déjà enregistrées dans le template restent la source de vérité.
+   - Aucune migration ni modification de données.
 
-## Vérification
-
-- Copier un texte depuis un autre champ de l'app (ex. panneau propriétés, historique), double-cliquer sur un texte du canvas, `Ctrl+V` → le texte apparaît immédiatement et est conservé après clic hors zone.
-- Copier depuis Word/Notepad → même comportement, sans styles parasites (grâce à `sanitizeHtml`).
-- `Ctrl+V` hors édition inline continue de coller des éléments (comportement existant du canvas inchangé).
-
-## Fichiers touchés
-
-- `src/components/template-editor/InlineTextEditor.tsx` (ajout du handler `onPaste`, aucune autre logique modifiée).
+5. **Vérification**
+   - Vérifier que la page 1 affiche le bloc client dans l’aperçu Services quand la zone `service_client_info` existe.
+   - Vérifier que le PDF utilise le même positionnement que l’aperçu.
+   - Vérifier qu’un template sans zone client continue d’afficher le fallback existant.
