@@ -156,7 +156,7 @@ export function ServiceProposalPreview() {
 
   const templatePagesTotal = currentVersion?.pages.length ?? 0;
   const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
-  const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 2 + templatePagesAfter);
+  const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 1 + templatePagesAfter);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     if (!currentVersion) return [];
