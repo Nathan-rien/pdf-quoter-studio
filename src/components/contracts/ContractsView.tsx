@@ -138,6 +138,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   const handleVisualize = async (contract: Contract) => {
+    if (!contract.proposal_id) return;
     setPreviewContract(contract);
     setPreviewContent(null);
     setLoadingPreview(true);
