@@ -92,7 +92,7 @@ export function useUpdateContract() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'monthly_rent_ht' | 'attachment_url' | 'attachment_name'>> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'client_name' | 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'monthly_rent_ht' | 'quarterly_rent_ht' | 'attachment_url' | 'attachment_name'>> }) => {
       const { data, error } = await supabase.from('contracts').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as Contract;
@@ -101,6 +101,36 @@ export function useUpdateContract() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       toast({ title: 'Contrat mis à jour' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useCreateQuickContract() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (proposalType: ProposalType = 'location'): Promise<Contract> => {
+      const { data, error } = await supabase
+        .from('contracts')
+        .insert({
+          proposal_id: null,
+          proposal_type: proposalType,
+          client_name: 'Nouveau contrat',
+          commercial_id: 'quick',
+          commercial_name: '',
+          is_quick_contract: true,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Contract;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      toast({ title: 'Contrat rapide créé', description: 'Renseignez les champs puis enregistrez.' });
     },
     onError: (err: Error) => {
       toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
