@@ -210,6 +210,25 @@ export const InlineTextEditor = forwardRef<InlineTextEditorHandle, InlineTextEdi
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         onMouseDown={(e) => e.stopPropagation()}
+        onPaste={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const cd = e.clipboardData;
+          if (!cd) return;
+          const html = cd.getData("text/html");
+          const plain = cd.getData("text/plain");
+          editorRef.current?.focus();
+          if (html && html.trim()) {
+            const clean = sanitizeHtml(html);
+            if (clean) {
+              document.execCommand("insertHTML", false, clean);
+              return;
+            }
+          }
+          if (plain) {
+            document.execCommand("insertText", false, plain);
+          }
+        }}
       />
     );
   }

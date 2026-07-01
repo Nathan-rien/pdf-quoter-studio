@@ -1,30 +1,26 @@
-## Objectif
+## Problème
 
-Faire apparaître automatiquement la date du jour sur la Page 1 du template **Contrat Cadre Services**, au même emplacement que sur le template **Proposition Commerciale Cybertek Pro** (à l'intérieur du bloc noir de couverture, sous le titre "PROPOSITION COMMERCIALE").
+En édition inline sur le canvas du template editor, `Ctrl+V` ne colle rien quand la source vient d'un autre champ de l'application. Le `InlineTextEditor` s'appuie sur le comportement natif de `contentEditable` sans gérer explicitement l'événement `paste`. Selon le format présent dans le presse-papiers (HTML complexe, fragments contenteditable, MIME non-`text/html` propre), le navigateur peut n'insérer aucun nœud, ou insérer un nœud immédiatement re-nettoyé, donnant l'impression que « rien ne se passe ».
 
-## Modifications
+## Correction proposée
 
-### 1. `src/lib/seedContratCadreTemplate.ts`
-Ajouter un élément texte sur la Page 1 avec le placeholder `{{DATE}}` (déjà pris en charge par `substituteDynamicPlaceholders` dans `template-render-utils.ts`, qui le remplace par la date FR courante type "01 juillet 2026").
+Ajouter un handler `onPaste` explicite dans `src/components/template-editor/InlineTextEditor.tsx` :
 
-- Position ≈ celle du template Cybertek Pro (dans la zone du cartouche noir, sous le titre) : `x ≈ 220`, `y ≈ 545`, `w ≈ 300`, `h ≈ 20`.
-- Style : Inter, 11px, blanc `#ffffff`, gras, aligné à droite.
-- Contenu : `{{DATE}}`.
-- `zIndex` élevé (ex. `5`) pour passer au-dessus du visuel de couverture éventuel.
+1. `e.preventDefault()` + `e.stopPropagation()` pour ne jamais laisser passer l'événement vers le canvas.
+2. Lire d'abord `clipboardData.getData('text/html')` :
+   - Passer par `sanitizeHtml(...)` (déjà importé) pour ne garder que les balises autorisées.
+   - Insérer via `document.execCommand('insertHTML', false, cleanHtml)` afin que la sélection courante reçoive le contenu.
+3. Fallback `text/plain` :
+   - Utiliser `document.execCommand('insertText', false, plain)` (convertit les sauts de ligne en `<br>` correctement dans un contentEditable).
+4. Si les deux formats sont vides, ne rien faire (au lieu de casser la sélection).
+5. Marquer le contenu comme modifié pour que le commit au blur envoie bien la nouvelle valeur au store.
 
-### 2. `src/components/service-proposal/ServiceProposalPreview.tsx`
-Aujourd'hui le rendu texte de l'aperçu Services affiche `content.text` brut — le `{{DATE}}` n'est pas substitué (contrairement à `RentalProposalPreview` qui appelle `substituteDynamicPlaceholders`).
+## Vérification
 
-- Importer `substituteDynamicPlaceholders` depuis `@/lib/template-render-utils`.
-- Dans `renderTemplateElement`, appliquer la substitution à `content.text` et `content.htmlContent` avant affichage.
+- Copier un texte depuis un autre champ de l'app (ex. panneau propriétés, historique), double-cliquer sur un texte du canvas, `Ctrl+V` → le texte apparaît immédiatement et est conservé après clic hors zone.
+- Copier depuis Word/Notepad → même comportement, sans styles parasites (grâce à `sanitizeHtml`).
+- `Ctrl+V` hors édition inline continue de coller des éléments (comportement existant du canvas inchangé).
 
-L'export PDF (`ServiceProposalExport.tsx`) passe déjà par `pdf-html-generator` avec `substitutionContext` — aucune modification requise, la date sera injectée automatiquement.
+## Fichiers touchés
 
-### 3. Réinitialisation du template
-Après déploiement, l'utilisateur doit recliquer sur **« Initialiser Contrat Cadre Services »** (mode forcé) dans les paramètres pour régénérer une v1 avec l'élément date.
-
-## Résultat attendu
-
-- Aperçu Services : la date du jour (format "01 juillet 2026") apparaît sur la Page 1 dans le bloc de couverture.
-- Export PDF : idem, position identique à Cybertek Pro.
-- L'élément reste éditable dans le template editor (position, taille, style) comme n'importe quel texte.
+- `src/components/template-editor/InlineTextEditor.tsx` (ajout du handler `onPaste`, aucune autre logique modifiée).
