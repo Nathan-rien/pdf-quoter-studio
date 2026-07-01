@@ -80,13 +80,14 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
   const manualRentNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
   const manualQuarterlyNumber = manualQuarterlyRent.trim() === '' ? null : Number(manualQuarterlyRent);
-  const monthlyRent: number | null =
-    (!isQuick ? proposalRent?.monthly ?? null : null) ??
-    (manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null) ??
-    (contract.monthly_rent_ht ?? null);
+  const proposalMonthlyRent = !isQuick && proposalRent?.monthly != null ? proposalRent.monthly : null;
+  const proposalQuarterlyRent = !isQuick && proposalRent?.quarterly != null ? proposalRent.quarterly : null;
+  const validManualMonthlyRent = manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null;
+  const validManualQuarterlyRent = manualQuarterlyNumber != null && !Number.isNaN(manualQuarterlyNumber) ? manualQuarterlyNumber : null;
+  const monthlyRent: number | null = proposalMonthlyRent ?? validManualMonthlyRent ?? contract.monthly_rent_ht ?? null;
   const quarterlyRent: number | null = isQuick
-    ? (manualQuarterlyNumber != null && !Number.isNaN(manualQuarterlyNumber) ? manualQuarterlyNumber : (contract.quarterly_rent_ht ?? null))
-    : (proposalRent?.quarterly ?? (monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null));
+    ? (validManualQuarterlyRent ?? contract.quarterly_rent_ht ?? null)
+    : (proposalQuarterlyRent ?? (monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null));
   const displayedAmount = paymentFrequency === 'trimestriel' ? quarterlyRent : monthlyRent;
   const hasProposalRent = !isQuick && (proposalRent?.monthly != null || proposalRent?.quarterly != null);
 
