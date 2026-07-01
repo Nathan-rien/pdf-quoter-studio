@@ -73,8 +73,42 @@ function CommercialGroup({
 export function ContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
   const { data: contracts = [], isLoading, error } = useContracts('location');
   const { toast } = useToast();
-  const groups = groupByCommercial(contracts);
-  const totalRenewing = contracts.filter(isContractRenewingSoon).length;
+  const { getCommercialById } = useCommerciaux();
+
+  const [entityFilter, setEntityFilter] = useState<string>('all');
+  const [partnerFilter, setPartnerFilter] = useState<string>('all');
+  const [commercialFilter, setCommercialFilter] = useState<string>('all');
+
+  const partnerOptions = useMemo(() => {
+    const s = new Set<string>();
+    contracts.forEach((c) => { if (c.financial_partner) s.add(c.financial_partner); });
+    return Array.from(s).sort();
+  }, [contracts]);
+
+  const commercialOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    contracts.forEach((c) => { map.set(c.commercial_id, c.commercial_name ?? c.commercial_id); });
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [contracts]);
+
+  const filteredContracts = useMemo(() => {
+    return contracts.filter((c) => {
+      if (partnerFilter !== 'all' && c.financial_partner !== partnerFilter) return false;
+      if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
+      if (entityFilter !== 'all') {
+        const entity = getCommercialById(c.commercial_id)?.entity;
+        if (entity !== entityFilter) return false;
+      }
+      return true;
+    });
+  }, [contracts, entityFilter, partnerFilter, commercialFilter, getCommercialById]);
+
+  const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all';
+  const groups = groupByCommercial(filteredContracts);
+  const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
+
 
   const [previewContract, setPreviewContract] = useState<Contract | null>(null);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
