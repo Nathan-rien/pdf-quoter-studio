@@ -215,9 +215,9 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
               <Calendar className="h-3 w-3" />
               {format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
             </span>
-            {displayedAmount != null && (
+            {monthlyRent != null && (
               <span>
-                {displayedAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € ({paymentFrequency})
+                Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
               </span>
             )}
             {contract.financial_partner && <span>{contract.financial_partner}</span>}
