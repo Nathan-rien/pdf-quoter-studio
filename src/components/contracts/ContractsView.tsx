@@ -153,7 +153,8 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold">Contrats</h1>
-            {contracts.length > 0 && <Badge variant="secondary">{contracts.length}</Badge>}
+            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{filteredContracts.length !== contracts.length ? ` / ${contracts.length}` : ''}</Badge>}
+
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
@@ -168,7 +169,57 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
 
       </div>
 
+      {contracts.length > 0 && (
+        <div className="flex flex-wrap items-end gap-3 p-3 border border-border rounded-lg bg-muted/20">
+          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+            <Filter className="h-3.5 w-3.5" /> Filtres
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Enseigne</Label>
+            <Select value={entityFilter} onValueChange={setEntityFilter}>
+              <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="cybertek-pro">Cybertek Pro</SelectItem>
+                <SelectItem value="grosbill-pro">Grosbill Pro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Partenaire</Label>
+            <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+              <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {partnerOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Commercial</Label>
+            <Select value={commercialFilter} onValueChange={setCommercialFilter}>
+              <SelectTrigger className="h-8 w-[200px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {commercialOptions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setEntityFilter('all'); setPartnerFilter('all'); setCommercialFilter('all'); }}
+              className="h-8 gap-1 text-xs"
+            >
+              <X className="h-3 w-3" /> Réinitialiser
+            </Button>
+          )}
+        </div>
+      )}
+
       {totalRenewing > 0 && <ContractRenewalAlert />}
+
 
       {contracts.length === 0 && (
         <div className="text-center py-12 border border-dashed border-border rounded-lg">
