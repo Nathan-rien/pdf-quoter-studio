@@ -176,6 +176,23 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
               (proposal.selected_services ?? []).reduce((s, l) => s + l.amount_ht, 0) * 100,
             ) / 100,
         })),
+
+      loadFromExport: (snapshot) =>
+        set(() => ({
+          clientData: snapshot.clientData ?? initialState.clientData,
+          commercialData: snapshot.commercialData ?? initialState.commercialData,
+          lignesData: Array.isArray(snapshot.lignesData) ? snapshot.lignesData : [],
+          servicesInclus: snapshot.servicesInclus ?? { description: DEFAULT_SERVICES_INCLUS_DESCRIPTION },
+          selectedTemplateId: snapshot.selectedTemplateId ?? null,
+          proposalName: snapshot.proposalName ?? '',
+          totalInvest: typeof snapshot.totalInvest === 'number' ? snapshot.totalInvest : 0,
+          selectedServices: Array.isArray(snapshot.selectedServices) ? snapshot.selectedServices : [],
+          paymentFrequency: snapshot.paymentFrequency ?? '',
+          paymentMode: snapshot.paymentMode ?? '',
+          contractDuration: snapshot.contractDuration ?? null,
+          startDate: snapshot.startDate ?? '',
+          totalServicesHt: typeof snapshot.totalServicesHt === 'number' ? snapshot.totalServicesHt : 0,
+        })),
     }),
     {
       name: 'service-proposal-storage',
