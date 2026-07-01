@@ -275,6 +275,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
             commercialName={g.commercialName}
             contracts={g.contracts}
             onVisualize={handleVisualize}
+            autoExpandId={autoExpandId}
           />
         ))}
       </div>
