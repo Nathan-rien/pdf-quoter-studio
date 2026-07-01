@@ -35,14 +35,18 @@ export type Database = {
       contracts: {
         Row: {
           amount_ht: number | null
+          attachment_name: string | null
+          attachment_url: string | null
           client_name: string
           commercial_id: string
           commercial_name: string | null
+          contract_number: string | null
           created_at: string
           duration_months: number | null
           financial_partner: string | null
           id: string
           implementation_month: string | null
+          monthly_rent_ht: number | null
           payment_frequency: string | null
           proposal_id: string
           proposal_type: string
@@ -52,14 +56,18 @@ export type Database = {
         }
         Insert: {
           amount_ht?: number | null
+          attachment_name?: string | null
+          attachment_url?: string | null
           client_name: string
           commercial_id: string
           commercial_name?: string | null
+          contract_number?: string | null
           created_at?: string
           duration_months?: number | null
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
+          monthly_rent_ht?: number | null
           payment_frequency?: string | null
           proposal_id: string
           proposal_type?: string
@@ -69,14 +77,18 @@ export type Database = {
         }
         Update: {
           amount_ht?: number | null
+          attachment_name?: string | null
+          attachment_url?: string | null
           client_name?: string
           commercial_id?: string
           commercial_name?: string | null
+          contract_number?: string | null
           created_at?: string
           duration_months?: number | null
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
+          monthly_rent_ht?: number | null
           payment_frequency?: string | null
           proposal_id?: string
           proposal_type?: string

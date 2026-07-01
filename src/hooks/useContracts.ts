@@ -19,10 +19,15 @@ export interface Contract {
   financial_partner?: string | null;
   duration_months?: number | null;
   payment_frequency?: PaymentFrequency;
+  contract_number?: string | null;
+  monthly_rent_ht?: number | null;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
   validated_at: string;
   created_at: string;
   updated_at: string;
 }
+
 
 
 export function isContractRenewingSoon(contract: Contract): boolean {
@@ -84,11 +89,12 @@ export function useUpdateContract() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: { implementation_month?: string | null; financial_partner?: string | null; duration_months?: number | null; payment_frequency?: PaymentFrequency } }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'monthly_rent_ht' | 'attachment_url' | 'attachment_name'>> }) => {
       const { data, error } = await supabase.from('contracts').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as Contract;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       toast({ title: 'Contrat mis à jour' });

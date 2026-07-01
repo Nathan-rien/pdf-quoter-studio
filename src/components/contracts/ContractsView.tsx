@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useContracts, isContractRenewingSoon, Contract } from '@/hooks/useContracts';
 import { ContractRow } from './ContractRow';
 import { ContractRenewalAlert } from './ContractRenewalAlert';
+import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
 
 function groupByCommercial(contracts: Contract[]) {
   const map = new Map<string, { name: string; contracts: Contract[] }>();
@@ -69,8 +73,42 @@ function CommercialGroup({
 export function ContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
   const { data: contracts = [], isLoading, error } = useContracts('location');
   const { toast } = useToast();
-  const groups = groupByCommercial(contracts);
-  const totalRenewing = contracts.filter(isContractRenewingSoon).length;
+  const { getCommercialById } = useCommerciaux();
+
+  const [entityFilter, setEntityFilter] = useState<string>('all');
+  const [partnerFilter, setPartnerFilter] = useState<string>('all');
+  const [commercialFilter, setCommercialFilter] = useState<string>('all');
+
+  const partnerOptions = useMemo(() => {
+    const s = new Set<string>();
+    contracts.forEach((c) => { if (c.financial_partner) s.add(c.financial_partner); });
+    return Array.from(s).sort();
+  }, [contracts]);
+
+  const commercialOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    contracts.forEach((c) => { map.set(c.commercial_id, c.commercial_name ?? c.commercial_id); });
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [contracts]);
+
+  const filteredContracts = useMemo(() => {
+    return contracts.filter((c) => {
+      if (partnerFilter !== 'all' && c.financial_partner !== partnerFilter) return false;
+      if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
+      if (entityFilter !== 'all') {
+        const entity = getCommercialById(c.commercial_id)?.entity;
+        if (entity !== entityFilter) return false;
+      }
+      return true;
+    });
+  }, [contracts, entityFilter, partnerFilter, commercialFilter, getCommercialById]);
+
+  const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all';
+  const groups = groupByCommercial(filteredContracts);
+  const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
+
 
   const [previewContract, setPreviewContract] = useState<Contract | null>(null);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
@@ -115,7 +153,8 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold">Contrats</h1>
-            {contracts.length > 0 && <Badge variant="secondary">{contracts.length}</Badge>}
+            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{filteredContracts.length !== contracts.length ? ` / ${contracts.length}` : ''}</Badge>}
+
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
@@ -130,7 +169,57 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
 
       </div>
 
+      {contracts.length > 0 && (
+        <div className="flex flex-wrap items-end gap-3 p-3 border border-border rounded-lg bg-muted/20">
+          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+            <Filter className="h-3.5 w-3.5" /> Filtres
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Enseigne</Label>
+            <Select value={entityFilter} onValueChange={setEntityFilter}>
+              <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="cybertek-pro">Cybertek Pro</SelectItem>
+                <SelectItem value="grosbill-pro">Grosbill Pro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Partenaire</Label>
+            <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+              <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {partnerOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Commercial</Label>
+            <Select value={commercialFilter} onValueChange={setCommercialFilter}>
+              <SelectTrigger className="h-8 w-[200px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {commercialOptions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setEntityFilter('all'); setPartnerFilter('all'); setCommercialFilter('all'); }}
+              className="h-8 gap-1 text-xs"
+            >
+              <X className="h-3 w-3" /> Réinitialiser
+            </Button>
+          )}
+        </div>
+      )}
+
       {totalRenewing > 0 && <ContractRenewalAlert />}
+
 
       {contracts.length === 0 && (
         <div className="text-center py-12 border border-dashed border-border rounded-lg">
