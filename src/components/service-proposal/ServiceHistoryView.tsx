@@ -492,6 +492,23 @@ export function ServiceHistoryView({ onLoadProposal }: ServiceHistoryViewProps =
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmLoadEntry} onOpenChange={(open) => !open && setConfirmLoadEntry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Charger cette proposition ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La proposition en cours sera remplacée par « {confirmLoadEntry?.proposal_name} ». Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmLoadEntry && handleLoadProposal(confirmLoadEntry)}>
+              Charger
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
