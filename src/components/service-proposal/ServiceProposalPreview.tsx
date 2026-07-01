@@ -317,7 +317,7 @@ export function ServiceProposalPreview() {
       left: '4%',
       right: '4%',
       height: `${zone.position?.height ?? fallbackHeight}%`,
-      zIndex: 100,
+      zIndex: 1000,
       overflow: 'hidden',
     };
   };

@@ -258,7 +258,7 @@ export function ServiceProposalExport() {
         'left: 4%',
         'right: 4%',
         `height: ${zone.position?.height ?? fallbackHeight}%`,
-        'z-index: 100',
+        'z-index: 1000',
         'overflow: hidden',
       ].join('; ');
     };
@@ -399,7 +399,7 @@ export function ServiceProposalExport() {
 
     if (selectedCommercial?.adresse) {
       dynamicContent[1] = `${dynamicContent[1] || ''}
-        <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 100;">
+        <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 1000;">
           ${escapeText(selectedCommercial.adresse)}
         </div>
       `;
