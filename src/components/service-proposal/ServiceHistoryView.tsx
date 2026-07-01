@@ -56,17 +56,23 @@ interface ServiceExportSummary {
   montant_investissement: number | null;
 }
 
+interface ServiceHistoryViewProps {
+  onLoadProposal?: (snapshot: Record<string, any>) => void;
+}
+
 const MONTHS_FR = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
-export function ServiceHistoryView() {
+export function ServiceHistoryView({ onLoadProposal }: ServiceHistoryViewProps = {}) {
   const [exports, setExports] = useState<ServiceExportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [loadingLoadId, setLoadingLoadId] = useState<string | null>(null);
+  const [confirmLoadEntry, setConfirmLoadEntry] = useState<ServiceExportSummary | null>(null);
 
   // Filtres
   const [searchQuery, setSearchQuery] = useState('');
