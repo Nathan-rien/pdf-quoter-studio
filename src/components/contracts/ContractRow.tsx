@@ -406,6 +406,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 className="h-9 text-sm"
               />
             </div>
+            {!hideFinancialPartner && (
             <div className="space-y-1.5">
               <Label className="text-xs">Partenaire financier</Label>
               {isQuick ? (
@@ -426,6 +427,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 </Select>
               )}
             </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs">Durée (mois)</Label>
               {isQuick ? (
