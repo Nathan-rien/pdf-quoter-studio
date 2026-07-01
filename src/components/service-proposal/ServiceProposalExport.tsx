@@ -45,6 +45,12 @@ import { ENTITIES, getCommercialById } from '@/data/commerciaux';
 import type { DynamicZone } from '@/types/pdf-template';
 
 const SERVICES_INSERTION_AFTER_PAGE = 3;
+const SERVICE_ZONE_GAP_PERCENT = 1.25;
+
+type PositionedDynamicZone = DynamicZone & {
+  layoutTop?: number;
+  layoutMinHeight?: number;
+};
 
 export function ServiceProposalExport() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -234,38 +240,80 @@ export function ServiceProposalExport() {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 
-    const getServiceZoneStyle = (zone: DynamicZone) => {
-      const fallbackTop =
-        zone.type === 'service_client_info'
-          ? 82
-          : zone.type === 'service_conditions'
-            ? 10
-            : zone.type === 'service_invest_table'
-              ? 5
-              : 65;
-      const fallbackHeight =
-        zone.type === 'service_client_info'
+    const getFallbackZoneTop = (zone: DynamicZone): number =>
+      zone.type === 'service_client_info'
+        ? 82
+        : zone.type === 'service_conditions'
           ? 10
-          : zone.type === 'service_conditions'
-            ? 12
-            : zone.type === 'service_invest_table'
-              ? 28
-              : 18;
+          : zone.type === 'service_invest_table'
+            ? 5
+            : 65;
 
+    const getFallbackZoneHeight = (zone: DynamicZone): number =>
+      zone.type === 'service_client_info'
+        ? 10
+        : zone.type === 'service_conditions'
+          ? 16
+          : zone.type === 'service_invest_table'
+            ? 30
+            : 18;
+
+    const getZoneTop = (zone: DynamicZone): number => zone.position?.top ?? getFallbackZoneTop(zone);
+    const getZoneMinHeight = (zone: DynamicZone): number => zone.position?.height ?? getFallbackZoneHeight(zone);
+
+    const estimateTextVisualLines = (text: string): number =>
+      Math.max(
+        1,
+        text
+          .split('\n')
+          .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 72)), 0),
+      );
+
+    const estimateServiceZoneHeight = (zone: DynamicZone): number => {
+      const minHeight = getZoneMinHeight(zone);
+      if (zone.type === 'service_invest_table') {
+        const visualRows = lignesData.length > 0
+          ? lignesData.reduce((total, ligne) => total + estimateTextVisualLines(ligne.designation || '-'), 0)
+          : 1;
+        return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
+      }
+      if (zone.type === 'service_conditions') return Math.max(minHeight, 17);
+      if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
+      if (zone.type === 'service_signature') return Math.max(minHeight, 14);
+      return minHeight;
+    };
+
+    const layoutServiceZones = (zones: Array<DynamicZone & { pageNumber: number }>): PositionedDynamicZone[] => {
+      let currentBottom = 0;
+      return [...zones]
+        .sort((a, b) => getZoneTop(a) - getZoneTop(b))
+        .map((zone) => {
+          const minHeight = getZoneMinHeight(zone);
+          const estimatedHeight = estimateServiceZoneHeight(zone);
+          const naturalTop = getZoneTop(zone);
+          const adjustedTop = Math.max(naturalTop, currentBottom > 0 ? currentBottom + SERVICE_ZONE_GAP_PERCENT : naturalTop);
+          const safeTop = Math.min(adjustedTop, Math.max(1, 96 - minHeight));
+          currentBottom = Math.max(currentBottom, safeTop + estimatedHeight);
+          return { ...zone, layoutTop: safeTop, layoutMinHeight: minHeight };
+        });
+    };
+
+    const getServiceZoneStyle = (zone: PositionedDynamicZone) => {
       return [
         'position: absolute',
-        `top: ${zone.position?.top ?? fallbackTop}%`,
+        `top: ${zone.layoutTop ?? getZoneTop(zone)}%`,
         'left: 4%',
         'right: 4%',
-        `min-height: ${zone.position?.height ?? fallbackHeight}%`,
+        `min-height: ${zone.layoutMinHeight ?? getZoneMinHeight(zone)}%`,
         'z-index: 1000',
+        'overflow: visible',
       ].join('; ');
     };
 
-    const renderClientZone = (zone: DynamicZone) => `
+    const renderClientZone = (zone: PositionedDynamicZone) => `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 10px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; height: 100%; overflow: hidden;">
-          <div style="padding-right: 12px; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr;">
+          <div style="padding-right: 12px;">
             <p style="font-size: 7px; color: #6b7280; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 3px 0; font-weight: 600;">Bénéficiaire</p>
             <div style="font-size: 8px; line-height: 1.3; color: #4b5563;">
               ${clientData.raisonSociale ? `<p style="font-weight: 700; font-size: 9px; color: #1f2937; margin: 0;">${escapeText(clientData.raisonSociale)}</p>` : ''}
@@ -275,7 +323,7 @@ export function ServiceProposalExport() {
               ${clientData.telephone ? `<p style="margin: 1px 0;">${escapeText(clientData.telephone)}</p>` : ''}
             </div>
           </div>
-          <div style="border-left: 1px solid #e5e7eb; padding-left: 12px; overflow: hidden;">
+          <div style="border-left: 1px solid #e5e7eb; padding-left: 12px;">
             <p style="font-size: 7px; color: #6b7280; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 3px 0; font-weight: 600;">Votre interlocuteur</p>
             ${
               selectedCommercial
@@ -303,16 +351,16 @@ export function ServiceProposalExport() {
       ['Total HT services', `${formatNumber(totalServicesHt)} €`, true],
     ];
 
-    const renderConditionsZone = (zone: DynamicZone) => `
+    const renderConditionsZone = (zone: PositionedDynamicZone) => `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <table style="width: 100%; border-collapse: collapse; font-size: 9px; background: white; border: 1px solid #e5e7eb;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
           <tbody>
             ${conditionsRows
               .map(
                 ([label, value, bold]) => `
               <tr>
-                <td style="width: 38%; padding: 4px 8px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">${escapeText(label)}</td>
-                <td style="padding: 4px 8px; color: #1f2937; border: 1px solid #e5e7eb; ${bold ? 'font-weight: 700; text-align: right;' : ''}">${escapeText(value)}</td>
+                <td style="width: 38%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(label)}</td>
+                <td style="padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; overflow-wrap: anywhere; vertical-align: top; ${bold ? 'font-weight: 700; text-align: right;' : ''}">${escapeText(value)}</td>
               </tr>`,
               )
               .join('')}
@@ -321,15 +369,15 @@ export function ServiceProposalExport() {
       </div>
     `;
 
-    const renderInvestZone = (zone: DynamicZone) => `
+    const renderInvestZone = (zone: PositionedDynamicZone) => `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <table style="width: 100%; border-collapse: collapse; font-size: 8px; background: white;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.2px; line-height: 1.15; background: white; table-layout: fixed;">
           <thead>
             <tr style="background: #f3f4f6;">
-              <th style="padding: 5px 8px; text-align: left; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb;">Désignation</th>
-              <th style="padding: 5px 8px; text-align: center; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 40px;">Qté</th>
-              <th style="padding: 5px 8px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 70px;">P.U. HT</th>
-              <th style="padding: 5px 8px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 80px;">Total HT</th>
+              <th style="padding: 3px 5px; text-align: left; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb;">Désignation</th>
+              <th style="padding: 3px 5px; text-align: center; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 34px;">Qté</th>
+              <th style="padding: 3px 5px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 56px;">P.U. HT</th>
+              <th style="padding: 3px 5px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 64px;">Total HT</th>
             </tr>
           </thead>
           <tbody>
@@ -339,10 +387,10 @@ export function ServiceProposalExport() {
                     .map(
                       (l, idx) => `
               <tr style="background: ${idx % 2 === 1 ? '#fafafa' : 'white'};">
-                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; vertical-align: top; word-wrap: break-word; white-space: pre-wrap;">${escapeText(l.designation || '-')}</td>
-                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: center; vertical-align: top;">${escapeText(l.quantite)}</td>
-                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top;">${formatNumber(l.prixUnitaire)}</td>
-                <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top; font-weight: 600;">${formatNumber(l.totalHT)}</td>
+                <td style="padding: 3px 5px; border: 1px solid #e5e7eb; vertical-align: top; overflow-wrap: anywhere; white-space: normal;">${escapeText(l.designation || '-')}</td>
+                <td style="padding: 3px 5px; border: 1px solid #e5e7eb; text-align: center; vertical-align: top;">${escapeText(l.quantite)}</td>
+                <td style="padding: 3px 5px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top;">${formatNumber(l.prixUnitaire)}</td>
+                <td style="padding: 3px 5px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top; font-weight: 600;">${formatNumber(l.totalHT)}</td>
               </tr>`,
                     )
                     .join('')
@@ -350,9 +398,9 @@ export function ServiceProposalExport() {
             }
           </tbody>
         </table>
-        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-          <div style="border: 1px solid #d1d5db; background: white; padding: 6px 10px; min-width: 180px;">
-            <div style="display: flex; justify-content: space-between; font-size: 10px; gap: 12px;">
+        <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+          <div style="border: 1px solid #d1d5db; background: white; padding: 4px 8px; min-width: 150px;">
+            <div style="display: flex; justify-content: space-between; font-size: 8.5px; gap: 12px;">
               <span style="font-weight: 700; color: #374151;">Total HT</span>
               <span style="font-weight: 700; color: #1f2937;">${formatNumber(totalInvest)} €</span>
             </div>
@@ -362,7 +410,7 @@ export function ServiceProposalExport() {
     `;
 
 
-    const renderSignatureZone = (zone: DynamicZone) => `
+    const renderSignatureZone = (zone: PositionedDynamicZone) => `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; font-size: 9px; color: #1f2937;">
         <div style="display: flex; justify-content: space-between; gap: 24px;">
           <div style="flex: 1;">
@@ -380,7 +428,7 @@ export function ServiceProposalExport() {
       </div>
     `;
 
-    const renderServiceZone = (zone: DynamicZone) => {
+    const renderServiceZone = (zone: PositionedDynamicZone) => {
       if (zone.type === 'service_client_info') return renderClientZone(zone);
       if (zone.type === 'service_conditions') return renderConditionsZone(zone);
       if (zone.type === 'service_invest_table') return renderInvestZone(zone);
@@ -394,10 +442,18 @@ export function ServiceProposalExport() {
         .map((zone) => ({ ...zone, pageNumber: page.pageNumber })),
     ) ?? [];
 
-    serviceZones.forEach((zone) => {
+    const serviceZonesByPage = serviceZones.reduce<Record<number, Array<DynamicZone & { pageNumber: number }>>>((acc, zone) => {
+      acc[zone.pageNumber] = [...(acc[zone.pageNumber] || []), zone];
+      return acc;
+    }, {});
+
+    Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
+      layoutServiceZones(zones).forEach((zone) => {
       const html = renderServiceZone(zone);
       if (!html) return;
-      dynamicContent[zone.pageNumber] = `${dynamicContent[zone.pageNumber] || ''}${html}`;
+        const page = Number(pageNumber);
+        dynamicContent[page] = `${dynamicContent[page] || ''}${html}`;
+      });
     });
 
     const hasPage1ClientZone = serviceZones.some(
