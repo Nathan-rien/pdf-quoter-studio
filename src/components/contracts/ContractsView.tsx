@@ -34,11 +34,13 @@ function CommercialGroup({
   commercialName,
   contracts,
   onVisualize,
+  autoExpandId,
 }: {
   commercialId: string;
   commercialName: string;
   contracts: Contract[];
   onVisualize?: (contract: Contract) => void;
+  autoExpandId?: string | null;
 }) {
   const [open, setOpen] = useState(true);
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
@@ -65,7 +67,14 @@ function CommercialGroup({
       </button>
       {open && (
         <div className="space-y-2 pl-2">
-          {contracts.map((c) => <ContractRow key={c.id} contract={c} onVisualize={onVisualize} />)}
+          {contracts.map((c) => (
+            <ContractRow
+              key={c.id}
+              contract={c}
+              onVisualize={onVisualize}
+              defaultExpanded={autoExpandId === c.id}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -76,6 +85,18 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
   const { data: contracts = [], isLoading, error } = useContracts('location');
   const { toast } = useToast();
   const { getCommercialById } = useCommerciaux();
+  const createQuick = useCreateQuickContract();
+  const [autoExpandId, setAutoExpandId] = useState<string | null>(null);
+
+  const handleCreateQuick = async () => {
+    try {
+      const created = await createQuick.mutateAsync('location');
+      setAutoExpandId(created.id);
+    } catch {
+      /* toast déjà géré par la mutation */
+    }
+  };
+
 
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [partnerFilter, setPartnerFilter] = useState<string>('all');
