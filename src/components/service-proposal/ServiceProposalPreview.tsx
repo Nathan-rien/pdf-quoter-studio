@@ -676,9 +676,8 @@ export function ServiceProposalPreview() {
     if (currentPage >= 1 && currentPage <= TEMPLATE_PAGES_BEFORE) {
       return renderTemplatePage(currentPage, currentPage);
     }
-    if (currentPage === TEMPLATE_PAGES_BEFORE + 1) return renderVosServicesPage(currentPage);
-    if (currentPage === TEMPLATE_PAGES_BEFORE + 2) return renderServicesInclusPage(currentPage);
-    const offset = currentPage - (TEMPLATE_PAGES_BEFORE + 2);
+    if (currentPage === TEMPLATE_PAGES_BEFORE + 1) return renderServicesInclusPage(currentPage);
+    const offset = currentPage - (TEMPLATE_PAGES_BEFORE + 1);
     const templatePageNumber = TEMPLATE_PAGES_BEFORE + offset;
     if (templatePageNumber <= templatePagesTotal) {
       return renderTemplatePage(templatePageNumber, currentPage);
