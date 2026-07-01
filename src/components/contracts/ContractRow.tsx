@@ -33,17 +33,20 @@ function sanitizeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
 }
 
-export function ContractRow({ contract, onVisualize }: { contract: Contract; onVisualize?: (contract: Contract) => void }) {
-  const [expanded, setExpanded] = useState(false);
+export function ContractRow({ contract, onVisualize, defaultExpanded = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
   const { commerciaux } = useCommerciaux();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isQuick = !!contract.is_quick_contract;
+
   const renewing = isContractRenewingSoon(contract);
   const monthsLeft = getMonthsUntilRenewal(contract);
 
+  const [clientName, setClientName] = useState(contract.client_name ?? '');
   const [implementationMonth, setImplementationMonth] = useState(
     contract.implementation_month ? contract.implementation_month.substring(0, 7) : ''
   );
@@ -55,12 +58,16 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
     contract.payment_frequency ?? 'mensuel'
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
+  const [commercialFree, setCommercialFree] = useState(contract.commercial_name ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
-  const { data: proposalRent } = useContractProposalRent(contract.proposal_id);
+  const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
     contract.monthly_rent_ht != null ? String(contract.monthly_rent_ht) : ''
+  );
+  const [manualQuarterlyRent, setManualQuarterlyRent] = useState<string>(
+    contract.quarterly_rent_ht != null ? String(contract.quarterly_rent_ht) : ''
   );
 
   const [uploading, setUploading] = useState(false);
@@ -72,39 +79,48 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
 
   // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
   const manualRentNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
+  const manualQuarterlyNumber = manualQuarterlyRent.trim() === '' ? null : Number(manualQuarterlyRent);
   const monthlyRent: number | null =
-    (typeof proposalRent === 'number' ? proposalRent : null) ??
+    (!isQuick && typeof proposalRent === 'number' ? proposalRent : null) ??
     (manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null) ??
     (contract.monthly_rent_ht ?? null);
-  const quarterlyRent = monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null;
+  const quarterlyRent: number | null = isQuick
+    ? (manualQuarterlyNumber != null && !Number.isNaN(manualQuarterlyNumber) ? manualQuarterlyNumber : (contract.quarterly_rent_ht ?? null))
+    : (monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null);
   const displayedAmount = paymentFrequency === 'trimestriel' ? quarterlyRent : monthlyRent;
-  const hasProposalRent = typeof proposalRent === 'number';
+  const hasProposalRent = !isQuick && typeof proposalRent === 'number';
 
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
 
   function handleSave() {
-    const selected = commerciaux.find((c) => c.id === commercialId);
-    // Loyer mensuel manuel : conservé uniquement quand aucune proposition n'apporte la valeur
+    const selected = !isQuick ? commerciaux.find((c) => c.id === commercialId) : null;
     const manualNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
     const manualMonthlyValue = manualNumber != null && !Number.isNaN(manualNumber)
       ? Math.round(manualNumber * 100) / 100
       : null;
+    const manualQNumber = manualQuarterlyRent.trim() === '' ? null : Number(manualQuarterlyRent);
+    const manualQuarterlyValue = manualQNumber != null && !Number.isNaN(manualQNumber)
+      ? Math.round(manualQNumber * 100) / 100
+      : null;
     updateContract.mutate({
       id: contract.id,
       updates: {
+        client_name: isQuick ? (clientName.trim() || 'Nouveau contrat') : contract.client_name,
         implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
         financial_partner: financialPartner || null,
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
-        commercial_id: commercialId || contract.commercial_id,
-        commercial_name: selected?.nom ?? contract.commercial_name,
+        commercial_id: isQuick ? 'quick' : (commercialId || contract.commercial_id),
+        commercial_name: isQuick ? (commercialFree.trim() || null) : (selected?.nom ?? contract.commercial_name),
         contract_number: contractNumber.trim() || null,
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
+        quarterly_rent_ht: isQuick ? manualQuarterlyValue : contract.quarterly_rent_ht ?? null,
       },
     });
   }
 
   async function handleDownloadProposal() {
+    if (!contract.proposal_id) return;
     setDownloadingProposal(true);
     try {
       const { data, error } = await supabase
@@ -229,25 +245,32 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
             <div className="text-[11px] text-muted-foreground">{contract.template_name}</div>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
-          title="Visualiser la proposition"
-          onClick={(e) => { e.stopPropagation(); onVisualize?.(contract); }}
-        >
-          <Eye className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
-          title="Télécharger la proposition"
-          disabled={downloadingProposal}
-          onClick={(e) => { e.stopPropagation(); handleDownloadProposal(); }}
-        >
-          {downloadingProposal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-        </Button>
+        {!isQuick && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
+              title="Visualiser la proposition"
+              onClick={(e) => { e.stopPropagation(); onVisualize?.(contract); }}
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
+              title="Télécharger la proposition"
+              disabled={downloadingProposal}
+              onClick={(e) => { e.stopPropagation(); handleDownloadProposal(); }}
+            >
+              {downloadingProposal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            </Button>
+          </>
+        )}
+        {isQuick && (
+          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Contrat rapide</Badge>
+        )}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -286,19 +309,39 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
 
       {expanded && (
         <div className="border-t border-border bg-muted/20 p-4 space-y-4">
+          {isQuick && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Client</Label>
+              <Input
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Nom du client"
+                className="h-9 text-sm"
+              />
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Commercial en charge</Label>
-              <Select value={commercialId} onValueChange={setCommercialId}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Sélectionner" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortedCommerciaux.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isQuick ? (
+                <Input
+                  value={commercialFree}
+                  onChange={(e) => setCommercialFree(e.target.value)}
+                  placeholder="Nom du commercial"
+                  className="h-9 text-sm"
+                />
+              ) : (
+                <Select value={commercialId} onValueChange={setCommercialId}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortedCommerciaux.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Numéro de contrat</Label>
@@ -310,8 +353,27 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Loyer HT (issu de la proposition)</Label>
-              {hasProposalRent ? (
+              <Label className="text-xs">{isQuick ? 'Loyer HT' : 'Loyer HT (issu de la proposition)'}</Label>
+              {isQuick ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualMonthlyRent}
+                    onChange={(e) => setManualMonthlyRent(e.target.value)}
+                    placeholder="Mensuel"
+                    className="h-9 text-sm"
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualQuarterlyRent}
+                    onChange={(e) => setManualQuarterlyRent(e.target.value)}
+                    placeholder="Trimestriel"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              ) : hasProposalRent ? (
                 <div className="h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3">
                   <span>Mensuel <strong>{(monthlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
                   <span className="text-muted-foreground">·</span>
@@ -346,25 +408,45 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Partenaire financier</Label>
-              <Select value={financialPartner} onValueChange={setFinancialPartner}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Sélectionner" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FINANCIAL_PARTNERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {isQuick ? (
+                <Input
+                  value={financialPartner}
+                  onChange={(e) => setFinancialPartner(e.target.value)}
+                  placeholder="Ex : Grenke 1"
+                  className="h-9 text-sm"
+                />
+              ) : (
+                <Select value={financialPartner} onValueChange={setFinancialPartner}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FINANCIAL_PARTNERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Durée (mois)</Label>
-              <Select value={durationMonths} onValueChange={setDurationMonths}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Sélectionner" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {isQuick ? (
+                <Input
+                  type="number"
+                  min={1}
+                  value={durationMonths}
+                  onChange={(e) => setDurationMonths(e.target.value)}
+                  placeholder="Ex : 48"
+                  className="h-9 text-sm"
+                />
+              ) : (
+                <Select value={durationMonths} onValueChange={setDurationMonths}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Périodicité</Label>

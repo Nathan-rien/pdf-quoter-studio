@@ -46,10 +46,12 @@ export type Database = {
           financial_partner: string | null
           id: string
           implementation_month: string | null
+          is_quick_contract: boolean
           monthly_rent_ht: number | null
           payment_frequency: string | null
-          proposal_id: string
+          proposal_id: string | null
           proposal_type: string
+          quarterly_rent_ht: number | null
           template_name: string | null
           updated_at: string
           validated_at: string
@@ -67,10 +69,12 @@ export type Database = {
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
+          is_quick_contract?: boolean
           monthly_rent_ht?: number | null
           payment_frequency?: string | null
-          proposal_id: string
+          proposal_id?: string | null
           proposal_type?: string
+          quarterly_rent_ht?: number | null
           template_name?: string | null
           updated_at?: string
           validated_at?: string
@@ -88,10 +92,12 @@ export type Database = {
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
+          is_quick_contract?: boolean
           monthly_rent_ht?: number | null
           payment_frequency?: string | null
-          proposal_id?: string
+          proposal_id?: string | null
           proposal_type?: string
+          quarterly_rent_ht?: number | null
           template_name?: string | null
           updated_at?: string
           validated_at?: string

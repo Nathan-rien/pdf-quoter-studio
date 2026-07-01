@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useContracts, isContractRenewingSoon, Contract } from '@/hooks/useContracts';
+import { useContracts, isContractRenewingSoon, Contract, useCreateQuickContract } from '@/hooks/useContracts';
 import { ContractRow } from './ContractRow';
 import { ContractRenewalAlert } from './ContractRenewalAlert';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
@@ -16,10 +16,12 @@ import { useToast } from '@/hooks/use-toast';
 function groupByCommercial(contracts: Contract[]) {
   const map = new Map<string, { name: string; contracts: Contract[] }>();
   for (const c of contracts) {
-    if (!map.has(c.commercial_id)) {
-      map.set(c.commercial_id, { name: c.commercial_name ?? c.commercial_id, contracts: [] });
+    const key = c.is_quick_contract ? '__quick__' : c.commercial_id;
+    const name = c.is_quick_contract ? 'Contrats rapides' : (c.commercial_name ?? c.commercial_id);
+    if (!map.has(key)) {
+      map.set(key, { name, contracts: [] });
     }
-    map.get(c.commercial_id)!.contracts.push(c);
+    map.get(key)!.contracts.push(c);
   }
   return Array.from(map.entries()).map(([id, val]) => ({
     commercialId: id,
@@ -32,11 +34,13 @@ function CommercialGroup({
   commercialName,
   contracts,
   onVisualize,
+  autoExpandId,
 }: {
   commercialId: string;
   commercialName: string;
   contracts: Contract[];
   onVisualize?: (contract: Contract) => void;
+  autoExpandId?: string | null;
 }) {
   const [open, setOpen] = useState(true);
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
@@ -63,7 +67,14 @@ function CommercialGroup({
       </button>
       {open && (
         <div className="space-y-2 pl-2">
-          {contracts.map((c) => <ContractRow key={c.id} contract={c} onVisualize={onVisualize} />)}
+          {contracts.map((c) => (
+            <ContractRow
+              key={c.id}
+              contract={c}
+              onVisualize={onVisualize}
+              defaultExpanded={autoExpandId === c.id}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -74,6 +85,18 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
   const { data: contracts = [], isLoading, error } = useContracts('location');
   const { toast } = useToast();
   const { getCommercialById } = useCommerciaux();
+  const createQuick = useCreateQuickContract();
+  const [autoExpandId, setAutoExpandId] = useState<string | null>(null);
+
+  const handleCreateQuick = async () => {
+    try {
+      const created = await createQuick.mutateAsync('location');
+      setAutoExpandId(created.id);
+    } catch {
+      /* toast déjà géré par la mutation */
+    }
+  };
+
 
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [partnerFilter, setPartnerFilter] = useState<string>('all');
@@ -115,6 +138,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   const handleVisualize = async (contract: Contract) => {
+    if (!contract.proposal_id) return;
     setPreviewContract(contract);
     setPreviewContent(null);
     setLoadingPreview(true);
@@ -160,12 +184,25 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
             Propositions validées. Renseignez le mois de mise en place, le partenaire et la durée pour chaque contrat.
           </p>
         </div>
-        {onCreateManual && (
-          <Button variant="outline" size="sm" onClick={onCreateManual} className="shrink-0 gap-1">
-            <Plus className="h-4 w-4" />
-            Créer un contrat manuellement
+        <div className="flex items-center gap-2 shrink-0">
+          {onCreateManual && (
+            <Button variant="outline" size="sm" onClick={onCreateManual} className="gap-1">
+              <Plus className="h-4 w-4" />
+              Créer un contrat manuellement
+            </Button>
+          )}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleCreateQuick}
+            disabled={createQuick.isPending}
+            className="gap-1"
+          >
+            <Zap className="h-4 w-4" />
+            {createQuick.isPending ? 'Création…' : 'Créer contrat rapide'}
           </Button>
-        )}
+        </div>
+
 
       </div>
 
@@ -239,6 +276,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
             commercialName={g.commercialName}
             contracts={g.contracts}
             onVisualize={handleVisualize}
+            autoExpandId={autoExpandId}
           />
         ))}
       </div>
