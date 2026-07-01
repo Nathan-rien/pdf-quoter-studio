@@ -6,8 +6,7 @@
  *
  * Sections générées :
  *   - Pages du template (toutes)
- *   - Page custom "Vos services" insérée après la page 3 du template
- *   - Page custom "Services inclus" insérée juste après
+ *   - Page custom "Services inclus" insérée après la page 3 du template
  *   - Pas de Votre offre, pas de loyer mensuel, pas de reprise, pas d'Avantages/Conditions
  */
 import React, { useState, useMemo, useCallback } from 'react';
