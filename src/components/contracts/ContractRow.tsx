@@ -33,7 +33,7 @@ function sanitizeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
 }
 
-export function ContractRow({ contract, onVisualize, defaultExpanded = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean }) {
+export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
