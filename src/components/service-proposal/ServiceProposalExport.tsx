@@ -42,6 +42,7 @@ import {
   setPdfSubstitutionContext,
 } from '@/lib/pdf-html-generator';
 import { ENTITIES, getCommercialById } from '@/data/commerciaux';
+import type { DynamicZone } from '@/types/pdf-template';
 
 const SERVICES_INSERTION_AFTER_PAGE = 3;
 
@@ -219,48 +220,184 @@ export function ServiceProposalExport() {
     const excludeElementIds: Record<number, string[]> = {};
     const extraPagesAfter: Record<number, string[]> = {};
 
-    // Page 1 : bloc client / commercial
-    dynamicContent[1] = `
-      <div class="dynamic-content" style="position: absolute; bottom: 55px; left: 5%; right: 5%; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; z-index: 40;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div>
-            <div style="font-size: 9px;">
-              ${clientData.raisonSociale ? `<p style="font-weight: 700; margin: 0;">${clientData.raisonSociale}</p>` : ''}
-              <p style="font-weight: 600; margin: 0;">${clientData.nom || 'Nom du client'}</p>
-              <p style="color: #6b7280; margin: 2px 0;">${clientData.adresse || ''}</p>
-              ${clientData.email ? `<p style="color: #6b7280; margin: 2px 0;">${clientData.email}</p>` : ''}
-              ${clientData.telephone ? `<p style="color: #6b7280; margin: 2px 0;">${clientData.telephone}</p>` : ''}
-            </div>
+    const escapeText = (value: unknown) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const getServiceZoneStyle = (zone: DynamicZone) => {
+      const fallbackTop =
+        zone.type === 'service_client_info'
+          ? 82
+          : zone.type === 'service_conditions'
+            ? 10
+            : zone.type === 'service_invest_table'
+              ? 5
+              : 65;
+      const fallbackHeight =
+        zone.type === 'service_client_info'
+          ? 10
+          : zone.type === 'service_conditions'
+            ? 12
+            : zone.type === 'service_invest_table'
+              ? 28
+              : 18;
+
+      return [
+        'position: absolute',
+        `top: ${zone.position?.top ?? fallbackTop}%`,
+        'left: 4%',
+        'right: 4%',
+        `height: ${zone.position?.height ?? fallbackHeight}%`,
+        'z-index: 60',
+        'overflow: hidden',
+      ].join('; ');
+    };
+
+    const renderClientZone = (zone: DynamicZone) => `
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 100%; overflow: hidden;">
+          <div style="font-size: 8px; line-height: 1.25; overflow: hidden;">
+            ${clientData.raisonSociale ? `<p style="font-weight: 700; margin: 0;">${escapeText(clientData.raisonSociale)}</p>` : ''}
+            <p style="font-weight: 600; margin: 0;">${escapeText(clientData.nom || 'Nom du client')}</p>
+            <p style="color: #6b7280; margin: 1px 0;">${escapeText(clientData.adresse || 'Adresse')}</p>
+            ${clientData.email ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(clientData.email)}</p>` : ''}
+            ${clientData.telephone ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(clientData.telephone)}</p>` : ''}
           </div>
-          <div>
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-              <span style="font-weight: 600; font-size: 10px;">Votre interlocuteur</span>
-            </div>
+          <div style="overflow: hidden;">
+            <p style="font-weight: 600; font-size: 9px; margin: 0 0 4px 0;">Votre interlocuteur</p>
             ${
               selectedCommercial
                 ? `
-              <div style="font-size: 9px;">
-                <p style="font-weight: 600; margin: 0;">${selectedCommercial.nom}</p>
-                ${selectedCommercial.telephone ? `<p style="color: #6b7280; margin: 2px 0;">${selectedCommercial.telephone}</p>` : ''}
-                <p style="color: #6b7280; margin: 2px 0;">${selectedCommercial.email}</p>
-                ${entityLabel ? `<p style="color: #6b7280; margin: 2px 0;">${entityLabel}</p>` : ''}
+              <div style="font-size: 8px; line-height: 1.25;">
+                <p style="font-weight: 600; margin: 0;">${escapeText(selectedCommercial.nom)}</p>
+                ${selectedCommercial.telephone ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
+                <p style="color: #6b7280; margin: 1px 0;">${escapeText(selectedCommercial.email)}</p>
+                ${entityLabel ? `<p style="color: #6b7280; margin: 1px 0;">${escapeText(entityLabel)}</p>` : ''}
               </div>
             `
-                : '<p style="font-size: 9px; color: #9ca3af; font-style: italic;">Non sélectionné</p>'
+                : '<p style="font-size: 8px; color: #9ca3af; font-style: italic;">Non sélectionné</p>'
             }
           </div>
         </div>
       </div>
-      ${
-        selectedCommercial?.adresse
-          ? `
-        <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 40;">
-          ${selectedCommercial.adresse}
-        </div>
-      `
-          : ''
-      }
     `;
+
+    const renderConditionsZone = (zone: DynamicZone) => `
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; font-size: 9px; line-height: 1.6; color: #1f2937;">
+        Services : ${escapeText(selectedServices.map((s) => s.label).join(', '))}<br />
+        Périodicité : ${paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'}<br />
+        Mode de règlement : ${paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : '—'}<br />
+        Durée : ${contractDuration ? `${contractDuration} mois` : '—'}<br />
+        Démarrage : ${startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'}<br />
+        Total HT services : ${formatNumber(totalServicesHt)} €
+      </div>
+    `;
+
+    const renderInvestZone = (zone: DynamicZone) => `
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+        <table style="width: 100%; border-collapse: collapse; font-size: 8px; background: white;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 4px 6px; text-align: left; font-weight: 600;">Désignation</th>
+              <th style="padding: 4px 6px; text-align: center; width: 50px;">Qté</th>
+              <th style="padding: 4px 6px; text-align: right; width: 75px;">P.U. HT</th>
+              <th style="padding: 4px 6px; text-align: right; width: 75px;">Total HT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              lignesData.length > 0
+                ? lignesData
+                    .map(
+                      (l) => `
+              <tr>
+                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; word-wrap: break-word; white-space: pre-wrap;">${escapeText(l.designation || '-')}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: center;">${escapeText(l.quantite)}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(l.prixUnitaire)}</td>
+                <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatNumber(l.totalHT)}</td>
+              </tr>`,
+                    )
+                    .join('')
+                : '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #9ca3af; font-style: italic;">Aucune ligne de service</td></tr>'
+            }
+          </tbody>
+        </table>
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 10px; min-width: 180px;">
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 10px; color: #1e40af; gap: 12px;">
+              <span>Total HT :</span>
+              <span>${formatNumber(totalInvest)} €</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const renderSignatureZone = (zone: DynamicZone) => `
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; font-size: 9px; color: #1f2937;">
+        <div style="display: flex; justify-content: space-between; gap: 24px;">
+          <div style="flex: 1;">
+            La Société Groupe Cybertek SAS<br />
+            Représentée par ${escapeText(selectedCommercial?.nom || commercialData?.commercialId || '—')}<br />
+            Directeur Services et Solutions<br /><br /><br />
+            Signature : _______________
+          </div>
+          <div style="flex: 1;">
+            La Société ${escapeText(clientData.raisonSociale || clientData.nom)}<br />
+            Représentée par ${escapeText(clientData.nom)}<br /><br /><br />
+            Signature : _______________
+          </div>
+        </div>
+      </div>
+    `;
+
+    const renderServiceZone = (zone: DynamicZone) => {
+      if (zone.type === 'service_client_info') return renderClientZone(zone);
+      if (zone.type === 'service_conditions') return renderConditionsZone(zone);
+      if (zone.type === 'service_invest_table') return renderInvestZone(zone);
+      if (zone.type === 'service_signature') return renderSignatureZone(zone);
+      return '';
+    };
+
+    const serviceZones = latestVersion?.pages.flatMap((page) =>
+      (page.dynamicZones || [])
+        .filter((zone) => (zone.type as string).startsWith('service_'))
+        .map((zone) => ({ ...zone, pageNumber: page.pageNumber })),
+    ) ?? [];
+
+    serviceZones.forEach((zone) => {
+      const html = renderServiceZone(zone);
+      if (!html) return;
+      dynamicContent[zone.pageNumber] = `${dynamicContent[zone.pageNumber] || ''}${html}`;
+    });
+
+    const hasPage1ClientZone = serviceZones.some(
+      (zone) => zone.pageNumber === 1 && zone.type === 'service_client_info',
+    );
+
+    if (!hasPage1ClientZone) {
+      dynamicContent[1] = `${dynamicContent[1] || ''}${renderClientZone({
+        id: 'fallback_service_client_info_page1',
+        pageNumber: 1,
+        type: 'service_client_info',
+        sourceSheet: 'client',
+        isRequired: true,
+        description: 'Informations client',
+        position: { top: 82, height: 10 },
+      })}`;
+    }
+
+    if (selectedCommercial?.adresse) {
+      dynamicContent[1] = `${dynamicContent[1] || ''}
+        <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 60;">
+          ${escapeText(selectedCommercial.adresse)}
+        </div>
+      `;
+    }
 
     // ---------- Page custom "Vos services" ----------
     const tableRowsHTML = lignesData
@@ -335,11 +472,19 @@ export function ServiceProposalExport() {
     };
   }, [
     clientData,
+    commercialData,
     lignesData,
     servicesInclus,
+    selectedServices,
+    paymentFrequency,
+    paymentMode,
+    contractDuration,
+    startDate,
+    totalServicesHt,
     selectedCommercial,
     entityLabel,
     totalInvest,
+    latestVersion,
   ]);
 
   // --- Génération HTML complet ---
