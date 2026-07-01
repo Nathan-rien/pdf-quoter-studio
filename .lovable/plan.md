@@ -1,25 +1,29 @@
-## Objectif
+## Problème identifié
 
-Aligner l'affichage du bloc « Les services inclus dans votre offre » dans **Propositions Services** sur celui de **Proposition Location** : titre avec icône fichier + carte bordée « Services location » (en-tête gris + liste à puces).
+Dans l'éditeur, tu as placé le titre statique **"Vos modalités de règlement"** juste au-dessus de la zone dynamique **`service_conditions`** (Données contrats). Mais à l'affichage, la zone dynamique est décalée vers le bas et se sépare de son titre.
 
-## Modifications
+**Cause :** dans `ServiceProposalPreview.tsx` et `ServiceProposalExport.tsx`, la fonction `layoutServiceZones` réempile automatiquement les zones dynamiques d'une même page pour éviter les chevauchements. Quand la zone `service_invest_table` du haut contient beaucoup de lignes, sa hauteur estimée dépasse sa position d'origine, et la zone `service_conditions` est poussée vers le bas — mais le **titre statique** reste à sa position d'origine dans le template. D'où la déconnexion visuelle.
 
-### 1. `src/components/service-proposal/ServiceProposalPreview.tsx` — `renderServicesInclusPage`
-Remplacer le rendu texte brut actuel par :
-- Titre avec icône `FileCheck` + « Les services inclus dans votre offre »
-- Carte bordée `border rounded` contenant :
-  - En-tête `bg-muted` avec pastille verticale + libellé « Services location »
-  - Corps avec la description en puces (`•`) + support sous-items `- ` indentés (identique à `renderServiceBloc` du Location, lignes 1114–1136).
+Le titre "Dans votre proposition :" fonctionne parce qu'il est au-dessus de la **première** zone (jamais poussée) — la logique d'empilement ne l'affecte pas.
 
-### 2. `src/components/service-proposal/ServiceProposalExport.tsx` — bloc `servicesInclusPageHTML`
-Remplacer le paragraphe `white-space: pre-wrap` par le même markup HTML que `servicesLocationHTML` du RentalProposalExport (lignes 635–645) :
-- Conteneur bordé
-- En-tête gris avec pastille + « Services location »
-- Corps blanc, chaque ligne rendue en `<div>• …</div>` (indentation pour `- `)
+## Solution proposée
 
-Le titre de page « Les services inclus dans votre offre » (avec icône SVG) est conservé au-dessus, comme aujourd'hui.
+Rendre le titre **solidaire** de la zone dynamique en le générant à l'intérieur de la zone `service_conditions` elle-même, plutôt que comme élément statique séparé.
 
-### Hors périmètre
-- Aucun changement au store, aux types, ni au template.
-- Aucun impact sur la Proposition Location.
-- Le contenu par défaut de `servicesInclus.description` reste inchangé.
+### Étapes
+
+1. **`ServiceProposalPreview.tsx`** — dans le rendu de `service_conditions` (lignes 424-446), ajouter un titre `Vos modalités de règlement` au-dessus du tableau (à l'intérieur du même conteneur absolument positionné). Ainsi, quand la zone est repoussée vers le bas par l'auto-stacking, le titre suit.
+
+2. **`ServiceProposalExport.tsx`** — même modification dans `renderConditionsZone` pour que le PDF exporté reflète l'aperçu.
+
+3. **`seedContratCadreTemplate.ts`** — supprimer le titre statique "Vos modalités de règlement" du seed (pour que "Initialiser Contrat Cadre Services" ne le recrée plus). Le titre "Dans votre proposition :" reste car il est associé à une zone jamais déplacée.
+
+4. **Action utilisateur** — après application, supprimer manuellement le titre statique existant "Vos modalités de règlement" du template actuel dans l'éditeur (le seed ne réécrit pas le template existant sans "Initialiser"). Ton template modifié n'est pas écrasé.
+
+### Alternative (non retenue)
+
+Désactiver l'auto-stacking et faire strictement confiance aux positions du template. Rejeté car cela réintroduirait les chevauchements quand le tableau produits contient beaucoup de lignes (problème que l'auto-stacking a résolu précédemment).
+
+### Résultat attendu
+
+Le titre "Vos modalités de règlement" apparaît toujours collé au tableau des données contrats, quelle que soit la hauteur du tableau produits situé au-dessus, sans casser la mise en page existante.

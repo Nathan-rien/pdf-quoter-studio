@@ -276,7 +276,7 @@ export function ServiceProposalExport() {
           : 1;
         return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
       }
-      if (zone.type === 'service_conditions') return Math.max(minHeight, 17);
+      if (zone.type === 'service_conditions') return Math.max(minHeight, 21);
       if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
       if (zone.type === 'service_signature') return Math.max(minHeight, 14);
       return minHeight;
@@ -352,6 +352,7 @@ export function ServiceProposalExport() {
 
     const renderConditionsZone = (zone: PositionedDynamicZone) => `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+        <p style="font-size: 10px; font-weight: 700; color: #1f2937; margin: 0 0 4px 0;">Vos modalités de règlement</p>
         <table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
           <tbody>
             ${conditionsRows
