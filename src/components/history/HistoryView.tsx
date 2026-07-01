@@ -403,6 +403,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                     commercialId={entry.commercial_id || ''}
                     commercialName={entry.commercial_name || undefined}
                     amountHt={entry.montant_investissement || undefined}
+                    monthlyRentHt={entry.loyer_mensuel_ht ?? undefined}
                     templateName={entry.template_name}
                     financialPartner={entry.financial_partner || undefined}
                     durationMonths={entry.duration_months || undefined}
