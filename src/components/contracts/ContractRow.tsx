@@ -33,17 +33,20 @@ function sanitizeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
 }
 
-export function ContractRow({ contract, onVisualize }: { contract: Contract; onVisualize?: (contract: Contract) => void }) {
-  const [expanded, setExpanded] = useState(false);
+export function ContractRow({ contract, onVisualize, defaultExpanded = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
   const { commerciaux } = useCommerciaux();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isQuick = !!contract.is_quick_contract;
+
   const renewing = isContractRenewingSoon(contract);
   const monthsLeft = getMonthsUntilRenewal(contract);
 
+  const [clientName, setClientName] = useState(contract.client_name ?? '');
   const [implementationMonth, setImplementationMonth] = useState(
     contract.implementation_month ? contract.implementation_month.substring(0, 7) : ''
   );
@@ -55,12 +58,16 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
     contract.payment_frequency ?? 'mensuel'
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
+  const [commercialFree, setCommercialFree] = useState(contract.commercial_name ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
-  const { data: proposalRent } = useContractProposalRent(contract.proposal_id);
+  const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
     contract.monthly_rent_ht != null ? String(contract.monthly_rent_ht) : ''
+  );
+  const [manualQuarterlyRent, setManualQuarterlyRent] = useState<string>(
+    contract.quarterly_rent_ht != null ? String(contract.quarterly_rent_ht) : ''
   );
 
   const [uploading, setUploading] = useState(false);
@@ -72,34 +79,42 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
 
   // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
   const manualRentNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
+  const manualQuarterlyNumber = manualQuarterlyRent.trim() === '' ? null : Number(manualQuarterlyRent);
   const monthlyRent: number | null =
-    (typeof proposalRent === 'number' ? proposalRent : null) ??
+    (!isQuick && typeof proposalRent === 'number' ? proposalRent : null) ??
     (manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null) ??
     (contract.monthly_rent_ht ?? null);
-  const quarterlyRent = monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null;
+  const quarterlyRent: number | null = isQuick
+    ? (manualQuarterlyNumber != null && !Number.isNaN(manualQuarterlyNumber) ? manualQuarterlyNumber : (contract.quarterly_rent_ht ?? null))
+    : (monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null);
   const displayedAmount = paymentFrequency === 'trimestriel' ? quarterlyRent : monthlyRent;
-  const hasProposalRent = typeof proposalRent === 'number';
+  const hasProposalRent = !isQuick && typeof proposalRent === 'number';
 
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
 
   function handleSave() {
-    const selected = commerciaux.find((c) => c.id === commercialId);
-    // Loyer mensuel manuel : conservé uniquement quand aucune proposition n'apporte la valeur
+    const selected = !isQuick ? commerciaux.find((c) => c.id === commercialId) : null;
     const manualNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
     const manualMonthlyValue = manualNumber != null && !Number.isNaN(manualNumber)
       ? Math.round(manualNumber * 100) / 100
       : null;
+    const manualQNumber = manualQuarterlyRent.trim() === '' ? null : Number(manualQuarterlyRent);
+    const manualQuarterlyValue = manualQNumber != null && !Number.isNaN(manualQNumber)
+      ? Math.round(manualQNumber * 100) / 100
+      : null;
     updateContract.mutate({
       id: contract.id,
       updates: {
+        client_name: isQuick ? (clientName.trim() || 'Nouveau contrat') : contract.client_name,
         implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
         financial_partner: financialPartner || null,
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
-        commercial_id: commercialId || contract.commercial_id,
-        commercial_name: selected?.nom ?? contract.commercial_name,
+        commercial_id: isQuick ? 'quick' : (commercialId || contract.commercial_id),
+        commercial_name: isQuick ? (commercialFree.trim() || null) : (selected?.nom ?? contract.commercial_name),
         contract_number: contractNumber.trim() || null,
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
+        quarterly_rent_ht: isQuick ? manualQuarterlyValue : contract.quarterly_rent_ht ?? null,
       },
     });
   }
