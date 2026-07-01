@@ -56,10 +56,10 @@ export function ContractRow({ contract, onVisualize }: { contract: Contract; onV
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
-  const [monthlyRent, setMonthlyRent] = useState<string>(
+  const [quarterlyRent, setQuarterlyRent] = useState<string>(
     contract.monthly_rent_ht != null
-      ? String(contract.monthly_rent_ht)
-      : (contract.amount_ht != null ? String(contract.amount_ht) : '')
+      ? String(calculateLoyerTrimestriel(contract.monthly_rent_ht))
+      : (contract.amount_ht != null ? String(calculateLoyerTrimestriel(contract.amount_ht)) : '')
   );
 
   const [uploading, setUploading] = useState(false);
