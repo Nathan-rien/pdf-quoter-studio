@@ -60,6 +60,12 @@ export function ServiceProposalExport() {
   const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   const proposalName = useServiceProposalStore((s) => s.proposalName);
   const totalInvest = useServiceProposalStore((s) => s.totalInvest);
+  const selectedServices = useServiceProposalStore((s) => s.selectedServices);
+  const paymentFrequency = useServiceProposalStore((s) => s.paymentFrequency);
+  const paymentMode = useServiceProposalStore((s) => s.paymentMode);
+  const contractDuration = useServiceProposalStore((s) => s.contractDuration);
+  const startDate = useServiceProposalStore((s) => s.startDate);
+  const totalServicesHt = useServiceProposalStore((s) => s.totalServicesHt);
 
   const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } =
     useTemplateEditorStore();
