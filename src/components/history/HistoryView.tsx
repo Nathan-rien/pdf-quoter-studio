@@ -113,7 +113,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
     setError(null);
     
     try {
-      const selectColumns = 'id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, proposal_state';
+      const selectColumns = 'id, proposal_name, file_name, client_name, template_name, status, row_count, options_count, created_at, commercial_id, commercial_name, montant_investissement, loyer_mensuel_ht, proposal_state';
       const batchSize = 1000;
       let allData: any[] = [];
       let from = 0;
