@@ -276,7 +276,7 @@ export function ServiceProposalExport() {
           : 1;
         return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
       }
-      if (zone.type === 'service_conditions') return Math.max(minHeight, 17);
+      if (zone.type === 'service_conditions') return Math.max(minHeight, 21);
       if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
       if (zone.type === 'service_signature') return Math.max(minHeight, 14);
       return minHeight;
