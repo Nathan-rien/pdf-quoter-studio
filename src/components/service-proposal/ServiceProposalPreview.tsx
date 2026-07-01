@@ -3,7 +3,7 @@
  * Réécriture sans race condition : résolution unique de la version + lazy loading once.
  */
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, icons } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, FileCheck, icons } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -616,12 +616,29 @@ export function ServiceProposalPreview() {
   const renderServicesInclusPage = (displayPageNum: number) => (
     <PageFrame pageNum={displayPageNum}>
       <div className="absolute bg-white" style={{ left: '3%', top: '5%', width: '94%' }}>
-        <div className="font-bold text-[13px] mb-2">Les services inclus dans votre offre</div>
-        <div
-          className="text-[10px] leading-relaxed whitespace-pre-wrap"
-          style={{ color: '#1f2937' }}
-        >
-          {servicesInclus.description || ''}
+        <div className="mb-3 flex items-center gap-2">
+          <FileCheck className="h-5 w-5 text-primary" />
+          <h2 className="font-bold text-[14px] text-foreground">Les services inclus dans votre offre</h2>
+        </div>
+        <div className="mb-2 border rounded overflow-hidden">
+          <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
+            <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
+            <span className="font-semibold text-[11px]">Services location</span>
+          </div>
+          <div className="px-3 py-1.5 bg-background">
+            <div className="text-[9px] text-muted-foreground space-y-0.5">
+              {(servicesInclus.description || '').split('\n').map((item, i) => {
+                const trimmed = item.trim();
+                if (!trimmed) return null;
+                const isSubItem = trimmed.startsWith('- ');
+                return (
+                  <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
+                    {isSubItem ? trimmed : `• ${trimmed}`}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </PageFrame>
