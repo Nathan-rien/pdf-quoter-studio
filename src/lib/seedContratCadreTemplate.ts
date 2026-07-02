@@ -139,27 +139,27 @@ function buildPages() {
         textEl(
           "p3-art3-body",
           40,
-          70,
+          75,
           714,
-          160,
+          230,
           "2.1 La Société PRESTATAIRE s'engage à mettre en œuvre, pour l'exécution de l'ensemble des prestations à sa charge en vertu des présentes, toute la diligence requise et à faire tout ce qui est en son pouvoir pour que les conseils et recommandations donnés à la Société BENEFICIAIRE et les services qui sont rendus, donnent toute satisfaction à celle-ci.\n\n2.2 La Société PRESTATAIRE s'engage à affecter à l'exécution des présentes un interlocuteur compétent et spécialisé. Elle pourra également faire appel à des consultants extérieurs ou sous-traiter, sans toutefois qu'il en résulte une quelconque atténuation de sa responsabilité.\n\n2.3 La Société PRESTATAIRE décidera seule du choix du personnel salarié ou non devant être affecté aux missions dont elle a la charge."
         ),
-        textEl("p3-art4", 40, 245, 714, 15, "IV - OBLIGATIONS DU BENEFICIAIRE", { bold: true }),
+        textEl("p3-art4", 40, 320, 714, 15, "IV - OBLIGATIONS DU BENEFICIAIRE", { bold: true }),
         textEl(
           "p3-art4-body",
           40,
-          265,
+          345,
           714,
-          60,
+          90,
           "La Société BENEFICIAIRE s'engage expressément à fournir, pendant toute la durée du présent contrat, au PRESTATAIRE, toutes les informations, tous les renseignements, tous les documents et toute l'assistance raisonnablement nécessaires pour lui permettre de réaliser l'objet du contrat."
         ),
-        textEl("p3-art5", 40, 340, 714, 15, "V - FACTURATION", { bold: true }),
+        textEl("p3-art5", 40, 450, 714, 15, "V - FACTURATION", { bold: true }),
         textEl(
           "p3-art5-body",
           40,
-          360,
+          475,
           714,
-          100,
+          180,
           "La rémunération des prestations définies dans le contrat d'application fera l'objet d'une redevance dont le montant et la périodicité sont précisés dans le contrat d'application annexé aux présentes.\n\nLes Prestations seront facturées dès la signature du contrat d'application par le client. A défaut de paiement de la somme due, LE PRESTATAIRE se réserve le droit de suspendre l'exécution des prestations, 10 jours après mise en demeure de règlement demeurée infructueuse.\n\nLe BENEFICIAIRE accepte toute information par voie électronique ainsi que la fourniture de toute pièce de facturation sous format électronique."
         ),
       ],
