@@ -29,7 +29,7 @@ export interface ServiceProposal {
   commercial_name?: string | null;
   selected_services: ServiceLine[];
   payment_frequency?: 'mensuel' | 'trimestriel' | null;
-  payment_mode?: 'prelevement' | 'virement' | null;
+  payment_mode?: 'prelevement' | 'virement' | 'allin' | null;
   start_date?: string | null;
   contract_duration?: number | null;
   invest_lines: InvestLine[];

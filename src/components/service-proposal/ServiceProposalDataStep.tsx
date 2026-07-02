@@ -8,9 +8,9 @@ import { ServiceLine } from '@/hooks/useServiceProposals';
 export interface ServiceDataFormValues {
   selected_services: ServiceLine[];
   payment_frequency: 'mensuel' | 'trimestriel' | '';
-  payment_mode: 'prelevement' | 'virement' | '';
+  payment_mode: 'prelevement' | 'virement' | 'allin' | '';
   start_date: string;
-  contract_duration: 12 | 24 | 36 | 48 | 60 | '';
+  contract_duration: number | '';
 }
 
 interface ServiceLineRowProps {
@@ -184,7 +184,7 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
           <div className="space-y-2">
             <Label>Mode de règlement</Label>
             <div className="flex gap-2">
-              {(['prelevement', 'virement'] as const).map((mode) => (
+              {(['prelevement', 'virement', 'allin'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -195,7 +195,7 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
                       : 'bg-card text-muted-foreground border-border hover:border-muted-foreground'
                   }`}
                 >
-                  {mode === 'prelevement' ? 'Prélèvement' : 'Virement'}
+                  {mode === 'prelevement' ? 'Prélèvement' : mode === 'virement' ? 'Virement' : 'Allin'}
                 </button>
               ))}
             </div>
@@ -214,7 +214,7 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
 
           <div className="space-y-2">
             <Label>Durée du contrat</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {([12, 24, 36, 48, 60] as const).map((d) => (
                 <button
                   key={d}
@@ -229,6 +229,25 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
                   {d} m
                 </button>
               ))}
+              <div className="flex items-center gap-1 ml-2">
+                <Label className="text-xs text-muted-foreground">Autre :</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={
+                    typeof data.contract_duration === 'number' &&
+                    ![12, 24, 36, 48, 60].includes(data.contract_duration)
+                      ? data.contract_duration
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    set('contract_duration', v === '' ? '' : (Number(v) as number));
+                  }}
+                  placeholder="mois"
+                  className="w-20 h-9 text-sm"
+                />
+              </div>
             </div>
           </div>
         </div>
