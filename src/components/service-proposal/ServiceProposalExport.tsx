@@ -588,34 +588,49 @@ export function ServiceProposalExport() {
       const textFlowHtml = textElements
         .map((el) => {
           const c = el.content as any;
-          const fs = Math.max((c.fontSize || 9) * 1.32, 7).toFixed(1);
-          const fontWeight = c.bold ? '700' : '400';
-          const textDecoration = c.underline ? 'underline' : 'none';
-          const marginTop = c.bold ? '9px' : '2px';
-          const color = c.color || '#1a1a1a';
-          const textAlign = c.textAlign || 'justify';
-          const lines = (c.text || '').split('\n');
-          const inner = lines
+          const fs = Math.max(c.fontSize || 9, 6);
+          const fw = c.bold ? '700' : '400';
+          const td = c.underline ? 'underline' : 'none';
+          const mt = c.bold ? '8px' : '2px';
+          const col = c.color || '#1a1a1a';
+          const inner = (c.text || '')
+            .split('\n')
             .map((l: string) => `<span>${esc(l) || '&nbsp;'}</span>`)
             .join('<br/>');
-          return `<div style="font-size:${fs}px;font-weight:${fontWeight};text-decoration:${textDecoration};color:${color};text-align:${textAlign};line-height:1.45;margin-top:${marginTop};margin-bottom:2px;">${inner}</div>`;
+          return `<div style="font-size:${fs}px;font-weight:${fw};text-decoration:${td};color:${col};text-align:left;line-height:1.5;margin-top:${mt};white-space:pre-wrap;overflow-wrap:break-word;">${inner}</div>`;
         })
         .join('');
 
       if (nonTextElements.length === 0) {
+        const flowRows = textElements
+          .map((el) => {
+            const c = el.content as any;
+            const fs = Math.max((c.fontSize || 9) * 0.73, 5).toFixed(1);
+            const fw = c.bold ? '700' : '400';
+            const td = c.underline ? 'underline' : 'none';
+            const mt = c.bold ? '6px' : '1.5px';
+            const col = c.color || '#1a1a1a';
+            const inner = (c.text || '')
+              .split('\n')
+              .map((l: string) => `<span>${esc(l) || '&nbsp;'}</span>`)
+              .join('<br/>');
+            return `<div style="font-size:${fs}px;font-weight:${fw};text-decoration:${td};color:${col};text-align:left;line-height:1.4;margin-top:${mt};white-space:pre-wrap;overflow-wrap:break-word;">${inner}</div>`;
+          })
+          .join('');
+
         allPagesHtml.push(`
           <div class="page-sheet">
-            <div style="padding:16mm 18mm 20mm 18mm;font-family:'Inter',Arial,sans-serif;height:100%;overflow:hidden;box-sizing:border-box;position:relative;">
-              ${textFlowHtml}
+            <div style="padding:14mm 16mm 18mm 16mm;font-family:'Inter',Arial,sans-serif;height:100%;overflow:hidden;box-sizing:border-box;position:relative;">
+              ${flowRows}
               ${content[page.pageNumber] || ''}
-              <div style="position:absolute;bottom:8mm;left:18mm;right:18mm;font-size:8px;color:#888;text-align:right;border-top:0.5px solid #ccc;padding-top:3px;">GROUPE | CYBERTEK</div>
+              <div style="position:absolute;bottom:6mm;left:16mm;right:16mm;font-size:6px;color:#888;text-align:right;border-top:0.5px solid #ddd;padding-top:2px;">GROUPE | CYBERTEK</div>
             </div>
           </div>
         `);
       } else {
         const existingDynamic = content[page.pageNumber] || '';
         const textAsAbsolute = textFlowHtml
-          ? `<div style="position:absolute;top:7%;left:4%;right:4%;bottom:3%;font-family:'Inter',Arial,sans-serif;overflow:hidden;">${textFlowHtml}</div>`
+          ? `<div style="position:absolute;top:7%;left:3%;right:3%;bottom:3%;font-family:'Inter',Arial,sans-serif;overflow:hidden;line-height:1.4;">${textFlowHtml}</div>`
           : '';
         const finalDynamic = existingDynamic + textAsAbsolute;
         const pageWithOnlyNonText = { ...page, elements: nonTextElements };
