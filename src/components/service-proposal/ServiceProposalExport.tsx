@@ -540,6 +540,7 @@ export function ServiceProposalExport() {
     selectedCommercial,
     entityLabel,
     totalInvest,
+    nosOptions,
     latestVersion,
   ]);
 
