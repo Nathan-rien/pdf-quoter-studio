@@ -72,7 +72,11 @@ interface ExportRecord {
 
 interface StatisticsDashboardProps {
   onNavigateToHistory?: (ids: string[]) => void;
+  proposalTypeFilter?: 'location' | 'service' | 'all';
+  hideAdditionalOptions?: boolean;
+  embedded?: boolean;
 }
+
 
 const CHART_COLORS = [
   'hsl(var(--primary))',
