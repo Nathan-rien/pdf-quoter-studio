@@ -482,10 +482,14 @@ export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Statistiques</h2>
-          <p className="text-sm text-muted-foreground">Aperçu global des propositions exportées</p>
-        </div>
+        {!embedded && (
+          <div>
+            <h2 className="text-lg font-semibold">Statistiques</h2>
+            <p className="text-sm text-muted-foreground">Aperçu global des propositions exportées</p>
+          </div>
+        )}
+        {embedded && <div />}
+
         <div className="flex items-center gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
