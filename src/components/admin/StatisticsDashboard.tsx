@@ -172,7 +172,7 @@ function ServiceDetailTable({
   );
 }
 
-export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboardProps) {
+export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 'all', hideAdditionalOptions = false, embedded = false }: StatisticsDashboardProps) {
   const [records, setRecords] = useState<ExportRecord[]>([]);
   const [allServiceOptions, setAllServiceOptions] = useState<{ id: string; title: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
