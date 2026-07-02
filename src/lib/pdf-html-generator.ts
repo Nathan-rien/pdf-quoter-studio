@@ -31,12 +31,73 @@ const normalizeZIndex = (element: EditableElement): number => (element.zIndex ??
 // Module-level substitution context for the current PDF generation pass
 let _pdfSubstitutionContext: SubstitutionContext | undefined;
 
+interface PdfRenderOptions {
+  /**
+   * Contraint les textes statiques dans leur bloc de template.
+   * Utile pour les contrats Services denses : le PDF ne doit pas laisser un paragraphe
+   * déborder sur le titre/bloc suivant, contrairement au flux HTML naturel du navigateur.
+   */
+  boundedTextBoxes?: boolean;
+}
+
+let _pdfRenderOptions: PdfRenderOptions = {};
+
 /**
  * Permet de définir le contexte de substitution avant d'appeler renderFlowTextElementToHTML
  * depuis l'extérieur (ex: generateDynamicContentByPage dans RentalProposalExport)
  */
 export function setPdfSubstitutionContext(context: SubstitutionContext | undefined) {
   _pdfSubstitutionContext = context;
+}
+
+function stripHTML(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p\s*>/gi, '\n')
+    .replace(/<\/div\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+\n/g, '\n')
+    .replace(/\n\s+/g, '\n')
+    .trim();
+}
+
+function estimateWrappedLineCount(text: string, widthPx: number, fontSizePx: number): number {
+  const charsPerLine = Math.max(18, Math.floor(widthPx / Math.max(fontSizePx * 0.52, 1)));
+  return Math.max(
+    1,
+    text
+      .split('\n')
+      .reduce((total, line) => total + Math.max(1, Math.ceil(line.trim().length / charsPerLine)), 0),
+  );
+}
+
+function getFittedStaticTextSize(
+  element: EditableElement,
+  content: TextContent,
+  initialFontSize: number,
+  lineHeight: number,
+): number {
+  if (!_pdfRenderOptions.boundedTextBoxes) return initialFontSize;
+
+  const rawText = content.htmlContent
+    ? stripHTML(substituteDynamicPlaceholders(content.htmlContent, _pdfSubstitutionContext))
+    : substituteDynamicPlaceholders(content.text || '', _pdfSubstitutionContext);
+
+  const widthPx = Math.max(24, (element.size.width / CANVAS_SCALE.width) * CANVAS_DISPLAY_MAX_WIDTH - 4);
+  const heightPx = Math.max(8, (element.size.height / CANVAS_SCALE.height) * (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) - 2);
+  const estimatedLines = estimateWrappedLineCount(rawText, widthPx, initialFontSize);
+  const neededHeight = estimatedLines * initialFontSize * lineHeight;
+
+  if (neededHeight <= heightPx) return initialFontSize;
+
+  // On réduit uniquement ce qui déborde, avec un minimum encore lisible à l'impression.
+  return Math.max(4.2, Math.floor(initialFontSize * (heightPx / neededHeight) * 100) / 100);
 }
 
 // Cache pour les images base64 (éviter les conversions répétées)
@@ -132,12 +193,28 @@ function renderTextElementToHTML(element: EditableElement): string {
   // IMPORTANT: fallback identique à l'Aperçu (RentalProposalPreview)
   // Un fallback différent change les métriques (wrap) et provoque des chevauchements sur les pages denses (ex: page 3)
   const fontValue = fontDef?.value || 'Outfit, sans-serif';
-  const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
+  const lineHeight = _pdfRenderOptions.boundedTextBoxes ? 1.12 : 1.2;
+  const scaledFontSize = getFittedStaticTextSize(
+    element,
+    content,
+    Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6),
+    lineHeight,
+  );
   const indentPx = (content.indentLevel || 0) * LIST_INDENT_PX;
+  const maxWidthPercent = Math.max(Math.min((element.size.width / CANVAS_SCALE.width) * 100, 100), 5);
+  const heightPercent = Math.max((element.size.height / CANVAS_SCALE.height) * 100, 1);
   
   // Wrapper externe : positionnement absolu (identique à getSharedElementStyle)
   const outerStyle: React.CSSProperties = {
     ...positionStyle,
+    ...(_pdfRenderOptions.boundedTextBoxes
+      ? {
+          width: `${maxWidthPercent}%`,
+          maxWidth: `${maxWidthPercent}%`,
+          height: `${heightPercent}%`,
+          overflow: 'hidden',
+        }
+      : {}),
     zIndex: normalizeZIndex(element),
   };
   
@@ -153,7 +230,7 @@ function renderTextElementToHTML(element: EditableElement): string {
     fontWeight: content.bold ? 'bold' : 'normal',
     fontStyle: content.italic ? 'italic' : 'normal',
     textDecoration: content.underline ? 'underline' : 'none',
-    lineHeight: 1.2,
+    lineHeight,
     textAlign: content.textAlign || 'left',
     whiteSpace: 'pre-wrap',
     // IMPORTANT: matcher Tailwind `break-words` (Aperçu) => overflow-wrap, pas word-break
