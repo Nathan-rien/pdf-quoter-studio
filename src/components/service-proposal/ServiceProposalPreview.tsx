@@ -456,8 +456,6 @@ export function ServiceProposalPreview() {
               <tr style={{ background: '#f3f4f6' }}>
                 <th style={{ padding: '3px 5px', textAlign: 'left', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb' }}>Désignation</th>
                 <th style={{ padding: '3px 5px', textAlign: 'center', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '34px' }}>Qté</th>
-                <th style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '56px' }}>P.U. HT</th>
-                <th style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.03em', border: '1px solid #e5e7eb', width: '64px' }}>Total HT</th>
               </tr>
             </thead>
             <tbody>
@@ -466,22 +464,14 @@ export function ServiceProposalPreview() {
                   <tr key={ligne.id} style={{ background: idx % 2 === 1 ? '#fafafa' : 'white' }}>
                     <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', verticalAlign: 'top', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{ligne.designation || '-'}</td>
                     <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', textAlign: 'center', verticalAlign: 'top' }}>{ligne.quantite}</td>
-                    <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top' }}>{formatNumber(ligne.prixUnitaire)}</td>
-                    <td style={{ padding: '3px 5px', border: '1px solid #e5e7eb', textAlign: 'right', verticalAlign: 'top', fontWeight: 600 }}>{formatNumber(ligne.totalHT)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} style={{ padding: '8px', textAlign: 'center', color: '#9ca3af', fontStyle: 'italic', border: '1px solid #e5e7eb' }}>Aucune ligne de service</td>
+                  <td colSpan={2} style={{ padding: '8px', textAlign: 'center', color: '#9ca3af', fontStyle: 'italic', border: '1px solid #e5e7eb' }}>Aucune ligne de service</td>
                 </tr>
               )}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={3} style={{ padding: '4px 5px', border: '1px solid #d1d5db', textAlign: 'right', fontWeight: 700, color: '#374151', background: 'white' }}>Total HT</td>
-                <td style={{ padding: '4px 5px', border: '1px solid #d1d5db', textAlign: 'right', fontWeight: 700, color: '#1f2937', background: 'white' }}>{formatNumber(totalInvest)} €</td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       );
