@@ -231,12 +231,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
           </div>
           <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
+              <CalendarIcon className="h-3 w-3" />
               {format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
             </span>
             {monthlyRent != null && (
-              <span>
-                Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+              <span className="flex items-center gap-1">
+                <span className={cn(paymentFrequency === 'mensuel' && 'text-primary font-semibold')}>
+                  Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                </span>
+                <span>·</span>
+                <span className={cn(paymentFrequency === 'trimestriel' && 'text-primary font-semibold')}>
+                  Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                </span>
               </span>
             )}
             {!hideFinancialPartner && contract.financial_partner && <span>{contract.financial_partner}</span>}
@@ -377,10 +383,30 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   />
                 </div>
               ) : hasProposalRent ? (
-                <div className="h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3">
-                  <span>Mensuel <strong>{(monthlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                <div className="min-h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3 flex-wrap">
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded flex items-center gap-1',
+                      paymentFrequency === 'mensuel'
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    Mensuel <strong>{(monthlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>
+                    {paymentFrequency === 'mensuel' && <Badge variant="secondary" className="ml-1 text-[9px]">Sélectionnée</Badge>}
+                  </span>
                   <span className="text-muted-foreground">·</span>
-                  <span>Trimestriel <strong>{(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded flex items-center gap-1',
+                      paymentFrequency === 'trimestriel'
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    Trimestriel <strong>{(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>
+                    {paymentFrequency === 'trimestriel' && <Badge variant="secondary" className="ml-1 text-[9px]">Sélectionnée</Badge>}
+                  </span>
                 </div>
               ) : (
                 <>
