@@ -704,6 +704,22 @@ export function ServiceProposalExport() {
     }
   };
 
+  function buildStandaloneTextDocument(pagesHtml: string, title: string): string {
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      @media print { @page { size: A4 portrait; margin: 0; } html,body { margin:0; padding:0; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 0; background: white; font-family: 'Inter', Arial, sans-serif; }
+      .text-page-sheet { width:210mm; height:297mm; overflow:hidden; background:white; page-break-after:always; break-after:page; page-break-inside:avoid; break-inside:avoid; position:relative; }
+      .text-page-sheet:last-child { page-break-after:auto; break-after:auto; }
+      .text-page-content { padding:20mm 18mm 25mm 18mm; overflow:hidden; height:100%; }
+      .page-footer { position:absolute; bottom:8mm; left:18mm; right:18mm; font-size:8px; color:#888; text-align:right; border-top:0.5px solid #ccc; padding-top:3px; }
+    </style>
+    </head><body>${pagesHtml}</body></html>`;
+  }
+
+
   return (
     <Card>
       <CardHeader>
