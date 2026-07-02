@@ -214,7 +214,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
               price,
               priceTotal: null,
               showPriceMode: 'mensuel',
-              pricingScope: 'unit',
+              pricingScope: 'par_machine' as const,
               showPrice: true,
               selected: true,
             } as OptionService,
