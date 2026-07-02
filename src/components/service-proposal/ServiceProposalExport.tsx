@@ -153,7 +153,6 @@ export function ServiceProposalExport() {
               clientData,
               commercialData,
               lignesData,
-              servicesInclus,
               selectedTemplateId: effectiveTemplateId,
               proposalName,
               totalInvest,
