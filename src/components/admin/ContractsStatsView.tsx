@@ -104,9 +104,11 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
     const byEnseigne: Record<string, number> = {};
     contracts.forEach((c) => {
       const entity = getCommercialById(c.commercial_id)?.entity ?? 'Non renseigné';
-      byEnseigne[entity] = (byEnseigne[entity] || 0) + 1;
+      const label = formatEnseigne(entity);
+      byEnseigne[label] = (byEnseigne[label] || 0) + 1;
     });
     const enseigneData = Object.entries(byEnseigne).map(([name, count]) => ({ name, count }));
+
 
     // by partner
     const byPartner: Record<string, number> = {};
