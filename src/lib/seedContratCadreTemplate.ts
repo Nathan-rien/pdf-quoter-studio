@@ -223,36 +223,36 @@ function buildPages() {
         textEl(
           "p5-art9-body",
           40,
-          70,
+          75,
           714,
-          45,
+          60,
           "Les parties conviennent expressément qu'aucune des clauses du contrat ne pourra être réputée comminatoire ou de style, mais qu'elles doivent toutes recevoir leur pleine et entière exécution."
         ),
-        textEl("p5-art10", 40, 130, 714, 15, "X - INDEPENDANCE DES CLAUSES", { bold: true }),
+        textEl("p5-art10", 40, 150, 714, 15, "X - INDEPENDANCE DES CLAUSES", { bold: true }),
         textEl(
           "p5-art10-body",
           40,
-          150,
+          175,
           714,
-          60,
+          70,
           "Toute disposition du présent contrat qui serait ou deviendrait illégale sera entièrement indépendante ; les autres dispositions n'en seront pas affectées et produiront leurs effets."
         ),
-        textEl("p5-art11", 40, 225, 714, 15, "XI - INDEPENDANCE DES PARTIES", { bold: true }),
+        textEl("p5-art11", 40, 260, 714, 15, "XI - INDEPENDANCE DES PARTIES", { bold: true }),
         textEl(
           "p5-art11-body",
           40,
-          245,
+          285,
           714,
-          80,
+          110,
           "Les parties déclarent expressément qu'elles sont et demeureront des partenaires commerciaux et professionnels indépendants, assumant chacun les risques et conséquences de leur propre exploitation. Aucun lien de subordination ne saurait être recherché dans le présent Contrat de services."
         ),
-        textEl("p5-art12", 40, 340, 714, 15, "XII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
+        textEl("p5-art12", 40, 410, 714, 15, "XII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
         textEl(
           "p5-art12-body",
           40,
-          360,
+          445,
           714,
-          120,
+          160,
           "Pour l'exécution des présentes, les parties font élection de domicile en leur siège respectif. Pour tous litiges relatifs à l'exécution ou à l'interprétation du présent Contrat, les parties attribuent expressément compétence aux juridictions de BORDEAUX.\n\nLe BENEFICIAIRE accepte que les signatures électroniques et documents électroniques aient même valeur juridique que leurs équivalents manuscrits."
         ),
       ],
