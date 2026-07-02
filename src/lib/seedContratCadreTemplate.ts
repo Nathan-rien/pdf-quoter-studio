@@ -175,31 +175,31 @@ function buildPages() {
         textEl(
           "p4-art6-body",
           40,
-          70,
+          75,
           714,
-          80,
+          130,
           "Le présent contrat cadre est conclu pour une durée indéterminée. Il pourra être rompu par l'une ou l'autre des Parties, à sa date anniversaire par l'envoi d'une lettre recommandée avec avis de réception à l'autre Partie en respectant un préavis de 3 mois.\n\nEn revanche, le contrat d'application est conclu pour une durée ferme, déterminée par décision du BÉNÉFICIAIRE. À son terme, il pourra être renouvelé au moyen de la signature d'un nouveau contrat d'application."
         ),
-        textEl("p4-art7", 40, 165, 714, 15, "VII - RESOLUTION DU CONTRAT", { bold: true }),
+        textEl("p4-art7", 40, 220, 714, 15, "VII - RESOLUTION DU CONTRAT", { bold: true }),
         textEl(
           "p4-art7-body",
           40,
-          185,
+          245,
           714,
-          80,
+          110,
           "En cas de non-respect par l'une ou l'autre des parties des obligations suivantes :\n- Défaut de paiement de la facturation par le BENEFICIAIRE,\n- Défaillance d'une des Parties dans le respect des obligations visées aux articles du présent contrat, celui-ci pourra être résolu au gré de la partie lésée, TRENTE (30) jours après mise en demeure restée sans effet."
         ),
-        textEl("p4-art8", 40, 280, 714, 15, "VIII - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
+        textEl("p4-art8", 40, 370, 714, 15, "VIII - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
         textEl(
           "p4-art8-body",
           40,
-          300,
+          395,
           714,
-          100,
+          80,
           "Les parties s'engagent à considérer comme strictement confidentiels l'ensemble des documents, informations et données communiqués dans le cadre du présent contrat, pendant toute sa durée et sans limitation après son expiration."
         ),
-        rectEl("p4-annexe-banner", 20, 415, 754, 30, "#f0f0f0"),
-        textEl("p4-annexe-title", 30, 420, 714, 20, "ANNEXE 1 — CONDITIONS PARTICULIERES DU CONTRAT D'APPLICATION", { bold: true, size: 10, align: "left" }),
+        rectEl("p4-annexe-banner", 20, 495, 754, 30, "#f0f0f0"),
+        textEl("p4-annexe-title", 30, 500, 714, 20, "ANNEXE 1 — CONDITIONS PARTICULIERES DU CONTRAT D'APPLICATION", { bold: true, size: 10, align: "left" }),
       ],
       dynamicZones: [
         {
