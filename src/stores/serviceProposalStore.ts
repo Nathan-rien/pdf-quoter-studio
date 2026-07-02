@@ -79,6 +79,7 @@ const initialState: ServiceProposalStoreState = {
   contractDuration: null,
   startDate: '',
   totalServicesHt: 0,
+  nosOptions: [],
 };
 
 interface ServiceProposalStoreActions {
