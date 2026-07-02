@@ -952,6 +952,9 @@ export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 
             )}
           </CardContent>
         </Card>
+        )}
+
+
 
         {/* Nos Options */}
         <Card>
