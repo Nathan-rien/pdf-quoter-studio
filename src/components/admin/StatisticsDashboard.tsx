@@ -226,7 +226,9 @@ export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposalTypeFilter]);
+
 
   const handleReset = async () => {
     setIsResetting(true);
