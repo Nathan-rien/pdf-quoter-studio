@@ -17,7 +17,8 @@ export type DynamicZoneType =
   | 'service_client_info'
   | 'service_invest_table'
   | 'service_conditions'
-  | 'service_signature';
+  | 'service_signature'
+  | 'service_options';
 
 // Types de zone disponibles avec leurs métadonnées
 export const AVAILABLE_ZONE_TYPES: { type: DynamicZoneType; label: string; sourceSheet: string; description: string }[] = [
