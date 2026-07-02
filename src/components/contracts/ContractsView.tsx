@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X, Zap } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X, Zap, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { addMonths, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -101,6 +103,8 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [partnerFilter, setPartnerFilter] = useState<string>('all');
   const [commercialFilter, setCommercialFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortMode, setSortMode] = useState<string>('recent');
 
   const partnerOptions = useMemo(() => {
     const s = new Set<string>();
@@ -116,19 +120,42 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [contracts]);
 
+  const getEndTime = (c: Contract): number | null => {
+    if (!c.implementation_month || !c.duration_months) return null;
+    try { return addMonths(parseISO(c.implementation_month), c.duration_months).getTime(); }
+    catch { return null; }
+  };
+
   const filteredContracts = useMemo(() => {
-    return contracts.filter((c) => {
+    const q = searchQuery.trim().toLowerCase();
+    const arr = contracts.filter((c) => {
       if (partnerFilter !== 'all' && c.financial_partner !== partnerFilter) return false;
       if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
       if (entityFilter !== 'all') {
         const entity = getCommercialById(c.commercial_id)?.entity;
         if (entity !== entityFilter) return false;
       }
+      if (q) {
+        const hay = `${c.client_name ?? ''} ${c.contract_number ?? ''} ${c.commercial_name ?? ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [contracts, entityFilter, partnerFilter, commercialFilter, getCommercialById]);
+    if (sortMode === 'echeance-asc' || sortMode === 'echeance-desc') {
+      const dir = sortMode === 'echeance-asc' ? 1 : -1;
+      arr.sort((a, b) => {
+        const ea = getEndTime(a);
+        const eb = getEndTime(b);
+        if (ea == null && eb == null) return 0;
+        if (ea == null) return 1;
+        if (eb == null) return -1;
+        return (ea - eb) * dir;
+      });
+    }
+    return arr;
+  }, [contracts, entityFilter, partnerFilter, commercialFilter, searchQuery, sortMode, getCommercialById]);
 
-  const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all';
+  const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
   const groups = groupByCommercial(filteredContracts);
   const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
 
