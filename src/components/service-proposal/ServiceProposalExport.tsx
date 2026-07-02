@@ -79,13 +79,13 @@ export function ServiceProposalExport() {
 
   const activeTemplate = useMemo(() => {
     if (effectiveTemplateId) {
-      return (
-        allTemplates.find((t) => t.id === effectiveTemplateId) ||
-        getActiveTemplate()
-      );
+      const selected = allTemplates.find((t) => t.id === effectiveTemplateId);
+      if (selected) return selected;
     }
-    return getActiveTemplate();
-  }, [effectiveTemplateId, allTemplates, getActiveTemplate]);
+    const activePublished = allTemplates.find((t) => t.isActive && !!getTemplatePublishedVersion(t.id));
+    if (activePublished) return activePublished;
+    return allTemplates.find((t) => !!getTemplatePublishedVersion(t.id)) || getActiveTemplate();
+  }, [effectiveTemplateId, allTemplates, getActiveTemplate, getTemplatePublishedVersion]);
 
   const latestVersion = activeTemplate
     ? getTemplatePublishedVersion(activeTemplate.id)
