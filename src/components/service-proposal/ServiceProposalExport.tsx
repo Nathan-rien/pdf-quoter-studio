@@ -572,52 +572,57 @@ export function ServiceProposalExport() {
     const allPagesHtml: string[] = [];
 
     for (const page of latestVersion.pages) {
-      const isTextOnly =
-        page.elements.length > 0 &&
-        page.elements.every((el) => el.type === 'text');
+      const nonTextElements = page.elements.filter((el) => el.type !== 'text');
+      const textElements = page.elements
+        .filter((el) => el.type === 'text')
+        .sort((a, b) => a.position.y - b.position.y);
 
-      if (isTextOnly) {
-        const sorted = [...page.elements].sort(
-          (a, b) => a.position.y - b.position.y,
-        );
-        const FSCALE = 1.32;
-        const rows = sorted
-          .map((el) => {
-            const c = el.content as any;
-            const fs = Math.max((c.fontSize || 9) * FSCALE, 7).toFixed(1);
-            const fw = c.bold ? '700' : '400';
-            const td = c.underline ? 'underline' : 'none';
-            const mt = c.bold ? '9px' : '2px';
-            const col = c.color || '#1a1a1a';
-            const ta = c.textAlign || 'justify';
-            const esc = (s: string) =>
-              s
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-            const lines = (c.text || '').split('\n');
-            const html = lines
-              .map((l: string) => `<div>${esc(l) || '&nbsp;'}</div>`)
-              .join('\n');
-            return `<p style="font-size:${fs}px;font-weight:${fw};text-decoration:${td};color:${col};text-align:${ta};line-height:1.45;margin:0;margin-top:${mt};margin-bottom:2px;">${html}</p>`;
-          })
-          .join('');
+      excludeIds[page.pageNumber] = [
+        ...(excludeIds[page.pageNumber] || []),
+        ...textElements.map((el) => el.id),
+      ];
 
+      const esc = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      const textFlowHtml = textElements
+        .map((el) => {
+          const c = el.content as any;
+          const fs = Math.max((c.fontSize || 9) * 1.32, 7).toFixed(1);
+          const fontWeight = c.bold ? '700' : '400';
+          const textDecoration = c.underline ? 'underline' : 'none';
+          const marginTop = c.bold ? '9px' : '2px';
+          const color = c.color || '#1a1a1a';
+          const textAlign = c.textAlign || 'justify';
+          const lines = (c.text || '').split('\n');
+          const inner = lines
+            .map((l: string) => `<span>${esc(l) || '&nbsp;'}</span>`)
+            .join('<br/>');
+          return `<div style="font-size:${fs}px;font-weight:${fontWeight};text-decoration:${textDecoration};color:${color};text-align:${textAlign};line-height:1.45;margin-top:${marginTop};margin-bottom:2px;">${inner}</div>`;
+        })
+        .join('');
+
+      if (nonTextElements.length === 0) {
         allPagesHtml.push(`
-          <div class="text-page-sheet">
-            <div class="text-page-content">
-              ${rows}
+          <div class="page-sheet">
+            <div style="padding:16mm 18mm 20mm 18mm;font-family:'Inter',Arial,sans-serif;height:100%;overflow:hidden;box-sizing:border-box;position:relative;">
+              ${textFlowHtml}
+              ${content[page.pageNumber] || ''}
+              <div style="position:absolute;bottom:8mm;left:18mm;right:18mm;font-size:8px;color:#888;text-align:right;border-top:0.5px solid #ccc;padding-top:3px;">GROUPE | CYBERTEK</div>
             </div>
-            <div class="page-footer">GROUPE | CYBERTEK</div>
           </div>
         `);
       } else {
-        const dynamicContent = content[page.pageNumber] || '';
-        const excludeIds_page = excludeIds[page.pageNumber];
+        const existingDynamic = content[page.pageNumber] || '';
+        const textAsAbsolute = textFlowHtml
+          ? `<div style="position:absolute;top:7%;left:4%;right:4%;bottom:3%;font-family:'Inter',Arial,sans-serif;overflow:hidden;">${textFlowHtml}</div>`
+          : '';
+        const finalDynamic = existingDynamic + textAsAbsolute;
+        const pageWithOnlyNonText = { ...page, elements: nonTextElements };
         const pageHtml = await renderPageToHTML(
-          page,
-          dynamicContent,
-          excludeIds_page,
+          pageWithOnlyNonText,
+          finalDynamic,
+          undefined,
           { boundedTextBoxes: false },
         );
         allPagesHtml.push(pageHtml);
@@ -654,17 +659,12 @@ export function ServiceProposalExport() {
       .page-sheet { display: block; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
       .page-sheet:last-child { page-break-after: auto; break-after: auto; }
       .page { transform: scale(${PRINT_SCALE.toFixed(6)}); transform-origin: top left; }
-      .text-page-sheet { page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
-      .text-page-sheet:last-child { page-break-after: auto; break-after: auto; }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     body { font-family: 'Inter', Arial, sans-serif; }
     .page-sheet { width: 210mm; height: 297mm; overflow: hidden; background: white; position: relative; }
     .page { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; position: relative; overflow: hidden; background: white; }
-    .text-page-sheet { width: 210mm; height: 297mm; overflow: hidden; background: white; position: relative; }
-    .text-page-content { padding: 20mm 18mm 25mm 18mm; overflow: hidden; height: 100%; }
-    .page-footer { position: absolute; bottom: 8mm; left: 18mm; right: 18mm; font-size: 8px; color: #888; text-align: right; border-top: 0.5px solid #ccc; padding-top: 3px; }
-    @media screen { .page-sheet, .text-page-sheet { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; } }
+    @media screen { .page-sheet { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; } }
     img { max-width: 100%; height: auto; }
     .dynamic-content { position: absolute; z-index: 40; }
     .rich-text p, .rich-text div { margin: 0; padding: 0; }
