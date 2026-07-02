@@ -495,14 +495,27 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   className="h-9 text-sm"
                 />
               ) : (
-                <Select value={durationMonths} onValueChange={setDurationMonths}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Sélectionner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={DURATIONS.includes(Number(durationMonths)) ? durationMonths : ''}
+                    onValueChange={setDurationMonths}
+                  >
+                    <SelectTrigger className="h-9 text-sm flex-1">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={durationMonths}
+                    onChange={(e) => setDurationMonths(e.target.value)}
+                    placeholder="Autre"
+                    className="w-24 h-9 text-sm"
+                  />
+                </div>
               )}
             </div>
             <div className="space-y-1.5">
