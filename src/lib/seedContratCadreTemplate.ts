@@ -292,7 +292,7 @@ function buildPages() {
   ];
 }
 
-export async function seedContratCadreTemplate(force = false): Promise<
+export async function seedContratCadreTemplate(force = true): Promise<
   { alreadyExists: true; templateId: string }
   | { alreadyExists: false; templateId: string; versionId: string }
 > {
