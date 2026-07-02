@@ -187,13 +187,17 @@ export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      let exportQuery = supabase
+        .from('proposal_exports')
+        .select('id, proposal_name, client_name, commercial_id, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names, proposal_type')
+        .eq('status', 'success')
+        .neq('created_by', '89def31b-d1c9-41a8-88f0-6a7d3afbf4c9')
+        .order('created_at', { ascending: true });
+      if (proposalTypeFilter !== 'all') {
+        exportQuery = exportQuery.eq('proposal_type', proposalTypeFilter);
+      }
       const [exportRes, optionsRes, settingsRes] = await Promise.all([
-        supabase
-          .from('proposal_exports')
-          .select('id, proposal_name, client_name, commercial_id, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
-          .eq('status', 'success')
-          .neq('created_by', '89def31b-d1c9-41a8-88f0-6a7d3afbf4c9')
-          .order('created_at', { ascending: true }),
+        exportQuery,
         supabase
           .from('options_services')
           .select('id, title, is_active')
@@ -204,6 +208,7 @@ export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 
           .eq('key', 'stats_reset_date')
           .single(),
       ]);
+
 
       if (exportRes.error) throw exportRes.error;
       setRecords((exportRes.data as any) || []);
