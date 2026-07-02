@@ -31,12 +31,75 @@ const normalizeZIndex = (element: EditableElement): number => (element.zIndex ??
 // Module-level substitution context for the current PDF generation pass
 let _pdfSubstitutionContext: SubstitutionContext | undefined;
 
+interface PdfRenderOptions {
+  /**
+   * Contraint les textes statiques dans leur bloc de template.
+   * Utile pour les contrats Services denses : le PDF ne doit pas laisser un paragraphe
+   * déborder sur le titre/bloc suivant, contrairement au flux HTML naturel du navigateur.
+   */
+  boundedTextBoxes?: boolean;
+}
+
+let _pdfRenderOptions: PdfRenderOptions = {};
+let _pdfTextBoxHeightOverrides = new Map<string, number>();
+
 /**
  * Permet de définir le contexte de substitution avant d'appeler renderFlowTextElementToHTML
  * depuis l'extérieur (ex: generateDynamicContentByPage dans RentalProposalExport)
  */
 export function setPdfSubstitutionContext(context: SubstitutionContext | undefined) {
   _pdfSubstitutionContext = context;
+}
+
+function stripHTML(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p\s*>/gi, '\n')
+    .replace(/<\/div\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+\n/g, '\n')
+    .replace(/\n\s+/g, '\n')
+    .trim();
+}
+
+function estimateWrappedLineCount(text: string, widthPx: number, fontSizePx: number): number {
+  const charsPerLine = Math.max(18, Math.floor(widthPx / Math.max(fontSizePx * 0.52, 1)));
+  return Math.max(
+    1,
+    text
+      .split('\n')
+      .reduce((total, line) => total + Math.max(1, Math.ceil(line.trim().length / charsPerLine)), 0),
+  );
+}
+
+function getFittedStaticTextSize(
+  element: EditableElement,
+  content: TextContent,
+  initialFontSize: number,
+  lineHeight: number,
+): number {
+  if (!_pdfRenderOptions.boundedTextBoxes) return initialFontSize;
+
+  const rawText = content.htmlContent
+    ? stripHTML(substituteDynamicPlaceholders(content.htmlContent, _pdfSubstitutionContext))
+    : substituteDynamicPlaceholders(content.text || '', _pdfSubstitutionContext);
+
+  const widthPx = Math.max(24, (element.size.width / CANVAS_SCALE.width) * CANVAS_DISPLAY_MAX_WIDTH - 4);
+  const effectiveHeight = _pdfTextBoxHeightOverrides.get(element.id) ?? element.size.height;
+  const heightPx = Math.max(8, (effectiveHeight / CANVAS_SCALE.height) * (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) - 2);
+  const estimatedLines = estimateWrappedLineCount(rawText, widthPx, initialFontSize);
+  const neededHeight = estimatedLines * initialFontSize * lineHeight;
+
+  if (neededHeight <= heightPx) return initialFontSize;
+
+  // On réduit uniquement ce qui déborde, avec un minimum encore lisible à l'impression.
+  return Math.max(4.2, Math.floor(initialFontSize * (heightPx / neededHeight) * 100) / 100);
 }
 
 // Cache pour les images base64 (éviter les conversions répétées)
@@ -132,12 +195,29 @@ function renderTextElementToHTML(element: EditableElement): string {
   // IMPORTANT: fallback identique à l'Aperçu (RentalProposalPreview)
   // Un fallback différent change les métriques (wrap) et provoque des chevauchements sur les pages denses (ex: page 3)
   const fontValue = fontDef?.value || 'Outfit, sans-serif';
-  const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6);
+  const lineHeight = _pdfRenderOptions.boundedTextBoxes ? 1.12 : 1.2;
+  const scaledFontSize = getFittedStaticTextSize(
+    element,
+    content,
+    Math.max(content.fontSize * PREVIEW_FONT_SCALE, 6),
+    lineHeight,
+  );
   const indentPx = (content.indentLevel || 0) * LIST_INDENT_PX;
+  const maxWidthPercent = Math.max(Math.min((element.size.width / CANVAS_SCALE.width) * 100, 100), 5);
+  const effectiveHeight = _pdfTextBoxHeightOverrides.get(element.id) ?? element.size.height;
+  const heightPercent = Math.max((effectiveHeight / CANVAS_SCALE.height) * 100, 1);
   
   // Wrapper externe : positionnement absolu (identique à getSharedElementStyle)
   const outerStyle: React.CSSProperties = {
     ...positionStyle,
+    ...(_pdfRenderOptions.boundedTextBoxes
+      ? {
+          width: `${maxWidthPercent}%`,
+          maxWidth: `${maxWidthPercent}%`,
+          height: `${heightPercent}%`,
+          overflow: 'hidden',
+        }
+      : {}),
     zIndex: normalizeZIndex(element),
   };
   
@@ -153,7 +233,7 @@ function renderTextElementToHTML(element: EditableElement): string {
     fontWeight: content.bold ? 'bold' : 'normal',
     fontStyle: content.italic ? 'italic' : 'normal',
     textDecoration: content.underline ? 'underline' : 'none',
-    lineHeight: 1.2,
+    lineHeight,
     textAlign: content.textAlign || 'left',
     whiteSpace: 'pre-wrap',
     // IMPORTANT: matcher Tailwind `break-words` (Aperçu) => overflow-wrap, pas word-break
@@ -420,6 +500,42 @@ function sortByZIndex(elements: EditableElement[]): EditableElement[] {
   return [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 }
 
+function prepareTextBoxHeightOverrides(elements: EditableElement[]): Map<string, number> {
+  if (!_pdfRenderOptions.boundedTextBoxes) return new Map();
+
+  const textElements = elements
+    .filter((el): el is EditableElement => el.type === 'text')
+    .sort((a, b) => a.position.y - b.position.y);
+
+  const overrides = new Map<string, number>();
+  for (let i = 0; i < textElements.length; i += 1) {
+    const current = textElements[i];
+    const sameColumnNext = textElements
+      .slice(i + 1)
+      .find((candidate) => {
+        const verticalGap = candidate.position.y - current.position.y;
+        if (verticalGap <= 0) return false;
+
+        const currentLeft = current.position.x;
+        const currentRight = current.position.x + current.size.width;
+        const candidateLeft = candidate.position.x;
+        const candidateRight = candidate.position.x + candidate.size.width;
+        const overlap = Math.min(currentRight, candidateRight) - Math.max(currentLeft, candidateLeft);
+        const minWidth = Math.min(current.size.width, candidate.size.width);
+
+        return overlap > minWidth * 0.5;
+      });
+
+    if (!sameColumnNext) continue;
+
+    const available = sameColumnNext.position.y - current.position.y - 6;
+    if (available > 6 && available < current.size.height) {
+      overrides.set(current.id, available);
+    }
+  }
+  return overrides;
+}
+
 /**
  * Génère le HTML d'une page du template
  * Utilise un wrapper .page-sheet (A4) + .page (canvas 650x919) pour un scaling uniforme
@@ -427,11 +543,14 @@ function sortByZIndex(elements: EditableElement[]): EditableElement[] {
 export async function renderPageToHTML(
   page: TemplatePageContent,
   dynamicContentHTML?: string,
-  excludeElementIds?: string[]
+  excludeElementIds?: string[],
+  options: PdfRenderOptions = {},
 ): Promise<string> {
+  _pdfRenderOptions = options;
   const sortedElements = sortByZIndex(
     page.elements.filter(el => !el.isDynamic && !(excludeElementIds?.includes(el.id)))
   );
+  _pdfTextBoxHeightOverrides = prepareTextBoxHeightOverrides(sortedElements);
   
   // Convertir tous les éléments en parallèle
   const elementsHTML = await Promise.all(
@@ -466,18 +585,20 @@ export async function generatePDFDocumentHTML(
   context?: SubstitutionContext,
   excludeElementIdsByPage?: Record<number, string[]>,
   extraPagesAfter?: Record<number, string[]>,
-  documentTitle?: string
+  documentTitle?: string,
+  options: PdfRenderOptions = {},
 ): Promise<string> {
   // Set module-level context for the duration of this generation
   _pdfSubstitutionContext = context;
-  // Générer le HTML de toutes les pages en parallèle
-  const pagesHTML = await Promise.all(
-    version.pages.map(async (page) => {
-      const dynamicContent = dynamicContentByPage[page.pageNumber] || '';
-      const excludeIds = excludeElementIdsByPage?.[page.pageNumber];
-      return renderPageToHTML(page, dynamicContent, excludeIds);
-    })
-  );
+  _pdfRenderOptions = options;
+  // Générer les pages séquentiellement : certaines options PDF (hauteur de bloc texte)
+  // sont calculées page par page pour éviter les interférences entre rendus concurrents.
+  const pagesHTML: string[] = [];
+  for (const page of version.pages) {
+    const dynamicContent = dynamicContentByPage[page.pageNumber] || '';
+    const excludeIds = excludeElementIdsByPage?.[page.pageNumber];
+    pagesHTML.push(await renderPageToHTML(page, dynamicContent, excludeIds, options));
+  }
   
   // Insérer les pages supplémentaires (ex: continuation du tableau invest)
   if (extraPagesAfter) {
@@ -489,8 +610,8 @@ export async function generatePDFDocumentHTML(
       if (extras && extras.length > 0) {
         // Récupérer le template de la page source pour le background (logos, etc.)
         const sourcePage = version.pages[i];
-        const extraPagesRendered = await Promise.all(
-          extras.map(async (extraDynamicContent) => {
+        const extraPagesRendered: string[] = [];
+        for (const extraDynamicContent of extras) {
             // Détecter si cette page contient le total investissement
             const hasTotal = extraDynamicContent.includes('summary-box');
             
@@ -509,9 +630,8 @@ export async function generatePDFDocumentHTML(
               elements: filteredImages,
               dynamicZones: [],
             };
-            return renderPageToHTML(imageOnlyPage, extraDynamicContent);
-          })
-        );
+            extraPagesRendered.push(await renderPageToHTML(imageOnlyPage, extraDynamicContent, undefined, options));
+          }
         // Insérer après la page courante
         pagesHTML.splice(i + 1, 0, ...extraPagesRendered);
       }
