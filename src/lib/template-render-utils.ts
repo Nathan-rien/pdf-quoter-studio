@@ -108,7 +108,9 @@ export const getSharedElementStyle = ({ element, canvasWidth = CANVAS_SCALE.widt
   
   // Pour le texte : width fit-content avec maxWidth, height auto
   if (element.type === 'text') {
-    const maxWidthPercent = Math.max(Math.min((element.size.width / canvasWidth) * 100, 100), 5);
+    const rawWidthPercent = (element.size.width / canvasWidth) * 100;
+    // Caper la maxWidth pour ne jamais dépasser le bord droit du canvas (left + maxWidth <= 100%)
+    const maxWidthPercent = Math.max(Math.min(rawWidthPercent, 100 - leftPercent), 5);
     return {
       position: 'absolute' as const,
       left: `${leftPercent}%`,
