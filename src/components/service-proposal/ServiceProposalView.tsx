@@ -20,6 +20,7 @@ import {
 import { ServiceProposalClientStep, ClientData } from './ServiceProposalClientStep';
 import { ServiceProposalDataStep, ServiceDataFormValues } from './ServiceProposalDataStep';
 import { ServiceProposalInvestStep, InvestFormValues } from './ServiceProposalInvestStep';
+import { ServiceProposalNosOptionsStep } from './ServiceProposalNosOptionsStep';
 import {
   useServiceProposals,
   useCreateServiceProposal,
@@ -343,6 +344,10 @@ function ProposalFormShell({
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
           <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
+          <TabsTrigger value="options" className="flex-1">
+            Nos Options
+            <NosOptionsBadge />
+          </TabsTrigger>
           <TabsTrigger value="template" className="flex-1">Template</TabsTrigger>
           <TabsTrigger value="preview-export" className="flex-1">Aperçu & Export</TabsTrigger>
         </TabsList>
@@ -354,6 +359,9 @@ function ProposalFormShell({
         </TabsContent>
         <TabsContent value="invest">
           <ServiceProposalInvestStep data={investForm} onChange={setInvestForm} />
+        </TabsContent>
+        <TabsContent value="options">
+          <ServiceProposalNosOptionsStep />
         </TabsContent>
         <TabsContent value="template">
           <TemplateSelector />
@@ -676,5 +684,15 @@ export function ServiceProposalView({ autoOpenCreate = false, onAutoOpenHandled 
         </div>
       )}
     </div>
+  );
+}
+
+function NosOptionsBadge() {
+  const count = useServiceProposalStore((s) => s.nosOptions.filter((o) => o.selected).length);
+  if (count === 0) return null;
+  return (
+    <Badge variant="secondary" className="ml-2">
+      {count}
+    </Badge>
   );
 }

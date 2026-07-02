@@ -56,6 +56,15 @@ const SERVICE_DATA_TYPES = [
     color: "text-orange-600 bg-orange-50 border-orange-200",
     required: true,
   },
+  {
+    type: "service_options" as DynamicZoneType,
+    label: "Options disponibles",
+    description: "Liste des options disponibles sélectionnées avec leurs prix",
+    sourceSheet: "options",
+    icon: ListChecks,
+    color: "text-amber-600 bg-amber-50 border-amber-200",
+    required: false,
+  },
 ];
 
 export function DynamicZoneManager() {

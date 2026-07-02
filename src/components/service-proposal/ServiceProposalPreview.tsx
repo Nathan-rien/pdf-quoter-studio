@@ -62,6 +62,7 @@ export function ServiceProposalPreview() {
   const proposalName = useServiceProposalStore((s) => s.proposalName);
   const totalInvest = useServiceProposalStore((s) => s.totalInvest);
   const selectedServices = useServiceProposalStore((s) => s.selectedServices);
+  const nosOptions = useServiceProposalStore((s) => s.nosOptions);
   const paymentFrequency = useServiceProposalStore((s) => s.paymentFrequency);
   const paymentMode = useServiceProposalStore((s) => s.paymentMode);
   const contractDuration = useServiceProposalStore((s) => s.contractDuration);
@@ -305,7 +306,9 @@ export function ServiceProposalPreview() {
         ? 10
         : zone.type === 'service_invest_table'
           ? 5
-          : 65;
+          : zone.type === 'service_options'
+            ? 55
+            : 65;
 
   const getFallbackZoneHeight = (zone: DynamicZone): number =>
     zone.type === 'service_client_info'
@@ -314,7 +317,9 @@ export function ServiceProposalPreview() {
         ? 16
         : zone.type === 'service_invest_table'
           ? 30
-          : 18;
+          : zone.type === 'service_options'
+            ? 18
+            : 18;
 
   const getZoneTop = (zone: DynamicZone): number => zone.position?.top ?? getFallbackZoneTop(zone);
   const getZoneMinHeight = (zone: DynamicZone): number => zone.position?.height ?? getFallbackZoneHeight(zone);
@@ -334,6 +339,11 @@ export function ServiceProposalPreview() {
         ? lignesData.reduce((total, ligne) => total + estimateTextVisualLines(ligne.designation || '-'), 0)
         : 1;
       return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
+    }
+    if (zone.type === 'service_options') {
+      const selected = nosOptions.filter((o) => o.selected);
+      const rows = selected.length || 1;
+      return Math.max(minHeight, Math.min(82, 6 + rows * 4));
     }
     if (zone.type === 'service_conditions') return Math.max(minHeight, 21);
     if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
@@ -506,6 +516,39 @@ export function ServiceProposalPreview() {
               Signature : _______________
             </div>
           </div>
+        </div>
+      );
+    }
+    if (zone.type === 'service_options') {
+      const selected = nosOptions.filter((o) => o.selected);
+      return (
+        <div key={key} style={zoneStyle}>
+          <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 700, color: '#000000', margin: '0 0 4px 0' }}>
+            Options disponibles :
+          </p>
+          {selected.length === 0 ? (
+            <p style={{ fontSize: '8px', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Aucune option sélectionnée</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', lineHeight: 1.2, background: 'white', border: '1px solid #e5e7eb', tableLayout: 'fixed' }}>
+              <tbody>
+                {selected.map((opt) => (
+                  <tr key={opt.id}>
+                    <td style={{ width: '30%', padding: '3px 6px', background: '#f9fafb', fontWeight: 600, color: '#374151', border: '1px solid #e5e7eb', verticalAlign: 'top' }}>
+                      {opt.name || '—'}
+                    </td>
+                    <td style={{ padding: '3px 6px', color: '#4b5563', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', verticalAlign: 'top' }}>
+                      {opt.description || ''}
+                    </td>
+                    {opt.showPrice !== false && (
+                      <td style={{ width: '22%', padding: '3px 6px', color: '#1f2937', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 700, verticalAlign: 'top' }}>
+                        {opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       );
     }

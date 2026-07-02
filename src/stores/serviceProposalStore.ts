@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ServiceProposal } from '@/hooks/useServiceProposals';
+import type { OptionService } from '@/stores/rentalProposalStore';
+
 
 export interface ClientData {
   nom: string;
@@ -45,6 +47,7 @@ export interface ServiceProposalStoreState {
   contractDuration: number | null;
   startDate: string;
   totalServicesHt: number;
+  nosOptions: OptionService[];
 }
 
 const DEFAULT_SERVICES_INCLUS_DESCRIPTION =
@@ -76,6 +79,7 @@ const initialState: ServiceProposalStoreState = {
   contractDuration: null,
   startDate: '',
   totalServicesHt: 0,
+  nosOptions: [],
 };
 
 interface ServiceProposalStoreActions {
@@ -96,6 +100,10 @@ interface ServiceProposalStoreActions {
   resetAll: () => void;
   loadFromServiceProposal: (proposal: ServiceProposal) => void;
   loadFromExport: (snapshot: Record<string, any>) => void;
+  addNosOption: (name: string, description: string, price: number | null) => void;
+  updateNosOption: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
+  deleteNosOption: (id: string) => void;
+  toggleNosOption: (id: string) => void;
 }
 
 export type ServiceProposalStore = ServiceProposalStoreState & ServiceProposalStoreActions;
@@ -192,6 +200,44 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           contractDuration: snapshot.contractDuration ?? null,
           startDate: snapshot.startDate ?? '',
           totalServicesHt: typeof snapshot.totalServicesHt === 'number' ? snapshot.totalServicesHt : 0,
+          nosOptions: Array.isArray(snapshot.nosOptions) ? snapshot.nosOptions : [],
+        })),
+
+      addNosOption: (name, description, price) =>
+        set((state) => ({
+          nosOptions: [
+            ...state.nosOptions,
+            {
+              id: `opt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              name,
+              description,
+              price,
+              priceTotal: null,
+              showPriceMode: 'mensuel',
+              pricingScope: 'par_machine' as const,
+              showPrice: true,
+              selected: true,
+            } as OptionService,
+          ],
+        })),
+
+      updateNosOption: (id, updates) =>
+        set((state) => ({
+          nosOptions: state.nosOptions.map((opt) =>
+            opt.id === id ? { ...opt, ...updates } : opt,
+          ),
+        })),
+
+      deleteNosOption: (id) =>
+        set((state) => ({
+          nosOptions: state.nosOptions.filter((opt) => opt.id !== id),
+        })),
+
+      toggleNosOption: (id) =>
+        set((state) => ({
+          nosOptions: state.nosOptions.map((opt) =>
+            opt.id === id ? { ...opt, selected: !opt.selected } : opt,
+          ),
         })),
     }),
     {
@@ -210,6 +256,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
         contractDuration: state.contractDuration,
         startDate: state.startDate,
         totalServicesHt: state.totalServicesHt,
+        nosOptions: state.nosOptions,
       }),
     }
   )
