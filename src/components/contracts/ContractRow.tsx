@@ -49,8 +49,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const monthsLeft = getMonthsUntilRenewal(contract);
 
   const [clientName, setClientName] = useState(contract.client_name ?? '');
-  const [implementationMonth, setImplementationMonth] = useState(
-    contract.implementation_month ? contract.implementation_month.substring(0, 7) : ''
+  const [implementationDate, setImplementationDate] = useState<Date | undefined>(
+    contract.implementation_month ? parseISO(contract.implementation_month) : undefined
   );
   const [financialPartner, setFinancialPartner] = useState(contract.financial_partner ?? '');
   const [durationMonths, setDurationMonths] = useState(
@@ -75,8 +75,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [uploading, setUploading] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
 
-  const endDate = implementationMonth && durationMonths
-    ? addMonths(parseISO(`${implementationMonth}-01`), parseInt(durationMonths))
+  const endDate = implementationDate && durationMonths
+    ? addMonths(implementationDate, parseInt(durationMonths))
     : null;
 
   // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
