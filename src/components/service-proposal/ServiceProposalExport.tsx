@@ -37,6 +37,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
   generatePDFDocumentHTML,
+  renderPageToHTML,
   clearImageCache,
   setPdfSubstitutionContext,
 } from '@/lib/pdf-html-generator';
@@ -559,90 +560,121 @@ export function ServiceProposalExport() {
     };
     setPdfSubstitutionContext(substitutionContext);
 
-    // Séparer les pages graphiques (avec images/formes) des pages texte seul
-    const graphicPages = latestVersion.pages.filter((p) =>
-      p.elements.some((el) => el.type === 'image' || el.type === 'shape'),
-    );
-    const textOnlyPages = latestVersion.pages.filter(
-      (p) => p.elements.length > 0 && p.elements.every((el) => el.type === 'text'),
-    );
-
-    // Générer le HTML des pages graphiques via generatePDFDocumentHTML (canvas absolu)
     const { content, excludeIds, extraPagesAfter } = generateDynamicContentByPage();
-
-    // Version partielle avec uniquement les pages graphiques
-    const graphicVersion = { ...latestVersion, pages: graphicPages };
     const docTitle = generateFileName().replace(/\.pdf$/i, '');
 
-    let graphicHtml = '';
-    if (graphicPages.length > 0) {
-      graphicHtml = await generatePDFDocumentHTML(
-        graphicVersion,
-        content,
-        substitutionContext,
-        excludeIds,
-        extraPagesAfter,
-        docTitle,
-        { boundedTextBoxes: false },
-      );
-    }
+    const PDF_BASE_WIDTH = 580;
+    const PDF_BASE_HEIGHT = PDF_BASE_WIDTH * (297 / 210);
+    const A4_W = (210 / 25.4) * 96;
+    const A4_H = (297 / 25.4) * 96;
+    const PRINT_SCALE = Math.min(A4_W / PDF_BASE_WIDTH, A4_H / PDF_BASE_HEIGHT);
 
-    // Générer le HTML des pages texte en flow A4 pur
-    const FONT_SCALE = 1.35; // Facteur d'échelle pour affichage A4 (9pt → ~12px)
-    const escapeHtml = (s: string) =>
-      s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+    const allPagesHtml: string[] = [];
 
-    const textPagesHtml = textOnlyPages
-      .map((page) => {
-        const sortedEls = [...page.elements].sort(
+    for (const page of latestVersion.pages) {
+      const isTextOnly =
+        page.elements.length > 0 &&
+        page.elements.every((el) => el.type === 'text');
+
+      if (isTextOnly) {
+        const sorted = [...page.elements].sort(
           (a, b) => a.position.y - b.position.y,
         );
-        const elementsHtml = sortedEls
+        const FSCALE = 1.32;
+        const rows = sorted
           .map((el) => {
             const c = el.content as any;
-            const fontSize = Math.max((c.fontSize || 9) * FONT_SCALE, 8);
-            const bold = c.bold ? 'font-weight:700;' : 'font-weight:400;';
-            const underline = c.underline ? 'text-decoration:underline;' : '';
-            const marginTop = c.bold ? '10px' : '3px';
-            const color = c.color || '#1a1a1a';
-            const align = c.textAlign || 'justify';
-            const text = escapeHtml(c.text || '').replace(/\n/g, '<br/>');
-            return `<p style="font-size:${fontSize}px;${bold}${underline}color:${color};text-align:${align};line-height:1.45;margin:0;margin-top:${marginTop};margin-bottom:2px;">${text}</p>`;
+            const fs = Math.max((c.fontSize || 9) * FSCALE, 7).toFixed(1);
+            const fw = c.bold ? '700' : '400';
+            const td = c.underline ? 'underline' : 'none';
+            const mt = c.bold ? '9px' : '2px';
+            const col = c.color || '#1a1a1a';
+            const ta = c.textAlign || 'justify';
+            const esc = (s: string) =>
+              s
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            const lines = (c.text || '').split('\n');
+            const html = lines
+              .map((l: string) => `<div>${esc(l) || '&nbsp;'}</div>`)
+              .join('\n');
+            return `<p style="font-size:${fs}px;font-weight:${fw};text-decoration:${td};color:${col};text-align:${ta};line-height:1.45;margin:0;margin-top:${mt};margin-bottom:2px;">${html}</p>`;
           })
           .join('');
 
-        return `
+        allPagesHtml.push(`
           <div class="text-page-sheet">
             <div class="text-page-content">
-              ${elementsHtml}
+              ${rows}
             </div>
             <div class="page-footer">GROUPE | CYBERTEK</div>
           </div>
-        `;
-      })
-      .join('');
+        `);
+      } else {
+        const dynamicContent = content[page.pageNumber] || '';
+        const excludeIds_page = excludeIds[page.pageNumber];
+        const pageHtml = await renderPageToHTML(
+          page,
+          dynamicContent,
+          excludeIds_page,
+          { boundedTextBoxes: false },
+        );
+        allPagesHtml.push(pageHtml);
 
-    // Si pas de pages graphiques, retourner un document complet avec juste les pages texte
-    if (!graphicHtml) {
-      return buildStandaloneTextDocument(textPagesHtml, docTitle);
+        const extras = extraPagesAfter[page.pageNumber];
+        if (extras && extras.length > 0) {
+          for (const extraContent of extras) {
+            const extraPageHtml = await renderPageToHTML(
+              {
+                ...page,
+                elements: page.elements.filter((el) => el.type === 'image'),
+                dynamicZones: [],
+              },
+              extraContent,
+              undefined,
+              { boundedTextBoxes: false },
+            );
+            allPagesHtml.push(extraPageHtml);
+          }
+        }
+      }
     }
 
-    // Injecter les pages texte DANS le document HTML graphique existant
-    // en les ajoutant avant la balise </body>
-    const textStylesAndPages = `
-      <style>
-        .text-page-sheet { width:210mm; height:297mm; overflow:hidden; background:white; page-break-after:always; break-after:page; page-break-inside:avoid; break-inside:avoid; position:relative; font-family:'Inter', Arial, sans-serif; }
-        .text-page-sheet:last-child { page-break-after:auto; break-after:auto; }
-        .text-page-content { padding:20mm 18mm 25mm 18mm; overflow:hidden; height:100%; }
-        .page-footer { position:absolute; bottom:8mm; left:18mm; right:18mm; font-size:8px; color:#888; text-align:right; border-top:0.5px solid #ccc; padding-top:3px; }
-      </style>
-      ${textPagesHtml}
-    `;
-
-    return graphicHtml.replace('</body>', textStylesAndPages + '</body>');
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${docTitle}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      .page-sheet { display: block; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+      .page-sheet:last-child { page-break-after: auto; break-after: auto; }
+      .page { transform: scale(${PRINT_SCALE.toFixed(6)}); transform-origin: top left; }
+      .text-page-sheet { page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+      .text-page-sheet:last-child { page-break-after: auto; break-after: auto; }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-family: 'Inter', Arial, sans-serif; }
+    .page-sheet { width: 210mm; height: 297mm; overflow: hidden; background: white; position: relative; }
+    .page { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; position: relative; overflow: hidden; background: white; }
+    .text-page-sheet { width: 210mm; height: 297mm; overflow: hidden; background: white; position: relative; }
+    .text-page-content { padding: 20mm 18mm 25mm 18mm; overflow: hidden; height: 100%; }
+    .page-footer { position: absolute; bottom: 8mm; left: 18mm; right: 18mm; font-size: 8px; color: #888; text-align: right; border-top: 0.5px solid #ccc; padding-top: 3px; }
+    @media screen { .page-sheet, .text-page-sheet { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; } }
+    img { max-width: 100%; height: auto; }
+    .dynamic-content { position: absolute; z-index: 40; }
+    .rich-text p, .rich-text div { margin: 0; padding: 0; }
+    ul, ol { list-style: none !important; margin: 0 !important; padding: 0 !important; }
+  </style>
+</head>
+<body>
+${allPagesHtml.join('\n')}
+</body>
+</html>`;
   }, [latestVersion, selectedCommercial, generateDynamicContentByPage]);
 
   // --- Handler téléchargement ---
