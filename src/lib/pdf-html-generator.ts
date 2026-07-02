@@ -500,6 +500,42 @@ function sortByZIndex(elements: EditableElement[]): EditableElement[] {
   return [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 }
 
+function prepareTextBoxHeightOverrides(elements: EditableElement[]): Map<string, number> {
+  if (!_pdfRenderOptions.boundedTextBoxes) return new Map();
+
+  const textElements = elements
+    .filter((el): el is EditableElement => el.type === 'text')
+    .sort((a, b) => a.position.y - b.position.y);
+
+  const overrides = new Map<string, number>();
+  for (let i = 0; i < textElements.length; i += 1) {
+    const current = textElements[i];
+    const sameColumnNext = textElements
+      .slice(i + 1)
+      .find((candidate) => {
+        const verticalGap = candidate.position.y - current.position.y;
+        if (verticalGap <= 0) return false;
+
+        const currentLeft = current.position.x;
+        const currentRight = current.position.x + current.size.width;
+        const candidateLeft = candidate.position.x;
+        const candidateRight = candidate.position.x + candidate.size.width;
+        const overlap = Math.min(currentRight, candidateRight) - Math.max(currentLeft, candidateLeft);
+        const minWidth = Math.min(current.size.width, candidate.size.width);
+
+        return overlap > minWidth * 0.5;
+      });
+
+    if (!sameColumnNext) continue;
+
+    const available = sameColumnNext.position.y - current.position.y - 6;
+    if (available > 6 && available < current.size.height) {
+      overrides.set(current.id, available);
+    }
+  }
+  return overrides;
+}
+
 /**
  * Génère le HTML d'une page du template
  * Utilise un wrapper .page-sheet (A4) + .page (canvas 650x919) pour un scaling uniforme
@@ -514,6 +550,7 @@ export async function renderPageToHTML(
   const sortedElements = sortByZIndex(
     page.elements.filter(el => !el.isDynamic && !(excludeElementIds?.includes(el.id)))
   );
+  _pdfTextBoxHeightOverrides = prepareTextBoxHeightOverrides(sortedElements);
   
   // Convertir tous les éléments en parallèle
   const elementsHTML = await Promise.all(
