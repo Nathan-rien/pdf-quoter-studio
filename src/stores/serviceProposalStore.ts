@@ -200,6 +200,44 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           contractDuration: snapshot.contractDuration ?? null,
           startDate: snapshot.startDate ?? '',
           totalServicesHt: typeof snapshot.totalServicesHt === 'number' ? snapshot.totalServicesHt : 0,
+          nosOptions: Array.isArray(snapshot.nosOptions) ? snapshot.nosOptions : [],
+        })),
+
+      addNosOption: (name, description, price) =>
+        set((state) => ({
+          nosOptions: [
+            ...state.nosOptions,
+            {
+              id: `opt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              name,
+              description,
+              price,
+              priceTotal: null,
+              showPriceMode: 'mensuel',
+              pricingScope: 'unit',
+              showPrice: true,
+              selected: true,
+            } as OptionService,
+          ],
+        })),
+
+      updateNosOption: (id, updates) =>
+        set((state) => ({
+          nosOptions: state.nosOptions.map((opt) =>
+            opt.id === id ? { ...opt, ...updates } : opt,
+          ),
+        })),
+
+      deleteNosOption: (id) =>
+        set((state) => ({
+          nosOptions: state.nosOptions.filter((opt) => opt.id !== id),
+        })),
+
+      toggleNosOption: (id) =>
+        set((state) => ({
+          nosOptions: state.nosOptions.map((opt) =>
+            opt.id === id ? { ...opt, selected: !opt.selected } : opt,
+          ),
         })),
     }),
     {
