@@ -591,14 +591,14 @@ export async function generatePDFDocumentHTML(
   // Set module-level context for the duration of this generation
   _pdfSubstitutionContext = context;
   _pdfRenderOptions = options;
-  // Générer le HTML de toutes les pages en parallèle
-  const pagesHTML = await Promise.all(
-    version.pages.map(async (page) => {
-      const dynamicContent = dynamicContentByPage[page.pageNumber] || '';
-      const excludeIds = excludeElementIdsByPage?.[page.pageNumber];
-      return renderPageToHTML(page, dynamicContent, excludeIds, options);
-    })
-  );
+  // Générer les pages séquentiellement : certaines options PDF (hauteur de bloc texte)
+  // sont calculées page par page pour éviter les interférences entre rendus concurrents.
+  const pagesHTML: string[] = [];
+  for (const page of version.pages) {
+    const dynamicContent = dynamicContentByPage[page.pageNumber] || '';
+    const excludeIds = excludeElementIdsByPage?.[page.pageNumber];
+    pagesHTML.push(await renderPageToHTML(page, dynamicContent, excludeIds, options));
+  }
   
   // Insérer les pages supplémentaires (ex: continuation du tableau invest)
   if (extraPagesAfter) {
@@ -610,8 +610,8 @@ export async function generatePDFDocumentHTML(
       if (extras && extras.length > 0) {
         // Récupérer le template de la page source pour le background (logos, etc.)
         const sourcePage = version.pages[i];
-        const extraPagesRendered = await Promise.all(
-          extras.map(async (extraDynamicContent) => {
+        const extraPagesRendered: string[] = [];
+        for (const extraDynamicContent of extras) {
             // Détecter si cette page contient le total investissement
             const hasTotal = extraDynamicContent.includes('summary-box');
             
@@ -630,9 +630,8 @@ export async function generatePDFDocumentHTML(
               elements: filteredImages,
               dynamicZones: [],
             };
-            return renderPageToHTML(imageOnlyPage, extraDynamicContent, undefined, options);
-          })
-        );
+            extraPagesRendered.push(await renderPageToHTML(imageOnlyPage, extraDynamicContent, undefined, options));
+          }
         // Insérer après la page courante
         pagesHTML.splice(i + 1, 0, ...extraPagesRendered);
       }
