@@ -630,7 +630,7 @@ export function ServiceProposalExport() {
       } else {
         const existingDynamic = content[page.pageNumber] || '';
         const textAsAbsolute = textFlowHtml
-          ? `<div style="position:absolute;top:7%;left:3%;right:3%;bottom:3%;font-family:'Inter',Arial,sans-serif;overflow:hidden;line-height:1.4;">${textFlowHtml}</div>`
+          ? `<div style="position:absolute;top:7%;left:3%;right:3%;font-family:'Inter',Arial,sans-serif;line-height:1.4;">${textFlowHtml}</div>`
           : '';
         const finalDynamic = existingDynamic + textAsAbsolute;
         const pageWithOnlyNonText = { ...page, elements: nonTextElements };
