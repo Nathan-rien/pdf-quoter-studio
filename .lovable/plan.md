@@ -1,48 +1,63 @@
+# Statistiques — Vues multiples
+
 ## Objectif
-Reprendre la fonctionnalité « Options disponibles » de Propositions Location dans Propositions Services : gestion d'options sélectionnables (ajout manuel + import depuis Admin), avec rendu dans le template via une nouvelle zone dynamique dédiée.
+Remplacer la vue unique actuelle (basée uniquement sur `proposal_exports` de type location) par un dashboard multi‑vues avec 5 onglets en haut de page :
 
-## Modifications
+1. **Vue globale** (par défaut) — synthèse consolidée des 4 périmètres
+2. **Propositions Location** — `proposal_exports` où `proposal_type = 'rental-proposal'`
+3. **Propositions Services** — `proposal_exports` où `proposal_type = 'service-proposal'`
+4. **Contrats Location** — `contracts` où `proposal_type = 'rental-proposal'`
+5. **Contrats Services** — `contracts` où `proposal_type = 'service-proposal'`
 
-### 1. Store `src/stores/serviceProposalStore.ts`
-- Ajouter le state `nosOptions: OptionService[]` (réutiliser le type `OptionService` de `rentalProposalStore` ou dupliquer) : `{ id, name, description, price, priceTotal?, selected, pricingScope: 'par_machine' | 'pour_le_parc', showPrice, showPriceMode }`.
-- Ajouter les actions `addNosOption / updateNosOption / deleteNosOption / toggleNosOption`.
-- Inclure `nosOptions` dans le snapshot save/load (rétro-compat : default `[]`).
-- Reset dans `resetProposal()`.
+## UI — switcher
+En haut de `StatisticsDashboard`, sous le titre : une barre `Tabs` (shadcn) à 5 boutons, sticky. Icônes : `LayoutDashboard`, `FileText`, `Wrench`, `FileSignature`, `Handshake`. État local `activeView`, défaut `'global'`. Les filtres existants (année, reset, entité, date) restent au‑dessus des rapports et s'appliquent à la vue courante.
 
-### 2. Nouvelle étape UI `src/components/service-proposal/ServiceProposalNosOptionsStep.tsx`
-- Copie adaptée du bloc « Nos Options » de `RentalDataEditor.tsx` (lignes 748-935) :
-  - Header + bouton « Importer depuis Admin » (Popover listant `useOptionsAdminStore` actives, checkbox multi-sélection).
-  - Bouton « Ajouter » manuel.
-  - Ligne d'option : Switch selected, Input Nom, Textarea Description, Input prix (€), toggle scope (/machine ou /parc), toggle « Prix visible » sur PDF, bouton supprimer.
-- Simplification par rapport à Location : pas de calcul croisé « au mois / au total » (Services n'a pas de coefficient base-taux) → un seul champ prix.
+## Rapports par vue
 
-### 3. Intégration onglet `src/components/service-proposal/ServiceProposalView.tsx`
-- Ajouter un `TabsTrigger value="options"` intitulé « Nos Options » (avec Badge count des options sélectionnées) entre « Données » et « Invest ».
-- Ajouter le `TabsContent` correspondant qui monte `ServiceProposalNosOptionsStep`.
-- Ajuster `grid-cols-*` de la TabsList.
+### Vue globale (défaut)
+KPIs consolidés :
+- Total propositions (Location + Services)
+- Total contrats actifs (Location + Services)
+- Montant investissement cumulé (propositions)
+- Loyer trimestriel cumulé (contrats, dérivé comme dans `useContractProposalRent`)
 
-### 4. Nouvelle zone dynamique `service_options`
-- `src/types/pdf-template.ts` : ajouter `'service_options'` à `DynamicZoneType` et une entrée dans `AVAILABLE_ZONE_TYPES` (`label: 'Options (Services)'`, sourceSheet: `'options_services'`, description : « Options sélectionnables affichées dans la proposition »).
-- `src/components/template-editor/DynamicZoneManager.tsx` : rendre la zone disponible dans le contexte Services (aucun code spécifique si le filtrage se fait déjà par préfixe `service_`).
+Graphes :
+- Répartition Location vs Services (propositions) — PieChart
+- Répartition Location vs Services (contrats) — PieChart
+- Volume mensuel combiné (barres empilées Location/Services)
+- Top 5 commerciaux tous périmètres confondus
 
-### 5. Rendu preview `src/components/service-proposal/ServiceProposalPreview.tsx`
-- Lire `nosOptions` depuis le store.
-- Ajouter un cas `zone.type === 'service_options'` dans `renderServiceDynamicZone` :
-  - Titre : « Options ».
-  - Liste des options avec `selected === true` (les autres non rendues).
-  - Colonnes : Nom + Description, Prix (si `showPrice`) formaté selon `pricingScope` (`… €/machine` ou `… € /parc`).
-- Ajouter estimation de hauteur (`estimateServiceZoneHeight`) sur ce type, basée sur le nombre d'options sélectionnées.
+### Propositions Location
+Réutilise l'ensemble actuel des rapports (KPIs, mensuel, top clients, avec/sans options, templates, commerciaux, tableau quotidien, Top Services additionnels, Top Nos Options) — filtré sur `proposal_type = 'rental-proposal'`.
 
-### 6. Rendu export `src/components/service-proposal/ServiceProposalExport.tsx`
-- Ajouter la même logique de rendu HTML pour `zone.type === 'service_options'` (`renderNosOptionsZone`).
-- Inclure `nosOptions` dans le snapshot exporté (`proposal_state`).
+### Propositions Services
+Mêmes rapports que Location, mais alimentés par les exports `service-proposal`. Le bloc « Top Services additionnels » est masqué (pas de page 5 côté Services) ; « Top Nos Options » conservé.
 
-### 7. Seeder template Services `src/lib/seedContratCadreTemplate.ts`
-- Ajouter une zone dynamique `service_options` (position par défaut sur une page appropriée, ex. sous le tableau produits). Optionnel : ne pas la seeder d'office pour laisser l'utilisateur la placer dans l'éditeur — à confirmer, par défaut on l'ajoute sur la page 3 sous les produits.
+### Contrats Location
+Source : table `contracts` filtrée `proposal_type = 'rental-proposal'`.
+- KPIs : nb contrats, loyer mensuel cumulé, loyer trimestriel cumulé, durée moyenne
+- Contrats par mois (date de création) — BarChart
+- Répartition par commercial — BarChart horizontal
+- Répartition par enseigne — PieChart
+- Répartition par partenaire financier — PieChart
+- Répartition Mensuel vs Trimestriel (`payment_frequency`)
+- Top 5 clients par loyer trimestriel
 
-## Vérifications
-- Onglet « Nos Options » visible avec Badge count.
-- Ajout manuel + import depuis Admin fonctionnent.
-- Rechargement d'anciennes propositions sans `nosOptions` : pas d'erreur (array vide).
-- Zone `service_options` disponible dans DynamicZoneManager et rendue dans l'aperçu + PDF quand présente et lorsqu'au moins une option est `selected`.
-- Aucun impact sur les autres zones/rendus.
+### Contrats Services
+Mêmes rapports que Contrats Location **sauf** « partenaire financier » (retiré du module Services, conformément à la mémoire projet).
+
+## Implémentation technique
+- Fichier principal : `src/components/admin/StatisticsDashboard.tsx`
+- Extraire les calculs actuels dans une fonction `computeProposalStats(records)` réutilisable pour Location et Services.
+- Nouvelle fonction `computeContractStats(contracts, proposalExportsById)` — jointure côté client sur `contract.proposal_export_id` pour dériver le loyer via la même logique que `useContractProposalRent`.
+- Nouvel appel dans `fetchData` :
+  - `proposal_exports` : ajouter le champ `proposal_type` au `select` (déjà en DB).
+  - `contracts` : `select` complet avec `proposal_type`, `payment_frequency`, `enseigne`, `partenaire_financier`, `commercial_name`, `client_name`, `duration`, `loyer_mensuel_ht`, `proposal_export_id`, `created_at`, `is_quick_contract`.
+- Nouveaux sous‑composants (dans le même fichier ou fichiers frères) : `GlobalOverview`, `ProposalStatsView`, `ContractStatsView` — chacun reçoit ses données déjà filtrées.
+- Les filtres (année, entité, date, reset) sont appliqués en amont, puis chaque vue reçoit son jeu filtré. Reset date : appliqué aux 2 sources via `created_at`.
+- Le bouton « Remettre à zéro » et les filtres restent globaux (au‑dessus du switcher).
+
+## Hors périmètre
+- Pas de modif DB ni de types Supabase (`proposal_type` et `payment_frequency` déjà présents).
+- Pas de changement de navigation ni de sidebar.
+- Pas de modif du parcours Propositions/Contrats.
