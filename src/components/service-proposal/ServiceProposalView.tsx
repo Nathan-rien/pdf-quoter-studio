@@ -686,3 +686,13 @@ export function ServiceProposalView({ autoOpenCreate = false, onAutoOpenHandled 
     </div>
   );
 }
+
+function NosOptionsBadge() {
+  const count = useServiceProposalStore((s) => s.nosOptions.filter((o) => o.selected).length);
+  if (count === 0) return null;
+  return (
+    <Badge variant="secondary" className="ml-2">
+      {count}
+    </Badge>
+  );
+}
