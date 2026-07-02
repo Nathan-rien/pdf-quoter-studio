@@ -216,7 +216,7 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
               <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">Aucune donnée disponible</div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <PieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                <PieChart margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                   <Pie
                     data={stats.enseigneData}
                     dataKey="count"
@@ -250,7 +250,7 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
                 <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">Aucune donnée disponible</div>
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
-                  <PieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                  <PieChart margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                     <Pie
                       data={stats.partnerData}
                       dataKey="count"
@@ -281,7 +281,7 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
-              <PieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <PieChart margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                 <Pie
                   data={stats.freqData}
                   dataKey="count"
