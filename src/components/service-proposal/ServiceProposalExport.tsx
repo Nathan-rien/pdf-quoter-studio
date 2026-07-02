@@ -72,6 +72,7 @@ export function ServiceProposalExport() {
   const contractDuration = useServiceProposalStore((s) => s.contractDuration);
   const startDate = useServiceProposalStore((s) => s.startDate);
   const totalServicesHt = useServiceProposalStore((s) => s.totalServicesHt);
+  const nosOptions = useServiceProposalStore((s) => s.nosOptions);
 
   const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } =
     useTemplateEditorStore();
