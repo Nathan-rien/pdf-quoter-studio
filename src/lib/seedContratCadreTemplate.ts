@@ -63,10 +63,10 @@ function buildPages() {
       title: "Entre les soussignées",
       type: "dynamic_partial",
       elements: [
-        rectEl("p1-banner", 20, 20, 754, 40),
-        textEl("p1-title", 30, 25, 734, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, align: "left" }),
+        rectEl("p1-banner", 20, 20, 610, 40),
+        textEl("p1-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, align: "left" }),
         textEl("p1-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
-        textEl("p1-ss", 40, 80, 714, 15, "ENTRE LES SOUSSIGNEES :", { bold: true }),
+        textEl("p1-ss", 40, 80, 570, 15, "ENTRE LES SOUSSIGNEES :", { bold: true }),
         textEl(
           "p1-cybertek",
           40,
@@ -75,10 +75,10 @@ function buildPages() {
           140,
           "1/ - La Société « Groupe Cybertek », société par actions simplifiée au capital de 4 471 800 Euros, ayant son siège social à BORDEAUX (33300), Zone d'activités Achard Bat U 130 rue Achard, immatriculée au registre du commerce et des sociétés de Bordeaux sous le numéro 408 772 960,\n\nReprésentée par Nicolas Sourroubille, agissant en qualité de Directeur Général, dûment habilité aux fins des présentes."
         ),
-        textEl("p1-prest", 40, 260, 714, 20, 'Ci-après dénommée le "PRESTATAIRE"', { align: "center", bold: true }),
-        textEl("p1-dune", 40, 285, 714, 15, "D'UNE PART", { align: "center", bold: true }),
-        textEl("p1-et", 40, 315, 714, 15, "Et"),
-        textEl("p1-benef-label", 40, 345, 714, 15, "2 - La Société", { bold: true }),
+        textEl("p1-prest", 40, 260, 570, 20, 'Ci-après dénommée le "PRESTATAIRE"', { align: "center", bold: true }),
+        textEl("p1-dune", 40, 285, 570, 15, "D'UNE PART", { align: "center", bold: true }),
+        textEl("p1-et", 40, 315, 570, 15, "Et"),
+        textEl("p1-benef-label", 40, 345, 570, 15, "2 - La Société", { bold: true }),
       ],
       dynamicZones: [
         {
@@ -98,7 +98,7 @@ function buildPages() {
       title: "Exposé préalable + Art. I et II",
       type: "static",
       elements: [
-        rectEl("p2-banner", 20, 20, 754, 40),
+        rectEl("p2-banner", 20, 20, 610, 40),
         textEl("p2-title", 30, 25, 734, 30, "EXPOSE PREALABLE", { size: 12, bold: true, align: "left" }),
         textEl(
           "p2-body",
@@ -108,7 +108,7 @@ function buildPages() {
           380,
           "Le présent Contrat Cadre a pour objet de déterminer les conditions dans lesquelles la société Groupe Cybertek SAS fournira des prestations de services objets des présentes au client.\n\nCes prestations reposent, d'une part, sur le présent contrat-cadre de prestations de services, comprenant les conditions générales exposées ci-après, et, d'autre part, sur le contrat d'application, comprenant les conditions particulières, annexé aux présentes (Annexe 1).\n\nLa nature et la liste des produits concernés par les prestations font l'objet d'une description annexée aux présentes qui figure dans le contrat d'application (Annexe 1).\n\nCela étant exposé, il a été convenu et arrêté ce qui suit :"
         ),
-        textEl("p2-art1", 40, 475, 714, 15, "I - DEFINITION DES SERVICES RENDUS", { bold: true }),
+        textEl("p2-art1", 40, 475, 570, 15, "I - DEFINITION DES SERVICES RENDUS", { bold: true }),
         textEl(
           "p2-art1-body",
           40,
@@ -117,7 +117,7 @@ function buildPages() {
           70,
           "Par le présent Contrat Cadre de prestations de services, le PRESTATAIRE s'engage à fournir au BENEFICIAIRE les prestations dont les conditions particulières et la liste descriptive sont annexées aux présentes (Annexe 1)."
         ),
-        textEl("p2-art2", 40, 590, 714, 15, "II - PRESTATIONS", { bold: true }),
+        textEl("p2-art2", 40, 590, 570, 15, "II - PRESTATIONS", { bold: true }),
         textEl(
           "p2-art2-body",
           40,
@@ -135,7 +135,7 @@ function buildPages() {
       title: "Art. III à V",
       type: "static",
       elements: [
-        textEl("p3-art3", 40, 50, 714, 15, "III - OBLIGATIONS GENERALES DU PRESTATAIRE", { bold: true }),
+        textEl("p3-art3", 40, 50, 570, 15, "III - OBLIGATIONS GENERALES DU PRESTATAIRE", { bold: true }),
         textEl(
           "p3-art3-body",
           40,
@@ -144,7 +144,7 @@ function buildPages() {
           230,
           "2.1 La Société PRESTATAIRE s'engage à mettre en œuvre, pour l'exécution de l'ensemble des prestations à sa charge en vertu des présentes, toute la diligence requise et à faire tout ce qui est en son pouvoir pour que les conseils et recommandations donnés à la Société BENEFICIAIRE et les services qui sont rendus, donnent toute satisfaction à celle-ci.\n\n2.2 La Société PRESTATAIRE s'engage à affecter à l'exécution des présentes un interlocuteur compétent et spécialisé. Elle pourra également faire appel à des consultants extérieurs ou sous-traiter, sans toutefois qu'il en résulte une quelconque atténuation de sa responsabilité.\n\n2.3 La Société PRESTATAIRE décidera seule du choix du personnel salarié ou non devant être affecté aux missions dont elle a la charge."
         ),
-        textEl("p3-art4", 40, 320, 714, 15, "IV - OBLIGATIONS DU BENEFICIAIRE", { bold: true }),
+        textEl("p3-art4", 40, 320, 570, 15, "IV - OBLIGATIONS DU BENEFICIAIRE", { bold: true }),
         textEl(
           "p3-art4-body",
           40,
@@ -153,7 +153,7 @@ function buildPages() {
           90,
           "La Société BENEFICIAIRE s'engage expressément à fournir, pendant toute la durée du présent contrat, au PRESTATAIRE, toutes les informations, tous les renseignements, tous les documents et toute l'assistance raisonnablement nécessaires pour lui permettre de réaliser l'objet du contrat."
         ),
-        textEl("p3-art5", 40, 450, 714, 15, "V - FACTURATION", { bold: true }),
+        textEl("p3-art5", 40, 450, 570, 15, "V - FACTURATION", { bold: true }),
         textEl(
           "p3-art5-body",
           40,
@@ -171,7 +171,7 @@ function buildPages() {
       title: "Art. VI à VIII + Conditions particulières",
       type: "dynamic_partial",
       elements: [
-        textEl("p4-art6", 40, 50, 714, 15, "VI - DUREE", { bold: true }),
+        textEl("p4-art6", 40, 50, 570, 15, "VI - DUREE", { bold: true }),
         textEl(
           "p4-art6-body",
           40,
@@ -180,7 +180,7 @@ function buildPages() {
           130,
           "Le présent contrat cadre est conclu pour une durée indéterminée. Il pourra être rompu par l'une ou l'autre des Parties, à sa date anniversaire par l'envoi d'une lettre recommandée avec avis de réception à l'autre Partie en respectant un préavis de 3 mois.\n\nEn revanche, le contrat d'application est conclu pour une durée ferme, déterminée par décision du BÉNÉFICIAIRE. À son terme, il pourra être renouvelé au moyen de la signature d'un nouveau contrat d'application."
         ),
-        textEl("p4-art7", 40, 220, 714, 15, "VII - RESOLUTION DU CONTRAT", { bold: true }),
+        textEl("p4-art7", 40, 220, 570, 15, "VII - RESOLUTION DU CONTRAT", { bold: true }),
         textEl(
           "p4-art7-body",
           40,
@@ -189,7 +189,7 @@ function buildPages() {
           110,
           "En cas de non-respect par l'une ou l'autre des parties des obligations suivantes :\n- Défaut de paiement de la facturation par le BENEFICIAIRE,\n- Défaillance d'une des Parties dans le respect des obligations visées aux articles du présent contrat, celui-ci pourra être résolu au gré de la partie lésée, TRENTE (30) jours après mise en demeure restée sans effet."
         ),
-        textEl("p4-art8", 40, 370, 714, 15, "VIII - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
+        textEl("p4-art8", 40, 370, 570, 15, "VIII - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
         textEl(
           "p4-art8-body",
           40,
@@ -198,8 +198,8 @@ function buildPages() {
           80,
           "Les parties s'engagent à considérer comme strictement confidentiels l'ensemble des documents, informations et données communiqués dans le cadre du présent contrat, pendant toute sa durée et sans limitation après son expiration."
         ),
-        rectEl("p4-annexe-banner", 20, 495, 754, 30, "#f0f0f0"),
-        textEl("p4-annexe-title", 30, 500, 714, 20, "ANNEXE 1 — CONDITIONS PARTICULIERES DU CONTRAT D'APPLICATION", { bold: true, size: 10, align: "left" }),
+        rectEl("p4-annexe-banner", 20, 495, 610, 30, "#f0f0f0"),
+        textEl("p4-annexe-title", 30, 500, 570, 20, "ANNEXE 1 — CONDITIONS PARTICULIERES DU CONTRAT D'APPLICATION", { bold: true, size: 10, align: "left" }),
       ],
       dynamicZones: [
         {
@@ -219,7 +219,7 @@ function buildPages() {
       title: "Art. IX à XII",
       type: "static",
       elements: [
-        textEl("p5-art9", 40, 50, 714, 15, "IX - CLAUSES DU CONTRAT", { bold: true }),
+        textEl("p5-art9", 40, 50, 570, 15, "IX - CLAUSES DU CONTRAT", { bold: true }),
         textEl(
           "p5-art9-body",
           40,
@@ -228,7 +228,7 @@ function buildPages() {
           60,
           "Les parties conviennent expressément qu'aucune des clauses du contrat ne pourra être réputée comminatoire ou de style, mais qu'elles doivent toutes recevoir leur pleine et entière exécution."
         ),
-        textEl("p5-art10", 40, 150, 714, 15, "X - INDEPENDANCE DES CLAUSES", { bold: true }),
+        textEl("p5-art10", 40, 150, 570, 15, "X - INDEPENDANCE DES CLAUSES", { bold: true }),
         textEl(
           "p5-art10-body",
           40,
@@ -237,7 +237,7 @@ function buildPages() {
           70,
           "Toute disposition du présent contrat qui serait ou deviendrait illégale sera entièrement indépendante ; les autres dispositions n'en seront pas affectées et produiront leurs effets."
         ),
-        textEl("p5-art11", 40, 260, 714, 15, "XI - INDEPENDANCE DES PARTIES", { bold: true }),
+        textEl("p5-art11", 40, 260, 570, 15, "XI - INDEPENDANCE DES PARTIES", { bold: true }),
         textEl(
           "p5-art11-body",
           40,
@@ -246,7 +246,7 @@ function buildPages() {
           110,
           "Les parties déclarent expressément qu'elles sont et demeureront des partenaires commerciaux et professionnels indépendants, assumant chacun les risques et conséquences de leur propre exploitation. Aucun lien de subordination ne saurait être recherché dans le présent Contrat de services."
         ),
-        textEl("p5-art12", 40, 410, 714, 15, "XII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
+        textEl("p5-art12", 40, 410, 570, 15, "XII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
         textEl(
           "p5-art12-body",
           40,
