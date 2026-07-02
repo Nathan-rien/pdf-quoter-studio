@@ -19,6 +19,22 @@ const CHART_COLORS = [
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
+const ENSEIGNE_LABELS: Record<string, string> = {
+  'cybertek-pro': 'Cybertek Pro',
+  'grosbill-pro': 'Grosbill Pro',
+  'dental': '3D Dental',
+  '3d-dental': '3D Dental',
+  '3ddental': '3D Dental',
+};
+
+function formatEnseigne(raw: string): string {
+  const key = (raw || '').toLowerCase().trim();
+  if (ENSEIGNE_LABELS[key]) return ENSEIGNE_LABELS[key];
+  if (!raw || raw === 'Non renseigné') return 'Non renseigné';
+  return raw;
+}
+
+
 interface Props {
   proposalType: ProposalType;
   hideFinancialPartner?: boolean;
