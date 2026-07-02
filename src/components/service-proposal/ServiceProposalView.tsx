@@ -403,7 +403,7 @@ function buildPayload(
     commercial_name: clientData.commercial_name || null,
     selected_services: dataForm.selected_services,
     payment_frequency: (dataForm.payment_frequency || null) as 'mensuel' | 'trimestriel' | null,
-    payment_mode: (dataForm.payment_mode || null) as 'prelevement' | 'virement' | null,
+    payment_mode: (dataForm.payment_mode || null) as 'prelevement' | 'virement' | 'allin' | null,
     start_date: dataForm.start_date || null,
     contract_duration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
     invest_lines: investForm.invest_lines,

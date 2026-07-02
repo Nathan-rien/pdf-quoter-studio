@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X, Zap } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X, Zap, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { addMonths, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -96,6 +98,8 @@ export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () =
 
   const [entityFilter, setEntityFilter] = useState<string>('all');
   const [commercialFilter, setCommercialFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortMode, setSortMode] = useState<string>('recent');
 
   const commercialOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -105,18 +109,41 @@ export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () =
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [contracts]);
 
+  const getEndTime = (c: Contract): number | null => {
+    if (!c.implementation_month || !c.duration_months) return null;
+    try { return addMonths(parseISO(c.implementation_month), c.duration_months).getTime(); }
+    catch { return null; }
+  };
+
   const filteredContracts = useMemo(() => {
-    return contracts.filter((c) => {
+    const q = searchQuery.trim().toLowerCase();
+    const arr = contracts.filter((c) => {
       if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
       if (entityFilter !== 'all') {
         const entity = getCommercialById(c.commercial_id)?.entity;
         if (entity !== entityFilter) return false;
       }
+      if (q) {
+        const hay = `${c.client_name ?? ''} ${c.contract_number ?? ''} ${c.commercial_name ?? ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [contracts, entityFilter, commercialFilter, getCommercialById]);
+    if (sortMode === 'echeance-asc' || sortMode === 'echeance-desc') {
+      const dir = sortMode === 'echeance-asc' ? 1 : -1;
+      arr.sort((a, b) => {
+        const ea = getEndTime(a);
+        const eb = getEndTime(b);
+        if (ea == null && eb == null) return 0;
+        if (ea == null) return 1;
+        if (eb == null) return -1;
+        return (ea - eb) * dir;
+      });
+    }
+    return arr;
+  }, [contracts, entityFilter, commercialFilter, searchQuery, sortMode, getCommercialById]);
 
-  const hasActiveFilter = entityFilter !== 'all' || commercialFilter !== 'all';
+  const hasActiveFilter = entityFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
   const groups = groupByCommercial(filteredContracts);
   const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
 
@@ -191,41 +218,66 @@ export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () =
       </div>
 
       {contracts.length > 0 && (
-        <div className="flex flex-wrap items-end gap-3 p-3 border border-border rounded-lg bg-muted/20">
-          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-            <Filter className="h-3.5 w-3.5" /> Filtres
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher (client, n° de contrat, commercial)…"
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Trier par</Label>
+              <Select value={sortMode} onValueChange={setSortMode}>
+                <SelectTrigger className="h-8 w-[220px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Plus récents</SelectItem>
+                  <SelectItem value="echeance-asc">Échéance (croissante)</SelectItem>
+                  <SelectItem value="echeance-desc">Échéance (décroissante)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label className="text-[10px] uppercase text-muted-foreground">Enseigne</Label>
-            <Select value={entityFilter} onValueChange={setEntityFilter}>
-              <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes</SelectItem>
-                <SelectItem value="cybertek-pro">Cybertek Pro</SelectItem>
-                <SelectItem value="grosbill-pro">Grosbill Pro</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-wrap items-end gap-3 p-3 border border-border rounded-lg bg-muted/20">
+            <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <Filter className="h-3.5 w-3.5" /> Filtres
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Enseigne</Label>
+              <Select value={entityFilter} onValueChange={setEntityFilter}>
+                <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="cybertek-pro">Cybertek Pro</SelectItem>
+                  <SelectItem value="grosbill-pro">Grosbill Pro</SelectItem>
+                  <SelectItem value="3d-dental">3D Dental</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Commercial</Label>
+              <Select value={commercialFilter} onValueChange={setCommercialFilter}>
+                <SelectTrigger className="h-8 w-[200px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  {commercialOptions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {hasActiveFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setEntityFilter('all'); setCommercialFilter('all'); setSearchQuery(''); setSortMode('recent'); }}
+                className="h-8 gap-1 text-xs"
+              >
+                <X className="h-3 w-3" /> Réinitialiser
+              </Button>
+            )}
           </div>
-          <div className="space-y-1">
-            <Label className="text-[10px] uppercase text-muted-foreground">Commercial</Label>
-            <Select value={commercialFilter} onValueChange={setCommercialFilter}>
-              <SelectTrigger className="h-8 w-[200px] text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                {commercialOptions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          {hasActiveFilter && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setEntityFilter('all'); setCommercialFilter('all'); }}
-              className="h-8 gap-1 text-xs"
-            >
-              <X className="h-3 w-3" /> Réinitialiser
-            </Button>
-          )}
         </div>
       )}
 

@@ -1,63 +1,53 @@
-# Statistiques — Vues multiples
 
-## Objectif
-Remplacer la vue unique actuelle (basée uniquement sur `proposal_exports` de type location) par un dashboard multi‑vues avec 5 onglets en haut de page :
+## 1. Périodicité mise en évidence sur "Loyers HT (issus de la proposition)"
 
-1. **Vue globale** (par défaut) — synthèse consolidée des 4 périmètres
-2. **Propositions Location** — `proposal_exports` où `proposal_type = 'rental-proposal'`
-3. **Propositions Services** — `proposal_exports` où `proposal_type = 'service-proposal'`
-4. **Contrats Location** — `contracts` où `proposal_type = 'rental-proposal'`
-5. **Contrats Services** — `contracts` où `proposal_type = 'service-proposal'`
+`src/components/contracts/ContractRow.tsx` — dans le bloc `hasProposalRent` (l.378-382), mettre en surbrillance la ligne correspondant à `paymentFrequency` (fond `bg-primary/10`, texte `text-primary font-semibold`, badge « sélectionnée ») et griser l'autre. Idem dans le résumé collapsed (l.235-239).
 
-## UI — switcher
-En haut de `StatisticsDashboard`, sous le titre : une barre `Tabs` (shadcn) à 5 boutons, sticky. Icônes : `LayoutDashboard`, `FileText`, `Wrench`, `FileSignature`, `Handshake`. État local `activeView`, défaut `'global'`. Les filtres existants (année, reset, entité, date) restent au‑dessus des rapports et s'appliquent à la vue courante.
+## 2. Barre de recherche — Contrats Location & Services
 
-## Rapports par vue
+`src/components/contracts/ContractsView.tsx` et `src/components/service-proposal/ServiceContractsView.tsx` :
+- Ajouter un `Input` avec icône `Search` en haut de la vue (au-dessus du bloc filtres).
+- État `searchQuery`, filtrage insensible à la casse sur : `client_name`, `contract_number`, `commercial_name`.
 
-### Vue globale (défaut)
-KPIs consolidés :
-- Total propositions (Location + Services)
-- Total contrats actifs (Location + Services)
-- Montant investissement cumulé (propositions)
-- Loyer trimestriel cumulé (contrats, dérivé comme dans `useContractProposalRent`)
+## 3. Tri par date d'échéance
 
-Graphes :
-- Répartition Location vs Services (propositions) — PieChart
-- Répartition Location vs Services (contrats) — PieChart
-- Volume mensuel combiné (barres empilées Location/Services)
-- Top 5 commerciaux tous périmètres confondus
+Mêmes deux fichiers. Ajouter un `Select` « Tri » à côté de la barre de recherche avec options :
+- Récents (défaut, tri actuel par `validated_at`)
+- Échéance croissante / décroissante — calcul via `implementation_month + duration_months` (contrats sans échéance renvoyés en fin de liste).
 
-### Propositions Location
-Réutilise l'ensemble actuel des rapports (KPIs, mensuel, top clients, avec/sans options, templates, commerciaux, tableau quotidien, Top Services additionnels, Top Nos Options) — filtré sur `proposal_type = 'rental-proposal'`.
+Le tri est appliqué sur `filteredContracts` avant le `groupByCommercial`.
 
-### Propositions Services
-Mêmes rapports que Location, mais alimentés par les exports `service-proposal`. Le bloc « Top Services additionnels » est masqué (pas de page 5 côté Services) ; « Top Nos Options » conservé.
+## 4. Enseigne 3D Dental dans les filtres
 
-### Contrats Location
-Source : table `contracts` filtrée `proposal_type = 'rental-proposal'`.
-- KPIs : nb contrats, loyer mensuel cumulé, loyer trimestriel cumulé, durée moyenne
-- Contrats par mois (date de création) — BarChart
-- Répartition par commercial — BarChart horizontal
-- Répartition par enseigne — PieChart
-- Répartition par partenaire financier — PieChart
-- Répartition Mensuel vs Trimestriel (`payment_frequency`)
-- Top 5 clients par loyer trimestriel
+Dans les deux `SelectContent` des filtres Enseigne (ContractsView l.218-223 et ServiceContractsView l.202-207) : ajouter `<SelectItem value="3d-dental">3D Dental</SelectItem>` (le mapping existe déjà côté stats).
 
-### Contrats Services
-Mêmes rapports que Contrats Location **sauf** « partenaire financier » (retiré du module Services, conformément à la mémoire projet).
+## 5. Durée du contrat libre — Propositions Services & Contrats
 
-## Implémentation technique
-- Fichier principal : `src/components/admin/StatisticsDashboard.tsx`
-- Extraire les calculs actuels dans une fonction `computeProposalStats(records)` réutilisable pour Location et Services.
-- Nouvelle fonction `computeContractStats(contracts, proposalExportsById)` — jointure côté client sur `contract.proposal_export_id` pour dériver le loyer via la même logique que `useContractProposalRent`.
-- Nouvel appel dans `fetchData` :
-  - `proposal_exports` : ajouter le champ `proposal_type` au `select` (déjà en DB).
-  - `contracts` : `select` complet avec `proposal_type`, `payment_frequency`, `enseigne`, `partenaire_financier`, `commercial_name`, `client_name`, `duration`, `loyer_mensuel_ht`, `proposal_export_id`, `created_at`, `is_quick_contract`.
-- Nouveaux sous‑composants (dans le même fichier ou fichiers frères) : `GlobalOverview`, `ProposalStatsView`, `ContractStatsView` — chacun reçoit ses données déjà filtrées.
-- Les filtres (année, entité, date, reset) sont appliqués en amont, puis chaque vue reçoit son jeu filtré. Reset date : appliqué aux 2 sources via `created_at`.
-- Le bouton « Remettre à zéro » et les filtres restent globaux (au‑dessus du switcher).
+**`src/components/service-proposal/ServiceProposalDataStep.tsx`** (bloc « Durée du contrat » l.215-233) : à côté des boutons 12/24/36/48/60, ajouter un `Input type="number"` (label « Autre »). La saisie remplit `contract_duration` en tant que nombre ; les boutons prédéfinis restent surlignés uniquement quand la valeur correspond.
 
-## Hors périmètre
-- Pas de modif DB ni de types Supabase (`proposal_type` et `payment_frequency` déjà présents).
-- Pas de changement de navigation ni de sidebar.
-- Pas de modif du parcours Propositions/Contrats.
+Étendre le type `ServiceDataFormValues.contract_duration` en `number | ''` pour lever la contrainte 12|24|36|48|60. Vérifier que `ServiceProposalView.tsx` propage la valeur sans cast restrictif.
+
+**`src/components/contracts/ContractRow.tsx`** (bloc Durée l.437-458) : remplacer le `Select` (branche non-quick) par un couple `Select` + `Input type="number"` libre — l'input a priorité s'il est renseigné. La branche `isQuick` reste inchangée (déjà libre).
+
+## 6. Mode de règlement « Allin » — Propositions Services
+
+- `src/hooks/useServiceProposals.ts` (l.32) : étendre le type `payment_mode` à `'prelevement' | 'virement' | 'allin' | null`.
+- `src/components/service-proposal/ServiceProposalDataStep.tsx` (l.8-14 et l.187-201) : étendre `payment_mode` à `'prelevement' | 'virement' | 'allin' | ''` et ajouter le bouton « Allin ».
+- `src/components/service-proposal/ServiceProposalView.tsx` (l.406) : ajuster le cast en `'prelevement' | 'virement' | 'allin' | null`.
+
+Aucune migration nécessaire (colonne `text` côté DB).
+
+## 7. Calendrier jour+mois pour "Mois de mise en place"
+
+`src/components/contracts/ContractRow.tsx` :
+- Remplacer l'`Input type="month"` (l.407-413) par un `Popover` + `Calendar` (shadcn datepicker, `mode="single"`, `pointer-events-auto`).
+- État interne : `implementationDate: Date | undefined` (au lieu du string YYYY-MM). Le libellé du bouton affiche `dd/MM/yyyy` via `date-fns`.
+- Dans `handleSave` : sérialiser en `yyyy-MM-dd` (au lieu du `${month}-01` actuel) pour `implementation_month`. La colonne DB étant `date`, aucun changement de schéma.
+- Ajuster le calcul de `endDate` (l.76-78) : `addMonths(implementationDate, ...)` directement.
+- Renommer visuellement le label en « Date de mise en place ».
+
+## Détails techniques
+
+- Aucune migration DB (les colonnes existantes acceptent déjà les valeurs).
+- Les stats (`ContractsStatsView`) contiennent déjà le mapping `3D Dental` : rien à changer.
+- Vérifier que `format(parseISO(contract.implementation_month), 'MM/yyyy')` (résumé l.242) continue de fonctionner avec un `yyyy-MM-dd` complet — c'est déjà le cas.

@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Calendar, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,8 +49,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const monthsLeft = getMonthsUntilRenewal(contract);
 
   const [clientName, setClientName] = useState(contract.client_name ?? '');
-  const [implementationMonth, setImplementationMonth] = useState(
-    contract.implementation_month ? contract.implementation_month.substring(0, 7) : ''
+  const [implementationDate, setImplementationDate] = useState<Date | undefined>(
+    contract.implementation_month ? parseISO(contract.implementation_month) : undefined
   );
   const [financialPartner, setFinancialPartner] = useState(contract.financial_partner ?? '');
   const [durationMonths, setDurationMonths] = useState(
@@ -73,8 +75,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [uploading, setUploading] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
 
-  const endDate = implementationMonth && durationMonths
-    ? addMonths(parseISO(`${implementationMonth}-01`), parseInt(durationMonths))
+  const endDate = implementationDate && durationMonths
+    ? addMonths(implementationDate, parseInt(durationMonths))
     : null;
 
   // Source unique du loyer : proposition validée → sinon valeur manuelle → sinon null
@@ -107,7 +109,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       id: contract.id,
       updates: {
         client_name: isQuick ? (clientName.trim() || 'Nouveau contrat') : contract.client_name,
-        implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
+        implementation_month: implementationDate ? format(implementationDate, 'yyyy-MM-dd') : null,
         financial_partner: hideFinancialPartner ? contract.financial_partner ?? null : (financialPartner || null),
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
@@ -229,12 +231,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
           </div>
           <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
+              <CalendarIcon className="h-3 w-3" />
               {format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
             </span>
             {monthlyRent != null && (
-              <span>
-                Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € · Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+              <span className="flex items-center gap-1">
+                <span className={cn(paymentFrequency === 'mensuel' && 'text-primary font-semibold')}>
+                  Mensuel {monthlyRent.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                </span>
+                <span>·</span>
+                <span className={cn(paymentFrequency === 'trimestriel' && 'text-primary font-semibold')}>
+                  Trimestriel {(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                </span>
               </span>
             )}
             {!hideFinancialPartner && contract.financial_partner && <span>{contract.financial_partner}</span>}
@@ -375,10 +383,30 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   />
                 </div>
               ) : hasProposalRent ? (
-                <div className="h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3">
-                  <span>Mensuel <strong>{(monthlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                <div className="min-h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3 flex-wrap">
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded flex items-center gap-1',
+                      paymentFrequency === 'mensuel'
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    Mensuel <strong>{(monthlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>
+                    {paymentFrequency === 'mensuel' && <Badge variant="secondary" className="ml-1 text-[9px]">Sélectionnée</Badge>}
+                  </span>
                   <span className="text-muted-foreground">·</span>
-                  <span>Trimestriel <strong>{(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong></span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded flex items-center gap-1',
+                      paymentFrequency === 'trimestriel'
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    Trimestriel <strong>{(quarterlyRent ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</strong>
+                    {paymentFrequency === 'trimestriel' && <Badge variant="secondary" className="ml-1 text-[9px]">Sélectionnée</Badge>}
+                  </span>
                 </div>
               ) : (
                 <>
@@ -404,13 +432,34 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Mois de mise en place</Label>
-              <Input
-                type="month"
-                value={implementationMonth}
-                onChange={(e) => setImplementationMonth(e.target.value)}
-                className="h-9 text-sm"
-              />
+              <Label className="text-xs">Date de mise en place</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'h-9 w-full justify-start text-left font-normal text-sm',
+                      !implementationDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {implementationDate
+                      ? format(implementationDate, 'dd/MM/yyyy', { locale: fr })
+                      : 'Choisir une date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={implementationDate}
+                    onSelect={setImplementationDate}
+                    initialFocus
+                    locale={fr}
+                    className={cn('p-3 pointer-events-auto')}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             {!hideFinancialPartner && (
             <div className="space-y-1.5">
@@ -446,14 +495,27 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   className="h-9 text-sm"
                 />
               ) : (
-                <Select value={durationMonths} onValueChange={setDurationMonths}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Sélectionner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={DURATIONS.includes(Number(durationMonths)) ? durationMonths : ''}
+                    onValueChange={setDurationMonths}
+                  >
+                    <SelectTrigger className="h-9 text-sm flex-1">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={durationMonths}
+                    onChange={(e) => setDurationMonths(e.target.value)}
+                    placeholder="Autre"
+                    className="w-24 h-9 text-sm"
+                  />
+                </div>
               )}
             </div>
             <div className="space-y-1.5">
