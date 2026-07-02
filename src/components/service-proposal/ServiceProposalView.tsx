@@ -288,8 +288,6 @@ function ProposalFormShell({
   initialTab?: string;
 }) {
   const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
-  const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
-  const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
   const selectedRentalTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   const allTemplates = useTemplateEditorStore((s) => s.allTemplates);
   const getTemplatePublishedVersion = useTemplateEditorStore((s) => s.getTemplatePublishedVersion);
@@ -344,7 +342,6 @@ function ProposalFormShell({
         <TabsList className="w-full">
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
-          <TabsTrigger value="services" className="flex-1">Services inclus</TabsTrigger>
           <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
           <TabsTrigger value="template" className="flex-1">Template</TabsTrigger>
           <TabsTrigger value="preview-export" className="flex-1">Aperçu & Export</TabsTrigger>
@@ -354,27 +351,6 @@ function ProposalFormShell({
         </TabsContent>
         <TabsContent value="data">
           <ServiceProposalDataStep data={dataForm} onChange={setDataForm} />
-        </TabsContent>
-        <TabsContent value="services">
-          <Card className="border-primary/30 bg-primary/5">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Services inclus</CardTitle>
-                <Badge variant="secondary" className="text-[10px]">Toujours affiché</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Ce bloc apparaît systématiquement en haut de la page services.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <AutoResizeTextarea
-                value={servicesInclus.description}
-                onChange={(e) => updateServicesInclus(e.target.value)}
-                className="min-h-[120px] bg-background"
-                placeholder="Décrivez les services inclus…"
-              />
-            </CardContent>
-          </Card>
         </TabsContent>
         <TabsContent value="invest">
           <ServiceProposalInvestStep data={investForm} onChange={setInvestForm} />

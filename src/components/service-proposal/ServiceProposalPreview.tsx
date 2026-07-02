@@ -58,7 +58,7 @@ export function ServiceProposalPreview() {
 
   const clientData = useServiceProposalStore((s) => s.clientData);
   const lignesData = useServiceProposalStore((s) => s.lignesData);
-  const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
+  
   const proposalName = useServiceProposalStore((s) => s.proposalName);
   const totalInvest = useServiceProposalStore((s) => s.totalInvest);
   const selectedServices = useServiceProposalStore((s) => s.selectedServices);
@@ -155,8 +155,7 @@ export function ServiceProposalPreview() {
   };
 
   const templatePagesTotal = currentVersion?.pages.length ?? 0;
-  const templatePagesAfter = Math.max(0, templatePagesTotal - TEMPLATE_PAGES_BEFORE);
-  const totalPages = Math.max(1, TEMPLATE_PAGES_BEFORE + 1 + templatePagesAfter);
+  const totalPages = Math.max(1, templatePagesTotal);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
     if (!currentVersion) return [];
@@ -663,46 +662,9 @@ export function ServiceProposalPreview() {
 
 
 
-  const renderServicesInclusPage = (displayPageNum: number) => (
-    <PageFrame pageNum={displayPageNum}>
-      <div className="absolute bg-white" style={{ left: '3%', top: '5%', width: '94%' }}>
-        <div className="mb-3 flex items-center gap-2">
-          <FileCheck className="h-5 w-5 text-primary" />
-          <h2 className="font-bold text-[14px] text-foreground">Les services inclus dans votre offre</h2>
-        </div>
-        <div className="mb-2 border rounded overflow-hidden">
-          <div className="bg-muted px-3 py-1.5 flex items-center gap-2">
-            <div className="w-2 h-4 bg-foreground/80 rounded-sm" />
-            <span className="font-semibold text-[11px]">Services location</span>
-          </div>
-          <div className="px-3 py-1.5 bg-background">
-            <div className="text-[9px] text-muted-foreground space-y-0.5">
-              {(servicesInclus.description || '').split('\n').map((item, i) => {
-                const trimmed = item.trim();
-                if (!trimmed) return null;
-                const isSubItem = trimmed.startsWith('- ');
-                return (
-                  <div key={i} className={`leading-tight ${isSubItem ? 'pl-3' : ''}`}>
-                    {isSubItem ? trimmed : `• ${trimmed}`}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    </PageFrame>
-  );
-
   const renderPage = () => {
-    if (currentPage >= 1 && currentPage <= TEMPLATE_PAGES_BEFORE) {
+    if (currentPage >= 1 && currentPage <= templatePagesTotal) {
       return renderTemplatePage(currentPage, currentPage);
-    }
-    if (currentPage === TEMPLATE_PAGES_BEFORE + 1) return renderServicesInclusPage(currentPage);
-    const offset = currentPage - (TEMPLATE_PAGES_BEFORE + 1);
-    const templatePageNumber = TEMPLATE_PAGES_BEFORE + offset;
-    if (templatePageNumber <= templatePagesTotal) {
-      return renderTemplatePage(templatePageNumber, currentPage);
     }
     return (
       <PageFrame pageNum={currentPage}>
