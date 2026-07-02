@@ -571,7 +571,7 @@ export function ServiceProposalExport() {
         excludeIds,
         extraPagesAfter,
         docTitle,
-        { boundedTextBoxes: true },
+        { boundedTextBoxes: false },
       );
     }, [latestVersion, selectedCommercial, generateDynamicContentByPage]);
 
