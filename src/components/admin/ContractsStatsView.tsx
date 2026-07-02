@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useContracts, Contract, ProposalType } from '@/hooks/useContracts';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
+import { useAggregatedContractRents } from '@/lib/contract-rent-aggregation';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -76,11 +77,12 @@ const KpiCard = ({ title, value, icon: Icon, sub }: { title: string; value: stri
 export function ContractsStatsView({ proposalType, hideFinancialPartner = false }: Props) {
   const { data: contracts = [], isLoading } = useContracts(proposalType);
   const { getCommercialById } = useCommerciaux();
+  const { data: aggRents, isLoading: rentsLoading } = useAggregatedContractRents(contracts);
 
   const stats = useMemo(() => {
     const total = contracts.length;
-    const monthlySum = contracts.reduce((s, c) => s + (contractMonthly(c) ?? 0), 0);
-    const quarterlySum = contracts.reduce((s, c) => s + (contractQuarterly(c) ?? 0), 0);
+    const monthlySum = aggRents.monthlySum;
+    const quarterlySum = aggRents.quarterlySum;
     const durations = contracts.map((c) => c.duration_months).filter((d): d is number => typeof d === 'number' && d > 0);
     const avgDuration = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
 
@@ -133,7 +135,8 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
     const clientMap: Record<string, number> = {};
     contracts.forEach((c) => {
       const name = c.client_name || 'Non renseigné';
-      clientMap[name] = (clientMap[name] || 0) + (contractQuarterly(c) ?? 0);
+      const q = aggRents.rents.get(c.id)?.quarterly ?? 0;
+      clientMap[name] = (clientMap[name] || 0) + q;
     });
     const topClients = Object.entries(clientMap)
       .map(([name, amount]) => ({ name, amount }))
@@ -141,9 +144,9 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
       .slice(0, 5);
 
     return { total, monthlySum, quarterlySum, avgDuration, monthlyData, commercialData, enseigneData, partnerData, freqData, topClients };
-  }, [contracts, getCommercialById]);
+  }, [contracts, getCommercialById, aggRents]);
 
-  if (isLoading) {
+  if (isLoading || rentsLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
