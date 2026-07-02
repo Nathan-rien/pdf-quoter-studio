@@ -917,9 +917,8 @@ export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 
       {/* Options et Services les plus proposés */}
       <div className={hideAdditionalOptions ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
         {!hideAdditionalOptions && (
-
-        {/* Services additionnels */}
         <Card>
+
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" />
