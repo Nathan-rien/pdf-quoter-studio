@@ -41,6 +41,7 @@ interface PdfRenderOptions {
 }
 
 let _pdfRenderOptions: PdfRenderOptions = {};
+let _pdfTextBoxHeightOverrides = new Map<string, number>();
 
 /**
  * Permet de définir le contexte de substitution avant d'appeler renderFlowTextElementToHTML
@@ -90,7 +91,8 @@ function getFittedStaticTextSize(
     : substituteDynamicPlaceholders(content.text || '', _pdfSubstitutionContext);
 
   const widthPx = Math.max(24, (element.size.width / CANVAS_SCALE.width) * CANVAS_DISPLAY_MAX_WIDTH - 4);
-  const heightPx = Math.max(8, (element.size.height / CANVAS_SCALE.height) * (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) - 2);
+  const effectiveHeight = _pdfTextBoxHeightOverrides.get(element.id) ?? element.size.height;
+  const heightPx = Math.max(8, (effectiveHeight / CANVAS_SCALE.height) * (CANVAS_DISPLAY_MAX_WIDTH * (297 / 210)) - 2);
   const estimatedLines = estimateWrappedLineCount(rawText, widthPx, initialFontSize);
   const neededHeight = estimatedLines * initialFontSize * lineHeight;
 
@@ -202,7 +204,8 @@ function renderTextElementToHTML(element: EditableElement): string {
   );
   const indentPx = (content.indentLevel || 0) * LIST_INDENT_PX;
   const maxWidthPercent = Math.max(Math.min((element.size.width / CANVAS_SCALE.width) * 100, 100), 5);
-  const heightPercent = Math.max((element.size.height / CANVAS_SCALE.height) * 100, 1);
+  const effectiveHeight = _pdfTextBoxHeightOverrides.get(element.id) ?? element.size.height;
+  const heightPercent = Math.max((effectiveHeight / CANVAS_SCALE.height) * 100, 1);
   
   // Wrapper externe : positionnement absolu (identique à getSharedElementStyle)
   const outerStyle: React.CSSProperties = {
