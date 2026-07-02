@@ -20,6 +20,7 @@ import {
 import { ServiceProposalClientStep, ClientData } from './ServiceProposalClientStep';
 import { ServiceProposalDataStep, ServiceDataFormValues } from './ServiceProposalDataStep';
 import { ServiceProposalInvestStep, InvestFormValues } from './ServiceProposalInvestStep';
+import { ServiceProposalNosOptionsStep } from './ServiceProposalNosOptionsStep';
 import {
   useServiceProposals,
   useCreateServiceProposal,
