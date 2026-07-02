@@ -344,6 +344,10 @@ function ProposalFormShell({
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
           <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
+          <TabsTrigger value="options" className="flex-1">
+            Nos Options
+            <NosOptionsBadge />
+          </TabsTrigger>
           <TabsTrigger value="template" className="flex-1">Template</TabsTrigger>
           <TabsTrigger value="preview-export" className="flex-1">Aperçu & Export</TabsTrigger>
         </TabsList>
@@ -355,6 +359,9 @@ function ProposalFormShell({
         </TabsContent>
         <TabsContent value="invest">
           <ServiceProposalInvestStep data={investForm} onChange={setInvestForm} />
+        </TabsContent>
+        <TabsContent value="options">
+          <ServiceProposalNosOptionsStep />
         </TabsContent>
         <TabsContent value="template">
           <TemplateSelector />
