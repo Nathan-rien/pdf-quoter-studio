@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Calendar, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
