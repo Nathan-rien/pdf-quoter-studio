@@ -584,9 +584,56 @@ export function ServiceProposalPreview() {
     const positionedPageDynamicZones = layoutServiceZones(pageDynamicZones);
     return (
       <PageFrame pageNum={displayPageNum}>
-        {elements.length > 0 ? (
-          elements.map((el) => renderTemplateElement(el))
-        ) : (
+        {elements.length > 0 ? (() => {
+          const isTextOnlyPage = elements.every((el) => el.type === 'text');
+          if (isTextOnlyPage) {
+            return (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '3%',
+                  left: '5%',
+                  right: '5%',
+                  bottom: '3%',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0',
+                }}
+              >
+                {[...elements]
+                  .sort((a, b) => a.position.y - b.position.y)
+                  .map((el) => {
+                    const content = el.content as any;
+                    const fontDef = ALLOWED_FONTS.find((f) => f.name === content.fontFamily);
+                    const fontValue = fontDef?.value || 'Inter, sans-serif';
+                    const scaledFontSize = Math.max(content.fontSize * PREVIEW_FONT_SCALE, 5);
+                    const isBold = content.bold;
+                    return (
+                      <div
+                        key={el.id}
+                        style={{
+                          fontFamily: fontValue,
+                          fontSize: `${scaledFontSize}px`,
+                          fontWeight: isBold ? 'bold' : 'normal',
+                          color: content.color || '#1a1a1a',
+                          textAlign: content.textAlign || 'justify',
+                          lineHeight: 1.35,
+                          marginTop: isBold ? '6px' : '2px',
+                          marginBottom: '1px',
+                          textDecoration: content.underline ? 'underline' : 'none',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {substituteDynamicPlaceholders(content.text || '')}
+                      </div>
+                    );
+                  })}
+              </div>
+            );
+          }
+          return <>{elements.map((el) => renderTemplateElement(el))}</>;
+        })() : (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
