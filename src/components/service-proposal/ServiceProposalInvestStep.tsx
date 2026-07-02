@@ -76,12 +76,10 @@ export function ServiceProposalInvestStep({ data, onChange }: ServiceProposalInv
       </div>
 
       <div className="border rounded-lg">
-        <div className="hidden sm:grid grid-cols-[auto_1fr_80px_100px_100px_auto] gap-3 px-3 py-2 text-xs text-muted-foreground font-medium border-b bg-muted/30">
+        <div className="hidden sm:grid grid-cols-[auto_1fr_80px_auto] gap-3 px-3 py-2 text-xs text-muted-foreground font-medium border-b bg-muted/30">
           <span />
           <span>Désignation</span>
           <span className="text-center">Nb</span>
-          <span className="text-right">VUN</span>
-          <span className="text-right">VTN</span>
           <span />
         </div>
 
@@ -101,7 +99,7 @@ export function ServiceProposalInvestStep({ data, onChange }: ServiceProposalInv
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
                           className={cn(
-                            "grid grid-cols-1 sm:grid-cols-[auto_1fr_80px_100px_100px_auto] gap-3 px-3 py-2 items-center border-b last:border-b-0 transition-colors",
+                            "grid grid-cols-1 sm:grid-cols-[auto_1fr_80px_auto] gap-3 px-3 py-2 items-center border-b last:border-b-0 transition-colors",
                             snapshot.isDragging && "bg-primary/5"
                           )}
                         >
@@ -121,17 +119,6 @@ export function ServiceProposalInvestStep({ data, onChange }: ServiceProposalInv
                             onChange={(e) => updateLine(idx, { qty: parseInt(e.target.value) || 1 })}
                             className="h-8 text-sm text-center"
                           />
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={line.vun || ''}
-                            onChange={(e) => updateLine(idx, { vun: parseFloat(e.target.value) || 0 })}
-                            className="h-8 text-sm text-right"
-                          />
-                          <div className="text-sm text-right font-medium">
-                            {(line.qty * line.vun).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-                          </div>
                           <button
                             type="button"
                             onClick={() => removeLine(idx)}
@@ -148,12 +135,6 @@ export function ServiceProposalInvestStep({ data, onChange }: ServiceProposalInv
               )}
             </Droppable>
           </DragDropContext>
-        )}
-
-        {data.invest_lines.length > 0 && (
-          <div className="px-3 py-2 border-t text-sm font-medium text-right bg-muted/20">
-            Total : {total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT
-          </div>
         )}
       </div>
     </div>
