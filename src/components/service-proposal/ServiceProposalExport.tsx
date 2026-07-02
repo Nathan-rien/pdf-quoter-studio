@@ -253,7 +253,9 @@ export function ServiceProposalExport() {
           ? 10
           : zone.type === 'service_invest_table'
             ? 5
-            : 65;
+            : zone.type === 'service_options'
+              ? 55
+              : 65;
 
     const getFallbackZoneHeight = (zone: DynamicZone): number =>
       zone.type === 'service_client_info'
@@ -262,7 +264,9 @@ export function ServiceProposalExport() {
           ? 16
           : zone.type === 'service_invest_table'
             ? 30
-            : 18;
+            : zone.type === 'service_options'
+              ? 18
+              : 18;
 
     const getZoneTop = (zone: DynamicZone): number => zone.position?.top ?? getFallbackZoneTop(zone);
     const getZoneMinHeight = (zone: DynamicZone): number => zone.position?.height ?? getFallbackZoneHeight(zone);
@@ -282,6 +286,11 @@ export function ServiceProposalExport() {
           ? lignesData.reduce((total, ligne) => total + estimateTextVisualLines(ligne.designation || '-'), 0)
           : 1;
         return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
+      }
+      if (zone.type === 'service_options') {
+        const selected = nosOptions.filter((o) => o.selected);
+        const rows = selected.length || 1;
+        return Math.max(minHeight, Math.min(82, 6 + rows * 4));
       }
       if (zone.type === 'service_conditions') return Math.max(minHeight, 21);
       if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
