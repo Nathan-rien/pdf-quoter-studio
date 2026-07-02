@@ -504,8 +504,10 @@ function sortByZIndex(elements: EditableElement[]): EditableElement[] {
 export async function renderPageToHTML(
   page: TemplatePageContent,
   dynamicContentHTML?: string,
-  excludeElementIds?: string[]
+  excludeElementIds?: string[],
+  options: PdfRenderOptions = {},
 ): Promise<string> {
+  _pdfRenderOptions = options;
   const sortedElements = sortByZIndex(
     page.elements.filter(el => !el.isDynamic && !(excludeElementIds?.includes(el.id)))
   );
@@ -543,16 +545,18 @@ export async function generatePDFDocumentHTML(
   context?: SubstitutionContext,
   excludeElementIdsByPage?: Record<number, string[]>,
   extraPagesAfter?: Record<number, string[]>,
-  documentTitle?: string
+  documentTitle?: string,
+  options: PdfRenderOptions = {},
 ): Promise<string> {
   // Set module-level context for the duration of this generation
   _pdfSubstitutionContext = context;
+  _pdfRenderOptions = options;
   // Générer le HTML de toutes les pages en parallèle
   const pagesHTML = await Promise.all(
     version.pages.map(async (page) => {
       const dynamicContent = dynamicContentByPage[page.pageNumber] || '';
       const excludeIds = excludeElementIdsByPage?.[page.pageNumber];
-      return renderPageToHTML(page, dynamicContent, excludeIds);
+      return renderPageToHTML(page, dynamicContent, excludeIds, options);
     })
   );
   
@@ -586,7 +590,7 @@ export async function generatePDFDocumentHTML(
               elements: filteredImages,
               dynamicZones: [],
             };
-            return renderPageToHTML(imageOnlyPage, extraDynamicContent);
+            return renderPageToHTML(imageOnlyPage, extraDynamicContent, undefined, options);
           })
         );
         // Insérer après la page courante
