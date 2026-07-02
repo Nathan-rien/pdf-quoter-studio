@@ -71,7 +71,7 @@ function buildPages() {
           "p1-cybertek",
           40,
           105,
-          714,
+          570,
           140,
           "1/ - La Société « Groupe Cybertek », société par actions simplifiée au capital de 4 471 800 Euros, ayant son siège social à BORDEAUX (33300), Zone d'activités Achard Bat U 130 rue Achard, immatriculée au registre du commerce et des sociétés de Bordeaux sous le numéro 408 772 960,\n\nReprésentée par Nicolas Sourroubille, agissant en qualité de Directeur Général, dûment habilité aux fins des présentes."
         ),
@@ -99,12 +99,12 @@ function buildPages() {
       type: "static",
       elements: [
         rectEl("p2-banner", 20, 20, 610, 40),
-        textEl("p2-title", 30, 25, 734, 30, "EXPOSE PREALABLE", { size: 12, bold: true, align: "left" }),
+        textEl("p2-title", 30, 25, 590, 30, "EXPOSE PREALABLE", { size: 12, bold: true, align: "left" }),
         textEl(
           "p2-body",
           40,
           75,
-          714,
+          570,
           380,
           "Le présent Contrat Cadre a pour objet de déterminer les conditions dans lesquelles la société Groupe Cybertek SAS fournira des prestations de services objets des présentes au client.\n\nCes prestations reposent, d'une part, sur le présent contrat-cadre de prestations de services, comprenant les conditions générales exposées ci-après, et, d'autre part, sur le contrat d'application, comprenant les conditions particulières, annexé aux présentes (Annexe 1).\n\nLa nature et la liste des produits concernés par les prestations font l'objet d'une description annexée aux présentes qui figure dans le contrat d'application (Annexe 1).\n\nCela étant exposé, il a été convenu et arrêté ce qui suit :"
         ),
@@ -113,7 +113,7 @@ function buildPages() {
           "p2-art1-body",
           40,
           500,
-          714,
+          570,
           70,
           "Par le présent Contrat Cadre de prestations de services, le PRESTATAIRE s'engage à fournir au BENEFICIAIRE les prestations dont les conditions particulières et la liste descriptive sont annexées aux présentes (Annexe 1)."
         ),
@@ -122,7 +122,7 @@ function buildPages() {
           "p2-art2-body",
           40,
           615,
-          714,
+          570,
           120,
           "Les prestations rendues par le PRESTATAIRE regroupent l'ensemble des offres de services, décrites dans l'annexe : Contrat d'Application et consistant en la supervision du parc informatique du BENEFICIAIRE.\n\nLors de la signature du contrat cadre le BENEFICIAIRE choisira les services auxquels il souhaite souscrire. A ce titre, les Parties signeront le contrat d'application annexé aux présentes."
         ),
@@ -140,7 +140,7 @@ function buildPages() {
           "p3-art3-body",
           40,
           75,
-          714,
+          570,
           230,
           "2.1 La Société PRESTATAIRE s'engage à mettre en œuvre, pour l'exécution de l'ensemble des prestations à sa charge en vertu des présentes, toute la diligence requise et à faire tout ce qui est en son pouvoir pour que les conseils et recommandations donnés à la Société BENEFICIAIRE et les services qui sont rendus, donnent toute satisfaction à celle-ci.\n\n2.2 La Société PRESTATAIRE s'engage à affecter à l'exécution des présentes un interlocuteur compétent et spécialisé. Elle pourra également faire appel à des consultants extérieurs ou sous-traiter, sans toutefois qu'il en résulte une quelconque atténuation de sa responsabilité.\n\n2.3 La Société PRESTATAIRE décidera seule du choix du personnel salarié ou non devant être affecté aux missions dont elle a la charge."
         ),
@@ -149,7 +149,7 @@ function buildPages() {
           "p3-art4-body",
           40,
           345,
-          714,
+          570,
           90,
           "La Société BENEFICIAIRE s'engage expressément à fournir, pendant toute la durée du présent contrat, au PRESTATAIRE, toutes les informations, tous les renseignements, tous les documents et toute l'assistance raisonnablement nécessaires pour lui permettre de réaliser l'objet du contrat."
         ),
@@ -158,7 +158,7 @@ function buildPages() {
           "p3-art5-body",
           40,
           475,
-          714,
+          570,
           180,
           "La rémunération des prestations définies dans le contrat d'application fera l'objet d'une redevance dont le montant et la périodicité sont précisés dans le contrat d'application annexé aux présentes.\n\nLes Prestations seront facturées dès la signature du contrat d'application par le client. A défaut de paiement de la somme due, LE PRESTATAIRE se réserve le droit de suspendre l'exécution des prestations, 10 jours après mise en demeure de règlement demeurée infructueuse.\n\nLe BENEFICIAIRE accepte toute information par voie électronique ainsi que la fourniture de toute pièce de facturation sous format électronique."
         ),
@@ -176,7 +176,7 @@ function buildPages() {
           "p4-art6-body",
           40,
           75,
-          714,
+          570,
           130,
           "Le présent contrat cadre est conclu pour une durée indéterminée. Il pourra être rompu par l'une ou l'autre des Parties, à sa date anniversaire par l'envoi d'une lettre recommandée avec avis de réception à l'autre Partie en respectant un préavis de 3 mois.\n\nEn revanche, le contrat d'application est conclu pour une durée ferme, déterminée par décision du BÉNÉFICIAIRE. À son terme, il pourra être renouvelé au moyen de la signature d'un nouveau contrat d'application."
         ),
@@ -185,7 +185,7 @@ function buildPages() {
           "p4-art7-body",
           40,
           245,
-          714,
+          570,
           110,
           "En cas de non-respect par l'une ou l'autre des parties des obligations suivantes :\n- Défaut de paiement de la facturation par le BENEFICIAIRE,\n- Défaillance d'une des Parties dans le respect des obligations visées aux articles du présent contrat, celui-ci pourra être résolu au gré de la partie lésée, TRENTE (30) jours après mise en demeure restée sans effet."
         ),
@@ -194,7 +194,7 @@ function buildPages() {
           "p4-art8-body",
           40,
           395,
-          714,
+          570,
           80,
           "Les parties s'engagent à considérer comme strictement confidentiels l'ensemble des documents, informations et données communiqués dans le cadre du présent contrat, pendant toute sa durée et sans limitation après son expiration."
         ),
@@ -224,7 +224,7 @@ function buildPages() {
           "p5-art9-body",
           40,
           75,
-          714,
+          570,
           60,
           "Les parties conviennent expressément qu'aucune des clauses du contrat ne pourra être réputée comminatoire ou de style, mais qu'elles doivent toutes recevoir leur pleine et entière exécution."
         ),
@@ -233,7 +233,7 @@ function buildPages() {
           "p5-art10-body",
           40,
           175,
-          714,
+          570,
           70,
           "Toute disposition du présent contrat qui serait ou deviendrait illégale sera entièrement indépendante ; les autres dispositions n'en seront pas affectées et produiront leurs effets."
         ),
@@ -242,7 +242,7 @@ function buildPages() {
           "p5-art11-body",
           40,
           285,
-          714,
+          570,
           110,
           "Les parties déclarent expressément qu'elles sont et demeureront des partenaires commerciaux et professionnels indépendants, assumant chacun les risques et conséquences de leur propre exploitation. Aucun lien de subordination ne saurait être recherché dans le présent Contrat de services."
         ),
@@ -251,7 +251,7 @@ function buildPages() {
           "p5-art12-body",
           40,
           445,
-          714,
+          570,
           160,
           "Pour l'exécution des présentes, les parties font élection de domicile en leur siège respectif. Pour tous litiges relatifs à l'exécution ou à l'interprétation du présent Contrat, les parties attribuent expressément compétence aux juridictions de BORDEAUX.\n\nLe BENEFICIAIRE accepte que les signatures électroniques et documents électroniques aient même valeur juridique que leurs équivalents manuscrits."
         ),
