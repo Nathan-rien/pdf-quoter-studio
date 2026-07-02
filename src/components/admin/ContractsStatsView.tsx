@@ -213,14 +213,25 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
           </CardHeader>
           <CardContent>
             {stats.enseigneData.length === 0 ? (
-              <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Aucune donnée disponible</div>
+              <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">Aucune donnée disponible</div>
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={stats.enseigneData} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                  <Pie
+                    data={stats.enseigneData}
+                    dataKey="count"
+                    nameKey="name"
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={40}
+                    outerRadius={70}
+                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
                     {stats.enseigneData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} formatter={(v: number, n: string) => [v, n]} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -236,13 +247,24 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
             </CardHeader>
             <CardContent>
               {stats.partnerData.length === 0 ? (
-                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Aucune donnée disponible</div>
+                <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">Aucune donnée disponible</div>
               ) : (
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={stats.partnerData} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                    <Pie
+                      data={stats.partnerData}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="45%"
+                      innerRadius={40}
+                      outerRadius={70}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
                       {stats.partnerData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                     </Pie>
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -258,9 +280,20 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={stats.freqData} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                <Pie
+                  data={stats.freqData}
+                  dataKey="count"
+                  nameKey="name"
+                  cx="50%"
+                  cy="45%"
+                  innerRadius={40}
+                  outerRadius={70}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+
                   {stats.freqData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                 </Pie>
                 <Legend wrapperStyle={{ fontSize: 11 }} />
