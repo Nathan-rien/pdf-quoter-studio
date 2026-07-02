@@ -563,6 +563,40 @@ export function ServiceProposalExport() {
       const { content, excludeIds, extraPagesAfter } =
         generateDynamicContentByPage();
 
+      // Pour les pages texte seul, remplacer le rendu absolu par du flux
+      if (latestVersion) {
+        for (const page of latestVersion.pages) {
+          const isTextOnlyPage =
+            page.elements.length > 0 &&
+            page.elements.every((el) => el.type === 'text');
+          if (isTextOnlyPage) {
+            excludeIds[page.pageNumber] = page.elements.map((el) => el.id);
+            const sortedEls = [...page.elements].sort(
+              (a, b) => a.position.y - b.position.y,
+            );
+            const flowHtml = `
+              <div style="position:absolute;top:3%;left:5%;right:5%;bottom:3%;overflow:hidden;font-family:'Inter',sans-serif;">
+                ${sortedEls
+                  .map((el) => {
+                    const c = el.content as any;
+                    const fs = Math.max((c.fontSize || 9) * 0.88, 6);
+                    const bold = c.bold ? 'font-weight:700;' : '';
+                    const mt = c.bold ? 'margin-top:8px;' : 'margin-top:2px;';
+                    const underline = c.underline
+                      ? 'text-decoration:underline;'
+                      : '';
+                    return `<div style="font-size:${fs}px;${bold}color:${c.color || '#1a1a1a'};text-align:${c.textAlign || 'justify'};line-height:1.4;margin-bottom:1px;${mt}${underline}">${(c.text || '').replace(/\n/g, '<br/>')}</div>`;
+                  })
+                  .join('')}
+              </div>
+            `;
+            content[page.pageNumber] =
+              (content[page.pageNumber] || '') + flowHtml;
+          }
+        }
+      }
+
+
       const docTitle = generateFileName().replace(/\.pdf$/i, '');
       return generatePDFDocumentHTML(
         latestVersion,
