@@ -288,8 +288,6 @@ function ProposalFormShell({
   initialTab?: string;
 }) {
   const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
-  const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
-  const updateServicesInclus = useServiceProposalStore((s) => s.updateServicesInclus);
   const selectedRentalTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   const allTemplates = useTemplateEditorStore((s) => s.allTemplates);
   const getTemplatePublishedVersion = useTemplateEditorStore((s) => s.getTemplatePublishedVersion);
