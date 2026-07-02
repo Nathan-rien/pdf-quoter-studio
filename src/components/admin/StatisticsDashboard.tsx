@@ -72,7 +72,11 @@ interface ExportRecord {
 
 interface StatisticsDashboardProps {
   onNavigateToHistory?: (ids: string[]) => void;
+  proposalTypeFilter?: 'location' | 'service' | 'all';
+  hideAdditionalOptions?: boolean;
+  embedded?: boolean;
 }
+
 
 const CHART_COLORS = [
   'hsl(var(--primary))',
@@ -168,7 +172,7 @@ function ServiceDetailTable({
   );
 }
 
-export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboardProps) {
+export function StatisticsDashboard({ onNavigateToHistory, proposalTypeFilter = 'all', hideAdditionalOptions = false, embedded = false }: StatisticsDashboardProps) {
   const [records, setRecords] = useState<ExportRecord[]>([]);
   const [allServiceOptions, setAllServiceOptions] = useState<{ id: string; title: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -183,13 +187,17 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      let exportQuery = supabase
+        .from('proposal_exports')
+        .select('id, proposal_name, client_name, commercial_id, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names, proposal_type')
+        .eq('status', 'success')
+        .neq('created_by', '89def31b-d1c9-41a8-88f0-6a7d3afbf4c9')
+        .order('created_at', { ascending: true });
+      if (proposalTypeFilter !== 'all') {
+        exportQuery = exportQuery.eq('proposal_type', proposalTypeFilter);
+      }
       const [exportRes, optionsRes, settingsRes] = await Promise.all([
-        supabase
-          .from('proposal_exports')
-          .select('id, proposal_name, client_name, commercial_id, commercial_name, montant_investissement, options_count, created_at, status, template_name, selected_options_names, selected_nos_options_names')
-          .eq('status', 'success')
-          .neq('created_by', '89def31b-d1c9-41a8-88f0-6a7d3afbf4c9')
-          .order('created_at', { ascending: true }),
+        exportQuery,
         supabase
           .from('options_services')
           .select('id, title, is_active')
@@ -200,6 +208,7 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
           .eq('key', 'stats_reset_date')
           .single(),
       ]);
+
 
       if (exportRes.error) throw exportRes.error;
       setRecords((exportRes.data as any) || []);
@@ -217,7 +226,9 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposalTypeFilter]);
+
 
   const handleReset = async () => {
     setIsResetting(true);
@@ -471,10 +482,14 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Statistiques</h2>
-          <p className="text-sm text-muted-foreground">Aperçu global des propositions exportées</p>
-        </div>
+        {!embedded && (
+          <div>
+            <h2 className="text-lg font-semibold">Statistiques</h2>
+            <p className="text-sm text-muted-foreground">Aperçu global des propositions exportées</p>
+          </div>
+        )}
+        {embedded && <div />}
+
         <div className="flex items-center gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -900,9 +915,10 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
 
 
       {/* Options et Services les plus proposés */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Services additionnels */}
+      <div className={hideAdditionalOptions ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
+        {!hideAdditionalOptions && (
         <Card>
+
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" />
@@ -935,6 +951,9 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
             )}
           </CardContent>
         </Card>
+        )}
+
+
 
         {/* Nos Options */}
         <Card>
@@ -973,8 +992,8 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
       </div>
 
       {/* Listes détaillées Services / Nos Options avec propositions associées */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Services additionnels — détail */}
+      <div className={hideAdditionalOptions ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
+        {!hideAdditionalOptions && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -991,6 +1010,9 @@ export function StatisticsDashboard({ onNavigateToHistory }: StatisticsDashboard
             />
           </CardContent>
         </Card>
+        )}
+
+
 
         {/* Nos Options — détail */}
         <Card>
