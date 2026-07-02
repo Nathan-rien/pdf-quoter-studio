@@ -100,6 +100,10 @@ interface ServiceProposalStoreActions {
   resetAll: () => void;
   loadFromServiceProposal: (proposal: ServiceProposal) => void;
   loadFromExport: (snapshot: Record<string, any>) => void;
+  addNosOption: (name: string, description: string, price: number | null) => void;
+  updateNosOption: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
+  deleteNosOption: (id: string) => void;
+  toggleNosOption: (id: string) => void;
 }
 
 export type ServiceProposalStore = ServiceProposalStoreState & ServiceProposalStoreActions;
