@@ -8,7 +8,7 @@ import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateEditorLayout } from "@/components/template-editor";
 import { RentalWorkflow } from "@/components/rental-proposal/RentalWorkflow";
 import { AccessManagement } from "@/components/access/AccessManagement";
-import { StatisticsDashboard } from "@/components/admin/StatisticsDashboard";
+import { StatisticsView } from "@/components/admin/StatisticsView";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { ContractsView } from "@/components/contracts/ContractsView";
 import { ServiceProposalView } from "@/components/service-proposal/ServiceProposalView";
