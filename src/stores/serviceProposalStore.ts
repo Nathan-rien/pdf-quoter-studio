@@ -47,6 +47,7 @@ export interface ServiceProposalStoreState {
   contractDuration: number | null;
   startDate: string;
   totalServicesHt: number;
+  nosOptions: OptionService[];
 }
 
 const DEFAULT_SERVICES_INCLUS_DESCRIPTION =
