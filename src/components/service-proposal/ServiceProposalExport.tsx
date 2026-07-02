@@ -432,11 +432,42 @@ export function ServiceProposalExport() {
       </div>
     `;
 
+    const renderOptionsZone = (zone: PositionedDynamicZone) => {
+      const selected = nosOptions.filter((o) => o.selected);
+      const rows = selected.length
+        ? selected
+            .map(
+              (opt) => `
+              <tr>
+                <td style="width: 30%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(opt.name || '—')}</td>
+                <td style="padding: 3px 6px; color: #4b5563; border: 1px solid #e5e7eb; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top;">${escapeText(opt.description || '')}</td>
+                ${
+                  opt.showPrice !== false
+                    ? `<td style="width: 22%; padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; vertical-align: top;">${opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
+                    : ''
+                }
+              </tr>`,
+            )
+            .join('')
+        : '';
+      return `
+        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Options disponibles :</p>
+          ${
+            selected.length === 0
+              ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucune option sélectionnée</p>'
+              : `<table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;"><tbody>${rows}</tbody></table>`
+          }
+        </div>
+      `;
+    };
+
     const renderServiceZone = (zone: PositionedDynamicZone) => {
       if (zone.type === 'service_client_info') return renderClientZone(zone);
       if (zone.type === 'service_conditions') return renderConditionsZone(zone);
       if (zone.type === 'service_invest_table') return renderInvestZone(zone);
       if (zone.type === 'service_signature') return renderSignatureZone(zone);
+      if (zone.type === 'service_options') return renderOptionsZone(zone);
       return '';
     };
 
