@@ -140,7 +140,7 @@ export default function Index() {
       case 'access-management':
         return <AccessManagement />;
       case 'statistics':
-        return <StatisticsDashboard onNavigateToHistory={handleNavigateToHistory} />;
+        return <StatisticsView onNavigateToHistory={handleNavigateToHistory} />;
       case 'gantt':
         return <GanttView />;
       case 'mes-infos':
