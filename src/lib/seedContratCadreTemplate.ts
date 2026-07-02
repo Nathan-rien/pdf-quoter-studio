@@ -105,25 +105,25 @@ function buildPages() {
           40,
           75,
           714,
-          320,
+          380,
           "Le présent Contrat Cadre a pour objet de déterminer les conditions dans lesquelles la société Groupe Cybertek SAS fournira des prestations de services objets des présentes au client.\n\nCes prestations reposent, d'une part, sur le présent contrat-cadre de prestations de services, comprenant les conditions générales exposées ci-après, et, d'autre part, sur le contrat d'application, comprenant les conditions particulières, annexé aux présentes (Annexe 1).\n\nLa nature et la liste des produits concernés par les prestations font l'objet d'une description annexée aux présentes qui figure dans le contrat d'application (Annexe 1).\n\nCela étant exposé, il a été convenu et arrêté ce qui suit :"
         ),
-        textEl("p2-art1", 40, 415, 714, 15, "I - DEFINITION DES SERVICES RENDUS", { bold: true }),
+        textEl("p2-art1", 40, 475, 714, 15, "I - DEFINITION DES SERVICES RENDUS", { bold: true }),
         textEl(
           "p2-art1-body",
           40,
-          435,
+          500,
           714,
-          45,
+          70,
           "Par le présent Contrat Cadre de prestations de services, le PRESTATAIRE s'engage à fournir au BENEFICIAIRE les prestations dont les conditions particulières et la liste descriptive sont annexées aux présentes (Annexe 1)."
         ),
-        textEl("p2-art2", 40, 495, 714, 15, "II - PRESTATIONS", { bold: true }),
+        textEl("p2-art2", 40, 590, 714, 15, "II - PRESTATIONS", { bold: true }),
         textEl(
           "p2-art2-body",
           40,
-          515,
+          615,
           714,
-          80,
+          120,
           "Les prestations rendues par le PRESTATAIRE regroupent l'ensemble des offres de services, décrites dans l'annexe : Contrat d'Application et consistant en la supervision du parc informatique du BENEFICIAIRE.\n\nLors de la signature du contrat cadre le BENEFICIAIRE choisira les services auxquels il souhaite souscrire. A ce titre, les Parties signeront le contrat d'application annexé aux présentes."
         ),
       ],
