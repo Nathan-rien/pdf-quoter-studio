@@ -256,6 +256,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
         contractDuration: state.contractDuration,
         startDate: state.startDate,
         totalServicesHt: state.totalServicesHt,
+        nosOptions: state.nosOptions,
       }),
     }
   )
