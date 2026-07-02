@@ -519,6 +519,39 @@ export function ServiceProposalPreview() {
         </div>
       );
     }
+    if (zone.type === 'service_options') {
+      const selected = nosOptions.filter((o) => o.selected);
+      return (
+        <div key={key} style={zoneStyle}>
+          <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 700, color: '#000000', margin: '0 0 4px 0' }}>
+            Options disponibles :
+          </p>
+          {selected.length === 0 ? (
+            <p style={{ fontSize: '8px', color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Aucune option sélectionnée</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', lineHeight: 1.2, background: 'white', border: '1px solid #e5e7eb', tableLayout: 'fixed' }}>
+              <tbody>
+                {selected.map((opt) => (
+                  <tr key={opt.id}>
+                    <td style={{ width: '30%', padding: '3px 6px', background: '#f9fafb', fontWeight: 600, color: '#374151', border: '1px solid #e5e7eb', verticalAlign: 'top' }}>
+                      {opt.name || '—'}
+                    </td>
+                    <td style={{ padding: '3px 6px', color: '#4b5563', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', verticalAlign: 'top' }}>
+                      {opt.description || ''}
+                    </td>
+                    {opt.showPrice !== false && (
+                      <td style={{ width: '22%', padding: '3px 6px', color: '#1f2937', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 700, verticalAlign: 'top' }}>
+                        {opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      );
+    }
 
     return null;
   };
