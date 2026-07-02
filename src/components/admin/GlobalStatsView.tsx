@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useContracts } from '@/hooks/useContracts';
+import { useAggregatedContractRents } from '@/lib/contract-rent-aggregation';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -46,6 +47,8 @@ export function GlobalStatsView() {
   const [loading, setLoading] = useState(true);
   const { data: locationContracts = [] } = useContracts('location');
   const { data: serviceContracts = [] } = useContracts('service');
+  const allContracts = useMemo(() => [...locationContracts, ...serviceContracts], [locationContracts, serviceContracts]);
+  const { data: aggRents } = useAggregatedContractRents(allContracts);
 
   useEffect(() => {
     (async () => {
@@ -65,13 +68,12 @@ export function GlobalStatsView() {
     const svcProp = records.filter((r) => r.proposal_type === 'service');
     const totalProp = records.length;
 
-    const investSum = records.reduce((s, r) => s + (r.montant_investissement ?? 0), 0);
+    const investPropSum = records.reduce((s, r) => s + (r.montant_investissement ?? 0), 0);
+    const investContractSum = allContracts.reduce((s, c) => s + (Number(c.amount_ht ?? 0) || 0), 0);
 
-    const quarterlySum =
-      locationContracts.reduce((s, c) => s + (Number(c.quarterly_rent_ht ?? (Number(c.monthly_rent_ht ?? 0) * 3)) || 0), 0) +
-      serviceContracts.reduce((s, c) => s + (Number(c.quarterly_rent_ht ?? (Number(c.monthly_rent_ht ?? 0) * 3)) || 0), 0);
+    const quarterlySum = aggRents.quarterlySum;
 
-    const totalContracts = locationContracts.length + serviceContracts.length;
+    const totalContracts = allContracts.length;
 
     const propPie = [
       { name: 'Location', count: locProp.length },
@@ -100,8 +102,8 @@ export function GlobalStatsView() {
     });
     const topCommercials = Object.entries(byComm).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 5);
 
-    return { totalProp, totalContracts, investSum, quarterlySum, propPie, contractPie, monthlyData, topCommercials };
-  }, [records, locationContracts, serviceContracts]);
+    return { totalProp, totalContracts, investPropSum, investContractSum, quarterlySum, propPie, contractPie, monthlyData, topCommercials };
+  }, [records, locationContracts, serviceContracts, allContracts, aggRents]);
 
   if (loading) {
     return (
@@ -114,9 +116,9 @@ export function GlobalStatsView() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard title="Propositions totales" value={String(stats.totalProp)} icon={FileText} />
+        <KpiCard title="Propositions totales" value={String(stats.totalProp)} icon={FileText} sub={`Investissement propositions : ${formatEuro(stats.investPropSum)}`} />
         <KpiCard title="Contrats totaux" value={String(stats.totalContracts)} icon={FileSignature} />
-        <KpiCard title="Investissement cumulé HT" value={formatEuro(stats.investSum)} icon={Euro} />
+        <KpiCard title="Investissement contrats HT" value={formatEuro(stats.investContractSum)} icon={Euro} />
         <KpiCard title="Loyer trimestriel cumulé HT" value={formatEuro(stats.quarterlySum)} icon={Euro} />
       </div>
 
