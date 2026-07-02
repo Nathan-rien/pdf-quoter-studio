@@ -548,58 +548,36 @@ export function ServiceProposalExport() {
   ]);
 
   // --- Génération HTML complet ---
-  const generatePDFContentFromTemplate =
-    useCallback(async (): Promise<string> => {
-      if (!latestVersion || latestVersion.pages.length === 0) {
-        throw new Error('Aucun template disponible pour générer le PDF');
-      }
+  const generatePDFContentFromTemplate = useCallback(async (): Promise<string> => {
+    if (!latestVersion || latestVersion.pages.length === 0) {
+      throw new Error('Aucun template disponible pour générer le PDF');
+    }
 
-      const substitutionContext = {
-        fraisDossier: 0,
-        adresseEntite: selectedCommercial?.adresse ?? null,
-      };
-      setPdfSubstitutionContext(substitutionContext);
+    const substitutionContext = {
+      fraisDossier: 0,
+      adresseEntite: selectedCommercial?.adresse ?? null,
+    };
+    setPdfSubstitutionContext(substitutionContext);
 
-      const { content, excludeIds, extraPagesAfter } =
-        generateDynamicContentByPage();
+    // Séparer les pages graphiques (avec images/formes) des pages texte seul
+    const graphicPages = latestVersion.pages.filter((p) =>
+      p.elements.some((el) => el.type === 'image' || el.type === 'shape'),
+    );
+    const textOnlyPages = latestVersion.pages.filter(
+      (p) => p.elements.length > 0 && p.elements.every((el) => el.type === 'text'),
+    );
 
-      // Pour les pages texte seul, remplacer le rendu absolu par du flux
-      if (latestVersion) {
-        for (const page of latestVersion.pages) {
-          const isTextOnlyPage =
-            page.elements.length > 0 &&
-            page.elements.every((el) => el.type === 'text');
-          if (isTextOnlyPage) {
-            excludeIds[page.pageNumber] = page.elements.map((el) => el.id);
-            const sortedEls = [...page.elements].sort(
-              (a, b) => a.position.y - b.position.y,
-            );
-            const flowHtml = `
-              <div style="position:absolute;top:3%;left:5%;right:5%;bottom:3%;overflow:hidden;font-family:'Inter',sans-serif;">
-                ${sortedEls
-                  .map((el) => {
-                    const c = el.content as any;
-                    const fs = Math.max((c.fontSize || 9) * 0.88, 6);
-                    const bold = c.bold ? 'font-weight:700;' : '';
-                    const mt = c.bold ? 'margin-top:8px;' : 'margin-top:2px;';
-                    const underline = c.underline
-                      ? 'text-decoration:underline;'
-                      : '';
-                    return `<div style="font-size:${fs}px;${bold}color:${c.color || '#1a1a1a'};text-align:${c.textAlign || 'justify'};line-height:1.4;margin-bottom:1px;${mt}${underline}">${(c.text || '').replace(/\n/g, '<br/>')}</div>`;
-                  })
-                  .join('')}
-              </div>
-            `;
-            content[page.pageNumber] =
-              (content[page.pageNumber] || '') + flowHtml;
-          }
-        }
-      }
+    // Générer le HTML des pages graphiques via generatePDFDocumentHTML (canvas absolu)
+    const { content, excludeIds, extraPagesAfter } = generateDynamicContentByPage();
 
+    // Version partielle avec uniquement les pages graphiques
+    const graphicVersion = { ...latestVersion, pages: graphicPages };
+    const docTitle = generateFileName().replace(/\.pdf$/i, '');
 
-      const docTitle = generateFileName().replace(/\.pdf$/i, '');
-      return generatePDFDocumentHTML(
-        latestVersion,
+    let graphicHtml = '';
+    if (graphicPages.length > 0) {
+      graphicHtml = await generatePDFDocumentHTML(
+        graphicVersion,
         content,
         substitutionContext,
         excludeIds,
@@ -607,7 +585,65 @@ export function ServiceProposalExport() {
         docTitle,
         { boundedTextBoxes: false },
       );
-    }, [latestVersion, selectedCommercial, generateDynamicContentByPage]);
+    }
+
+    // Générer le HTML des pages texte en flow A4 pur
+    const FONT_SCALE = 1.35; // Facteur d'échelle pour affichage A4 (9pt → ~12px)
+    const escapeHtml = (s: string) =>
+      s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const textPagesHtml = textOnlyPages
+      .map((page) => {
+        const sortedEls = [...page.elements].sort(
+          (a, b) => a.position.y - b.position.y,
+        );
+        const elementsHtml = sortedEls
+          .map((el) => {
+            const c = el.content as any;
+            const fontSize = Math.max((c.fontSize || 9) * FONT_SCALE, 8);
+            const bold = c.bold ? 'font-weight:700;' : 'font-weight:400;';
+            const underline = c.underline ? 'text-decoration:underline;' : '';
+            const marginTop = c.bold ? '10px' : '3px';
+            const color = c.color || '#1a1a1a';
+            const align = c.textAlign || 'justify';
+            const text = escapeHtml(c.text || '').replace(/\n/g, '<br/>');
+            return `<p style="font-size:${fontSize}px;${bold}${underline}color:${color};text-align:${align};line-height:1.45;margin:0;margin-top:${marginTop};margin-bottom:2px;">${text}</p>`;
+          })
+          .join('');
+
+        return `
+          <div class="text-page-sheet">
+            <div class="text-page-content">
+              ${elementsHtml}
+            </div>
+            <div class="page-footer">GROUPE | CYBERTEK</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    // Si pas de pages graphiques, retourner un document complet avec juste les pages texte
+    if (!graphicHtml) {
+      return buildStandaloneTextDocument(textPagesHtml, docTitle);
+    }
+
+    // Injecter les pages texte DANS le document HTML graphique existant
+    // en les ajoutant avant la balise </body>
+    const textStylesAndPages = `
+      <style>
+        .text-page-sheet { width:210mm; height:297mm; overflow:hidden; background:white; page-break-after:always; break-after:page; page-break-inside:avoid; break-inside:avoid; position:relative; font-family:'Inter', Arial, sans-serif; }
+        .text-page-sheet:last-child { page-break-after:auto; break-after:auto; }
+        .text-page-content { padding:20mm 18mm 25mm 18mm; overflow:hidden; height:100%; }
+        .page-footer { position:absolute; bottom:8mm; left:18mm; right:18mm; font-size:8px; color:#888; text-align:right; border-top:0.5px solid #ccc; padding-top:3px; }
+      </style>
+      ${textPagesHtml}
+    `;
+
+    return graphicHtml.replace('</body>', textStylesAndPages + '</body>');
+  }, [latestVersion, selectedCommercial, generateDynamicContentByPage]);
 
   // --- Handler téléchargement ---
   const handleDownloadPDF = async () => {
@@ -667,6 +703,22 @@ export function ServiceProposalExport() {
       setIsGenerating(false);
     }
   };
+
+  function buildStandaloneTextDocument(pagesHtml: string, title: string): string {
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      @media print { @page { size: A4 portrait; margin: 0; } html,body { margin:0; padding:0; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 0; background: white; font-family: 'Inter', Arial, sans-serif; }
+      .text-page-sheet { width:210mm; height:297mm; overflow:hidden; background:white; page-break-after:always; break-after:page; page-break-inside:avoid; break-inside:avoid; position:relative; }
+      .text-page-sheet:last-child { page-break-after:auto; break-after:auto; }
+      .text-page-content { padding:20mm 18mm 25mm 18mm; overflow:hidden; height:100%; }
+      .page-footer { position:absolute; bottom:8mm; left:18mm; right:18mm; font-size:8px; color:#888; text-align:right; border-top:0.5px solid #ccc; padding-top:3px; }
+    </style>
+    </head><body>${pagesHtml}</body></html>`;
+  }
+
 
   return (
     <Card>
