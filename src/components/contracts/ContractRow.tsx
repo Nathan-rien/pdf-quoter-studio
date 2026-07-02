@@ -109,7 +109,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       id: contract.id,
       updates: {
         client_name: isQuick ? (clientName.trim() || 'Nouveau contrat') : contract.client_name,
-        implementation_month: implementationMonth ? `${implementationMonth}-01` : null,
+        implementation_month: implementationDate ? format(implementationDate, 'yyyy-MM-dd') : null,
         financial_partner: hideFinancialPartner ? contract.financial_partner ?? null : (financialPartner || null),
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
@@ -406,13 +406,34 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Mois de mise en place</Label>
-              <Input
-                type="month"
-                value={implementationMonth}
-                onChange={(e) => setImplementationMonth(e.target.value)}
-                className="h-9 text-sm"
-              />
+              <Label className="text-xs">Date de mise en place</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'h-9 w-full justify-start text-left font-normal text-sm',
+                      !implementationDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {implementationDate
+                      ? format(implementationDate, 'dd/MM/yyyy', { locale: fr })
+                      : 'Choisir une date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={implementationDate}
+                    onSelect={setImplementationDate}
+                    initialFocus
+                    locale={fr}
+                    className={cn('p-3 pointer-events-auto')}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             {!hideFinancialPartner && (
             <div className="space-y-1.5">
