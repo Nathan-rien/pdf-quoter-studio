@@ -72,13 +72,13 @@ function buildPages() {
           40,
           105,
           714,
-          80,
+          140,
           "1/ - La Société « Groupe Cybertek », société par actions simplifiée au capital de 4 471 800 Euros, ayant son siège social à BORDEAUX (33300), Zone d'activités Achard Bat U 130 rue Achard, immatriculée au registre du commerce et des sociétés de Bordeaux sous le numéro 408 772 960,\n\nReprésentée par Nicolas Sourroubille, agissant en qualité de Directeur Général, dûment habilité aux fins des présentes."
         ),
-        textEl("p1-prest", 40, 200, 714, 20, 'Ci-après dénommée le "PRESTATAIRE"', { align: "center", bold: true }),
-        textEl("p1-dune", 40, 225, 714, 15, "D'UNE PART", { align: "center", bold: true }),
-        textEl("p1-et", 40, 250, 714, 15, "Et"),
-        textEl("p1-benef-label", 40, 275, 714, 15, "2 - La Société", { bold: true }),
+        textEl("p1-prest", 40, 260, 714, 20, 'Ci-après dénommée le "PRESTATAIRE"', { align: "center", bold: true }),
+        textEl("p1-dune", 40, 285, 714, 15, "D'UNE PART", { align: "center", bold: true }),
+        textEl("p1-et", 40, 315, 714, 15, "Et"),
+        textEl("p1-benef-label", 40, 345, 714, 15, "2 - La Société", { bold: true }),
       ],
       dynamicZones: [
         {
