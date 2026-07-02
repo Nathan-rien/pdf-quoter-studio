@@ -382,8 +382,6 @@ export function ServiceProposalExport() {
             <tr style="background: #f3f4f6;">
               <th style="padding: 3px 5px; text-align: left; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb;">Désignation</th>
               <th style="padding: 3px 5px; text-align: center; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 34px;">Qté</th>
-              <th style="padding: 3px 5px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 56px;">P.U. HT</th>
-              <th style="padding: 3px 5px; text-align: right; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 64px;">Total HT</th>
             </tr>
           </thead>
           <tbody>
@@ -395,20 +393,12 @@ export function ServiceProposalExport() {
               <tr style="background: ${idx % 2 === 1 ? '#fafafa' : 'white'};">
                 <td style="padding: 3px 5px; border: 1px solid #e5e7eb; vertical-align: top; overflow-wrap: anywhere; white-space: normal;">${escapeText(l.designation || '-')}</td>
                 <td style="padding: 3px 5px; border: 1px solid #e5e7eb; text-align: center; vertical-align: top;">${escapeText(l.quantite)}</td>
-                <td style="padding: 3px 5px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top;">${formatNumber(l.prixUnitaire)}</td>
-                <td style="padding: 3px 5px; border: 1px solid #e5e7eb; text-align: right; vertical-align: top; font-weight: 600;">${formatNumber(l.totalHT)}</td>
               </tr>`,
                     )
                     .join('')
-                : '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #9ca3af; font-style: italic; border: 1px solid #e5e7eb;">Aucune ligne de service</td></tr>'
+                : '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #9ca3af; font-style: italic; border: 1px solid #e5e7eb;">Aucune ligne de service</td></tr>'
             }
           </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="3" style="padding: 4px 5px; border: 1px solid #d1d5db; text-align: right; font-weight: 700; color: #374151; background: white;">Total HT</td>
-              <td style="padding: 4px 5px; border: 1px solid #d1d5db; text-align: right; font-weight: 700; color: #1f2937; background: white;">${formatNumber(totalInvest)} €</td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     `;
