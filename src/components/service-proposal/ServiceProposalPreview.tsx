@@ -58,7 +58,7 @@ export function ServiceProposalPreview() {
 
   const clientData = useServiceProposalStore((s) => s.clientData);
   const lignesData = useServiceProposalStore((s) => s.lignesData);
-  const servicesInclus = useServiceProposalStore((s) => s.servicesInclus);
+  
   const proposalName = useServiceProposalStore((s) => s.proposalName);
   const totalInvest = useServiceProposalStore((s) => s.totalInvest);
   const selectedServices = useServiceProposalStore((s) => s.selectedServices);
