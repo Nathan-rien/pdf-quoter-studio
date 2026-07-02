@@ -499,7 +499,7 @@ export function ServiceProposalExport() {
     clientData,
     commercialData,
     lignesData,
-    servicesInclus,
+    
     selectedServices,
     paymentFrequency,
     paymentMode,
