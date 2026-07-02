@@ -130,7 +130,7 @@ export function GlobalStatsView() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={stats.propPie} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                <Pie data={stats.propPie} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} label={({ percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
                   {stats.propPie.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
                 </Pie>
                 <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -149,7 +149,7 @@ export function GlobalStatsView() {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={stats.contractPie} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                <Pie data={stats.contractPie} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} label={({ percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
                   {stats.contractPie.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
                 </Pie>
                 <Legend wrapperStyle={{ fontSize: 11 }} />
