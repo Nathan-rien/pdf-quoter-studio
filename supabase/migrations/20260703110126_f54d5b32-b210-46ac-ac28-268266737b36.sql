@@ -1,0 +1,1 @@
+ALTER TABLE public.contracts ADD COLUMN cession_percent smallint NULL CHECK (cession_percent IN (1,2,3,4));

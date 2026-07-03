@@ -37,6 +37,7 @@ export type Database = {
           amount_ht: number | null
           attachment_name: string | null
           attachment_url: string | null
+          cession_percent: number | null
           client_name: string
           commercial_id: string
           commercial_name: string | null
@@ -60,6 +61,7 @@ export type Database = {
           amount_ht?: number | null
           attachment_name?: string | null
           attachment_url?: string | null
+          cession_percent?: number | null
           client_name: string
           commercial_id: string
           commercial_name?: string | null
@@ -83,6 +85,7 @@ export type Database = {
           amount_ht?: number | null
           attachment_name?: string | null
           attachment_url?: string | null
+          cession_percent?: number | null
           client_name?: string
           commercial_id?: string
           commercial_name?: string | null
