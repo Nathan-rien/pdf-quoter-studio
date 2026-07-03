@@ -151,18 +151,23 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
         </div>
 
         {data.selected_services.length > 0 && (
-          <div className="space-y-1 text-right">
+          <div className="flex flex-col items-end gap-2">
             <div className="text-sm font-medium">
               Total services : {totalServices.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT
             </div>
-            {data.payment_frequency === 'mensuel' && (
-              <div className="text-xs text-muted-foreground">
-                Soit {(Math.round((totalServices / 12) * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/mois HT
-              </div>
-            )}
-            {data.payment_frequency === 'trimestriel' && (
-              <div className="text-xs text-muted-foreground">
-                Soit {(Math.round((totalServices / 4) * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/trimestre HT
+            {(data.payment_frequency === 'mensuel' || data.payment_frequency === 'trimestriel') && totalServices > 0 && (
+              <div className="inline-flex items-baseline gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Soit</span>
+                <span className="text-base font-bold text-primary">
+                  {(
+                    Math.round(
+                      (totalServices / (data.payment_frequency === 'mensuel' ? 12 : 4)) * 100,
+                    ) / 100
+                  ).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                </span>
+                <span className="text-xs font-medium text-primary/80">
+                  {data.payment_frequency === 'mensuel' ? '/ mois HT' : '/ trimestre HT'}
+                </span>
               </div>
             )}
           </div>
