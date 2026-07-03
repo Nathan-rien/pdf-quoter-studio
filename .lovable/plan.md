@@ -1,57 +1,47 @@
-## 1. Champ "Cession" sur les contrats de Location
+## Objectif
+Corriger le calcul du loyer périodique dans les propositions Services pour qu'il intègre la durée du contrat, avec le libellé approprié.
 
-Dans `ContractRow.tsx` (partie détails/expanded), ajouter un nouveau champ visible uniquement pour les contrats de type `location` (pas `service`) :
+## Formule
+```
+moisParPériode = périodicité === 'trimestriel' ? 3 : 1
+montant        = totalServicesHt / (durée / moisParPériode)
+label          = périodicité === 'trimestriel' ? '€/trimestre' : '€/mois'
+```
 
-- Libellé : **Cession**
-- 4 boutons pastilles au style existant : `1%`, `2%`, `3%`, `4%` (sélection unique, optionnelle)
-- Placé à côté de "Périodicité" dans la grille détails
+Exemples:
+- 6000 / mensuel / 12 → 500 €/mois
+- 6000 / mensuel / 24 → 250 €/mois
+- 6000 / trimestriel / 12 → 1500 €/trimestre (montant), affiché avec libellé /trimestre
 
-**Backend** :
-- Migration : ajouter `cession_percent smallint NULL` sur `public.contracts` avec `CHECK (cession_percent IN (1,2,3,4))`
-- Mise à jour de l'interface `Contract` (`useContracts.ts`) et du mutateur `useUpdateContract`
-- Persistance via `handleSave`
+## Fichiers à modifier
 
-Visible également en résumé fermé (petit badge "Cession 2 %") quand renseigné.
+1. **`src/lib/service-proposal-totals.ts`**
+   - `computePeriodicRent(total, durationMonths, frequency)` :
+     - si `frequency` absent ou `durationMonths` ≤ 0 → `null`
+     - `factor = frequency === 'trimestriel' ? 3 : 1`
+     - retourne `round2(total / (durationMonths / factor))`
+   - Ajouter helper `periodicRentLabel(frequency)` → `'€/trimestre'` ou `'€/mois'`.
 
-## 2. Nouveau calcul mensualité / trimestrialité
+2. **`src/components/service-proposal/ServiceProposalDataStep.tsx`**
+   - Le bloc "SOIT xxx €/mois HT" doit utiliser la nouvelle formule et le libellé dynamique (`/mois HT` ou `/trimestre HT`).
 
-Formule demandée :
-- Mensualité = **Total services HT / durée du contrat (mois)**
-- Trimestrialité = **Mensualité × 3**
+3. **`src/components/service-proposal/ServiceProposalPreview.tsx`**
+   - Remplacer le calcul actuel (`total * factor`) par la formule ci-dessus, adapter le libellé affiché.
 
-Remplace l'actuelle division `/12` (mensuel) et `/4` (trimestriel).
+4. **`src/components/service-proposal/ServiceProposalExport.tsx`**
+   - Idem preview : formule + libellé.
 
-Fichiers impactés (même helper partagé) :
-- `src/components/service-proposal/ServiceProposalDataStep.tsx` : encart "Soit … / mois HT" ou "/ trimestre HT"
-- `src/components/service-proposal/ServiceProposalPreview.tsx` : ligne "Loyer mensuel/trimestriel HT"
-- `src/components/service-proposal/ServiceProposalExport.tsx` : même ligne dans le PDF
-- `src/hooks/useContracts.ts` (`useContractProposalRent`) et `src/lib/contract-rent-aggregation.ts` (`computeFromExport`) : branche `state.kind === 'service-proposal'` → utiliser `duration` (déjà présent dans le state) au lieu du diviseur fixe
+5. **`src/hooks/useContracts.ts`**
+   - Pour les propositions Services (branche `service-proposal`), calculer `monthly_rent_ht` / `quarterly_rent_ht` avec la nouvelle formule :
+     - `monthly = total / duration` (toujours)
+     - `quarterly = total / (duration / 3)` = `monthly * 3`
+   - Nécessite d'avoir la durée du contrat côté export (déjà présente dans `proposal_state.contractDuration`).
 
-Comportement si `contract_duration` manquant / 0 : afficher un tiret ("—") plutôt que diviser par zéro, calcul ignoré côté agrégation.
+6. **`src/lib/contract-rent-aggregation.ts`**
+   - Même correction que `useContracts` : utiliser `state.contractDuration` pour diviser le total avant d'appliquer le facteur.
+   - Fallback si `contractDuration` manquant → `null` (au lieu de faux calcul).
 
-Précision : `Math.round(x * 100) / 100` maintenu partout.
-
-## 3. Toggle "/mois" vs "total" par ligne de service (onglet Données – Propositions Services)
-
-Aligner l'UX des lignes Services sur celle des Options (voir capture) :
-
-Dans `ServiceProposalDataStep.tsx` / `ServiceLineRow` :
-- Ajouter à côté du toggle `total | /parc` (Scope) un second toggle **Afficher : /mois | total** (même style pastille noire)
-- Nouveau champ sur `ServiceLine` : `show_price_mode: 'mensuel' | 'total'` (défaut `'total'` pour ne pas casser l'existant)
-- Le montant saisi reste le même champ `amount_ht`; le mode contrôle uniquement l'affichage dans la Preview / Export
-
-**Sémantique** :
-- `total` = montant global sur la durée (comportement actuel)
-- `mensuel` = montant / mois → dans Preview/Export, la ligne affiche "X,XX € / mois" et le total services HT annuel reste calculé en `amount_ht × durée` pour être cohérent avec le nouveau calcul de mensualité
-
-Fichiers impactés :
-- `src/hooks/useServiceProposals.ts` : ajout du champ dans `ServiceLine`
-- `src/components/service-proposal/ServiceProposalDataStep.tsx` : UI toggle + total dynamique (somme des lignes converties en montant total = mensuel × durée si mode mensuel)
-- `src/components/service-proposal/ServiceProposalPreview.tsx` & `ServiceProposalExport.tsx` : rendu du libellé par ligne + calcul du `totalServicesHt` cohérent
-- Aucune migration DB : `selected_services` est déjà stocké en JSONB
-
-## Zone hors périmètre
-
-- Pas de modification de la logique des Options (déjà en place)
-- Pas de modification des templates PDF Editor
-- Pas de changement sur les propositions de Location (calculs matrice inchangés)
+## Points d'attention
+- Précision : `Math.round(x * 100) / 100` partout.
+- Si `contractDuration` est nul/0, ne pas afficher de montant périodique (retour `null`, UI masque le bloc).
+- Ne pas toucher aux propositions Location (branche `calculateAllMatriceValues` reste inchangée).
