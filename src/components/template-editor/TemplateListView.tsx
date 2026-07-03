@@ -31,6 +31,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useTemplateSync as _useTemplateSyncType } from '@/hooks/useTemplateSync';
 
 export function TemplateListView() {
   const [duplicateTemplate, setDuplicateTemplate] = useState<PDFTemplate | null>(null);
