@@ -431,13 +431,26 @@ export function ServiceProposalPreview() {
     }
 
     if (zone.type === 'service_conditions') {
+      const periodicRent =
+        paymentFrequency === 'mensuel'
+          ? Math.round((totalServicesHt / 12) * 100) / 100
+          : paymentFrequency === 'trimestriel'
+            ? Math.round((totalServicesHt / 4) * 100) / 100
+            : null;
       const rows: Array<[string, string, boolean?]> = [
         ['Services', selectedServices.map((s) => s.label).join(', ') || '—'],
         ['Périodicité', paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'],
-        ['Mode de règlement', paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : '—'],
+        ['Mode de règlement', paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : paymentMode === 'allin' ? 'Allin' : '—'],
         ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
         ['Démarrage', startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'],
         ['Total HT services', `${formatNumber(totalServicesHt)} €`, true],
+        ...(periodicRent !== null
+          ? ([[
+              paymentFrequency === 'mensuel' ? 'Loyer mensuel HT' : 'Loyer trimestriel HT',
+              `${formatNumber(periodicRent)} €`,
+              true,
+            ]] as Array<[string, string, boolean?]>)
+          : []),
       ];
       return (
         <div key={key} style={zoneStyle}>
