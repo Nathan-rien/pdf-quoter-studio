@@ -250,6 +250,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {!hideFinancialPartner && contract.financial_partner && <span>{contract.financial_partner}</span>}
             {contract.duration_months && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.duration_months} mois</span>}
             {endDate && <span>→ {format(endDate, 'MM/yyyy', { locale: fr })}</span>}
+            {!hideFinancialPartner && contract.cession_percent != null && (
+              <span className="flex items-center gap-1">Cession {contract.cession_percent} %</span>
+            )}
             {contract.attachment_url && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />PDF joint</span>}
           </div>
           {contract.template_name && (
