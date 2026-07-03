@@ -36,7 +36,8 @@ interface DbVersion {
 }
 
 // Convertir un template DB vers le format du store
-function dbToStoreTemplate(db: DbTemplate): PDFTemplate {
+function dbToStoreTemplate(db: DbTemplate & { target_view?: string | null }): PDFTemplate {
+  const tv = (db as any).target_view;
   return {
     id: db.id,
     name: db.name,
@@ -44,7 +45,8 @@ function dbToStoreTemplate(db: DbTemplate): PDFTemplate {
     createdAt: new Date(db.created_at),
     createdBy: 'system',
     updatedAt: new Date(db.updated_at),
-    isActive: db.is_active
+    isActive: db.is_active,
+    targetView: tv === 'location' || tv === 'services' ? tv : null,
   };
 }
 
@@ -121,12 +123,13 @@ function toValidUUID(id: string): string {
 }
 
 // Convertir un template du store vers le format DB
-function storeToDbTemplate(template: PDFTemplate): Omit<DbTemplate, 'created_at' | 'updated_at'> {
+function storeToDbTemplate(template: PDFTemplate): Omit<DbTemplate, 'created_at' | 'updated_at'> & { target_view: string | null } {
   return {
     id: toValidUUID(template.id),
     name: template.name,
     description: template.description || null,
-    is_active: template.isActive
+    is_active: template.isActive,
+    target_view: template.targetView ?? null,
   };
 }
 
