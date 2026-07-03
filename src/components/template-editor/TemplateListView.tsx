@@ -37,7 +37,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
 import { useTemplateSync as _useTemplateSyncType } from '@/hooks/useTemplateSync';
 
 export function TemplateListView() {
