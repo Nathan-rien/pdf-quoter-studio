@@ -23,6 +23,7 @@ export interface Contract {
   contract_number?: string | null;
   monthly_rent_ht?: number | null;
   quarterly_rent_ht?: number | null;
+  cession_percent?: number | null;
   is_quick_contract?: boolean;
   attachment_url?: string | null;
   attachment_name?: string | null;
