@@ -202,7 +202,8 @@ const DEFAULT_TEMPLATE: PDFTemplate = {
   createdAt: new Date('2025-01-01'),
   createdBy: 'system',
   updatedAt: new Date('2025-01-01'),
-  isActive: true
+  isActive: true,
+  targetView: null,
 };
 
 // Presse-papier (non persisté)
@@ -350,7 +351,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       createdAt: new Date(),
       createdBy: 'user',
       updatedAt: new Date(),
-      isActive: false
+      isActive: false,
+      targetView: null,
     };
 
     const initialVersion = createInitialVersion(newTemplate.id);
@@ -376,7 +378,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       createdAt: new Date(),
       createdBy: 'user',
       updatedAt: new Date(),
-      isActive: false
+      isActive: false,
+      targetView: sourceTemplate.targetView ?? null,
     };
 
     // Récupérer les versions à dupliquer
