@@ -540,7 +540,39 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 ))}
               </div>
             </div>
+            {!hideFinancialPartner && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Cession</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {([1, 2, 3, 4] as const).map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setCessionPercent(cessionPercent === pct ? null : pct)}
+                      className={cn(
+                        'h-9 px-4 rounded-full text-sm font-medium border transition-colors',
+                        cessionPercent === pct
+                          ? 'bg-black text-white border-black'
+                          : 'bg-background text-foreground border-border hover:bg-muted'
+                      )}
+                    >
+                      {pct} %
+                    </button>
+                  ))}
+                  {cessionPercent !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setCessionPercent(null)}
+                      className="h-9 px-3 rounded-full text-xs font-medium border border-border text-muted-foreground hover:bg-muted"
+                    >
+                      Aucune
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+
 
           {/* Attachment section */}
           <div className="space-y-1.5">
