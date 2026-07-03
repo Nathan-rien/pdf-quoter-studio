@@ -22,17 +22,18 @@ export function computeTotalServicesHt(lines: ServiceLine[], durationMonths: num
 }
 
 /**
- * Loyer mensuel = total services HT / durée du contrat.
- * Loyer trimestriel = loyer mensuel × 3.
- * Retourne null si la durée est manquante ou nulle.
+ * Loyer périodique = total HT services × facteur périodicité.
+ * - mensuel     : total × 1
+ * - trimestriel : total × 3
+ * La durée du contrat est déjà intégrée dans le total (lignes en /mois × durée).
  */
 export function computePeriodicRent(
   totalServicesHt: number,
-  durationMonths: number | null | undefined,
+  _durationMonths: number | null | undefined,
   frequency: 'mensuel' | 'trimestriel' | null | undefined,
 ): number | null {
-  if (!durationMonths || durationMonths <= 0) return null;
   if (frequency !== 'mensuel' && frequency !== 'trimestriel') return null;
-  const monthly = totalServicesHt / durationMonths;
-  return frequency === 'mensuel' ? round2(monthly) : round2(monthly * 3);
+  const factor = frequency === 'mensuel' ? 1 : 3;
+  return round2(totalServicesHt * factor);
 }
+

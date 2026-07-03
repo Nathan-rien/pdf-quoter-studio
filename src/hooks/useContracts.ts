@@ -195,11 +195,10 @@ export function useContractProposalRent(proposalId: string | null | undefined) {
           normalizeMoney((data as any).montant_investissement) ??
           normalizeMoney(state.totalInvest);
         if (total == null) return null;
-        const duration = Number(state.contractDuration);
-        if (!Number.isFinite(duration) || duration <= 0) return null;
-        const monthly = Math.round((total / duration) * 100) / 100;
-        return { monthly, quarterly: Math.round(monthly * 3 * 100) / 100 };
+        const monthly = Math.round(total * 100) / 100;
+        return { monthly, quarterly: Math.round(total * 3 * 100) / 100 };
       }
+
 
       const proposal = state?.proposals?.[0];
       if (!proposal) return null;

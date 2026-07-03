@@ -358,13 +358,12 @@ export function ServiceProposalExport() {
     `;
 
     const periodicRent =
-      contractDuration && contractDuration > 0
-        ? paymentFrequency === 'mensuel'
-          ? Math.round((totalServicesHt / contractDuration) * 100) / 100
-          : paymentFrequency === 'trimestriel'
-            ? Math.round(((totalServicesHt / contractDuration) * 3) * 100) / 100
-            : null
-        : null;
+      paymentFrequency === 'mensuel'
+        ? Math.round(totalServicesHt * 100) / 100
+        : paymentFrequency === 'trimestriel'
+          ? Math.round(totalServicesHt * 3 * 100) / 100
+          : null;
+
     const conditionsRows: Array<[string, string, boolean?]> = [
       ['Services', selectedServices.map((s) => s.label).join(', ') || '—'],
       ['Périodicité', paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'],
