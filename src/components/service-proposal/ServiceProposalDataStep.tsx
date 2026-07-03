@@ -115,7 +115,7 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
     if (!found || data.selected_services.some((l) => l.service_id === serviceId)) return;
     set('selected_services', [
       ...data.selected_services,
-      { service_id: serviceId, label: found.title, amount_ht: 0, scope: 'total' },
+      { service_id: serviceId, label: found.title, amount_ht: 0, scope: 'total', show_price_mode: 'total' },
     ]);
   }
 
@@ -133,7 +133,9 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
     (s) => !data.selected_services.some((l) => l.service_id === s.id)
   );
 
-  const totalServices = data.selected_services.reduce((sum, l) => sum + l.amount_ht, 0);
+  const duration = typeof data.contract_duration === 'number' ? data.contract_duration : null;
+  const totalServices = computeTotalServicesHt(data.selected_services, duration);
+  const periodicRent = computePeriodicRent(totalServices, duration, data.payment_frequency || null);
 
   return (
     <div className="space-y-6">
@@ -164,9 +166,10 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
             </div>
           ) : (
             <div>
-              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-3 text-xs text-muted-foreground font-medium pb-2 border-b">
+              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 text-xs text-muted-foreground font-medium pb-2 border-b">
                 <span>Service</span>
                 <span className="text-right">Montant HT</span>
+                <span className="text-center">Afficher</span>
                 <span className="text-center">Scope</span>
                 <span />
               </div>
@@ -181,25 +184,29 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
           <div className="flex flex-col items-end gap-2">
             <div className="text-sm font-medium">
               Total services : {totalServices.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT
+              {!duration && (
+                <span className="ml-2 text-xs text-muted-foreground">(saisir une durée pour intégrer les lignes /mois)</span>
+              )}
             </div>
-            {(data.payment_frequency === 'mensuel' || data.payment_frequency === 'trimestriel') && totalServices > 0 && (
-              <div className="inline-flex items-baseline gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">Soit</span>
-                <span className="text-base font-bold text-primary">
-                  {(
-                    Math.round(
-                      (totalServices / (data.payment_frequency === 'mensuel' ? 12 : 4)) * 100,
-                    ) / 100
-                  ).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                </span>
-                <span className="text-xs font-medium text-primary/80">
-                  {data.payment_frequency === 'mensuel' ? '/ mois HT' : '/ trimestre HT'}
-                </span>
-              </div>
+            {(data.payment_frequency === 'mensuel' || data.payment_frequency === 'trimestriel') && (
+              periodicRent !== null ? (
+                <div className="inline-flex items-baseline gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Soit</span>
+                  <span className="text-base font-bold text-primary">
+                    {periodicRent.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                  </span>
+                  <span className="text-xs font-medium text-primary/80">
+                    {data.payment_frequency === 'mensuel' ? '/ mois HT' : '/ trimestre HT'}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground italic">Renseigner la durée du contrat pour calculer le loyer.</div>
+              )
             )}
           </div>
         )}
       </div>
+
 
       {/* Modalités */}
       <div className="space-y-4">
