@@ -432,11 +432,13 @@ export function ServiceProposalPreview() {
 
     if (zone.type === 'service_conditions') {
       const periodicRent =
-        paymentFrequency === 'mensuel'
-          ? Math.round((totalServicesHt / 12) * 100) / 100
-          : paymentFrequency === 'trimestriel'
-            ? Math.round((totalServicesHt / 4) * 100) / 100
-            : null;
+        contractDuration && contractDuration > 0
+          ? paymentFrequency === 'mensuel'
+            ? Math.round((totalServicesHt / contractDuration) * 100) / 100
+            : paymentFrequency === 'trimestriel'
+              ? Math.round(((totalServicesHt / contractDuration) * 3) * 100) / 100
+              : null
+          : null;
       const rows: Array<[string, string, boolean?]> = [
         ['Services', selectedServices.map((s) => s.label).join(', ') || '—'],
         ['Périodicité', paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'],

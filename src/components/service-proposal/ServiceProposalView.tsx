@@ -32,6 +32,7 @@ import { TemplateSelector } from '@/components/rental-proposal/TemplateSelector'
 import { ServiceProposalPreview } from './ServiceProposalPreview';
 import { ServiceProposalExport } from './ServiceProposalExport';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
+import { computeTotalServicesHt } from '@/lib/service-proposal-totals';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
@@ -113,7 +114,7 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
     paymentMode: dataForm.payment_mode || '',
     contractDuration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
     startDate: dataForm.start_date || '',
-    totalServicesHt: dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0),
+    totalServicesHt: computeTotalServicesHt(dataForm.selected_services, dataForm.contract_duration ? Number(dataForm.contract_duration) : null),
   });
   store.updateProposalName(
     clientData.client_company || clientData.client_name || 'Proposition Services',
@@ -390,7 +391,7 @@ function buildPayload(
   dataForm: ServiceDataFormValues,
   investForm: InvestFormValues,
 ) {
-  const totalServices = dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0);
+  const totalServices = computeTotalServicesHt(dataForm.selected_services, dataForm.contract_duration ? Number(dataForm.contract_duration) : null);
   const totalInvest = investForm.invest_lines.reduce((s, l) => s + l.vtn, 0);
   return {
     client_name: clientData.client_name || 'Sans nom',

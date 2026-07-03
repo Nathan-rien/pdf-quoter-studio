@@ -62,6 +62,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [commercialFree, setCommercialFree] = useState(contract.commercial_name ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
+  const [cessionPercent, setCessionPercent] = useState<number | null>(contract.cession_percent ?? null);
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
@@ -118,6 +119,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         contract_number: contractNumber.trim() || null,
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
         quarterly_rent_ht: isQuick ? manualQuarterlyValue : contract.quarterly_rent_ht ?? null,
+        cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
       },
     });
   }
@@ -248,6 +250,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {!hideFinancialPartner && contract.financial_partner && <span>{contract.financial_partner}</span>}
             {contract.duration_months && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.duration_months} mois</span>}
             {endDate && <span>→ {format(endDate, 'MM/yyyy', { locale: fr })}</span>}
+            {!hideFinancialPartner && contract.cession_percent != null && (
+              <span className="flex items-center gap-1">Cession {contract.cession_percent} %</span>
+            )}
             {contract.attachment_url && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />PDF joint</span>}
           </div>
           {contract.template_name && (
@@ -538,7 +543,39 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 ))}
               </div>
             </div>
+            {!hideFinancialPartner && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Cession</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {([1, 2, 3, 4] as const).map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setCessionPercent(cessionPercent === pct ? null : pct)}
+                      className={cn(
+                        'h-9 px-4 rounded-full text-sm font-medium border transition-colors',
+                        cessionPercent === pct
+                          ? 'bg-black text-white border-black'
+                          : 'bg-background text-foreground border-border hover:bg-muted'
+                      )}
+                    >
+                      {pct} %
+                    </button>
+                  ))}
+                  {cessionPercent !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setCessionPercent(null)}
+                      className="h-9 px-3 rounded-full text-xs font-medium border border-border text-muted-foreground hover:bg-muted"
+                    >
+                      Aucune
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+
 
           {/* Attachment section */}
           <div className="space-y-1.5">

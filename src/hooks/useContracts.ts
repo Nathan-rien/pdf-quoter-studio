@@ -23,6 +23,7 @@ export interface Contract {
   contract_number?: string | null;
   monthly_rent_ht?: number | null;
   quarterly_rent_ht?: number | null;
+  cession_percent?: number | null;
   is_quick_contract?: boolean;
   attachment_url?: string | null;
   attachment_name?: string | null;
@@ -92,7 +93,7 @@ export function useUpdateContract() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'client_name' | 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'monthly_rent_ht' | 'quarterly_rent_ht' | 'attachment_url' | 'attachment_name'>> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'client_name' | 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'monthly_rent_ht' | 'quarterly_rent_ht' | 'cession_percent' | 'attachment_url' | 'attachment_name'>> }) => {
       const { data, error } = await supabase.from('contracts').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as Contract;
@@ -194,9 +195,10 @@ export function useContractProposalRent(proposalId: string | null | undefined) {
           normalizeMoney((data as any).montant_investissement) ??
           normalizeMoney(state.totalInvest);
         if (total == null) return null;
-        const freq = state.paymentFrequency;
-        if (freq === 'trimestriel') return { monthly: Math.round((total / 3) * 100) / 100, quarterly: total };
-        return { monthly: total, quarterly: Math.round(total * 3 * 100) / 100 };
+        const duration = Number(state.contractDuration);
+        if (!Number.isFinite(duration) || duration <= 0) return null;
+        const monthly = Math.round((total / duration) * 100) / 100;
+        return { monthly, quarterly: Math.round(monthly * 3 * 100) / 100 };
       }
 
       const proposal = state?.proposals?.[0];
