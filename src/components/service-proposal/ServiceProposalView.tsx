@@ -32,6 +32,7 @@ import { TemplateSelector } from '@/components/rental-proposal/TemplateSelector'
 import { ServiceProposalPreview } from './ServiceProposalPreview';
 import { ServiceProposalExport } from './ServiceProposalExport';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
+import { computeTotalServicesHt } from '@/lib/service-proposal-totals';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
