@@ -151,8 +151,20 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
         </div>
 
         {data.selected_services.length > 0 && (
-          <div className="text-sm font-medium text-right">
-            Total services : {totalServices.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT
+          <div className="space-y-1 text-right">
+            <div className="text-sm font-medium">
+              Total services : {totalServices.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT
+            </div>
+            {data.payment_frequency === 'mensuel' && (
+              <div className="text-xs text-muted-foreground">
+                Soit {(Math.round((totalServices / 12) * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/mois HT
+              </div>
+            )}
+            {data.payment_frequency === 'trimestriel' && (
+              <div className="text-xs text-muted-foreground">
+                Soit {(Math.round((totalServices / 4) * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/trimestre HT
+              </div>
+            )}
           </div>
         )}
       </div>
