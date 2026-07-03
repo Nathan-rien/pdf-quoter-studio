@@ -1,22 +1,46 @@
-## Mettre en avant le montant périodique + le reporter dans le template
+## Associer un template à une vue (Location ou Services)
 
-### 1. Onglet Données (`ServiceProposalDataStep.tsx`)
-Remplacer le petit texte muted par un encart bien visible aligné à droite :
-- Fond `bg-primary/10`, bordure `border-primary/30`, coin arrondi, padding ~ `px-3 py-2`
-- Libellé "Soit" petit + montant en `text-base font-bold text-primary` + suffixe `/mois HT` ou `/trimestre HT`
-- Affiché uniquement si `payment_frequency` et `totalServices > 0`
-- Le "Total services : X € HT" reste au-dessus, inchangé
+### 1. Base de données
+Ajouter une colonne `target_view` sur `pdf_templates` :
+- Type `text`, valeurs autorisées via check : `'location' | 'services' | null`
+- Nullable ; migration : `ALTER TABLE public.pdf_templates ADD COLUMN target_view text CHECK (target_view IN ('location','services'))`
+- Pas de valeur par défaut : les templates existants restent non assignés jusqu'à sélection manuelle
 
-### 2. Template — Preview + Export PDF
-Ajouter une ligne supplémentaire dans le tableau "Vos modalités de règlement" (zone `service_conditions`), après "Total HT services" :
-- Libellé : `Loyer mensuel HT` (si mensuel) ou `Loyer trimestriel HT` (si trimestriel)
-- Valeur : `totalServicesHt / 12` ou `totalServicesHt / 4`, arrondi `Math.round(x*100)/100`, formaté via `formatNumber`, suivi de ` €`
-- Marqué `bold = true` (mise en évidence comme le total)
-- Non affichée si `payment_frequency` est vide
+### 2. Type & sync
+- `src/types/template-editor.ts` — ajouter `targetView: 'location' | 'services' | null` dans `PDFTemplate`
+- `src/hooks/useTemplateSync.ts` — mapper `db.target_view` ↔ `template.targetView` dans `dbToStoreTemplate` / `storeToDbTemplate`, et sauver la valeur dans `upsertTemplate`
+- `src/stores/templateEditorStore.ts` — ajouter action `setTemplateTargetView(templateId, targetView)` qui met à jour le template en mémoire, marque `updatedAt`, puis persiste via `saveTemplateToDatabase`
 
-Fichiers touchés :
-- `src/components/service-proposal/ServiceProposalPreview.tsx` (tableau JSX ligne ~440)
-- `src/components/service-proposal/ServiceProposalExport.tsx` (tableau HTML ligne ~366)
-- `src/components/service-proposal/ServiceProposalDataStep.tsx` (encart visuel)
+### 3. UI éditeur (`TemplateListView.tsx`)
+Sur chaque carte de template, sous la description, ajouter un `<Select>` compact :
+- Options : « Proposition Location », « Proposition Services », « Non assignée »
+- Valeur liée à `template.targetView` ; `onValueChange` appelle `setTemplateTargetView`
+- Badge visuel discret à côté du nom (couleur différenciée par vue) pour repérage rapide
+- Toast de confirmation « Template associé à Proposition Location » / etc.
 
-Aucun changement de données persistées : la valeur est purement dérivée de `totalServicesHt` et `payment_frequency` déjà stockés.
+### 4. Filtrage dans le sélecteur (`TemplateSelector.tsx`)
+Le composant est partagé entre location et services : ajouter une prop `viewScope: 'location' | 'services'`.
+- `RentalWorkflow.tsx` : `<TemplateSelector viewScope="location" />`
+- `ServiceProposalView.tsx` : `<TemplateSelector viewScope="services" />`
+
+Filtre :
+```ts
+const availableTemplates = allTemplates.filter(t =>
+  !!getTemplatePublishedVersion(t.id) && t.targetView === viewScope
+);
+```
+Les templates non assignés (ou assignés à l'autre vue) n'apparaissent pas — conforme à la demande.
+
+Message vide adapté : « Aucun template n'est associé à cette vue. Rendez-vous dans l'éditeur de templates pour en associer un. »
+
+### 5. Fichiers touchés
+- migration Supabase (nouvelle)
+- `src/types/template-editor.ts`
+- `src/hooks/useTemplateSync.ts`
+- `src/stores/templateEditorStore.ts`
+- `src/components/template-editor/TemplateListView.tsx`
+- `src/components/rental-proposal/TemplateSelector.tsx`
+- `src/components/rental-proposal/RentalWorkflow.tsx`
+- `src/components/service-proposal/ServiceProposalView.tsx`
+
+Aucune modification des snapshots de propositions existantes ; les propositions déjà validées conservent leur `selectedTemplateId` même si le template est plus tard réassigné à l'autre vue.
