@@ -20,6 +20,7 @@ interface ServiceLineRowProps {
 }
 
 function ServiceLineRow({ line, onUpdate, onRemove }: ServiceLineRowProps) {
+  const showMode = line.show_price_mode ?? 'total';
   return (
     <div className="flex items-center gap-3 py-2 border-b last:border-b-0">
       <span className="flex-1 text-sm truncate">{line.label}</span>
@@ -33,6 +34,31 @@ function ServiceLineRow({ line, onUpdate, onRemove }: ServiceLineRowProps) {
           className="w-28 h-8 text-sm text-right"
         />
         <span className="text-sm text-muted-foreground">€</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-muted-foreground mr-1">Afficher :</span>
+        <button
+          type="button"
+          onClick={() => onUpdate({ ...line, show_price_mode: 'mensuel' })}
+          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+            showMode === 'mensuel'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          /mois
+        </button>
+        <button
+          type="button"
+          onClick={() => onUpdate({ ...line, show_price_mode: 'total' })}
+          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+            showMode === 'total'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          total
+        </button>
       </div>
       <div className="flex items-center gap-1">
         <button
