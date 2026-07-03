@@ -294,6 +294,7 @@ const deserializeDates = (data: any) => {
         ...t,
         createdAt: new Date(t.createdAt),
         updatedAt: new Date(t.updatedAt),
+        targetView: t.targetView === 'location' || t.targetView === 'services' ? t.targetView : null,
       })) || [],
       allVersions: data.state.allVersions?.map((v: any) => ({
         ...v,
