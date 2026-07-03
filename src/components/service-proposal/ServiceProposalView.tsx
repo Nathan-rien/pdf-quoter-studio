@@ -114,7 +114,7 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
     paymentMode: dataForm.payment_mode || '',
     contractDuration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
     startDate: dataForm.start_date || '',
-    totalServicesHt: dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0),
+    totalServicesHt: computeTotalServicesHt(dataForm.selected_services, dataForm.contract_duration ? Number(dataForm.contract_duration) : null),
   });
   store.updateProposalName(
     clientData.client_company || clientData.client_name || 'Proposition Services',
