@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { ServiceLine } from '@/hooks/useServiceProposals';
+import { computeTotalServicesHt, computePeriodicRent } from '@/lib/service-proposal-totals';
 
 export interface ServiceDataFormValues {
   selected_services: ServiceLine[];
