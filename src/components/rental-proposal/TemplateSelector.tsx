@@ -72,11 +72,11 @@ export function TemplateSelector({ viewScope = 'location' }: TemplateSelectorPro
       <Card>
         <CardHeader>
           <CardTitle>Sélection du template</CardTitle>
-          <CardDescription>Aucun template publié disponible</CardDescription>
+          <CardDescription>Aucun template associé à cette vue</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Vous devez d'abord créer et publier un template dans l'éditeur de templates.
+            Aucun template publié n'est associé à la vue « Proposition {viewScope === 'location' ? 'Location' : 'Services'} ». Rendez-vous dans l'éditeur de templates pour en associer un.
           </p>
         </CardContent>
       </Card>
