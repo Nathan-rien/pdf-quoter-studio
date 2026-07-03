@@ -391,7 +391,7 @@ function buildPayload(
   dataForm: ServiceDataFormValues,
   investForm: InvestFormValues,
 ) {
-  const totalServices = dataForm.selected_services.reduce((s, l) => s + l.amount_ht, 0);
+  const totalServices = computeTotalServicesHt(dataForm.selected_services, dataForm.contract_duration ? Number(dataForm.contract_duration) : null);
   const totalInvest = investForm.invest_lines.reduce((s, l) => s + l.vtn, 0);
   return {
     client_name: clientData.client_name || 'Sans nom',
