@@ -37,6 +37,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   renameTemplate: (templateId: string, newName: string) => void;
   deleteTemplate: (templateId: string) => boolean;
   setTemplateActive: (templateId: string) => void;
+  setTemplateTargetView: (templateId: string, targetView: 'location' | 'services' | null) => void;
   backToList: () => void;
   
   // Getters templates
@@ -481,6 +482,15 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       }))
     }));
   },
+
+  setTemplateTargetView: (templateId, targetView) => {
+    set(state => ({
+      allTemplates: state.allTemplates.map(t =>
+        t.id === templateId ? { ...t, targetView, updatedAt: new Date() } : t
+      ),
+    }));
+  },
+
 
   backToList: () => {
     set({ viewMode: 'list', currentTemplateId: null, currentVersion: null });
