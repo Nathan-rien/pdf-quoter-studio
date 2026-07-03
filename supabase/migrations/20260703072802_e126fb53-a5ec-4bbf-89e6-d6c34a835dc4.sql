@@ -1,0 +1,1 @@
+ALTER TABLE public.pdf_templates ADD COLUMN IF NOT EXISTS target_view text CHECK (target_view IN ('location','services'));
