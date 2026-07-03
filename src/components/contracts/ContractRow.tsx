@@ -119,6 +119,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         contract_number: contractNumber.trim() || null,
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
         quarterly_rent_ht: isQuick ? manualQuarterlyValue : contract.quarterly_rent_ht ?? null,
+        cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
       },
     });
   }
