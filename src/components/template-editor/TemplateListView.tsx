@@ -37,7 +37,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-import { useTemplateSync as _useTemplateSyncType } from '@/hooks/useTemplateSync';
+} from "@/components/ui/select";
 
 export function TemplateListView() {
   const [duplicateTemplate, setDuplicateTemplate] = useState<PDFTemplate | null>(null);
@@ -45,13 +45,17 @@ export function TemplateListView() {
   const [templateToDelete, setTemplateToDelete] = useState<PDFTemplate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const { 
-    allTemplates, 
+  const {
+    allTemplates,
     allVersions,
-    selectTemplate, 
+    selectTemplate,
     deleteTemplate,
-    setShouldOpenPublishDialog
+    setShouldOpenPublishDialog,
+    setTemplateTargetView,
   } = useTemplateEditorStore();
+
+  const { deleteTemplateFromDatabase: _unused, ...syncApi } = useTemplateSync();
+  const saveTemplateToDatabase = (syncApi as any).saveTemplateToDatabase as (t: PDFTemplate) => Promise<boolean>;
 
   const { deleteTemplateFromDatabase } = useTemplateSync();
 
