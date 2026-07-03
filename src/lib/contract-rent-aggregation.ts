@@ -32,10 +32,10 @@ function computeFromExport(row: any): AggregatedRent | null {
       normalizeMoney(row.montant_investissement) ??
       normalizeMoney(state.totalInvest);
     if (total == null) return null;
-    const freq = state.paymentFrequency;
-    if (freq === 'trimestriel')
-      return { monthly: Math.round((total / 3) * 100) / 100, quarterly: total };
-    return { monthly: total, quarterly: Math.round(total * 3 * 100) / 100 };
+    const duration = Number(state.contractDuration);
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+    const monthly = Math.round((total / duration) * 100) / 100;
+    return { monthly, quarterly: Math.round(monthly * 3 * 100) / 100 };
   }
 
   const proposal = state?.proposals?.[0];
