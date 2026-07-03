@@ -54,10 +54,7 @@ export function TemplateListView() {
     setTemplateTargetView,
   } = useTemplateEditorStore();
 
-  const { deleteTemplateFromDatabase: _unused, ...syncApi } = useTemplateSync();
-  const saveTemplateToDatabase = (syncApi as any).saveTemplateToDatabase as (t: PDFTemplate) => Promise<boolean>;
-
-  const { deleteTemplateFromDatabase } = useTemplateSync();
+  const { deleteTemplateFromDatabase, saveTemplateToDatabase } = useTemplateSync();
 
   const handleEditTemplate = (template: PDFTemplate) => {
     selectTemplate(template.id);
