@@ -1,17 +1,22 @@
-## Ajout du calcul périodique du total services
+## Mettre en avant le montant périodique + le reporter dans le template
 
-Dans `src/components/service-proposal/ServiceProposalDataStep.tsx`, ajouter sous la ligne "Total services : X € HT" un second affichage qui montre le montant réparti selon la périodicité sélectionnée.
+### 1. Onglet Données (`ServiceProposalDataStep.tsx`)
+Remplacer le petit texte muted par un encart bien visible aligné à droite :
+- Fond `bg-primary/10`, bordure `border-primary/30`, coin arrondi, padding ~ `px-3 py-2`
+- Libellé "Soit" petit + montant en `text-base font-bold text-primary` + suffixe `/mois HT` ou `/trimestre HT`
+- Affiché uniquement si `payment_frequency` et `totalServices > 0`
+- Le "Total services : X € HT" reste au-dessus, inchangé
 
-### Comportement
-- Si `payment_frequency === 'mensuel'` → afficher `Total services / 12` avec libellé "Soit X €/mois HT"
-- Si `payment_frequency === 'trimestriel'` → afficher `Total services / 4` avec libellé "Soit X €/trimestre HT"
-- Si aucune périodicité sélectionnée → ne rien afficher (ou message discret "Sélectionnez une périodicité")
+### 2. Template — Preview + Export PDF
+Ajouter une ligne supplémentaire dans le tableau "Vos modalités de règlement" (zone `service_conditions`), après "Total HT services" :
+- Libellé : `Loyer mensuel HT` (si mensuel) ou `Loyer trimestriel HT` (si trimestriel)
+- Valeur : `totalServicesHt / 12` ou `totalServicesHt / 4`, arrondi `Math.round(x*100)/100`, formaté via `formatNumber`, suivi de ` €`
+- Marqué `bold = true` (mise en évidence comme le total)
+- Non affichée si `payment_frequency` est vide
 
-### Détails techniques
-- Calcul : `Math.round((totalServices / diviseur) * 100) / 100` (respecte la règle de précision financière du projet)
-- Formatage : `toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })`
-- Emplacement : juste sous le "Total services" existant, même alignement à droite, style légèrement plus discret (text-muted-foreground)
-- Aucun impact sur la persistance ni les autres vues — c'est purement un affichage dérivé
+Fichiers touchés :
+- `src/components/service-proposal/ServiceProposalPreview.tsx` (tableau JSX ligne ~440)
+- `src/components/service-proposal/ServiceProposalExport.tsx` (tableau HTML ligne ~366)
+- `src/components/service-proposal/ServiceProposalDataStep.tsx` (encart visuel)
 
-### Fichier modifié
-- `src/components/service-proposal/ServiceProposalDataStep.tsx`
+Aucun changement de données persistées : la valeur est purement dérivée de `totalServicesHt` et `payment_frequency` déjà stockés.
