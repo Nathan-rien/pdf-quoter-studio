@@ -179,10 +179,16 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           paymentMode: proposal.payment_mode ?? '',
           contractDuration: proposal.contract_duration ?? null,
           startDate: proposal.start_date ?? '',
-          totalServicesHt:
-            Math.round(
-              (proposal.selected_services ?? []).reduce((s, l) => s + l.amount_ht, 0) * 100,
-            ) / 100,
+          totalServicesHt: (() => {
+            const dur = proposal.contract_duration ?? null;
+            return Math.round(
+              (proposal.selected_services ?? []).reduce((s, l) => {
+                const mode = (l as any).show_price_mode ?? 'total';
+                const amt = Number(l.amount_ht) || 0;
+                return s + (mode === 'mensuel' && dur ? amt * dur : amt);
+              }, 0) * 100,
+            ) / 100;
+          })(),
         })),
 
       loadFromExport: (snapshot) =>
