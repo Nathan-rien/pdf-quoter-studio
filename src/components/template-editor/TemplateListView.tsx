@@ -31,6 +31,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function TemplateListView() {
   const [duplicateTemplate, setDuplicateTemplate] = useState<PDFTemplate | null>(null);
@@ -38,15 +45,16 @@ export function TemplateListView() {
   const [templateToDelete, setTemplateToDelete] = useState<PDFTemplate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const { 
-    allTemplates, 
+  const {
+    allTemplates,
     allVersions,
-    selectTemplate, 
+    selectTemplate,
     deleteTemplate,
-    setShouldOpenPublishDialog
+    setShouldOpenPublishDialog,
+    setTemplateTargetView,
   } = useTemplateEditorStore();
 
-  const { deleteTemplateFromDatabase } = useTemplateSync();
+  const { deleteTemplateFromDatabase, saveTemplateToDatabase } = useTemplateSync();
 
   const handleEditTemplate = (template: PDFTemplate) => {
     selectTemplate(template.id);
@@ -187,7 +195,7 @@ export function TemplateListView() {
                 </div>
               </CardHeader>
               
-              <CardContent className="pb-3">
+              <CardContent className="pb-3 space-y-3">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
@@ -198,8 +206,42 @@ export function TemplateListView() {
                       v{latestVersion.versionNumber} - {latestVersion.status === 'publie' ? 'Publié' : 'Brouillon'}
                     </Badge>
                   )}
+                  {template.targetView && (
+                    <Badge variant="outline" className="border-primary/40 text-primary">
+                      {template.targetView === 'location' ? 'Location' : 'Services'}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Vue associée :</label>
+                  <Select
+                    value={template.targetView ?? 'none'}
+                    onValueChange={async (val) => {
+                      const next = val === 'none' ? null : (val as 'location' | 'services');
+                      setTemplateTargetView(template.id, next);
+                      const updated = { ...template, targetView: next, updatedAt: new Date() };
+                      const ok = await saveTemplateToDatabase(updated);
+                      if (ok) {
+                        toast.success(
+                          next === null
+                            ? 'Template dissocié de toute vue'
+                            : `Template associé à Proposition ${next === 'location' ? 'Location' : 'Services'}`
+                        );
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Non assignée</SelectItem>
+                      <SelectItem value="location">Proposition Location</SelectItem>
+                      <SelectItem value="services">Proposition Services</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
+
               
               <CardFooter className="pt-0 gap-2">
                 <Button 

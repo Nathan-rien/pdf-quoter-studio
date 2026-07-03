@@ -37,6 +37,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   renameTemplate: (templateId: string, newName: string) => void;
   deleteTemplate: (templateId: string) => boolean;
   setTemplateActive: (templateId: string) => void;
+  setTemplateTargetView: (templateId: string, targetView: 'location' | 'services' | null) => void;
   backToList: () => void;
   
   // Getters templates
@@ -202,7 +203,8 @@ const DEFAULT_TEMPLATE: PDFTemplate = {
   createdAt: new Date('2025-01-01'),
   createdBy: 'system',
   updatedAt: new Date('2025-01-01'),
-  isActive: true
+  isActive: true,
+  targetView: null,
 };
 
 // Presse-papier (non persisté)
@@ -292,6 +294,7 @@ const deserializeDates = (data: any) => {
         ...t,
         createdAt: new Date(t.createdAt),
         updatedAt: new Date(t.updatedAt),
+        targetView: t.targetView === 'location' || t.targetView === 'services' ? t.targetView : null,
       })) || [],
       allVersions: data.state.allVersions?.map((v: any) => ({
         ...v,
@@ -350,7 +353,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       createdAt: new Date(),
       createdBy: 'user',
       updatedAt: new Date(),
-      isActive: false
+      isActive: false,
+      targetView: null,
     };
 
     const initialVersion = createInitialVersion(newTemplate.id);
@@ -376,7 +380,8 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       createdAt: new Date(),
       createdBy: 'user',
       updatedAt: new Date(),
-      isActive: false
+      isActive: false,
+      targetView: sourceTemplate.targetView ?? null,
     };
 
     // Récupérer les versions à dupliquer
@@ -478,6 +483,15 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
       }))
     }));
   },
+
+  setTemplateTargetView: (templateId, targetView) => {
+    set(state => ({
+      allTemplates: state.allTemplates.map(t =>
+        t.id === templateId ? { ...t, targetView, updatedAt: new Date() } : t
+      ),
+    }));
+  },
+
 
   backToList: () => {
     set({ viewMode: 'list', currentTemplateId: null, currentVersion: null });

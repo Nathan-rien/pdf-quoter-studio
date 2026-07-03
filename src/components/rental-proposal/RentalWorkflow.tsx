@@ -136,7 +136,7 @@ export function RentalWorkflow({ isManualEntry = false }: { isManualEntry?: bool
         return <RentalDataEditor key="step-data" />;
 
       case 'template':
-        return <TemplateSelector key="step-template" />;
+        return <TemplateSelector key="step-template" viewScope="location" />;
 
       case 'preview':
         return <RentalProposalPreview key="step-preview" />;

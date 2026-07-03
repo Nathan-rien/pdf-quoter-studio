@@ -11,7 +11,11 @@ import type { TemplateVersion } from '@/types/template-editor';
 // UUID regex for cloud IDs
 const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-export function TemplateSelector() {
+interface TemplateSelectorProps {
+  viewScope?: 'location' | 'services';
+}
+
+export function TemplateSelector({ viewScope = 'location' }: TemplateSelectorProps = {}) {
   const { selectedTemplateId, selectTemplateForProposal } = useRentalProposalStore();
   const { allTemplates, getTemplatePublishedVersion } = useTemplateEditorStore();
   const { isLoading, hasLoaded, loadVersionPages } = useTemplateSync();
@@ -19,10 +23,10 @@ export function TemplateSelector() {
   // Track requested version IDs to prevent duplicate requests
   const requestedRef = useRef(new Set<string>());
 
-  // Filtrer uniquement les templates actifs ou publiés
+  // Filtrer les templates : uniquement ceux publiés ET associés à la vue courante
   const availableTemplates = allTemplates.filter(template => {
     const version = getTemplatePublishedVersion(template.id);
-    return !!version;
+    return !!version && template.targetView === viewScope;
   });
 
   // Lazy load pages for published versions that don't have pages loaded yet
@@ -68,11 +72,11 @@ export function TemplateSelector() {
       <Card>
         <CardHeader>
           <CardTitle>Sélection du template</CardTitle>
-          <CardDescription>Aucun template publié disponible</CardDescription>
+          <CardDescription>Aucun template associé à cette vue</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Vous devez d'abord créer et publier un template dans l'éditeur de templates.
+            Aucun template publié n'est associé à la vue « Proposition {viewScope === 'location' ? 'Location' : 'Services'} ». Rendez-vous dans l'éditeur de templates pour en associer un.
           </p>
         </CardContent>
       </Card>

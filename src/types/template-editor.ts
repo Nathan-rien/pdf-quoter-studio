@@ -170,6 +170,7 @@ export interface PDFTemplate {
   createdBy: string;
   updatedAt: Date;
   isActive: boolean; // Un seul template peut être actif à la fois
+  targetView: 'location' | 'services' | null; // Vue associée au template
 }
 
 // Résultat de validation pour publication
