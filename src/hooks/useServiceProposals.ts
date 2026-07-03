@@ -7,6 +7,7 @@ export interface ServiceLine {
   label: string;
   amount_ht: number;
   scope: 'total' | 'parc';
+  show_price_mode?: 'mensuel' | 'total';
 }
 
 export interface InvestLine {
