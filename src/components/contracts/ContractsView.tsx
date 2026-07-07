@@ -327,17 +327,26 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
         </div>
       )}
 
-      <div className="space-y-4">
-        {groups.map((g) => (
-          <CommercialGroup
-            key={g.commercialId}
-            commercialId={g.commercialId}
-            commercialName={g.commercialName}
-            contracts={g.contracts}
-            onVisualize={handleVisualize}
-            autoExpandId={autoExpandId}
-          />
-        ))}
+      <div className="space-y-2">
+        {isFlatList
+          ? filteredContracts.map((c) => (
+              <ContractRow
+                key={c.id}
+                contract={c}
+                onVisualize={handleVisualize}
+                defaultExpanded={autoExpandId === c.id}
+              />
+            ))
+          : groups.map((g) => (
+              <CommercialGroup
+                key={g.commercialId}
+                commercialId={g.commercialId}
+                commercialName={g.commercialName}
+                contracts={g.contracts}
+                onVisualize={handleVisualize}
+                autoExpandId={autoExpandId}
+              />
+            ))}
       </div>
 
       <Dialog open={!!previewContract} onOpenChange={(open) => !open && handleClosePreview()}>
