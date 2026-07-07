@@ -139,12 +139,19 @@ export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () =
         if (eb == null) return -1;
         return (ea - eb) * dir;
       });
+    } else if (sortMode === 'recent') {
+      arr.sort((a, b) => {
+        const ta = new Date(a.validated_at ?? a.created_at ?? 0).getTime();
+        const tb = new Date(b.validated_at ?? b.created_at ?? 0).getTime();
+        return tb - ta;
+      });
     }
     return arr;
   }, [contracts, entityFilter, commercialFilter, searchQuery, sortMode, getCommercialById]);
 
   const hasActiveFilter = entityFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
-  const groups = groupByCommercial(filteredContracts);
+  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc';
+  const groups = isFlatList ? [] : groupByCommercial(filteredContracts);
   const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
 
   const [previewContract, setPreviewContract] = useState<Contract | null>(null);
@@ -293,16 +300,26 @@ export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () =
         </div>
       )}
 
-      <div className="space-y-4">
-        {groups.map((g) => (
-          <CommercialGroup
-            key={g.commercialId}
-            commercialName={g.commercialName}
-            contracts={g.contracts}
-            onVisualize={handleVisualize}
-            autoExpandId={autoExpandId}
-          />
-        ))}
+      <div className="space-y-2">
+        {isFlatList
+          ? filteredContracts.map((c) => (
+              <ContractRow
+                key={c.id}
+                contract={c}
+                onVisualize={handleVisualize}
+                defaultExpanded={autoExpandId === c.id}
+                hideFinancialPartner
+              />
+            ))
+          : groups.map((g) => (
+              <CommercialGroup
+                key={g.commercialId}
+                commercialName={g.commercialName}
+                contracts={g.contracts}
+                onVisualize={handleVisualize}
+                autoExpandId={autoExpandId}
+              />
+            ))}
       </div>
 
       <Dialog open={!!previewContract} onOpenChange={(open) => !open && handleClosePreview()}>
