@@ -87,9 +87,13 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const proposalQuarterlyRent = !isQuick && proposalRent?.quarterly != null ? proposalRent.quarterly : null;
   const validManualMonthlyRent = manualRentNumber != null && !Number.isNaN(manualRentNumber) ? manualRentNumber : null;
   const validManualQuarterlyRent = manualQuarterlyNumber != null && !Number.isNaN(manualQuarterlyNumber) ? manualQuarterlyNumber : null;
-  const monthlyRent: number | null = proposalMonthlyRent ?? validManualMonthlyRent ?? contract.monthly_rent_ht ?? null;
+  const quickMonthlyBase = validManualMonthlyRent ?? contract.monthly_rent_ht ?? null;
+  const quickQuarterlyBase = validManualQuarterlyRent ?? contract.quarterly_rent_ht ?? null;
+  const monthlyRent: number | null = isQuick
+    ? (quickMonthlyBase ?? (quickQuarterlyBase != null ? Math.round((quickQuarterlyBase / 3) * 100) / 100 : null))
+    : (proposalMonthlyRent ?? validManualMonthlyRent ?? contract.monthly_rent_ht ?? null);
   const quarterlyRent: number | null = isQuick
-    ? (validManualQuarterlyRent ?? contract.quarterly_rent_ht ?? null)
+    ? (quickQuarterlyBase ?? (quickMonthlyBase != null ? calculateLoyerTrimestriel(quickMonthlyBase) ?? Math.round(quickMonthlyBase * 3 * 100) / 100 : null))
     : (proposalQuarterlyRent ?? (monthlyRent != null ? calculateLoyerTrimestriel(monthlyRent) ?? monthlyRent * 3 : null));
   const displayedAmount = paymentFrequency === 'trimestriel' ? quarterlyRent : monthlyRent;
   const hasProposalRent = !isQuick && (proposalRent?.monthly != null || proposalRent?.quarterly != null);
