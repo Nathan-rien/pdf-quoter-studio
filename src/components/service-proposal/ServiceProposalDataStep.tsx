@@ -61,30 +61,6 @@ function ServiceLineRow({ line, onUpdate, onRemove }: ServiceLineRowProps) {
           total
         </button>
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => onUpdate({ ...line, scope: 'total' })}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-            line.scope === 'total'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          total
-        </button>
-        <button
-          type="button"
-          onClick={() => onUpdate({ ...line, scope: 'parc' })}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-            line.scope === 'parc'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          /parc
-        </button>
-      </div>
       <button
         type="button"
         onClick={onRemove}
