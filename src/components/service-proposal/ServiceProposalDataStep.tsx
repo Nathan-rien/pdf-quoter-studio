@@ -61,30 +61,6 @@ function ServiceLineRow({ line, onUpdate, onRemove }: ServiceLineRowProps) {
           total
         </button>
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => onUpdate({ ...line, scope: 'total' })}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-            line.scope === 'total'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          total
-        </button>
-        <button
-          type="button"
-          onClick={() => onUpdate({ ...line, scope: 'parc' })}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-            line.scope === 'parc'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          /parc
-        </button>
-      </div>
       <button
         type="button"
         onClick={onRemove}
@@ -166,11 +142,10 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
             </div>
           ) : (
             <div>
-              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 text-xs text-muted-foreground font-medium pb-2 border-b">
+              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-3 text-xs text-muted-foreground font-medium pb-2 border-b">
                 <span>Service</span>
                 <span className="text-right">Montant HT</span>
                 <span className="text-center">Afficher</span>
-                <span className="text-center">Scope</span>
                 <span />
               </div>
               {data.selected_services.map((line, idx) => (
