@@ -142,11 +142,10 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
             </div>
           ) : (
             <div>
-              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 text-xs text-muted-foreground font-medium pb-2 border-b">
+              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-3 text-xs text-muted-foreground font-medium pb-2 border-b">
                 <span>Service</span>
                 <span className="text-right">Montant HT</span>
                 <span className="text-center">Afficher</span>
-                <span className="text-center">Scope</span>
                 <span />
               </div>
               {data.selected_services.map((line, idx) => (
