@@ -1,28 +1,28 @@
 ## Objectif
 
-Sur la ligne repliée d'un contrat rapide, afficher les mêmes informations que sur un contrat normal : loyer **Mensuel** + **Trimestriel** (avec mise en évidence de la périodicité sélectionnée), partenaire financier, durée, date de fin, PDF joint, etc.
+Quand le tri est **« Plus récents »** (ou « Échéance croissante/décroissante »), afficher une **liste plate** de contrats triés globalement, sans regroupement par commercial. Le regroupement par commercial reste actif uniquement quand aucun tri explicite n'est demandé… en pratique, il faut le retirer dès qu'un mode de tri est sélectionné.
 
-Aujourd'hui les contrats rapides n'affichent ni le mensuel ni le trimestriel dans le résumé, même quand les montants ont été saisis.
+**Décision retenue** : dès qu'un tri est actif dans la liste (`recent`, `echeance-asc`, `echeance-desc`), on n'affiche plus les entêtes de commercial — un flux plat trié. Le regroupement par commercial n'existait que pour l'organisation visuelle, il masquait le vrai ordre chronologique.
 
-## Fichier modifié
+## Fichiers modifiés
 
-`src/components/contracts/ContractRow.tsx`
+- `src/components/contracts/ContractsView.tsx`
+- `src/components/service-proposal/ServiceContractsView.tsx`
 
-## Changements
+## Changements (identiques dans les deux fichiers)
 
-1. **Calcul du trimestriel pour les contrats rapides** (ligne ~91-93)
-   - Aujourd'hui : `quarterlyRent` = uniquement la valeur manuelle trimestrielle saisie.
-   - Nouveau : si l'utilisateur n'a saisi que le mensuel, calculer automatiquement le trimestriel (`calculateLoyerTrimestriel(monthly) ?? monthly * 3`), comme pour un contrat normal. Idem inverse : si seul le trimestriel est saisi, en déduire le mensuel (`quarterly / 3`) pour l'affichage.
+1. **Tri chronologique global** dans le `useMemo` : ajouter le cas `sortMode === 'recent'` qui trie par `validated_at` (ou `created_at` en fallback) DESC. Les contrats rapides restent mêlés aux autres — ils portent leur propre `validated_at`.
 
-2. **Affichage du bloc Mensuel/Trimestriel dans le header** (lignes 239-249)
-   - La condition `monthlyRent != null` reste, mais grâce au point 1 elle se déclenchera dès qu'un des deux montants est renseigné sur un contrat rapide.
-   - Aucune autre modification visuelle nécessaire : le même rendu (« Mensuel X € · Trimestriel Y € » avec surlignage de la périodicité active) s'appliquera automatiquement aux contrats rapides.
+2. **Rendu conditionnel** : remplacer la section `groups.map(...)` par :
+   - Si `sortMode !== 'recent'` (ancien comportement conservé pour le futur) → afficher les groupes commerciaux comme aujourd'hui.
+   - Sinon → afficher directement `filteredContracts.map(c => <ContractRow ... />)` en liste plate, sans entête « Contrats rapides » / « Nom du commercial ».
 
-3. **Ligne secondaire template/description** (ligne 258-260)
-   - Pour un contrat rapide, `template_name` est vide → afficher à la place `contract.client_name` complémentaire n'a pas de sens. On garde le comportement actuel (rien) — le badge « CONTRAT RAPIDE » à droite joue déjà ce rôle informatif.
+   Comme le tri par défaut est `recent`, la vue par défaut devient plate. Les tris `echeance-asc/desc` restent également plats (déjà attendu par l'utilisateur puisque c'est un tri global).
+
+3. **Petit indicateur visuel** : chaque `ContractRow` affiche déjà le nom du commercial dans son propre contenu (via `commercial_name`/badge « Contrat rapide »), donc aucune info n'est perdue en supprimant l'entête de groupe.
 
 ## Hors périmètre
 
-- Pas de changement de logique métier (calculs, persistance).
-- Pas de modification de la vue étendue (formulaire d'édition) — elle est déjà cohérente.
-- Pas de changement backend / migration.
+- Pas de changement dans `ContractRow.tsx`.
+- Pas de suppression de la fonction `groupByCommercial` / composant `CommercialGroup` (conservés au cas où l'on veuille un mode « groupé » plus tard).
+- Aucun changement backend.
