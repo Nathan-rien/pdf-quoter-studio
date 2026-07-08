@@ -311,9 +311,6 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             </Button>
           </>
         )}
-        {isQuick && (
-          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Contrat rapide</Badge>
-        )}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
