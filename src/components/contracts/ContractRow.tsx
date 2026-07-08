@@ -240,7 +240,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
           <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <CalendarIcon className="h-3 w-3" />
-              {format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
+              {contract.implementation_month
+                ? format(parseISO(contract.implementation_month), 'dd/MM/yyyy', { locale: fr })
+                : format(parseISO(contract.validated_at), 'dd/MM/yyyy', { locale: fr })}
             </span>
             {monthlyRent != null && (
               <span className="flex items-center gap-1">
