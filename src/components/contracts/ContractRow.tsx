@@ -464,59 +464,39 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {!hideFinancialPartner && (
             <div className="space-y-1.5">
               <Label className="text-xs">Partenaire financier</Label>
-              {isQuick ? (
-                <Input
-                  value={financialPartner}
-                  onChange={(e) => setFinancialPartner(e.target.value)}
-                  placeholder="Ex : Grenke 1"
-                  className="h-9 text-sm"
-                />
-              ) : (
-                <Select value={financialPartner} onValueChange={setFinancialPartner}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Sélectionner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FINANCIAL_PARTNERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select value={financialPartner} onValueChange={setFinancialPartner}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FINANCIAL_PARTNERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             )}
             <div className="space-y-1.5">
               <Label className="text-xs">Durée (mois)</Label>
-              {isQuick ? (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={DURATIONS.includes(Number(durationMonths)) ? durationMonths : ''}
+                  onValueChange={setDurationMonths}
+                >
+                  <SelectTrigger className="h-9 text-sm flex-1">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <Input
                   type="number"
                   min={1}
                   value={durationMonths}
                   onChange={(e) => setDurationMonths(e.target.value)}
-                  placeholder="Ex : 48"
-                  className="h-9 text-sm"
+                  placeholder="Autre"
+                  className="w-24 h-9 text-sm"
                 />
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={DURATIONS.includes(Number(durationMonths)) ? durationMonths : ''}
-                    onValueChange={setDurationMonths}
-                  >
-                    <SelectTrigger className="h-9 text-sm flex-1">
-                      <SelectValue placeholder="Sélectionner" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DURATIONS.map((d) => <SelectItem key={d} value={String(d)}>{d} mois</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={durationMonths}
-                    onChange={(e) => setDurationMonths(e.target.value)}
-                    placeholder="Autre"
-                    className="w-24 h-9 text-sm"
-                  />
-                </div>
-              )}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Périodicité</Label>
