@@ -259,11 +259,34 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             )}
             {contract.attachment_url && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />PDF joint</span>}
           </div>
-          {contract.template_name && (
-            <div className="text-[11px] text-muted-foreground">{contract.template_name}</div>
+          {(contract.template_name || isQuick) && (
+            <div className="text-[11px] text-muted-foreground">{contract.template_name ?? 'Contrat rapide'}</div>
           )}
         </div>
-        {!isQuick && (
+        {isQuick ? (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0 disabled:opacity-40"
+              title={contract.attachment_url ? 'Visualiser le PDF joint' : 'Aucune proposition ni PDF joint'}
+              disabled={!contract.attachment_url}
+              onClick={(e) => { e.stopPropagation(); handleDownloadAttachment(); }}
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0 disabled:opacity-40"
+              title={contract.attachment_url ? 'Télécharger le PDF joint' : 'Aucune proposition ni PDF joint'}
+              disabled={!contract.attachment_url}
+              onClick={(e) => { e.stopPropagation(); handleDownloadAttachment(); }}
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          </>
+        ) : (
           <>
             <Button
               variant="ghost"
