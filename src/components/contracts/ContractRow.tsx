@@ -227,6 +227,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {contract.contract_number && (
               <Badge variant="secondary" className="font-mono text-[10px]">N° {contract.contract_number}</Badge>
             )}
+            {isQuick && (
+              <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Contrat rapide</Badge>
+            )}
             {renewing && (
               <Badge variant="warning" className="gap-1">
                 <Bell className="h-3 w-3" />
