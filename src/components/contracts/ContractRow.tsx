@@ -101,7 +101,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
 
   function handleSave() {
-    const selected = !isQuick ? commerciaux.find((c) => c.id === commercialId) : null;
+    const selected = commerciaux.find((c) => c.id === commercialId);
     const manualNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
     const manualMonthlyValue = manualNumber != null && !Number.isNaN(manualNumber)
       ? Math.round(manualNumber * 100) / 100
@@ -113,16 +113,16 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     updateContract.mutate({
       id: contract.id,
       updates: {
-        client_name: isQuick ? (clientName.trim() || 'Nouveau contrat') : contract.client_name,
+        client_name: clientName.trim() || 'Nouveau contrat',
         implementation_month: implementationDate ? format(implementationDate, 'yyyy-MM-dd') : null,
         financial_partner: hideFinancialPartner ? contract.financial_partner ?? null : (financialPartner || null),
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
-        commercial_id: isQuick ? 'quick' : (commercialId || contract.commercial_id),
-        commercial_name: isQuick ? (commercialFree.trim() || null) : (selected?.nom ?? contract.commercial_name),
+        commercial_id: isQuick ? (commercialId || 'quick') : (commercialId || contract.commercial_id),
+        commercial_name: selected?.nom ?? (isQuick ? null : contract.commercial_name),
         contract_number: contractNumber.trim() || null,
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
-        quarterly_rent_ht: isQuick ? manualQuarterlyValue : contract.quarterly_rent_ht ?? null,
+        quarterly_rent_ht: hasProposalRent ? contract.quarterly_rent_ht ?? null : manualQuarterlyValue,
         cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
       },
     });
