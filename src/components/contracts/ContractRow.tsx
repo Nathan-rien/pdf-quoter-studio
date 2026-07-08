@@ -350,39 +350,28 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
       {expanded && (
         <div className="border-t border-border bg-muted/20 p-4 space-y-4">
-          {isQuick && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Client</Label>
-              <Input
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Nom du client"
-                className="h-9 text-sm"
-              />
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Client</Label>
+            <Input
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="Nom du client"
+              className="h-9 text-sm"
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Commercial en charge</Label>
-              {isQuick ? (
-                <Input
-                  value={commercialFree}
-                  onChange={(e) => setCommercialFree(e.target.value)}
-                  placeholder="Nom du commercial"
-                  className="h-9 text-sm"
-                />
-              ) : (
-                <Select value={commercialId} onValueChange={setCommercialId}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Sélectionner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortedCommerciaux.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select value={commercialId} onValueChange={setCommercialId}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedCommerciaux.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Numéro de contrat</Label>
