@@ -1920,13 +1920,11 @@ async function extractTextWithPdfJs(file: File): Promise<ExtractedTextResult> {
   const emptyResult: ExtractedTextResult = { text: '', items: [] };
   
   try {
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const workerUrl = (await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')).default;
 
     // Worker
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/legacy/build/pdf.worker.min.js',
-      import.meta.url
-    ).toString();
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
