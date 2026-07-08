@@ -383,27 +383,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">{isQuick ? 'Loyer HT' : 'Loyers HT (issus de la proposition)'}</Label>
-              {isQuick ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={manualMonthlyRent}
-                    onChange={(e) => setManualMonthlyRent(e.target.value)}
-                    placeholder="Mensuel"
-                    className="h-9 text-sm"
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={manualQuarterlyRent}
-                    onChange={(e) => setManualQuarterlyRent(e.target.value)}
-                    placeholder="Trimestriel"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              ) : hasProposalRent ? (
+              <Label className="text-xs">{hasProposalRent ? 'Loyers HT (issus de la proposition)' : 'Loyers HT'}</Label>
+              {hasProposalRent ? (
                 <div className="min-h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40 flex items-center gap-3 flex-wrap">
                   <span
                     className={cn(
@@ -430,26 +411,24 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   </span>
                 </div>
               ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={manualMonthlyRent}
-                      onChange={(e) => setManualMonthlyRent(e.target.value)}
-                      placeholder="Loyer mensuel HT"
-                      className="h-9 text-sm"
-                    />
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={manualQuarterlyRent}
-                      onChange={(e) => setManualQuarterlyRent(e.target.value)}
-                      placeholder="Loyer trimestriel HT"
-                      className="h-9 text-sm"
-                    />
-                  </div>
-                </>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualMonthlyRent}
+                    onChange={(e) => setManualMonthlyRent(e.target.value)}
+                    placeholder="Loyer mensuel HT"
+                    className="h-9 text-sm"
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualQuarterlyRent}
+                    onChange={(e) => setManualQuarterlyRent(e.target.value)}
+                    placeholder="Loyer trimestriel HT"
+                    className="h-9 text-sm"
+                  />
+                </div>
               )}
             </div>
             <div className="space-y-1.5">
