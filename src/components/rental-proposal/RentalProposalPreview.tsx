@@ -1049,14 +1049,10 @@ export function RentalProposalPreview() {
                             <span className="font-medium">{formatNumber(proposal.montantInvestissement)} € HT</span>
                           </div>
                         )}
-                        <div className="flex justify-between px-3 py-1 text-[10px]">
-                          <span>Loyer mensuel HT</span>
-                          <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
-                        </div>
-                        <div className="flex justify-between px-3 py-1 text-[10px]">
-                          <span>Loyer trimestriel HT</span>
-                          <span className="font-semibold">{formatNumber(calculations.loyerTrimestriel)} € HT</span>
-                        </div>
+                         <div className="flex justify-between px-3 py-1 text-[10px]">
+                           <span>Loyer mensuel HT</span>
+                           <span className="font-semibold">{formatNumber(calculations.loyerMensuel)} € HT</span>
+                         </div>
                         {matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null && (
                           <div className="flex justify-between px-3 py-1 text-[10px]">
                             <span>Coût locatif annuel</span>

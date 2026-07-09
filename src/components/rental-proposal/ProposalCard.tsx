@@ -208,12 +208,6 @@ export function ProposalCard({
                 <span className="font-semibold">{formatNumber(calculatedValues.loyerMensuel)} €</span>
               </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground font-medium">Loyer trimestriel HT</Label>
-              <div className="flex items-center h-9 px-2 bg-primary/10 rounded text-sm border border-primary/20">
-                <span className="font-semibold">{formatNumber(calculatedValues.loyerTrimestriel)} €</span>
-              </div>
-            </div>
             {showCoutLocatifAnnuel && (
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Coût locatif annuel</Label>

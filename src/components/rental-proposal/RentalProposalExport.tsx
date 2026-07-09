@@ -431,14 +431,10 @@ export function RentalProposalExport() {
             <td style="padding: 6px 8px;">Montant investissement</td>
             <td style="padding: 6px 8px; text-align: right;">${formatNumber(proposal.montantInvestissement)} € HT</td>
           </tr>` : ''}
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 6px 8px;">Loyer mensuel HT</td>
-            <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${formatNumber(calculations.loyerMensuel)} € HT</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 8px;">Loyer trimestriel HT</td>
-            <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${formatNumber(calculations.loyerTrimestriel)} € HT</td>
-          </tr>
+           <tr>
+             <td style="padding: 6px 8px;">Loyer mensuel HT</td>
+             <td style="padding: 6px 8px; text-align: right; font-weight: 600;">${formatNumber(calculations.loyerMensuel)} € HT</td>
+           </tr>
           ${matriceData.showCoutLocatifAnnuel && calculations.coutLocatifAnnuel !== null ? `
           <tr>
             <td style="padding: 6px 8px;">Coût locatif annuel</td>
@@ -881,10 +877,6 @@ export function RentalProposalExport() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Loyer mensuel :</span>
               <span className="font-medium text-primary">{formatNumber(calculatedValues.loyerMensuel)} €</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Loyer trimestriel :</span>
-              <span className="font-medium text-primary">{formatNumber(calculatedValues.loyerTrimestriel)} €</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Avec services :</span>
