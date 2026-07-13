@@ -67,6 +67,7 @@ export interface PDFPageConfig {
   type: PDFPageType;
   dynamicZones: DynamicZone[];
   staticElements: string[]; // Liste des éléments figés
+  documentScope?: DocumentScope; // Défaut : 'both' (compat rétro)
 }
 
 // Template complet
