@@ -232,6 +232,9 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
                 }, 0) * 100,
               ) / 100;
             })(),
+            siteAddresses: proposal.site_addresses ?? [],
+            operationalContact: proposal.operational_contact ?? { name: '', role: '', email: '', phone: '' },
+            externalProviders: proposal.external_providers ?? [],
           };
         }),
 
