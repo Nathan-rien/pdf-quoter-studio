@@ -9,6 +9,9 @@ export type PDFPageNumber = number;
 // Type de page
 export type PDFPageType = 'static' | 'dynamic_partial' | 'dynamic_conditional';
 
+// Portée du document : détermine dans quel mode (devis/contrat) la page est incluse
+export type DocumentScope = 'devis' | 'contrat' | 'both';
+
 // Type de zone dynamique
 export type DynamicZoneType =
   | 'invest_table'
