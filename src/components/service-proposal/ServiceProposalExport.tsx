@@ -552,26 +552,8 @@ export function ServiceProposalExport() {
         </div>`;
     };
 
-    const renderInterventionsTarifsZone = (zone: PositionedDynamicZone) => {
-      const tarifs: Array<[string, string]> = [
-        ['Technicien', '500 € HT'],
-        ['Administrateur', '600 € HT'],
-        ['Ingénieur serveur réseau', '900 € HT'],
-      ];
-      return `
-        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Interventions sur site en supplément :</p>
-          <table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
-            <tbody>
-              ${tarifs.map(([l, p]) => `
-                <tr>
-                  <td style="padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">${escapeText(l)}</td>
-                  <td style="padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700;">${escapeText(p)}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`;
-    };
+
+
 
     const renderOptionsSummaryZone = (zone: PositionedDynamicZone) => {
       const selected = nosOptions.filter((o) => o.selected);
