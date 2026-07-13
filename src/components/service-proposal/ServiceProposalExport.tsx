@@ -261,8 +261,8 @@ export function ServiceProposalExport() {
         case 'service_site_addresses': return 32;
         case 'service_operational_contact': return 52;
         case 'service_external_providers': return 70;
-        case 'service_interventions_tarifs': return 42;
         case 'service_options_summary': return 10;
+
         default: return 65;
       }
     };
@@ -276,7 +276,7 @@ export function ServiceProposalExport() {
         case 'service_site_addresses': return 18;
         case 'service_operational_contact': return 14;
         case 'service_external_providers': return 20;
-        case 'service_interventions_tarifs': return 18;
+
         case 'service_options_summary': return 28;
         default: return 18;
       }
@@ -473,10 +473,11 @@ export function ServiceProposalExport() {
                 <td style="width: 30%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(opt.name || '—')}</td>
                 <td style="padding: 3px 6px; color: #4b5563; border: 1px solid #e5e7eb; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
                 ${
-                  opt.showPrice !== false
+                  !zone.hidePrice && opt.showPrice !== false
                     ? `<td style="width: 22%; padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; vertical-align: top;">${opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
                     : ''
                 }
+
               </tr>`,
             )
             .join('')
@@ -552,26 +553,8 @@ export function ServiceProposalExport() {
         </div>`;
     };
 
-    const renderInterventionsTarifsZone = (zone: PositionedDynamicZone) => {
-      const tarifs: Array<[string, string]> = [
-        ['Technicien', '500 € HT'],
-        ['Administrateur', '600 € HT'],
-        ['Ingénieur serveur réseau', '900 € HT'],
-      ];
-      return `
-        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Interventions sur site en supplément :</p>
-          <table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
-            <tbody>
-              ${tarifs.map(([l, p]) => `
-                <tr>
-                  <td style="padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">${escapeText(l)}</td>
-                  <td style="padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700;">${escapeText(p)}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`;
-    };
+
+
 
     const renderOptionsSummaryZone = (zone: PositionedDynamicZone) => {
       const selected = nosOptions.filter((o) => o.selected);
@@ -595,7 +578,7 @@ export function ServiceProposalExport() {
       if (zone.type === 'service_site_addresses') return renderSiteAddressesZone(zone);
       if (zone.type === 'service_operational_contact') return renderOperationalContactZone(zone);
       if (zone.type === 'service_external_providers') return renderExternalProvidersZone(zone);
-      if (zone.type === 'service_interventions_tarifs') return renderInterventionsTarifsZone(zone);
+      
       if (zone.type === 'service_options_summary') return renderOptionsSummaryZone(zone);
       return '';
     };

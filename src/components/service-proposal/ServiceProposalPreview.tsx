@@ -314,8 +314,8 @@ export function ServiceProposalPreview() {
       case 'service_site_addresses': return 32;
       case 'service_operational_contact': return 52;
       case 'service_external_providers': return 70;
-      case 'service_interventions_tarifs': return 42;
       case 'service_options_summary': return 10;
+
       default: return 65;
     }
   };
@@ -329,7 +329,7 @@ export function ServiceProposalPreview() {
       case 'service_site_addresses': return 18;
       case 'service_operational_contact': return 14;
       case 'service_external_providers': return 20;
-      case 'service_interventions_tarifs': return 18;
+
       case 'service_options_summary': return 28;
       default: return 18;
     }
@@ -570,11 +570,12 @@ export function ServiceProposalPreview() {
                     <td style={{ padding: '3px 6px', color: '#4b5563', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', verticalAlign: 'top' }}>
                       {resolvePackDescription(opt, adminOptions)}
                     </td>
-                    {opt.showPrice !== false && (
+                    {!zone.hidePrice && opt.showPrice !== false && (
                       <td style={{ width: '22%', padding: '3px 6px', color: '#1f2937', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 700, verticalAlign: 'top' }}>
                         {opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}
                       </td>
                     )}
+
                   </tr>
                 ))}
               </tbody>
@@ -662,30 +663,8 @@ export function ServiceProposalPreview() {
       );
     }
 
-    if (zone.type === 'service_interventions_tarifs') {
-      const tarifs: Array<[string, string]> = [
-        ['Technicien', '500 € HT'],
-        ['Administrateur', '600 € HT'],
-        ['Ingénieur serveur réseau', '900 € HT'],
-      ];
-      return (
-        <div key={key} style={zoneStyle}>
-          <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '11px', fontWeight: 700, color: '#000000', margin: '0 0 4px 0' }}>
-            Interventions sur site en supplément :
-          </p>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', lineHeight: 1.2, background: 'white', border: '1px solid #e5e7eb', tableLayout: 'fixed' }}>
-            <tbody>
-              {tarifs.map(([label, price]) => (
-                <tr key={label}>
-                  <td style={{ padding: '3px 6px', background: '#f9fafb', fontWeight: 600, color: '#374151', border: '1px solid #e5e7eb' }}>{label}</td>
-                  <td style={{ padding: '3px 6px', color: '#1f2937', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 700 }}>{price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
+
+
 
     if (zone.type === 'service_options_summary') {
       const selected = nosOptions.filter((o) => o.selected);

@@ -22,7 +22,6 @@ export type DynamicZoneType =
   | 'service_site_addresses'
   | 'service_operational_contact'
   | 'service_external_providers'
-  | 'service_interventions_tarifs'
   | 'service_options_summary';
 
 // Types de zone disponibles avec leurs métadonnées
@@ -38,9 +37,9 @@ export const AVAILABLE_ZONE_TYPES: { type: DynamicZoneType; label: string; sourc
   { type: 'service_site_addresses', label: 'Adresses de sites (Services)', sourceSheet: 'client', description: 'Liste des adresses de sites d\'intervention' },
   { type: 'service_operational_contact', label: 'Contact opérationnel (Services)', sourceSheet: 'client', description: 'Bloc contact opérationnel du bénéficiaire' },
   { type: 'service_external_providers', label: 'Prestataires extérieurs (Services)', sourceSheet: 'client', description: 'Tableau des prestataires extérieurs' },
-  { type: 'service_interventions_tarifs', label: 'Tarifs interventions supplément (Services)', sourceSheet: 'fixe', description: 'Tableau fixe des tarifs interventions sur site en supplément' },
   { type: 'service_options_summary', label: 'Résumé options (Services)', sourceSheet: 'options', description: 'Résumé compact des services/packs cochés (nom seul, sans prix ni description)' }
 ];
+
 
 
 // Définition d'une zone dynamique
@@ -53,7 +52,10 @@ export interface DynamicZone {
   description: string;
   // Position personnalisable (optionnelle, en pourcentage)
   position?: { top: number; height: number };
+  // Force le masquage des prix (utilisé pour service_options sur une page "matériel")
+  hidePrice?: boolean;
 }
+
 
 // Configuration d'une page
 export interface PDFPageConfig {
