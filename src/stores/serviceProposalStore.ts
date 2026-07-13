@@ -97,6 +97,11 @@ interface ServiceProposalStoreActions {
   updateServicesInclus: (description: string) => void;
   selectTemplate: (id: string | null) => void;
   updateProposalName: (name: string) => void;
+  setStructuredClientData: (data: {
+    siteAddresses?: SiteAddress[];
+    operationalContact?: OperationalContact;
+    externalProviders?: ExternalProvider[];
+  }) => void;
   setContractData: (data: {
     selectedServices: SelectedService[];
     paymentFrequency: string;
