@@ -13,6 +13,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useValidateProposal, ProposalType } from '@/hooks/useContracts';
+import { supabase } from '@/integrations/supabase/client';
+import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 
 interface ValidateProposalButtonProps {
   proposalId: string;
@@ -59,6 +61,25 @@ export function ValidateProposalButton({
     });
     setOpen(false);
     onValidated?.(result.id);
+
+    // Background: generate the contract-mode PDF for Service proposals
+    if (proposalType === 'service') {
+      try {
+        const uploaded = await generateAndUploadServiceContractPdf({
+          proposalId,
+          contractId: result.id,
+          clientName,
+        });
+        if (uploaded) {
+          await supabase
+            .from('contracts')
+            .update({ attachment_url: uploaded.path, attachment_name: uploaded.name })
+            .eq('id', result.id);
+        }
+      } catch (err) {
+        console.error('[ValidateProposalButton] génération contrat automatique échouée', err);
+      }
+    }
   }
 
 
