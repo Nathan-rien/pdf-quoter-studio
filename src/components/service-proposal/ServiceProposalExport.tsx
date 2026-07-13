@@ -577,7 +577,7 @@ export function ServiceProposalExport() {
       if (zone.type === 'service_site_addresses') return renderSiteAddressesZone(zone);
       if (zone.type === 'service_operational_contact') return renderOperationalContactZone(zone);
       if (zone.type === 'service_external_providers') return renderExternalProvidersZone(zone);
-      if (zone.type === 'service_interventions_tarifs') return renderInterventionsTarifsZone(zone);
+      
       if (zone.type === 'service_options_summary') return renderOptionsSummaryZone(zone);
       return '';
     };
