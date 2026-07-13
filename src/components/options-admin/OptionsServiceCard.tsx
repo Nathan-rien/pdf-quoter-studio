@@ -50,8 +50,10 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
   const [showPriceEditor, setShowPriceEditor] = useState(!!option.price);
   const [priceAmount, setPriceAmount] = useState(option.price?.amount?.toString() || "");
   const [priceUnit, setPriceUnit] = useState(option.price?.unit || "€ HT / mois");
+  const [localErp, setLocalErp] = useState(option.erpReference || "");
 
   const {
+    options: allOptions,
     updateOption,
     deleteOption,
     addServiceToOption,
@@ -64,6 +66,24 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
     removeOptionPrice,
     toggleOptionActive,
   } = useOptionsAdminStore();
+
+  const isPack = option.kind === 'pack';
+  const packableOptions = allOptions.filter((o) => o.id !== option.id && (o.kind ?? 'option') === 'option');
+  const packServiceIds = option.packServiceIds ?? [];
+
+  const togglePackService = (id: string) => {
+    const next = packServiceIds.includes(id)
+      ? packServiceIds.filter((x) => x !== id)
+      : [...packServiceIds, id];
+    updateOption(option.id, { packServiceIds: next });
+  };
+
+  const handleErpBlur = () => {
+    const next = localErp.trim() || undefined;
+    if (next !== option.erpReference) {
+      updateOption(option.id, { erpReference: next });
+    }
+  };
 
   // Migrer les services pour l'affichage
   const services: ServiceItem[] = option.services.map(migrateService);
