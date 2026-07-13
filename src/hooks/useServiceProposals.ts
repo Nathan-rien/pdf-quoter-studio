@@ -18,6 +18,26 @@ export interface InvestLine {
   vtn: number;
 }
 
+export interface SiteAddress {
+  id: string;
+  label: string;
+  address: string;
+}
+
+export interface OperationalContact {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+}
+
+export interface ExternalProvider {
+  id: string;
+  name: string;
+  role: string;
+  contact: string;
+}
+
 export interface ServiceProposal {
   id: string;
   client_name: string;
@@ -38,10 +58,14 @@ export interface ServiceProposal {
   show_offer_amount: boolean;
   total_services_ht: number;
   total_invest_ht: number;
+  site_addresses?: SiteAddress[];
+  operational_contact?: OperationalContact;
+  external_providers?: ExternalProvider[];
   status: 'draft' | 'sent' | 'validated' | 'cancelled';
   created_at: string;
   updated_at: string;
 }
+
 
 type DbServiceProposal = Awaited<ReturnType<ReturnType<typeof supabase.from>['select']>>['data'] extends (infer T)[] | null ? NonNullable<T> : never;
 
