@@ -161,7 +161,12 @@ export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'c
     if (version) loadVersionPages(version.id);
   };
 
-  const templatePagesTotal = currentVersion?.pages.length ?? 0;
+  const scopeMatches = (p: any): boolean => {
+    const s: DocumentScope = p.documentScope ?? 'both';
+    return s === 'both' || s === mode;
+  };
+  const visibleTemplatePages = currentVersion?.pages.filter(scopeMatches) ?? [];
+  const templatePagesTotal = visibleTemplatePages.length;
   const totalPages = Math.max(1, templatePagesTotal);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
@@ -830,7 +835,8 @@ export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'c
 
   const renderPage = () => {
     if (currentPage >= 1 && currentPage <= templatePagesTotal) {
-      return renderTemplatePage(currentPage, currentPage);
+      const actualPageNumber = visibleTemplatePages[currentPage - 1]?.pageNumber ?? currentPage;
+      return renderTemplatePage(actualPageNumber, currentPage);
     }
     return (
       <PageFrame pageNum={currentPage}>
