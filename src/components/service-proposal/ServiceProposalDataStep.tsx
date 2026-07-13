@@ -1,10 +1,12 @@
-import { Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
+import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { ServiceLine } from '@/hooks/useServiceProposals';
-import { computeTotalServicesHt, computePeriodicRent } from '@/lib/service-proposal-totals';
+import {
+  computeTotalServicesHt,
+  computePeriodicRent,
+  nosOptionsToServiceLines,
+} from '@/lib/service-proposal-totals';
 
 export interface ServiceDataFormValues {
   selected_services: ServiceLine[];
@@ -14,148 +16,51 @@ export interface ServiceDataFormValues {
   contract_duration: number | '';
 }
 
-interface ServiceLineRowProps {
-  line: ServiceLine;
-  onUpdate: (line: ServiceLine) => void;
-  onRemove: () => void;
-}
-
-function ServiceLineRow({ line, onUpdate, onRemove }: ServiceLineRowProps) {
-  const showMode = line.show_price_mode ?? 'total';
-  return (
-    <div className="flex items-center gap-3 py-2 border-b last:border-b-0">
-      <span className="flex-1 text-sm truncate">{line.label}</span>
-      <div className="flex items-center gap-1">
-        <Input
-          type="number"
-          min={0}
-          step={0.01}
-          value={line.amount_ht || ''}
-          onChange={(e) => onUpdate({ ...line, amount_ht: parseFloat(e.target.value) || 0 })}
-          className="w-28 h-8 text-sm text-right"
-        />
-        <span className="text-sm text-muted-foreground">€</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <span className="text-xs text-muted-foreground mr-1">Afficher :</span>
-        <button
-          type="button"
-          onClick={() => onUpdate({ ...line, show_price_mode: 'mensuel' })}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-            showMode === 'mensuel'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          /mois
-        </button>
-        <button
-          type="button"
-          onClick={() => onUpdate({ ...line, show_price_mode: 'total' })}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-            showMode === 'total'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          total
-        </button>
-      </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="text-muted-foreground hover:text-destructive transition-colors"
-        title="Supprimer"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
 interface ServiceProposalDataStepProps {
   data: ServiceDataFormValues;
   onChange: (data: ServiceDataFormValues) => void;
 }
 
 export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataStepProps) {
-  const { options: allOptions } = useOptionsAdminStore();
-  const availableServices = allOptions.filter((o) => o.isActive);
+  const nosOptions = useServiceProposalStore((s) => s.nosOptions);
+  const selectedServiceLines = nosOptionsToServiceLines(nosOptions);
 
   function set<K extends keyof ServiceDataFormValues>(key: K, value: ServiceDataFormValues[K]) {
     onChange({ ...data, [key]: value });
   }
 
-  function addService(serviceId: string) {
-    const found = availableServices.find((s) => s.id === serviceId);
-    if (!found || data.selected_services.some((l) => l.service_id === serviceId)) return;
-    set('selected_services', [
-      ...data.selected_services,
-      { service_id: serviceId, label: found.title, amount_ht: 0, scope: 'total', show_price_mode: 'total' },
-    ]);
-  }
-
-  function updateService(idx: number, line: ServiceLine) {
-    const updated = [...data.selected_services];
-    updated[idx] = line;
-    set('selected_services', updated);
-  }
-
-  function removeService(idx: number) {
-    set('selected_services', data.selected_services.filter((_, i) => i !== idx));
-  }
-
-  const unselectedServices = availableServices.filter(
-    (s) => !data.selected_services.some((l) => l.service_id === s.id)
-  );
-
   const duration = typeof data.contract_duration === 'number' ? data.contract_duration : null;
-  const totalServices = computeTotalServicesHt(data.selected_services, duration);
+  const totalServices = computeTotalServicesHt(selectedServiceLines, duration);
   const periodicRent = computePeriodicRent(totalServices, duration, data.payment_frequency || null);
 
   return (
     <div className="space-y-6">
-      {/* Services */}
+      {/* Services (lecture seule — source : onglet Nos Options) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Services</h4>
-          {unselectedServices.length > 0 && (
-            <Select onValueChange={addService} value="">
-              <SelectTrigger className="w-56 h-8 text-sm">
-                <SelectValue placeholder="Ajouter un service…" />
-              </SelectTrigger>
-              <SelectContent>
-                {unselectedServices.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          <h4 className="text-sm font-medium">Services sélectionnés</h4>
+          <span className="text-xs text-muted-foreground">
+            Gestion dans l'onglet « Nos Options »
+          </span>
         </div>
 
         <div className="border rounded-lg p-3">
-          {data.selected_services.length === 0 ? (
+          {selectedServiceLines.length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-4">
-              Aucun service sélectionné.
+              Aucun service sélectionné. Rendez-vous dans l'onglet « Nos Options ».
             </div>
           ) : (
-            <div>
-              <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-3 text-xs text-muted-foreground font-medium pb-2 border-b">
-                <span>Service</span>
-                <span className="text-right">Montant HT</span>
-                <span className="text-center">Afficher</span>
-                <span />
-              </div>
-              {data.selected_services.map((line, idx) => (
-                <ServiceLineRow key={line.service_id} line={line} onUpdate={(l) => updateService(idx, l)} onRemove={() => removeService(idx)} />
+            <ul className="divide-y">
+              {selectedServiceLines.map((line) => (
+                <li key={line.service_id} className="py-2 text-sm">
+                  {line.label || <span className="text-muted-foreground italic">(sans nom)</span>}
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
 
-        {data.selected_services.length > 0 && (
+        {selectedServiceLines.length > 0 && (
           <div className="flex flex-col items-end gap-2">
             <div className="text-sm font-medium">
               Total services : {totalServices.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} € HT
@@ -181,7 +86,6 @@ export function ServiceProposalDataStep({ data, onChange }: ServiceProposalDataS
           </div>
         )}
       </div>
-
 
       {/* Modalités */}
       <div className="space-y-4">
