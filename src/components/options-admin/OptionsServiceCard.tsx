@@ -155,6 +155,11 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
                     {option.title}
                   </span>
                 )}
+                {isPack && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-primary/10 text-primary border border-primary/30">
+                    Pack
+                  </span>
+                )}
                 {(option.subtitle || isEditingSubtitle) && (
                   <>
                     {isEditingSubtitle ? (
