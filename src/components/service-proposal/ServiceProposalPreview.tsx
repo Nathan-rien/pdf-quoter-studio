@@ -11,7 +11,9 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
+import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
+import { resolvePackDescription } from '@/lib/pack-description';
 import {
   CANVAS_DISPLAY_MAX_WIDTH,
   PREVIEW_FONT_SCALE,
@@ -554,7 +556,7 @@ export function ServiceProposalPreview() {
                       {opt.name || '—'}
                     </td>
                     <td style={{ padding: '3px 6px', color: '#4b5563', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', verticalAlign: 'top' }}>
-                      {opt.description || ''}
+                      {resolvePackDescription(opt, adminOptions)}
                     </td>
                     {opt.showPrice !== false && (
                       <td style={{ width: '22%', padding: '3px 6px', color: '#1f2937', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 700, verticalAlign: 'top' }}>
