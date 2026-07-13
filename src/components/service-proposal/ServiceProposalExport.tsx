@@ -165,6 +165,7 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
               commercialData,
               lignesData,
               selectedTemplateId: effectiveTemplateId,
+              activeTemplateId: activeTemplate?.id ?? null,
               proposalName,
               totalInvest,
               selectedServices,
@@ -173,6 +174,19 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
               contractDuration,
               startDate,
               totalServicesHt,
+              nosOptions,
+              siteAddresses,
+              operationalContact,
+              externalProviders,
+              selectedCommercial: selectedCommercial
+                ? {
+                    nom: selectedCommercial.nom,
+                    telephone: selectedCommercial.telephone,
+                    email: selectedCommercial.email,
+                    adresse: selectedCommercial.adresse,
+                  }
+                : null,
+              entityLabel,
             }
           : null;
 
