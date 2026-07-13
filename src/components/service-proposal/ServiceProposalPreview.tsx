@@ -37,7 +37,7 @@ import type {
   IconContent,
   TemplateVersion,
 } from '@/types/template-editor';
-import type { DynamicZone, PDFPageNumber } from '@/types/pdf-template';
+import type { DynamicZone, PDFPageNumber, DocumentScope } from '@/types/pdf-template';
 
 const TEMPLATE_PAGES_BEFORE = 3;
 const SERVICE_ZONE_GAP_PERCENT = 1.25;
@@ -55,7 +55,7 @@ const formatNumber = (value: number | null | undefined) => {
   }).format(value);
 };
 
-export function ServiceProposalPreview() {
+export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const clientData = useServiceProposalStore((s) => s.clientData);
