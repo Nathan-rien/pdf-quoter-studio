@@ -8,7 +8,7 @@ export const FRAIS_DOSSIER: Record<string, number> = {
   'Franfinance 1': 118,
   'Olinn 2': 135,
   'BNP VR 2': 0,
-  'BNP Credit Bail 1': 0,
+  'BNP Crédit Bail 1': 0,
   'Olinn 2 PC Leno/HP/Dell': 135,
   'Olinn 2 PC autre marque': 135,
   'Olinn 2 Serveurs': 135,
@@ -23,7 +23,17 @@ export const FRAIS_DOSSIER: Record<string, number> = {
  */
 export function getFraisDossier(refinanceur: string | null): number | null {
   if (!refinanceur) return null;
-  return FRAIS_DOSSIER[refinanceur] ?? null;
+  const key = normalizeRefinanceur(refinanceur);
+  return FRAIS_DOSSIER[key] ?? null;
+}
+
+// Alias de compatibilité pour les anciennes valeurs enregistrées
+const REFINANCEUR_ALIASES: Record<string, string> = {
+  'BNP Credit Bail 1': 'BNP Crédit Bail 1',
+};
+
+export function normalizeRefinanceur(refinanceur: string): string {
+  return REFINANCEUR_ALIASES[refinanceur] ?? refinanceur;
 }
 
 // Mapping des conditions de fin de contrat par refinanceur
@@ -40,7 +50,7 @@ export const CONDITION_FIN_CONTRAT: Record<string, string> = {
   'Lixxbail 1': 'Cession client possible',
   'Grenke 1': 'Cession client possible',
   'Franfinance 1': 'Cession client possible',
-  'BNP Credit Bail 1': 'Cession client possible',
+  'BNP Crédit Bail 1': 'Cession client possible',
   'Olinn 1 3D dental': 'Cession client possible',
 };
 
@@ -51,5 +61,5 @@ export const CONDITION_FIN_CONTRAT: Record<string, string> = {
  */
 export function getConditionFinContrat(refinanceur: string | null): string | null {
   if (!refinanceur) return null;
-  return CONDITION_FIN_CONTRAT[refinanceur] ?? null;
+  return CONDITION_FIN_CONTRAT[normalizeRefinanceur(refinanceur)] ?? null;
 }
