@@ -311,6 +311,9 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
         startDate: state.startDate,
         totalServicesHt: state.totalServicesHt,
         nosOptions: state.nosOptions,
+        siteAddresses: state.siteAddresses,
+        operationalContact: state.operationalContact,
+        externalProviders: state.externalProviders,
       }),
     }
   )
