@@ -68,6 +68,8 @@ export function EditorSidebar() {
     selectedPageNumber, 
     setSelectedPage,
     currentVersion,
+    currentTemplateId,
+    allTemplates,
     editorMode,
     addElementMode,
     selectedShapeType,
@@ -79,11 +81,14 @@ export function EditorSidebar() {
     addPage,
     deletePage,
     canDeletePage,
-    addLogoToAllPages
+    addLogoToAllPages,
+    setPageDocumentScope,
   } = useTemplateEditorStore();
 
   const pages = currentVersion?.pages || [];
   const isEditable = editorMode === 'edit' && currentVersion?.status === 'brouillon';
+  const currentTemplate = allTemplates.find((t) => t.id === currentTemplateId);
+  const isContratCadreServices = currentTemplate?.name === 'Contrat Cadre Services';
 
   const handleShapeClick = (shapeType: ShapeType) => {
     if (!isEditable) return;
