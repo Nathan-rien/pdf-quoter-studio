@@ -50,6 +50,9 @@ export interface ServiceProposalStoreState {
   startDate: string;
   totalServicesHt: number;
   nosOptions: OptionService[];
+  siteAddresses: SiteAddress[];
+  operationalContact: OperationalContact;
+  externalProviders: ExternalProvider[];
 }
 
 const DEFAULT_SERVICES_INCLUS_DESCRIPTION =
