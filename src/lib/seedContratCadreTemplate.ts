@@ -107,8 +107,7 @@ function buildPages() {
         { id: "service_conditions_page2", pageNumber: 2, type: "service_conditions", sourceSheet: "données", isRequired: false, description: "Modalités de règlement", position: { top: 65, height: 24 } },
       ],
       staticElements: [],
-
-
+    },
     // ================== PAGE 3 — MATÉRIEL ==================
     {
       pageNumber: 3,
@@ -122,7 +121,8 @@ function buildPages() {
       ],
       dynamicZones: [
         { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 12, height: 40 } },
-        { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées", position: { top: 55, height: 35 } },
+        { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées (sans prix)", position: { top: 55, height: 35 }, hidePrice: true },
+
       ],
       staticElements: [],
     },
