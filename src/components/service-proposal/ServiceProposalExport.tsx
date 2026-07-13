@@ -252,27 +252,35 @@ export function ServiceProposalExport() {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 
-    const getFallbackZoneTop = (zone: DynamicZone): number =>
-      zone.type === 'service_client_info'
-        ? 82
-        : zone.type === 'service_conditions'
-          ? 10
-          : zone.type === 'service_invest_table'
-            ? 5
-            : zone.type === 'service_options'
-              ? 55
-              : 65;
+    const getFallbackZoneTop = (zone: DynamicZone): number => {
+      switch (zone.type) {
+        case 'service_client_info': return 82;
+        case 'service_conditions': return 65;
+        case 'service_invest_table': return 12;
+        case 'service_options': return 55;
+        case 'service_site_addresses': return 32;
+        case 'service_operational_contact': return 52;
+        case 'service_external_providers': return 70;
+        case 'service_interventions_tarifs': return 42;
+        case 'service_options_summary': return 10;
+        default: return 65;
+      }
+    };
 
-    const getFallbackZoneHeight = (zone: DynamicZone): number =>
-      zone.type === 'service_client_info'
-        ? 10
-        : zone.type === 'service_conditions'
-          ? 16
-          : zone.type === 'service_invest_table'
-            ? 30
-            : zone.type === 'service_options'
-              ? 18
-              : 18;
+    const getFallbackZoneHeight = (zone: DynamicZone): number => {
+      switch (zone.type) {
+        case 'service_client_info': return 10;
+        case 'service_conditions': return 21;
+        case 'service_invest_table': return 30;
+        case 'service_options': return 18;
+        case 'service_site_addresses': return 18;
+        case 'service_operational_contact': return 14;
+        case 'service_external_providers': return 20;
+        case 'service_interventions_tarifs': return 18;
+        case 'service_options_summary': return 28;
+        default: return 18;
+      }
+    };
 
     const getZoneTop = (zone: DynamicZone): number => zone.position?.top ?? getFallbackZoneTop(zone);
     const getZoneMinHeight = (zone: DynamicZone): number => zone.position?.height ?? getFallbackZoneHeight(zone);
