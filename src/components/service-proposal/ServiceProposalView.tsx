@@ -471,7 +471,11 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
     entity: '',
     commercial_id: proposal.commercial_id ?? '',
     commercial_name: proposal.commercial_name ?? '',
+    site_addresses: proposal.site_addresses ?? [],
+    operational_contact: proposal.operational_contact ?? { ...DEFAULT_OPERATIONAL_CONTACT },
+    external_providers: proposal.external_providers ?? [],
   });
+
   const [dataForm, setDataForm] = useState<ServiceDataFormValues>({
     selected_services: proposal.selected_services ?? [],
     payment_frequency: proposal.payment_frequency ?? '',
