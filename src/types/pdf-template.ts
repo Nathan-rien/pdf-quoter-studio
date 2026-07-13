@@ -18,7 +18,12 @@ export type DynamicZoneType =
   | 'service_invest_table'
   | 'service_conditions'
   | 'service_signature'
-  | 'service_options';
+  | 'service_options'
+  | 'service_site_addresses'
+  | 'service_operational_contact'
+  | 'service_external_providers'
+  | 'service_interventions_tarifs'
+  | 'service_options_summary';
 
 // Types de zone disponibles avec leurs métadonnées
 export const AVAILABLE_ZONE_TYPES: { type: DynamicZoneType; label: string; sourceSheet: string; description: string }[] = [
@@ -29,8 +34,14 @@ export const AVAILABLE_ZONE_TYPES: { type: DynamicZoneType; label: string; sourc
   { type: 'service_invest_table', label: 'Tableau Produits (Services)', sourceSheet: 'invest_services', description: 'Tableau des lignes produits et services' },
   { type: 'service_conditions', label: 'Conditions Contrat', sourceSheet: 'données', description: 'Durée, date démarrage, périodicité, mode règlement, services souscrits' },
   { type: 'service_signature', label: 'Bloc Signature', sourceSheet: 'client', description: 'Bloc de signature avec noms du commercial et du client' },
-  { type: 'service_options', label: 'Options disponibles (Services)', sourceSheet: 'options', description: 'Liste des options disponibles sélectionnées' }
+  { type: 'service_options', label: 'Options disponibles (Services)', sourceSheet: 'options', description: 'Liste des options disponibles sélectionnées (détail complet)' },
+  { type: 'service_site_addresses', label: 'Adresses de sites (Services)', sourceSheet: 'client', description: 'Liste des adresses de sites d\'intervention' },
+  { type: 'service_operational_contact', label: 'Contact opérationnel (Services)', sourceSheet: 'client', description: 'Bloc contact opérationnel du bénéficiaire' },
+  { type: 'service_external_providers', label: 'Prestataires extérieurs (Services)', sourceSheet: 'client', description: 'Tableau des prestataires extérieurs' },
+  { type: 'service_interventions_tarifs', label: 'Tarifs interventions supplément (Services)', sourceSheet: 'fixe', description: 'Tableau fixe des tarifs interventions sur site en supplément' },
+  { type: 'service_options_summary', label: 'Résumé options (Services)', sourceSheet: 'options', description: 'Résumé compact des services/packs cochés (nom seul, sans prix ni description)' }
 ];
+
 
 // Définition d'une zone dynamique
 export interface DynamicZone {
