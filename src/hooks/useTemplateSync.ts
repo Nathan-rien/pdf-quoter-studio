@@ -277,7 +277,9 @@ export function useTemplateSync() {
           pages = data.pages.map((page: any) => ({
             pageNumber: page.pageNumber as PDFPageNumber,
             elements: page.elements || [],
-            dynamicZones: page.dynamicZones || []
+            dynamicZones: page.dynamicZones || [],
+            documentScope: page.documentScope,
+            ...(page.title ? { title: page.title } : {}),
           }));
         } else {
           pages = [];
