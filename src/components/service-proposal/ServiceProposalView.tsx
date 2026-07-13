@@ -247,7 +247,7 @@ function ProposalRow({
           </div>
 
           <div>
-            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Invest</h5>
+            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Matériel</h5>
             {proposal.invest_lines.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune ligne</p>
             ) : (
