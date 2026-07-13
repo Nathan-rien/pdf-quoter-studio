@@ -367,8 +367,11 @@ export type Database = {
       options_services: {
         Row: {
           created_at: string
+          erp_reference: string | null
           id: string
           is_active: boolean
+          kind: string
+          pack_service_ids: string[]
           price: Json | null
           services: Json
           sort_order: number
@@ -378,8 +381,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          erp_reference?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
+          pack_service_ids?: string[]
           price?: Json | null
           services?: Json
           sort_order?: number
@@ -389,8 +395,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          erp_reference?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
+          pack_service_ids?: string[]
           price?: Json | null
           services?: Json
           sort_order?: number
