@@ -582,13 +582,16 @@ export type Database = {
           commercial_name: string | null
           contract_duration: number | null
           created_at: string
+          external_providers: Json
           id: string
           invest_lines: Json | null
+          operational_contact: Json
           payment_frequency: string | null
           payment_mode: string | null
           selected_services: Json | null
           show_invest_price: boolean | null
           show_offer_amount: boolean | null
+          site_addresses: Json
           start_date: string | null
           status: string
           total_invest_ht: number | null
@@ -606,13 +609,16 @@ export type Database = {
           commercial_name?: string | null
           contract_duration?: number | null
           created_at?: string
+          external_providers?: Json
           id?: string
           invest_lines?: Json | null
+          operational_contact?: Json
           payment_frequency?: string | null
           payment_mode?: string | null
           selected_services?: Json | null
           show_invest_price?: boolean | null
           show_offer_amount?: boolean | null
+          site_addresses?: Json
           start_date?: string | null
           status?: string
           total_invest_ht?: number | null
@@ -630,13 +636,16 @@ export type Database = {
           commercial_name?: string | null
           contract_duration?: number | null
           created_at?: string
+          external_providers?: Json
           id?: string
           invest_lines?: Json | null
+          operational_contact?: Json
           payment_frequency?: string | null
           payment_mode?: string | null
           selected_services?: Json | null
           show_invest_price?: boolean | null
           show_offer_amount?: boolean | null
+          site_addresses?: Json
           start_date?: string | null
           status?: string
           total_invest_ht?: number | null

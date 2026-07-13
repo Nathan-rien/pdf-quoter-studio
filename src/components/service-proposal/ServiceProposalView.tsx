@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ServiceProposalClientStep, ClientData } from './ServiceProposalClientStep';
+import { ServiceProposalClientStep, ClientData, DEFAULT_OPERATIONAL_CONTACT } from './ServiceProposalClientStep';
 import { ServiceProposalDataStep, ServiceDataFormValues } from './ServiceProposalDataStep';
 import { ServiceProposalInvestStep, InvestFormValues } from './ServiceProposalInvestStep';
 import { ServiceProposalNosOptionsStep } from './ServiceProposalNosOptionsStep';
@@ -49,7 +49,11 @@ const DEFAULT_CLIENT: ClientData = {
   entity: '',
   commercial_id: '',
   commercial_name: '',
+  site_addresses: [],
+  operational_contact: { ...DEFAULT_OPERATIONAL_CONTACT },
+  external_providers: [],
 };
+
 
 const DEFAULT_DATA: ServiceDataFormValues = {
   selected_services: [],
@@ -243,7 +247,7 @@ function ProposalRow({
           </div>
 
           <div>
-            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Invest</h5>
+            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Matériel</h5>
             {proposal.invest_lines.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune ligne</p>
             ) : (
@@ -345,7 +349,7 @@ function ProposalFormShell({
         <TabsList className="w-full">
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
-          <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
+          <TabsTrigger value="invest" className="flex-1">Matériel</TabsTrigger>
           <TabsTrigger value="options" className="flex-1">
             Nos Options
             <NosOptionsBadge />
@@ -415,9 +419,13 @@ function buildPayload(
     show_offer_amount: investForm.show_offer_amount,
     total_services_ht: totalServices,
     total_invest_ht: totalInvest,
+    site_addresses: clientData.site_addresses ?? [],
+    operational_contact: clientData.operational_contact ?? { ...DEFAULT_OPERATIONAL_CONTACT },
+    external_providers: clientData.external_providers ?? [],
     status: 'draft' as const,
   };
 }
+
 
 function CreateForm({ onClose }: { onClose: () => void }) {
   const [clientData, setClientData] = useState<ClientData>(DEFAULT_CLIENT);
@@ -467,7 +475,11 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
     entity: '',
     commercial_id: proposal.commercial_id ?? '',
     commercial_name: proposal.commercial_name ?? '',
+    site_addresses: proposal.site_addresses ?? [],
+    operational_contact: proposal.operational_contact ?? { ...DEFAULT_OPERATIONAL_CONTACT },
+    external_providers: proposal.external_providers ?? [],
   });
+
   const [dataForm, setDataForm] = useState<ServiceDataFormValues>({
     selected_services: proposal.selected_services ?? [],
     payment_frequency: proposal.payment_frequency ?? '',
