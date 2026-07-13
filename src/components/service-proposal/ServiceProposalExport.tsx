@@ -54,7 +54,7 @@ type PositionedDynamicZone = DynamicZone & {
   layoutMinHeight?: number;
 };
 
-export function ServiceProposalExport() {
+export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
 
@@ -98,7 +98,11 @@ export function ServiceProposalExport() {
   const latestVersion = activeTemplate
     ? getTemplatePublishedVersion(activeTemplate.id)
     : null;
-  const totalPages = latestVersion?.pages.length || 0;
+  const visibleTemplatePages = (latestVersion?.pages ?? []).filter((p: any) => {
+    const s = p.documentScope ?? 'both';
+    return s === 'both' || s === mode;
+  });
+  const totalPages = visibleTemplatePages.length;
 
   const selectedCommercial = useMemo(() => {
     if (!commercialData.commercialId) return null;
@@ -682,7 +686,7 @@ export function ServiceProposalExport() {
 
     const allPagesHtml: string[] = [];
 
-    for (const page of latestVersion.pages) {
+    for (const page of visibleTemplatePages) {
       const nonTextElements = page.elements.filter((el) => el.type !== 'text');
       const textElements = page.elements
         .filter((el) => el.type === 'text')
