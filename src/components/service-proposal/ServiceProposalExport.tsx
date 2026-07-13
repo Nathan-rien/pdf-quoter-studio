@@ -805,7 +805,7 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
 ${allPagesHtml.join('\n')}
 </body>
 </html>`;
-  }, [latestVersion, selectedCommercial, generateDynamicContentByPage]);
+  }, [latestVersion, visibleTemplatePages, selectedCommercial, generateDynamicContentByPage]);
 
   // --- Handler téléchargement ---
   const handleDownloadPDF = async () => {
