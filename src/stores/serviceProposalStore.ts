@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ServiceProposal } from '@/hooks/useServiceProposals';
+import type { SiteAddress, OperationalContact, ExternalProvider } from '@/hooks/useServiceProposals';
 import type { OptionService } from '@/stores/rentalProposalStore';
+
 
 
 export interface ClientData {
@@ -48,6 +50,9 @@ export interface ServiceProposalStoreState {
   startDate: string;
   totalServicesHt: number;
   nosOptions: OptionService[];
+  siteAddresses: SiteAddress[];
+  operationalContact: OperationalContact;
+  externalProviders: ExternalProvider[];
 }
 
 const DEFAULT_SERVICES_INCLUS_DESCRIPTION =
@@ -80,6 +85,9 @@ const initialState: ServiceProposalStoreState = {
   startDate: '',
   totalServicesHt: 0,
   nosOptions: [],
+  siteAddresses: [],
+  operationalContact: { name: '', role: '', email: '', phone: '' },
+  externalProviders: [],
 };
 
 interface ServiceProposalStoreActions {
@@ -89,6 +97,11 @@ interface ServiceProposalStoreActions {
   updateServicesInclus: (description: string) => void;
   selectTemplate: (id: string | null) => void;
   updateProposalName: (name: string) => void;
+  setStructuredClientData: (data: {
+    siteAddresses?: SiteAddress[];
+    operationalContact?: OperationalContact;
+    externalProviders?: ExternalProvider[];
+  }) => void;
   setContractData: (data: {
     selectedServices: SelectedService[];
     paymentFrequency: string;
@@ -145,6 +158,13 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
         })),
 
       setContractData: (data) => set((state) => ({ ...state, ...data })),
+
+      setStructuredClientData: (data) =>
+        set((state) => ({
+          siteAddresses: data.siteAddresses ?? state.siteAddresses,
+          operationalContact: data.operationalContact ?? state.operationalContact,
+          externalProviders: data.externalProviders ?? state.externalProviders,
+        })),
 
       resetAll: () => set(() => ({ ...initialState })),
 
@@ -212,6 +232,9 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
                 }, 0) * 100,
               ) / 100;
             })(),
+            siteAddresses: proposal.site_addresses ?? [],
+            operationalContact: proposal.operational_contact ?? { name: '', role: '', email: '', phone: '' },
+            externalProviders: proposal.external_providers ?? [],
           };
         }),
 
@@ -231,6 +254,9 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           startDate: snapshot.startDate ?? '',
           totalServicesHt: typeof snapshot.totalServicesHt === 'number' ? snapshot.totalServicesHt : 0,
           nosOptions: Array.isArray(snapshot.nosOptions) ? snapshot.nosOptions : [],
+          siteAddresses: Array.isArray(snapshot.siteAddresses) ? snapshot.siteAddresses : [],
+          operationalContact: snapshot.operationalContact ?? initialState.operationalContact,
+          externalProviders: Array.isArray(snapshot.externalProviders) ? snapshot.externalProviders : [],
         })),
 
       addNosOption: (name, description, price, sourcePackId = null) =>
@@ -288,6 +314,9 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
         startDate: state.startDate,
         totalServicesHt: state.totalServicesHt,
         nosOptions: state.nosOptions,
+        siteAddresses: state.siteAddresses,
+        operationalContact: state.operationalContact,
+        externalProviders: state.externalProviders,
       }),
     }
   )
