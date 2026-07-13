@@ -315,6 +315,49 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
               </div>
             </div>
           </CardContent>
+              </div>
+
+              {/* Composition du pack */}
+              {isPack && (
+                <div className="pt-3 border-t border-border mt-3">
+                  <Label className="text-xs text-muted-foreground mb-2 block">
+                    Services inclus dans ce pack
+                  </Label>
+                  {packableOptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Aucune option disponible.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-48 overflow-y-auto">
+                      {packableOptions.map((o) => (
+                        <label key={o.id} className="flex items-center gap-2 text-xs cursor-pointer p-1 rounded hover:bg-muted/50">
+                          <input
+                            type="checkbox"
+                            checked={packServiceIds.includes(o.id)}
+                            onChange={() => togglePackService(o.id)}
+                            className="h-3.5 w-3.5"
+                          />
+                          <span className="truncate">{o.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Référence ERP (JAJA) — admin only */}
+              <div className="pt-3 border-t border-border mt-3 flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                  Référence ERP (JAJA)
+                </Label>
+                <Input
+                  value={localErp}
+                  onChange={(e) => setLocalErp(e.target.value)}
+                  onBlur={handleErpBlur}
+                  placeholder="Optionnel"
+                  className="h-8 text-sm max-w-xs"
+                />
+              </div>
+            </div>
+          </CardContent>
         </CollapsibleContent>
       </Collapsible>
     </Card>
