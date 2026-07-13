@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ServiceProposalClientStep, ClientData } from './ServiceProposalClientStep';
+import { ServiceProposalClientStep, ClientData, DEFAULT_OPERATIONAL_CONTACT } from './ServiceProposalClientStep';
 import { ServiceProposalDataStep, ServiceDataFormValues } from './ServiceProposalDataStep';
 import { ServiceProposalInvestStep, InvestFormValues } from './ServiceProposalInvestStep';
 import { ServiceProposalNosOptionsStep } from './ServiceProposalNosOptionsStep';
@@ -49,7 +49,11 @@ const DEFAULT_CLIENT: ClientData = {
   entity: '',
   commercial_id: '',
   commercial_name: '',
+  site_addresses: [],
+  operational_contact: { ...DEFAULT_OPERATIONAL_CONTACT },
+  external_providers: [],
 };
+
 
 const DEFAULT_DATA: ServiceDataFormValues = {
   selected_services: [],
