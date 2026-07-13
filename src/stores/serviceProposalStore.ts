@@ -251,6 +251,9 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           startDate: snapshot.startDate ?? '',
           totalServicesHt: typeof snapshot.totalServicesHt === 'number' ? snapshot.totalServicesHt : 0,
           nosOptions: Array.isArray(snapshot.nosOptions) ? snapshot.nosOptions : [],
+          siteAddresses: Array.isArray(snapshot.siteAddresses) ? snapshot.siteAddresses : [],
+          operationalContact: snapshot.operationalContact ?? initialState.operationalContact,
+          externalProviders: Array.isArray(snapshot.externalProviders) ? snapshot.externalProviders : [],
         })),
 
       addNosOption: (name, description, price, sourcePackId = null) =>
