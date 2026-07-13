@@ -32,7 +32,9 @@ import {
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
+import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
+import { resolvePackDescription } from '@/lib/pack-description';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -73,6 +75,7 @@ export function ServiceProposalExport() {
   const startDate = useServiceProposalStore((s) => s.startDate);
   const totalServicesHt = useServiceProposalStore((s) => s.totalServicesHt);
   const nosOptions = useServiceProposalStore((s) => s.nosOptions);
+  const adminOptions = useOptionsAdminStore((s) => s.options);
 
   const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } =
     useTemplateEditorStore();
@@ -457,7 +460,7 @@ export function ServiceProposalExport() {
               (opt) => `
               <tr>
                 <td style="width: 30%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(opt.name || '—')}</td>
-                <td style="padding: 3px 6px; color: #4b5563; border: 1px solid #e5e7eb; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top;">${escapeText(opt.description || '')}</td>
+                <td style="padding: 3px 6px; color: #4b5563; border: 1px solid #e5e7eb; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
                 ${
                   opt.showPrice !== false
                     ? `<td style="width: 22%; padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; vertical-align: top;">${opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
