@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Plus, Trash2, Download, Loader2 } from 'lucide-react';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
+import { buildPackDescription } from '@/lib/pack-description';
 
 export function ServiceProposalNosOptionsStep() {
   const nosOptions = useServiceProposalStore((s) => s.nosOptions);
@@ -38,18 +39,25 @@ export function ServiceProposalNosOptionsStep() {
   const handleImportSelected = () => {
     selectedAdminOptions.forEach((optionId) => {
       const option = activeAdminOptions.find((opt) => opt.id === optionId);
-      if (option) {
-        const descriptionParts = option.services.map((s) => {
-          const text = typeof s === 'string' ? s : s.text;
-          const subItems = typeof s === 'string' ? [] : s.subItems || [];
-          if (subItems.length > 0) {
-            return `${text}\n  - ${subItems.join('\n  - ')}`;
-          }
-          return text;
-        });
-        const description = descriptionParts.join('\n');
-        addNosOption(option.title, description, option.price?.amount ?? null);
+      if (!option) return;
+
+      if (option.kind === 'pack') {
+        // Compose la description à partir des services regroupés dans le pack.
+        const description = buildPackDescription(option, activeAdminOptions);
+        addNosOption(option.title, description, option.price?.amount ?? null, option.id);
+        return;
       }
+
+      const descriptionParts = option.services.map((s) => {
+        const text = typeof s === 'string' ? s : s.text;
+        const subItems = typeof s === 'string' ? [] : s.subItems || [];
+        if (subItems.length > 0) {
+          return `${text}\n  - ${subItems.join('\n  - ')}`;
+        }
+        return text;
+      });
+      const description = descriptionParts.join('\n');
+      addNosOption(option.title, description, option.price?.amount ?? null);
     });
     setSelectedAdminOptions([]);
     setIsPopoverOpen(false);

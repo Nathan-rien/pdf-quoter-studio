@@ -100,7 +100,7 @@ interface ServiceProposalStoreActions {
   resetAll: () => void;
   loadFromServiceProposal: (proposal: ServiceProposal) => void;
   loadFromExport: (snapshot: Record<string, any>) => void;
-  addNosOption: (name: string, description: string, price: number | null) => void;
+  addNosOption: (name: string, description: string, price: number | null, sourcePackId?: string | null) => void;
   updateNosOption: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
   deleteNosOption: (id: string) => void;
   toggleNosOption: (id: string) => void;
@@ -233,7 +233,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           nosOptions: Array.isArray(snapshot.nosOptions) ? snapshot.nosOptions : [],
         })),
 
-      addNosOption: (name, description, price) =>
+      addNosOption: (name, description, price, sourcePackId = null) =>
         set((state) => ({
           nosOptions: [
             ...state.nosOptions,
@@ -247,6 +247,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
               pricingScope: 'par_machine' as const,
               showPrice: true,
               selected: true,
+              sourcePackId,
             } as OptionService,
           ],
         })),

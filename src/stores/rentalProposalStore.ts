@@ -127,6 +127,7 @@ export interface OptionService {
   pricingScope: 'par_machine' | 'pour_le_parc'; // scope de tarification
   showPrice: boolean;             // afficher le montant sur le template/PDF
   selected: boolean;
+  sourcePackId?: string | null;   // id de l'admin pack d'origine (si importée depuis un pack)
 }
 
 interface PDFImportStatus {
