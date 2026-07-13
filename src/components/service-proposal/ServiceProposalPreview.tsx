@@ -72,6 +72,9 @@ export function ServiceProposalPreview() {
   const startDate = useServiceProposalStore((s) => s.startDate);
   const totalServicesHt = useServiceProposalStore((s) => s.totalServicesHt);
   const commercialData = useServiceProposalStore((s) => s.commercialData);
+  const siteAddresses = useServiceProposalStore((s) => s.siteAddresses);
+  const operationalContact = useServiceProposalStore((s) => s.operationalContact);
+  const externalProviders = useServiceProposalStore((s) => s.externalProviders);
 
   // Lire selectedTemplateId directement depuis rentalProposalStore
   // car c'est là que TemplateSelector écrit (comme dans RentalProposalPreview)
