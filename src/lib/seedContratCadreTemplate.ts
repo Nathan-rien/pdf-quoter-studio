@@ -63,6 +63,7 @@ function buildPages() {
       pageNumber: 1,
       title: "Couverture",
       type: "dynamic_partial",
+      documentScope: "both",
       elements: [
         rectEl("p1c-banner", 20, 20, 610, 40),
         textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
@@ -85,6 +86,7 @@ function buildPages() {
       pageNumber: 2,
       title: "Périmètre d'intervention (Annexe 1)",
       type: "dynamic_partial",
+      documentScope: "both",
       elements: [
         rectEl("p2p-banner", 20, 20, 610, 40),
         textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
@@ -113,6 +115,7 @@ function buildPages() {
       pageNumber: 3,
       title: "Matériel",
       type: "dynamic_partial",
+      documentScope: "both",
       elements: [
         rectEl("p3m-banner", 20, 20, 610, 40),
         textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
@@ -131,6 +134,7 @@ function buildPages() {
       pageNumber: 4,
       title: "Entre les soussignées",
       type: "dynamic_partial",
+      documentScope: "contrat",
       elements: [
         rectEl("p1-banner", 20, 20, 610, 40),
         textEl("p1-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, align: "left" }),
@@ -166,6 +170,7 @@ function buildPages() {
       pageNumber: 5,
       title: "Exposé préalable + Art. I et II",
       type: "static",
+      documentScope: "contrat",
       elements: [
         rectEl("p2-banner", 20, 20, 610, 40),
         textEl("p2-title", 30, 25, 590, 30, "EXPOSE PREALABLE", { size: 12, bold: true, align: "left" }),
@@ -203,6 +208,7 @@ function buildPages() {
       pageNumber: 6,
       title: "Art. III à V",
       type: "static",
+      documentScope: "contrat",
       elements: [
         textEl("p3-art3", 40, 50, 570, 15, "III - OBLIGATIONS GENERALES DU PRESTATAIRE", { bold: true }),
         textEl(
@@ -239,6 +245,7 @@ function buildPages() {
       pageNumber: 7,
       title: "Art. VI à VIII + Conditions particulières",
       type: "static",
+      documentScope: "contrat",
       elements: [
         textEl("p4-art6", 40, 50, 570, 15, "VI - DUREE", { bold: true }),
         textEl(
@@ -275,6 +282,7 @@ function buildPages() {
       pageNumber: 8,
       title: "Art. IX à XII",
       type: "static",
+      documentScope: "contrat",
       elements: [
         textEl("p5-art9", 40, 50, 570, 15, "IX - CLAUSES DU CONTRAT", { bold: true }),
         textEl(
@@ -320,6 +328,7 @@ function buildPages() {
       pageNumber: 9,
       title: "Signatures",
       type: "dynamic_partial",
+      documentScope: "contrat",
       elements: [
         textEl("p6-fait", 40, 50, 200, 15, "Fait à"),
         textEl("p6-le", 40, 70, 300, 15, "Le _________________________"),

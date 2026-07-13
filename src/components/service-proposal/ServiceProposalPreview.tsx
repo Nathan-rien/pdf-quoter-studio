@@ -37,7 +37,7 @@ import type {
   IconContent,
   TemplateVersion,
 } from '@/types/template-editor';
-import type { DynamicZone, PDFPageNumber } from '@/types/pdf-template';
+import type { DynamicZone, PDFPageNumber, DocumentScope } from '@/types/pdf-template';
 
 const TEMPLATE_PAGES_BEFORE = 3;
 const SERVICE_ZONE_GAP_PERCENT = 1.25;
@@ -55,7 +55,7 @@ const formatNumber = (value: number | null | undefined) => {
   }).format(value);
 };
 
-export function ServiceProposalPreview() {
+export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const clientData = useServiceProposalStore((s) => s.clientData);
@@ -161,7 +161,12 @@ export function ServiceProposalPreview() {
     if (version) loadVersionPages(version.id);
   };
 
-  const templatePagesTotal = currentVersion?.pages.length ?? 0;
+  const scopeMatches = (p: any): boolean => {
+    const s: DocumentScope = p.documentScope ?? 'both';
+    return s === 'both' || s === mode;
+  };
+  const visibleTemplatePages = currentVersion?.pages.filter(scopeMatches) ?? [];
+  const templatePagesTotal = visibleTemplatePages.length;
   const totalPages = Math.max(1, templatePagesTotal);
 
   const getStaticPageElements = (pageNumber: PDFPageNumber): EditableElement[] => {
@@ -830,7 +835,8 @@ export function ServiceProposalPreview() {
 
   const renderPage = () => {
     if (currentPage >= 1 && currentPage <= templatePagesTotal) {
-      return renderTemplatePage(currentPage, currentPage);
+      const actualPageNumber = visibleTemplatePages[currentPage - 1]?.pageNumber ?? currentPage;
+      return renderTemplatePage(actualPageNumber, currentPage);
     }
     return (
       <PageFrame pageNum={currentPage}>

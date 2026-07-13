@@ -146,6 +146,7 @@ export interface TemplatePageContent {
   pageNumber: PDFPageNumber;
   elements: EditableElement[];
   dynamicZones: DynamicZone[]; // Zones protégées - lecture seule
+  documentScope?: import('./pdf-template').DocumentScope; // Défaut : 'both'
 }
 
 // Version de template

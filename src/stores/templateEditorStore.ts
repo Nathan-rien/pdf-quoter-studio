@@ -146,6 +146,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   addPage: (title?: string, afterPageNumber?: number) => TemplatePageContent | null;
   deletePage: (pageNumber: number, forceDelete?: boolean) => boolean;
   canDeletePage: (pageNumber: number) => { canDelete: boolean; hasWarning?: boolean; reason?: string; warning?: string; dynamicZonesCount?: number };
+  setPageDocumentScope: (pageNumber: number, scope: import('@/types/pdf-template').DocumentScope) => boolean;
 
   // Gestion des zones dynamiques
   addDynamicZone: (pageNumber: number, type: DynamicZoneType, isRequired?: boolean, description?: string) => DynamicZone | null;
@@ -1929,6 +1930,21 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
 
     return { canDelete: true };
   },
+
+  setPageDocumentScope: (pageNumber, scope) => {
+    const state = get();
+    const { currentVersion } = state;
+    if (!currentVersion) return false;
+    const updatedPages = currentVersion.pages.map((p) =>
+      p.pageNumber === pageNumber ? { ...p, documentScope: scope } : p
+    );
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+    });
+    return true;
+  },
+
 
   addPage: (title = 'Nouvelle page', afterPageNumber) => {
     const state = get();
