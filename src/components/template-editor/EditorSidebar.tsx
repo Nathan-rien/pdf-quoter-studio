@@ -205,48 +205,74 @@ export function EditorSidebar() {
                   <div
                     key={page.pageNumber}
                     className={cn(
-                      "flex items-center gap-1 group",
+                      "flex flex-col gap-1 group",
                       isSelected && "ring-1 ring-primary ring-offset-1 rounded"
                     )}
                   >
-                    <Button
-                      variant={isSelected ? "secondary" : "ghost"}
-                      className="flex-1 justify-start h-auto py-1.5 px-2"
-                      onClick={() => setSelectedPage(page.pageNumber as PDFPageNumber)}
-                    >
-                      <div className="flex items-center gap-1.5 w-full">
-                        <div className={cn(
-                          "flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold shrink-0",
-                          hasDynamicZones 
-                            ? "bg-primary/10 text-primary" 
-                            : "bg-muted text-muted-foreground"
-                        )}>
-                          {page.pageNumber}
-                        </div>
-                        
-                        <div className="flex-1 text-left min-w-0">
-                          <span className="text-[10px] font-medium truncate block">
-                            {pageTitle}
-                          </span>
-                        </div>
-                        
-                        {isProtected && (
-                          <Lock className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
-                        )}
-                      </div>
-                    </Button>
-                    
-                    {/* Bouton de suppression (visible uniquement en mode édition pour les pages non protégées) */}
-                    {isEditable && deleteCheck.canDelete && (
+                    <div className="flex items-center gap-1">
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        onClick={(e) => handleDeletePageClick(page.pageNumber, e)}
-                        title="Supprimer cette page"
+                        variant={isSelected ? "secondary" : "ghost"}
+                        className="flex-1 justify-start h-auto py-1.5 px-2"
+                        onClick={() => setSelectedPage(page.pageNumber as PDFPageNumber)}
                       >
-                        <Trash2 className="h-3 w-3 text-destructive" />
+                        <div className="flex items-center gap-1.5 w-full">
+                          <div className={cn(
+                            "flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold shrink-0",
+                            hasDynamicZones 
+                              ? "bg-primary/10 text-primary" 
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {page.pageNumber}
+                          </div>
+                          
+                          <div className="flex-1 text-left min-w-0">
+                            <span className="text-[10px] font-medium truncate block">
+                              {pageTitle}
+                            </span>
+                          </div>
+                          
+                          {isProtected && (
+                            <Lock className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+                          )}
+                        </div>
                       </Button>
+                      
+                      {/* Bouton de suppression (visible uniquement en mode édition pour les pages non protégées) */}
+                      {isEditable && deleteCheck.canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={(e) => handleDeletePageClick(page.pageNumber, e)}
+                          title="Supprimer cette page"
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Portée du document (uniquement pour "Contrat Cadre Services") */}
+                    {isContratCadreServices && isSelected && (
+                      <div className="flex items-center gap-1 pl-6 pr-1">
+                        <span className="text-[9px] text-muted-foreground shrink-0">Portée :</span>
+                        <select
+                          value={(page as any).documentScope ?? 'both'}
+                          onChange={(e) => {
+                            if (!isEditable) return;
+                            setPageDocumentScope(
+                              page.pageNumber,
+                              e.target.value as 'devis' | 'contrat' | 'both'
+                            );
+                          }}
+                          disabled={!isEditable}
+                          className="flex-1 h-6 rounded border border-input bg-background text-[10px] px-1"
+                          title="Portée du document"
+                        >
+                          <option value="both">Les deux</option>
+                          <option value="devis">Devis uniquement</option>
+                          <option value="contrat">Contrat uniquement</option>
+                        </select>
+                      </div>
                     )}
                   </div>
                 );
