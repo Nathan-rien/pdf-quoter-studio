@@ -241,7 +241,7 @@ export function AccessManagement() {
       if (fields.telephone !== undefined) updatePayload.telephone = fields.telephone;
       const { error } = await supabase
         .from('pre_registered_commercials')
-        .update(updatePayload)
+        .update(updatePayload as never)
         .eq('commercial_id', commercialId);
       if (error) throw error;
       setPreRegistered(prev => prev.map(p =>

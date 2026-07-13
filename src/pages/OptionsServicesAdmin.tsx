@@ -37,6 +37,17 @@ export default function OptionsServicesAdmin() {
       title: "Nouvelle option",
       services: [{ text: "Service à définir" }],
       isActive: true,
+      kind: 'option',
+    });
+  };
+
+  const handleAddNewPack = () => {
+    addOption({
+      title: "Nouveau pack",
+      services: [],
+      isActive: true,
+      kind: 'pack',
+      packServiceIds: [],
     });
   };
 
@@ -130,6 +141,10 @@ export default function OptionsServicesAdmin() {
         <Button onClick={handleAddNewOption} className="gap-2" size="sm" disabled={isLoadingFromDB}>
           <Plus className="h-3.5 w-3.5" />
           Nouvelle option
+        </Button>
+        <Button onClick={handleAddNewPack} className="gap-2" size="sm" variant="outline" disabled={isLoadingFromDB}>
+          <Plus className="h-3.5 w-3.5" />
+          Nouveau pack
         </Button>
         <div className="flex-1" />
         <div className="relative">

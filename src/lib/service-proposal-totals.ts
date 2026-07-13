@@ -1,4 +1,27 @@
 import type { ServiceLine } from '@/hooks/useServiceProposals';
+import type { OptionService } from '@/stores/rentalProposalStore';
+
+/**
+ * Convertit les nosOptions sélectionnées en ServiceLine[] pour les calculs & payload.
+ * - amount_ht = price (mensuel) ou priceTotal (total) selon showPriceMode
+ * - show_price_mode ré-utilisé tel quel
+ */
+export function nosOptionsToServiceLines(nosOptions: OptionService[]): ServiceLine[] {
+  return nosOptions
+    .filter((o) => o.selected)
+    .map((o) => {
+      const mode: 'mensuel' | 'total' = o.showPriceMode === 'total' ? 'total' : 'mensuel';
+      const amount =
+        mode === 'total' ? (o.priceTotal ?? o.price ?? 0) : (o.price ?? 0);
+      return {
+        service_id: o.id,
+        label: o.name,
+        amount_ht: Number(amount) || 0,
+        scope: 'total' as const,
+        show_price_mode: mode,
+      };
+    });
+}
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 

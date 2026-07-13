@@ -50,8 +50,10 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
   const [showPriceEditor, setShowPriceEditor] = useState(!!option.price);
   const [priceAmount, setPriceAmount] = useState(option.price?.amount?.toString() || "");
   const [priceUnit, setPriceUnit] = useState(option.price?.unit || "€ HT / mois");
+  const [localErp, setLocalErp] = useState(option.erpReference || "");
 
   const {
+    options: allOptions,
     updateOption,
     deleteOption,
     addServiceToOption,
@@ -64,6 +66,24 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
     removeOptionPrice,
     toggleOptionActive,
   } = useOptionsAdminStore();
+
+  const isPack = option.kind === 'pack';
+  const packableOptions = allOptions.filter((o) => o.id !== option.id && (o.kind ?? 'option') === 'option');
+  const packServiceIds = option.packServiceIds ?? [];
+
+  const togglePackService = (id: string) => {
+    const next = packServiceIds.includes(id)
+      ? packServiceIds.filter((x) => x !== id)
+      : [...packServiceIds, id];
+    updateOption(option.id, { packServiceIds: next });
+  };
+
+  const handleErpBlur = () => {
+    const next = localErp.trim() || undefined;
+    if (next !== option.erpReference) {
+      updateOption(option.id, { erpReference: next });
+    }
+  };
 
   // Migrer les services pour l'affichage
   const services: ServiceItem[] = option.services.map(migrateService);
@@ -133,6 +153,11 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
                     onClick={() => setIsEditingTitle(true)}
                   >
                     {option.title}
+                  </span>
+                )}
+                {isPack && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-primary/10 text-primary border border-primary/30">
+                    Pack
                   </span>
                 )}
                 {(option.subtitle || isEditingSubtitle) && (
@@ -287,6 +312,47 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
                     Ajouter un prix
                   </Button>
                 )}
+              </div>
+
+
+              {/* Composition du pack */}
+              {isPack && (
+                <div className="pt-3 border-t border-border mt-3">
+                  <Label className="text-xs text-muted-foreground mb-2 block">
+                    Services inclus dans ce pack
+                  </Label>
+                  {packableOptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Aucune option disponible.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-48 overflow-y-auto">
+                      {packableOptions.map((o) => (
+                        <label key={o.id} className="flex items-center gap-2 text-xs cursor-pointer p-1 rounded hover:bg-muted/50">
+                          <input
+                            type="checkbox"
+                            checked={packServiceIds.includes(o.id)}
+                            onChange={() => togglePackService(o.id)}
+                            className="h-3.5 w-3.5"
+                          />
+                          <span className="truncate">{o.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Référence ERP (JAJA) — admin only */}
+              <div className="pt-3 border-t border-border mt-3 flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                  Référence ERP (JAJA)
+                </Label>
+                <Input
+                  value={localErp}
+                  onChange={(e) => setLocalErp(e.target.value)}
+                  onBlur={handleErpBlur}
+                  placeholder="Optionnel"
+                  className="h-8 text-sm max-w-xs"
+                />
               </div>
             </div>
           </CardContent>

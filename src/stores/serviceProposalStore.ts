@@ -149,47 +149,71 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
       resetAll: () => set(() => ({ ...initialState })),
 
       loadFromServiceProposal: (proposal) =>
-        set(() => ({
-          clientData: {
-            nom: proposal.client_name ?? '',
-            raisonSociale: proposal.client_company ?? '',
-            email: proposal.client_email ?? '',
-            telephone: proposal.client_phone ?? '',
-            adresse: proposal.client_address ?? '',
-            siret: proposal.client_siret ?? '',
-          },
-          commercialData: {
-            entity: null,
-            commercialId: proposal.commercial_id ?? null,
-          },
-          lignesData: proposal.invest_lines.map((line) => ({
-            id: line.id,
-            designation: line.designation,
-            quantite: line.qty,
-            prixUnitaire: line.vun,
-            totalHT: line.vtn,
-          })),
-          totalInvest:
-            Math.round(proposal.invest_lines.reduce((sum, l) => sum + l.vtn, 0) * 100) / 100,
-          servicesInclus: { description: DEFAULT_SERVICES_INCLUS_DESCRIPTION },
-          proposalName: proposal.client_company || proposal.client_name || 'Proposition Services',
-          selectedTemplateId: null,
-          selectedServices: proposal.selected_services ?? [],
-          paymentFrequency: proposal.payment_frequency ?? '',
-          paymentMode: proposal.payment_mode ?? '',
-          contractDuration: proposal.contract_duration ?? null,
-          startDate: proposal.start_date ?? '',
-          totalServicesHt: (() => {
-            const dur = proposal.contract_duration ?? null;
-            return Math.round(
-              (proposal.selected_services ?? []).reduce((s, l) => {
-                const mode = (l as any).show_price_mode ?? 'total';
-                const amt = Number(l.amount_ht) || 0;
-                return s + (mode === 'mensuel' && dur ? amt * dur : amt);
-              }, 0) * 100,
-            ) / 100;
-          })(),
-        })),
+        set((state) => {
+          const existingNos = state.nosOptions ?? [];
+          const seededNos: OptionService[] =
+            existingNos.length > 0
+              ? existingNos
+              : (proposal.selected_services ?? []).map((s) => {
+                  const mode = ((s as { show_price_mode?: string }).show_price_mode === 'total'
+                    ? 'total'
+                    : 'mensuel') as 'mensuel' | 'total';
+                  const amount = Number(s.amount_ht) || 0;
+                  return {
+                    id: s.service_id || `opt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    name: s.label,
+                    description: '',
+                    price: mode === 'mensuel' ? amount : null,
+                    priceTotal: mode === 'total' ? amount : null,
+                    showPriceMode: mode,
+                    pricingScope: 'par_machine' as const,
+                    showPrice: true,
+                    selected: true,
+                  } as OptionService;
+                });
+          return {
+            clientData: {
+              nom: proposal.client_name ?? '',
+              raisonSociale: proposal.client_company ?? '',
+              email: proposal.client_email ?? '',
+              telephone: proposal.client_phone ?? '',
+              adresse: proposal.client_address ?? '',
+              siret: proposal.client_siret ?? '',
+            },
+            commercialData: {
+              entity: null,
+              commercialId: proposal.commercial_id ?? null,
+            },
+            lignesData: proposal.invest_lines.map((line) => ({
+              id: line.id,
+              designation: line.designation,
+              quantite: line.qty,
+              prixUnitaire: line.vun,
+              totalHT: line.vtn,
+            })),
+            totalInvest:
+              Math.round(proposal.invest_lines.reduce((sum, l) => sum + l.vtn, 0) * 100) / 100,
+            servicesInclus: { description: DEFAULT_SERVICES_INCLUS_DESCRIPTION },
+            proposalName: proposal.client_company || proposal.client_name || 'Proposition Services',
+            selectedTemplateId: null,
+            selectedServices: proposal.selected_services ?? [],
+            paymentFrequency: proposal.payment_frequency ?? '',
+            paymentMode: proposal.payment_mode ?? '',
+            contractDuration: proposal.contract_duration ?? null,
+            startDate: proposal.start_date ?? '',
+            nosOptions: seededNos,
+            totalServicesHt: (() => {
+              const dur = proposal.contract_duration ?? null;
+              return Math.round(
+                (proposal.selected_services ?? []).reduce((s, l) => {
+                  const mode = (l as { show_price_mode?: string }).show_price_mode ?? 'total';
+                  const amt = Number(l.amount_ht) || 0;
+                  return s + (mode === 'mensuel' && dur ? amt * dur : amt);
+                }, 0) * 100,
+              ) / 100;
+            })(),
+          };
+        }),
 
       loadFromExport: (snapshot) =>
         set(() => ({

@@ -90,7 +90,7 @@ export function useUpdateServiceProposal() {
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<ServiceProposal, 'id' | 'created_at' | 'updated_at'>> }) => {
       const { data, error } = await supabase
         .from('service_proposals')
-        .update(updates as unknown as Record<string, unknown>)
+        .update(updates as never)
         .eq('id', id)
         .select()
         .single();

@@ -32,7 +32,7 @@ import { TemplateSelector } from '@/components/rental-proposal/TemplateSelector'
 import { ServiceProposalPreview } from './ServiceProposalPreview';
 import { ServiceProposalExport } from './ServiceProposalExport';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
-import { computeTotalServicesHt } from '@/lib/service-proposal-totals';
+import { computeTotalServicesHt, nosOptionsToServiceLines } from '@/lib/service-proposal-totals';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
@@ -108,13 +108,14 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
       totalHT: l.vtn,
     })),
   );
+  const derivedSelected = nosOptionsToServiceLines(store.nosOptions);
   store.setContractData({
-    selectedServices: dataForm.selected_services,
+    selectedServices: derivedSelected,
     paymentFrequency: dataForm.payment_frequency || '',
     paymentMode: dataForm.payment_mode || '',
     contractDuration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
     startDate: dataForm.start_date || '',
-    totalServicesHt: computeTotalServicesHt(dataForm.selected_services, dataForm.contract_duration ? Number(dataForm.contract_duration) : null),
+    totalServicesHt: computeTotalServicesHt(derivedSelected, dataForm.contract_duration ? Number(dataForm.contract_duration) : null),
   });
   store.updateProposalName(
     clientData.client_company || clientData.client_name || 'Proposition Services',
@@ -391,7 +392,9 @@ function buildPayload(
   dataForm: ServiceDataFormValues,
   investForm: InvestFormValues,
 ) {
-  const totalServices = computeTotalServicesHt(dataForm.selected_services, dataForm.contract_duration ? Number(dataForm.contract_duration) : null);
+  const nosOptions = useServiceProposalStore.getState().nosOptions;
+  const derivedSelected = nosOptionsToServiceLines(nosOptions);
+  const totalServices = computeTotalServicesHt(derivedSelected, dataForm.contract_duration ? Number(dataForm.contract_duration) : null);
   const totalInvest = investForm.invest_lines.reduce((s, l) => s + l.vtn, 0);
   return {
     client_name: clientData.client_name || 'Sans nom',
@@ -402,7 +405,7 @@ function buildPayload(
     client_siret: clientData.client_siret || null,
     commercial_id: clientData.commercial_id || '',
     commercial_name: clientData.commercial_name || null,
-    selected_services: dataForm.selected_services,
+    selected_services: derivedSelected,
     payment_frequency: (dataForm.payment_frequency || null) as 'mensuel' | 'trimestriel' | null,
     payment_mode: (dataForm.payment_mode || null) as 'prelevement' | 'virement' | 'allin' | null,
     start_date: dataForm.start_date || null,
