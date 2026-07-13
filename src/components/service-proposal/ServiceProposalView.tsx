@@ -108,13 +108,14 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
       totalHT: l.vtn,
     })),
   );
+  const derivedSelected = nosOptionsToServiceLines(store.nosOptions);
   store.setContractData({
-    selectedServices: dataForm.selected_services,
+    selectedServices: derivedSelected,
     paymentFrequency: dataForm.payment_frequency || '',
     paymentMode: dataForm.payment_mode || '',
     contractDuration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
     startDate: dataForm.start_date || '',
-    totalServicesHt: computeTotalServicesHt(dataForm.selected_services, dataForm.contract_duration ? Number(dataForm.contract_duration) : null),
+    totalServicesHt: computeTotalServicesHt(derivedSelected, dataForm.contract_duration ? Number(dataForm.contract_duration) : null),
   });
   store.updateProposalName(
     clientData.client_company || clientData.client_name || 'Proposition Services',
