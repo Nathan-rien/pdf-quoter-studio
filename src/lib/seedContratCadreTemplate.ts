@@ -63,6 +63,7 @@ function buildPages() {
       pageNumber: 1,
       title: "Couverture",
       type: "dynamic_partial",
+      documentScope: "both",
       elements: [
         rectEl("p1c-banner", 20, 20, 610, 40),
         textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
