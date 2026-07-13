@@ -104,10 +104,10 @@ export const BASE_TAUX_DATA: BaseTauxEntry[] = [
   { partenaire: 'BNP VR 2', montantMin: 1000, montantMax: 500000, dureeMois: 48, taux: 2.264333333 },
   { partenaire: 'BNP VR 2', montantMin: 1000, montantMax: 500000, dureeMois: 60, taux: 1.902333333 },
 
-  // ========== BNP Credit Bail 1 (3 lignes - MISE A JOUR) ==========
-  { partenaire: 'BNP Credit Bail 1', montantMin: 1000, montantMax: 500000, dureeMois: 36, taux: 3.027333 },
-  { partenaire: 'BNP Credit Bail 1', montantMin: 1000, montantMax: 500000, dureeMois: 48, taux: 2.344667 },
-  { partenaire: 'BNP Credit Bail 1', montantMin: 1000, montantMax: 500000, dureeMois: 60, taux: 1.934667 },
+  // ========== BNP Crédit Bail 1 (3 lignes - MISE A JOUR) ==========
+  { partenaire: 'BNP Crédit Bail 1', montantMin: 1000, montantMax: 500000, dureeMois: 36, taux: 3.027333 },
+  { partenaire: 'BNP Crédit Bail 1', montantMin: 1000, montantMax: 500000, dureeMois: 48, taux: 2.344667 },
+  { partenaire: 'BNP Crédit Bail 1', montantMin: 1000, montantMax: 500000, dureeMois: 60, taux: 1.934667 },
 
   // ========== Olinn 2 PC Leno/HP/Dell (8 lignes - MISE A JOUR) ==========
   { partenaire: 'Olinn 2 PC Leno/HP/Dell', montantMin: 25001, montantMax: 50000, dureeMois: 24, taux: 3.816 },
@@ -177,7 +177,7 @@ export const PARTENAIRES = [
   'Franfinance 1',
   'Olinn 2',
   'BNP VR 2',
-  'BNP Credit Bail 1',
+  'BNP Crédit Bail 1',
   'Olinn 2 PC Leno/HP/Dell',
   'Olinn 2 PC autre marque',
   'Olinn 2 Serveurs',
