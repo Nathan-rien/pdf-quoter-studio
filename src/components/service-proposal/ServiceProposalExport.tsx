@@ -276,7 +276,7 @@ export function ServiceProposalExport() {
         case 'service_site_addresses': return 18;
         case 'service_operational_contact': return 14;
         case 'service_external_providers': return 20;
-        case 'service_interventions_tarifs': return 18;
+
         case 'service_options_summary': return 28;
         default: return 18;
       }
