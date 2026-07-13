@@ -159,6 +159,13 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
 
       setContractData: (data) => set((state) => ({ ...state, ...data })),
 
+      setStructuredClientData: (data) =>
+        set((state) => ({
+          siteAddresses: data.siteAddresses ?? state.siteAddresses,
+          operationalContact: data.operationalContact ?? state.operationalContact,
+          externalProviders: data.externalProviders ?? state.externalProviders,
+        })),
+
       resetAll: () => set(() => ({ ...initialState })),
 
       loadFromServiceProposal: (proposal) =>
