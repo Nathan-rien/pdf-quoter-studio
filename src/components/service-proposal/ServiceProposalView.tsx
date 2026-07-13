@@ -349,7 +349,7 @@ function ProposalFormShell({
         <TabsList className="w-full">
           <TabsTrigger value="client" className="flex-1">Client</TabsTrigger>
           <TabsTrigger value="data" className="flex-1">Données</TabsTrigger>
-          <TabsTrigger value="invest" className="flex-1">Invest</TabsTrigger>
+          <TabsTrigger value="invest" className="flex-1">Matériel</TabsTrigger>
           <TabsTrigger value="options" className="flex-1">
             Nos Options
             <NosOptionsBadge />
