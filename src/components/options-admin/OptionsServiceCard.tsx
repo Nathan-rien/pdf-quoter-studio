@@ -313,9 +313,7 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
                   </Button>
                 )}
               </div>
-            </div>
-          </CardContent>
-              </div>
+
 
               {/* Composition du pack */}
               {isPack && (
