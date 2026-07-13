@@ -37,6 +37,17 @@ export default function OptionsServicesAdmin() {
       title: "Nouvelle option",
       services: [{ text: "Service à définir" }],
       isActive: true,
+      kind: 'option',
+    });
+  };
+
+  const handleAddNewPack = () => {
+    addOption({
+      title: "Nouveau pack",
+      services: [],
+      isActive: true,
+      kind: 'pack',
+      packServiceIds: [],
     });
   };
 
