@@ -493,12 +493,110 @@ export function ServiceProposalExport() {
       `;
     };
 
+    const renderSiteAddressesZone = (zone: PositionedDynamicZone) => {
+      const rows = siteAddresses.length
+        ? siteAddresses.map((s) => `
+            <tr>
+              <td style="width: 30%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(s.label || '—')}</td>
+              <td style="padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere;">${escapeText(s.address || '—')}</td>
+            </tr>`).join('')
+        : '';
+      return `
+        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Sites d'intervention :</p>
+          ${siteAddresses.length === 0
+            ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucun site renseigné</p>'
+            : `<table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;"><tbody>${rows}</tbody></table>`}
+        </div>`;
+    };
+
+    const renderOperationalContactZone = (zone: PositionedDynamicZone) => {
+      const op = operationalContact ?? { name: '', role: '', email: '', phone: '' };
+      const hasData = op.name || op.role || op.email || op.phone;
+      return `
+        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Contact opérationnel :</p>
+          ${!hasData
+            ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Non renseigné</p>'
+            : `<div style="font-size: 8px; line-height: 1.3; color: #374151; border: 1px solid #e5e7eb; background: #ffffff; border-radius: 4px; padding: 6px 8px;">
+                ${op.name ? `<p style="margin: 0; font-weight: 700; font-size: 9px; color: #1f2937;">${escapeText(op.name)}</p>` : ''}
+                ${op.role ? `<p style="margin: 1px 0;">${escapeText(op.role)}</p>` : ''}
+                ${op.email ? `<p style="margin: 1px 0;">${escapeText(op.email)}</p>` : ''}
+                ${op.phone ? `<p style="margin: 1px 0;">${escapeText(op.phone)}</p>` : ''}
+              </div>`}
+        </div>`;
+    };
+
+    const renderExternalProvidersZone = (zone: PositionedDynamicZone) => {
+      const rows = externalProviders.length
+        ? externalProviders.map((p) => `
+            <tr>
+              <td style="padding: 3px 6px; border: 1px solid #e5e7eb; vertical-align: top; font-weight: 600; color: #1f2937;">${escapeText(p.name || '—')}</td>
+              <td style="padding: 3px 6px; border: 1px solid #e5e7eb; vertical-align: top; color: #4b5563;">${escapeText(p.role || '—')}</td>
+              <td style="padding: 3px 6px; border: 1px solid #e5e7eb; vertical-align: top; color: #4b5563; overflow-wrap: anywhere;">${escapeText(p.contact || '—')}</td>
+            </tr>`).join('')
+        : '';
+      return `
+        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Prestataires extérieurs :</p>
+          ${externalProviders.length === 0
+            ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucun prestataire renseigné</p>'
+            : `<table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
+                <thead><tr style="background: #f3f4f6;">
+                  <th style="padding: 3px 6px; text-align: left; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">Nom</th>
+                  <th style="padding: 3px 6px; text-align: left; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">Rôle</th>
+                  <th style="padding: 3px 6px; text-align: left; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">Contact</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>`}
+        </div>`;
+    };
+
+    const renderInterventionsTarifsZone = (zone: PositionedDynamicZone) => {
+      const tarifs: Array<[string, string]> = [
+        ['Technicien', '500 € HT'],
+        ['Administrateur', '600 € HT'],
+        ['Ingénieur serveur réseau', '900 € HT'],
+      ];
+      return `
+        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Interventions sur site en supplément :</p>
+          <table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
+            <tbody>
+              ${tarifs.map(([l, p]) => `
+                <tr>
+                  <td style="padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">${escapeText(l)}</td>
+                  <td style="padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700;">${escapeText(p)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    };
+
+    const renderOptionsSummaryZone = (zone: PositionedDynamicZone) => {
+      const selected = nosOptions.filter((o) => o.selected);
+      return `
+        <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
+          <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Services & packs souscrits :</p>
+          ${selected.length === 0
+            ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucun élément sélectionné</p>'
+            : `<ul style="margin: 0; padding: 0 0 0 14px; font-size: 9px; line-height: 1.4; color: #1f2937;">
+                ${selected.map((o) => `<li style="margin-bottom: 2px;">${escapeText(o.name || '—')}</li>`).join('')}
+              </ul>`}
+        </div>`;
+    };
+
     const renderServiceZone = (zone: PositionedDynamicZone) => {
       if (zone.type === 'service_client_info') return renderClientZone(zone);
       if (zone.type === 'service_conditions') return renderConditionsZone(zone);
       if (zone.type === 'service_invest_table') return renderInvestZone(zone);
       if (zone.type === 'service_signature') return renderSignatureZone(zone);
       if (zone.type === 'service_options') return renderOptionsZone(zone);
+      if (zone.type === 'service_site_addresses') return renderSiteAddressesZone(zone);
+      if (zone.type === 'service_operational_contact') return renderOperationalContactZone(zone);
+      if (zone.type === 'service_external_providers') return renderExternalProvidersZone(zone);
+      if (zone.type === 'service_interventions_tarifs') return renderInterventionsTarifsZone(zone);
+      if (zone.type === 'service_options_summary') return renderOptionsSummaryZone(zone);
       return '';
     };
 
