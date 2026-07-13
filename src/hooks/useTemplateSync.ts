@@ -75,7 +75,9 @@ function dbToStoreVersion(db: DbVersion): TemplateVersion {
         pages = db.pages.map((page: any) => ({
           pageNumber: page.pageNumber as PDFPageNumber,
           elements: page.elements || [],
-          dynamicZones: page.dynamicZones || []
+          dynamicZones: page.dynamicZones || [],
+          documentScope: page.documentScope,
+          ...(page.title ? { title: page.title } : {}),
         }));
       } else {
         // Pages vides en base — ne PAS substituer par les pages par défaut (qui sont celles du template Location)
