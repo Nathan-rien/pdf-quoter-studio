@@ -419,9 +419,13 @@ function buildPayload(
     show_offer_amount: investForm.show_offer_amount,
     total_services_ht: totalServices,
     total_invest_ht: totalInvest,
+    site_addresses: clientData.site_addresses ?? [],
+    operational_contact: clientData.operational_contact ?? { ...DEFAULT_OPERATIONAL_CONTACT },
+    external_providers: clientData.external_providers ?? [],
     status: 'draft' as const,
   };
 }
+
 
 function CreateForm({ onClose }: { onClose: () => void }) {
   const [clientData, setClientData] = useState<ClientData>(DEFAULT_CLIENT);
