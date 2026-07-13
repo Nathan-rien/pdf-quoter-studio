@@ -103,6 +103,11 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
     entity: clientData.entity || null,
     commercialId: clientData.commercial_id || null,
   });
+  store.setStructuredClientData({
+    siteAddresses: clientData.site_addresses ?? [],
+    operationalContact: clientData.operational_contact ?? { name: '', role: '', email: '', phone: '' },
+    externalProviders: clientData.external_providers ?? [],
+  });
   store.setLignesData(
     investForm.invest_lines.map((l) => ({
       id: l.id,
