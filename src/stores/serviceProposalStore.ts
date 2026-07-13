@@ -85,6 +85,9 @@ const initialState: ServiceProposalStoreState = {
   startDate: '',
   totalServicesHt: 0,
   nosOptions: [],
+  siteAddresses: [],
+  operationalContact: { name: '', role: '', email: '', phone: '' },
+  externalProviders: [],
 };
 
 interface ServiceProposalStoreActions {
