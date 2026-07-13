@@ -16,6 +16,9 @@ export interface ServiceOptionDefinition {
     unit: string;
   };
   isActive: boolean;
+  kind?: 'option' | 'pack';
+  packServiceIds?: string[]; // Pour un pack : ids d'options regroupées
+  erpReference?: string;     // Référence ERP (JAJA), admin uniquement
   createdAt: Date;
   updatedAt: Date;
 }
