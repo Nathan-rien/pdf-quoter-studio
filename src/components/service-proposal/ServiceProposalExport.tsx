@@ -473,10 +473,11 @@ export function ServiceProposalExport() {
                 <td style="width: 30%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(opt.name || '—')}</td>
                 <td style="padding: 3px 6px; color: #4b5563; border: 1px solid #e5e7eb; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
                 ${
-                  opt.showPrice !== false
+                  !zone.hidePrice && opt.showPrice !== false
                     ? `<td style="width: 22%; padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; vertical-align: top;">${opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
                     : ''
                 }
+
               </tr>`,
             )
             .join('')
