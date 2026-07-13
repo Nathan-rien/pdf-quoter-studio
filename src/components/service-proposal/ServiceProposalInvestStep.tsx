@@ -63,10 +63,11 @@ export function ServiceProposalInvestStep({ data, onChange }: ServiceProposalInv
     <div className="space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Lignes produits (Invest)</h3>
+          <h3 className="text-lg font-semibold">Matériel</h3>
           <p className="text-sm text-muted-foreground">
             Matériel inclus dans cette proposition de services.
           </p>
+
         </div>
         <div className="flex items-center gap-3">
           <Button type="button" size="sm" onClick={addLine} className="gap-1">
