@@ -107,12 +107,8 @@ function buildPages() {
         { id: "service_conditions_page2", pageNumber: 2, type: "service_conditions", sourceSheet: "données", isRequired: false, description: "Modalités de règlement", position: { top: 65, height: 24 } },
       ],
       staticElements: [],
-    },
 
-        { id: "service_conditions_page2", pageNumber: 2, type: "service_conditions", sourceSheet: "données", isRequired: false, description: "Modalités de règlement", position: { top: 65, height: 24 } },
-      ],
-      staticElements: [],
-    },
+
     // ================== PAGE 3 — MATÉRIEL ==================
     {
       pageNumber: 3,
