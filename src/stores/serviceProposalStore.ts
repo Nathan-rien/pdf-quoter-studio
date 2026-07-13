@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ServiceProposal } from '@/hooks/useServiceProposals';
+import type { SiteAddress, OperationalContact, ExternalProvider } from '@/hooks/useServiceProposals';
 import type { OptionService } from '@/stores/rentalProposalStore';
+
 
 
 export interface ClientData {
