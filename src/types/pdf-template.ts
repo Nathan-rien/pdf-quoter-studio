@@ -52,7 +52,10 @@ export interface DynamicZone {
   description: string;
   // Position personnalisable (optionnelle, en pourcentage)
   position?: { top: number; height: number };
+  // Force le masquage des prix (utilisé pour service_options sur une page "matériel")
+  hidePrice?: boolean;
 }
+
 
 // Configuration d'une page
 export interface PDFPageConfig {
