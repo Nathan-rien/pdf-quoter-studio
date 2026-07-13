@@ -24,6 +24,9 @@ const dbRowToOption = (row: Record<string, unknown>): ServiceOptionDefinition =>
   services: migrateServices((row.services as ServiceItem[]) || []),
   price: (row.price as { amount: number; unit: string } | null) ?? undefined,
   isActive: row.is_active as boolean,
+  kind: ((row.kind as string) === 'pack' ? 'pack' : 'option'),
+  packServiceIds: Array.isArray(row.pack_service_ids) ? (row.pack_service_ids as string[]) : [],
+  erpReference: (row.erp_reference as string | null) ?? undefined,
   createdAt: new Date(row.created_at as string),
   updatedAt: new Date(row.updated_at as string),
 });
@@ -37,6 +40,9 @@ const optionToDbRow = (option: ServiceOptionDefinition, sortOrder: number) => ({
   price: option.price ?? null,
   is_active: option.isActive,
   sort_order: sortOrder,
+  kind: option.kind ?? 'option',
+  pack_service_ids: option.packServiceIds ?? [],
+  erp_reference: option.erpReference ?? null,
 });
 
 // ─── Types pour le sync status ──────────────────────────────────────────────
