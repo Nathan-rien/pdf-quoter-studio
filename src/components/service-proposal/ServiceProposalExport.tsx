@@ -75,6 +75,9 @@ export function ServiceProposalExport() {
   const startDate = useServiceProposalStore((s) => s.startDate);
   const totalServicesHt = useServiceProposalStore((s) => s.totalServicesHt);
   const nosOptions = useServiceProposalStore((s) => s.nosOptions);
+  const siteAddresses = useServiceProposalStore((s) => s.siteAddresses);
+  const operationalContact = useServiceProposalStore((s) => s.operationalContact);
+  const externalProviders = useServiceProposalStore((s) => s.externalProviders);
   const adminOptions = useOptionsAdminStore((s) => s.options);
 
   const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } =
