@@ -261,8 +261,8 @@ export function ServiceProposalExport() {
         case 'service_site_addresses': return 32;
         case 'service_operational_contact': return 52;
         case 'service_external_providers': return 70;
-        case 'service_interventions_tarifs': return 42;
         case 'service_options_summary': return 10;
+
         default: return 65;
       }
     };
