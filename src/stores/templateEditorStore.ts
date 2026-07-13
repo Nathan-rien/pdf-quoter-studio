@@ -1931,6 +1931,21 @@ export const useTemplateEditorStore = create<TemplateEditorStore>()(
     return { canDelete: true };
   },
 
+  setPageDocumentScope: (pageNumber, scope) => {
+    const state = get();
+    const { currentVersion } = state;
+    if (!currentVersion) return false;
+    const updatedPages = currentVersion.pages.map((p) =>
+      p.pageNumber === pageNumber ? { ...p, documentScope: scope } : p
+    );
+    set({
+      currentVersion: { ...currentVersion, pages: updatedPages },
+      hasUnsavedChanges: true,
+    });
+    return true;
+  },
+
+
   addPage: (title = 'Nouvelle page', afterPageNumber) => {
     const state = get();
     const { currentVersion, currentTemplateId } = state;
