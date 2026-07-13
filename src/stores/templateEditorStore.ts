@@ -146,6 +146,7 @@ interface TemplateEditorStore extends TemplateEditorState {
   addPage: (title?: string, afterPageNumber?: number) => TemplatePageContent | null;
   deletePage: (pageNumber: number, forceDelete?: boolean) => boolean;
   canDeletePage: (pageNumber: number) => { canDelete: boolean; hasWarning?: boolean; reason?: string; warning?: string; dynamicZonesCount?: number };
+  setPageDocumentScope: (pageNumber: number, scope: import('@/types/pdf-template').DocumentScope) => boolean;
 
   // Gestion des zones dynamiques
   addDynamicZone: (pageNumber: number, type: DynamicZoneType, isRequired?: boolean, description?: string) => DynamicZone | null;
