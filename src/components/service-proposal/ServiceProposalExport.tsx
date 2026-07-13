@@ -670,6 +670,9 @@ export function ServiceProposalExport() {
     entityLabel,
     totalInvest,
     nosOptions,
+    siteAddresses,
+    operationalContact,
+    externalProviders,
     latestVersion,
   ]);
 
