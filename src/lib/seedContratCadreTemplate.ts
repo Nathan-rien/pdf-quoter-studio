@@ -58,8 +58,67 @@ function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "
 
 function buildPages() {
   return [
+    // ================== PAGE 1 — COUVERTURE ==================
     {
       pageNumber: 1,
+      title: "Couverture",
+      type: "dynamic_partial",
+      elements: [
+        rectEl("p1c-banner", 20, 20, 610, 40),
+        textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
+        textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, align: "right", zIndex: 5 }),
+        textEl("p1c-lbl-benef", 40, 90, 570, 15, "Bénéficiaire", { bold: true, size: 10 }),
+        textEl("p1c-lbl-sites", 40, 240, 570, 15, "Sites d'intervention", { bold: true, size: 10 }),
+        textEl("p1c-lbl-op", 40, 400, 570, 15, "Contact opérationnel", { bold: true, size: 10 }),
+        textEl("p1c-lbl-prest", 40, 560, 570, 15, "Prestataires extérieurs", { bold: true, size: 10 }),
+      ],
+      dynamicZones: [
+        { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 12, height: 16 } },
+        { id: "service_site_addresses_page1", pageNumber: 1, type: "service_site_addresses", sourceSheet: "client", isRequired: false, description: "Adresses de sites", position: { top: 32, height: 18 } },
+        { id: "service_operational_contact_page1", pageNumber: 1, type: "service_operational_contact", sourceSheet: "client", isRequired: false, description: "Contact opérationnel", position: { top: 52, height: 14 } },
+        { id: "service_external_providers_page1", pageNumber: 1, type: "service_external_providers", sourceSheet: "client", isRequired: false, description: "Prestataires extérieurs", position: { top: 70, height: 20 } },
+      ],
+      staticElements: [],
+    },
+    // ================== PAGE 2 — PÉRIMÈTRE (ANNEXE 1) ==================
+    {
+      pageNumber: 2,
+      title: "Périmètre d'intervention (Annexe 1)",
+      type: "dynamic_partial",
+      elements: [
+        rectEl("p2p-banner", 20, 20, 610, 40),
+        textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
+        textEl("p2p-lbl-summary", 40, 78, 570, 15, "Résumé des services souscrits", { bold: true, size: 10 }),
+        textEl("p2p-lbl-tarifs", 40, 320, 570, 15, "Interventions sur site en supplément", { bold: true, size: 10 }),
+        textEl("p2p-lbl-cond", 40, 500, 570, 15, "Modalités de règlement", { bold: true, size: 10 }),
+      ],
+      dynamicZones: [
+        { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 10, height: 28 } },
+        { id: "service_interventions_tarifs_page2", pageNumber: 2, type: "service_interventions_tarifs", sourceSheet: "fixe", isRequired: false, description: "Tableau tarifs interventions", position: { top: 42, height: 18 } },
+        { id: "service_conditions_page2", pageNumber: 2, type: "service_conditions", sourceSheet: "données", isRequired: false, description: "Modalités de règlement", position: { top: 65, height: 24 } },
+      ],
+      staticElements: [],
+    },
+    // ================== PAGE 3 — MATÉRIEL ==================
+    {
+      pageNumber: 3,
+      title: "Matériel",
+      type: "dynamic_partial",
+      elements: [
+        rectEl("p3m-banner", 20, 20, 610, 40),
+        textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
+        textEl("p3m-lbl-invest", 40, 78, 570, 15, "Matériel concerné", { bold: true, size: 10 }),
+        textEl("p3m-lbl-options", 40, 420, 570, 15, "Options souscrites (détail)", { bold: true, size: 10 }),
+      ],
+      dynamicZones: [
+        { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 12, height: 40 } },
+        { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées", position: { top: 55, height: 35 } },
+      ],
+      staticElements: [],
+    },
+    // ================== PAGES CG (ex-1 à ex-6, renumérotées 4-9) ==================
+    {
+      pageNumber: 4,
       title: "Entre les soussignées",
       type: "dynamic_partial",
       elements: [
@@ -82,8 +141,8 @@ function buildPages() {
       ],
       dynamicZones: [
         {
-          id: "service_client_info_page1",
-          pageNumber: 1,
+          id: "service_client_info_page4",
+          pageNumber: 4,
           type: "service_client_info",
           sourceSheet: "client",
           isRequired: true,
@@ -94,7 +153,7 @@ function buildPages() {
       staticElements: [],
     },
     {
-      pageNumber: 2,
+      pageNumber: 5,
       title: "Exposé préalable + Art. I et II",
       type: "static",
       elements: [
@@ -131,7 +190,7 @@ function buildPages() {
       staticElements: [],
     },
     {
-      pageNumber: 3,
+      pageNumber: 6,
       title: "Art. III à V",
       type: "static",
       elements: [
@@ -167,9 +226,9 @@ function buildPages() {
       staticElements: [],
     },
     {
-      pageNumber: 4,
+      pageNumber: 7,
       title: "Art. VI à VIII + Conditions particulières",
-      type: "dynamic_partial",
+      type: "static",
       elements: [
         textEl("p4-art6", 40, 50, 570, 15, "VI - DUREE", { bold: true }),
         textEl(
@@ -198,24 +257,12 @@ function buildPages() {
           80,
           "Les parties s'engagent à considérer comme strictement confidentiels l'ensemble des documents, informations et données communiqués dans le cadre du présent contrat, pendant toute sa durée et sans limitation après son expiration."
         ),
-        rectEl("p4-annexe-banner", 20, 495, 610, 30, "#f0f0f0"),
-        textEl("p4-annexe-title", 30, 500, 570, 20, "ANNEXE 1 — CONDITIONS PARTICULIERES DU CONTRAT D'APPLICATION", { bold: true, size: 10, align: "left" }),
       ],
-      dynamicZones: [
-        {
-          id: "service_conditions_page4",
-          pageNumber: 4,
-          type: "service_conditions",
-          sourceSheet: "données",
-          isRequired: false,
-          description: "Durée, périodicité, services souscrits",
-          position: { top: 50, height: 12 },
-        },
-      ],
+      dynamicZones: [],
       staticElements: [],
     },
     {
-      pageNumber: 5,
+      pageNumber: 8,
       title: "Art. IX à XII",
       type: "static",
       elements: [
@@ -260,8 +307,8 @@ function buildPages() {
       staticElements: [],
     },
     {
-      pageNumber: 6,
-      title: "Tableau produits + Signatures",
+      pageNumber: 9,
+      title: "Signatures",
       type: "dynamic_partial",
       elements: [
         textEl("p6-fait", 40, 50, 200, 15, "Fait à"),
@@ -269,17 +316,8 @@ function buildPages() {
       ],
       dynamicZones: [
         {
-          id: "service_invest_table_page6",
-          pageNumber: 6,
-          type: "service_invest_table",
-          sourceSheet: "invest_services",
-          isRequired: false,
-          description: "Tableau des produits et services",
-          position: { top: 10, height: 25 },
-        },
-        {
-          id: "service_signature_page6",
-          pageNumber: 6,
+          id: "service_signature_page9",
+          pageNumber: 9,
           type: "service_signature",
           sourceSheet: "client",
           isRequired: true,
