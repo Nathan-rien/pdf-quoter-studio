@@ -36,6 +36,7 @@ export interface SelectedService {
 }
 
 export interface ServiceProposalStoreState {
+  currentServiceProposalId: string | null;
   clientData: ClientData;
   commercialData: CommercialData;
   lignesData: LigneData[];
@@ -59,6 +60,7 @@ const DEFAULT_SERVICES_INCLUS_DESCRIPTION =
   'Contrat de location et gestion administrative\nOptimisation des coûts et gestion budgétaire\nGestion des évolutions (ajout / retrait de matériels en cours de contrat)\nAccès privilégié aux matériels de seconde vie\nGarantie de recyclage / valorisation du matériel en fin de vie (DEEE)\nMise à disposition du matériel informatique (location possible au-delà de la durée du contrat)';
 
 const initialState: ServiceProposalStoreState = {
+  currentServiceProposalId: null,
   clientData: {
     nom: '',
     raisonSociale: '',
@@ -192,6 +194,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
                   } as OptionService;
                 });
           return {
+            currentServiceProposalId: proposal.id,
             clientData: {
               nom: proposal.client_name ?? '',
               raisonSociale: proposal.client_company ?? '',
