@@ -512,6 +512,7 @@ export type Database = {
           row_count: number | null
           selected_nos_options_names: Json | null
           selected_options_names: Json | null
+          service_proposal_id: string | null
           status: string
           template_id: string | null
           template_name: string
@@ -534,6 +535,7 @@ export type Database = {
           row_count?: number | null
           selected_nos_options_names?: Json | null
           selected_options_names?: Json | null
+          service_proposal_id?: string | null
           status?: string
           template_id?: string | null
           template_name: string
@@ -556,11 +558,19 @@ export type Database = {
           row_count?: number | null
           selected_nos_options_names?: Json | null
           selected_options_names?: Json | null
+          service_proposal_id?: string | null
           status?: string
           template_id?: string | null
           template_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "proposal_exports_service_proposal_id_fkey"
+            columns: ["service_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "service_proposals"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proposal_exports_template_id_fkey"
             columns: ["template_id"]
