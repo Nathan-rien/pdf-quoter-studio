@@ -1,0 +1,2 @@
+ALTER TABLE public.proposal_exports ADD COLUMN IF NOT EXISTS service_proposal_id UUID REFERENCES public.service_proposals(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_proposal_exports_service_proposal_id ON public.proposal_exports(service_proposal_id);
