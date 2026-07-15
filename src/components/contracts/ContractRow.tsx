@@ -261,7 +261,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {!hideFinancialPartner && contract.cession_percent != null && (
               <span className="flex items-center gap-1">Cession {contract.cession_percent} %</span>
             )}
-            {contract.attachment_url && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />PDF joint</span>}
+            {contract.attachment_url && contract.attachment_name?.toLowerCase().endsWith('.pdf') && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />PDF joint</span>}
           </div>
           {(contract.template_name || isQuick) && (
             <div className="text-[11px] text-muted-foreground">{contract.template_name ?? 'Contrat rapide'}</div>
