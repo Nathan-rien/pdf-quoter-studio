@@ -131,7 +131,21 @@ export default function Index() {
 
       case 'technician-tracking':
         return (isAdmin || isTechnicien) ? (
-          <TechnicianTrackingView isAdmin={isAdmin} />
+          <TechnicianTrackingView
+            isAdmin={isAdmin}
+            onPlanIntervention={(p) => {
+              setPlanningPrefill(p);
+              setCurrentView('service-planning');
+            }}
+          />
+        ) : null;
+
+      case 'service-planning':
+        return (isAdmin || isTechnicien) ? (
+          <PlanningView
+            prefill={planningPrefill}
+            onPrefillHandled={() => setPlanningPrefill(null)}
+          />
         ) : null;
 
 
