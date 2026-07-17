@@ -32,6 +32,57 @@ export type Database = {
         }
         Relationships: []
       }
+      client_service_references: {
+        Row: {
+          contract_id: string
+          created_at: string
+          erp_reference: string | null
+          id: string
+          option_service_id: string | null
+          service_label: string
+          tickets_initial: number | null
+          tickets_remaining: number | null
+          updated_at: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          erp_reference?: string | null
+          id?: string
+          option_service_id?: string | null
+          service_label: string
+          tickets_initial?: number | null
+          tickets_remaining?: number | null
+          updated_at?: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          erp_reference?: string | null
+          id?: string
+          option_service_id?: string | null
+          service_label?: string
+          tickets_initial?: number | null
+          tickets_remaining?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_service_references_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_service_references_option_service_id_fkey"
+            columns: ["option_service_id"]
+            isOneToOne: false
+            referencedRelation: "options_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           amount_ht: number | null
@@ -705,6 +756,41 @@ export type Database = {
           },
         ]
       }
+      ticket_usage_log: {
+        Row: {
+          id: string
+          note: string | null
+          reference_id: string
+          used_at: string
+          used_by: string
+          used_by_name: string | null
+        }
+        Insert: {
+          id?: string
+          note?: string | null
+          reference_id: string
+          used_at?: string
+          used_by: string
+          used_by_name?: string | null
+        }
+        Update: {
+          id?: string
+          note?: string | null
+          reference_id?: string
+          used_at?: string
+          used_by?: string
+          used_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_usage_log_reference_id_fkey"
+            columns: ["reference_id"]
+            isOneToOne: false
+            referencedRelation: "client_service_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -731,6 +817,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_ticket: {
+        Args: { _note?: string; _reference_id: string }
+        Returns: {
+          contract_id: string
+          created_at: string
+          erp_reference: string | null
+          id: string
+          option_service_id: string | null
+          service_label: string
+          tickets_initial: number | null
+          tickets_remaining: number | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_service_references"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_commercial_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
