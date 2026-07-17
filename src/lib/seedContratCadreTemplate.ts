@@ -91,7 +91,7 @@ function buildPages() {
       elements: [
         rectEl("p2p-banner", 20, 20, 610, 40),
         textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p2p-lbl-summary", 40, 78, 570, 15, "Résumé des services souscrits", { bold: true, size: 10 }),
+        textEl("p2p-lbl-summary", 40, 64, 570, 14, "Résumé des services souscrits", { bold: true, size: 10, zIndex: 50 }),
         textEl("p2p-lbl-tarifs", 40, 320, 570, 15, "Interventions sur site en supplément", { bold: true, size: 10 }),
         // Tableau statique éditable dans l'éditeur — 3 lignes de tarifs
         rectEl("p2p-tarif-r1-bg", 40, 340, 330, 20, "#f9fafb"),
