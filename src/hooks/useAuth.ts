@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'commercial' | 'user';
+type AppRole = 'admin' | 'commercial' | 'technicien' | 'user';
 
 interface UseAuthReturn {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
   isCommercial: boolean;
+  isTechnicien: boolean;
   userRole: AppRole | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
