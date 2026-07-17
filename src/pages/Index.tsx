@@ -29,6 +29,7 @@ export default function Index() {
   const [highlightedIds, setHighlightedIds] = useState<string[]>([]);
   const [isManualEntry, setIsManualEntry] = useState(false);
   const [serviceAutoOpenCreate, setServiceAutoOpenCreate] = useState(false);
+  const [planningPrefill, setPlanningPrefill] = useState<PlanningPrefill | null>(null);
   const { isAdmin, isCommercial, isTechnicien, userRole, signOut } = useAuth();
   const canAccessAdmin = userRole === 'admin';
 
