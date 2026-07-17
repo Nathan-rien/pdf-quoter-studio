@@ -349,54 +349,67 @@ function buildPages() {
   ];
 }
 
-export async function seedContratCadreTemplate(force = true): Promise<
-  { alreadyExists: true; templateId: string }
-  | { alreadyExists: false; templateId: string; versionId: string }
-> {
-  if (force) {
-    await supabase
-      .from("pdf_templates")
-      .delete()
-      .eq("name", "Contrat Cadre Services");
-  }
-
+/**
+ * Publie une version "propre" du template Contrat Cadre Services à partir
+ * du seed statique. Si le template existe déjà, on ajoute une nouvelle
+ * version publiée (max(version_number)+1) plutôt que de retourner
+ * silencieusement — sinon les correctifs du seed ne seraient jamais
+ * appliqués sur les templates historiques.
+ */
+export async function seedContratCadreTemplate(
+  _force = true
+): Promise<{ alreadyExists: boolean; templateId: string; versionId: string }> {
+  // 1. Récupérer / créer le template
   const { data: existing, error: existingErr } = await supabase
     .from("pdf_templates")
     .select("id")
     .eq("name", "Contrat Cadre Services")
     .limit(1)
     .maybeSingle();
-
   if (existingErr) throw existingErr;
-  if (existing?.id) return { alreadyExists: true, templateId: existing.id };
 
-  const { data: tpl, error: tplErr } = await supabase
-    .from("pdf_templates")
-    .insert({
-      name: "Contrat Cadre Services",
-      description: "Contrat cadre de prestations de services - généré automatiquement",
-      is_active: false,
-    })
-    .select("id")
-    .single();
+  let templateId = existing?.id as string | undefined;
+  const alreadyExists = !!templateId;
 
-  if (tplErr) throw tplErr;
+  if (!templateId) {
+    const { data: tpl, error: tplErr } = await supabase
+      .from("pdf_templates")
+      .insert({
+        name: "Contrat Cadre Services",
+        description: "Contrat cadre de prestations de services - généré automatiquement",
+        is_active: false,
+      })
+      .select("id")
+      .single();
+    if (tplErr) throw tplErr;
+    templateId = tpl.id;
+  }
+
+  // 2. Calculer le prochain numéro de version
+  const { data: last, error: lastErr } = await supabase
+    .from("template_versions")
+    .select("version_number")
+    .eq("template_id", templateId!)
+    .order("version_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastErr) throw lastErr;
+  const nextVersion = (last?.version_number ?? 0) + 1;
 
   const pages = buildPages();
 
   const { data: ver, error: verErr } = await supabase
     .from("template_versions")
     .insert({
-      template_id: tpl.id,
-      version_number: 1,
+      template_id: templateId!,
+      version_number: nextVersion,
       status: "publie",
       published_at: new Date().toISOString(),
       pages: pages as unknown as never,
     })
     .select("id")
     .single();
-
   if (verErr) throw verErr;
 
-  return { alreadyExists: false, templateId: tpl.id, versionId: ver.id };
+  return { alreadyExists, templateId: templateId!, versionId: ver.id };
 }
