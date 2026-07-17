@@ -741,7 +741,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user" | "commercial"
+      app_role: "admin" | "user" | "commercial" | "technicien"
       gantt_dependency_type: "finish_to_start" | "start_to_start"
       gantt_priority: "low" | "medium" | "high" | "critical"
       gantt_status: "not_started" | "in_progress" | "done"
@@ -872,7 +872,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "commercial"],
+      app_role: ["admin", "user", "commercial", "technicien"],
       gantt_dependency_type: ["finish_to_start", "start_to_start"],
       gantt_priority: ["low", "medium", "high", "critical"],
       gantt_status: ["not_started", "in_progress", "done"],
