@@ -362,7 +362,7 @@ export function TemplateEditorLayout() {
                 } catch (e: any) {
                   toast.error('Erreur lors de la création du template', { description: e?.message });
                 }
-              }}
+              }}>
                 <FileText className="h-4 w-4 mr-2" />
                 Initialiser Contrat Cadre Services
               </DropdownMenuItem>
