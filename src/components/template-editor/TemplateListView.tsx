@@ -145,7 +145,10 @@ export function TemplateListView() {
                 try {
                   const res = await seedContratCadreTemplate(false);
                   if (res.alreadyExists) {
-                    toast.info('Template "Contrat Cadre Services" déjà présent — contenu existant préservé.');
+                    toast.success('Nouvelle version publiée à partir du seed — les pages ont été régénérées.', {
+                      description: 'Rechargement de la liste...'
+                    });
+                    setTimeout(() => window.location.reload(), 600);
                   } else {
                     toast.success('Template "Contrat Cadre Services" créé avec succès.');
                   }
