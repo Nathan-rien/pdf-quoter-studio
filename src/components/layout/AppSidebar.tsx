@@ -16,6 +16,7 @@ import {
   ExternalLink,
   ChevronDown,
   Layers,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,10 +57,12 @@ export function AppSidebar({
   isAdmin = false,
   canAccessAdmin = false,
   isCommercial = false,
+  isTechnicien = false,
   onSignOut,
 }: AppSidebarProps) {
   const { data: contracts = [] } = useContracts();
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
+  const isTechnicienOnly = isTechnicien && !isAdmin;
 
   return (
     <aside className="w-52 bg-card border-r border-border flex flex-col h-screen sticky top-0">
@@ -78,82 +81,97 @@ export function AppSidebar({
 
       {/* Main navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
-          Location
-        </p>
-
-        <Button
-          variant={currentView === 'rental-proposal' || currentView === 'rental-workflow' ? 'secondary' : 'ghost'}
-          className="w-full justify-start gap-2 h-8 text-sm"
-          onClick={() => onNavigate('rental-proposal')}
-        >
-          <Building2 className="h-3.5 w-3.5" />
-          Proposition
-        </Button>
-
-        <Button
-          variant={currentView === 'contracts' ? 'secondary' : 'ghost'}
-          className="w-full justify-start gap-2 h-8 text-sm"
-          onClick={() => onNavigate('contracts')}
-        >
-          <FileCheck className="h-3.5 w-3.5" />
-          <span className="flex-1 text-left">Contrats</span>
-          {renewingCount > 0 && (
-            <Badge className="h-5 px-1.5 text-[10px] bg-orange-500 hover:bg-orange-500 text-white border-transparent">
-              {renewingCount}
-            </Badge>
-          )}
-        </Button>
-
-        <Button
-          variant={currentView === 'history' ? 'secondary' : 'ghost'}
-          className="w-full justify-start gap-2 h-8 text-sm"
-          onClick={() => onNavigate('history')}
-        >
-          <History className="h-3.5 w-3.5" />
-          Historique
-        </Button>
-
-        {/* SECTION 2 — Services (admin uniquement) */}
-        {isAdmin && (
+        {!isTechnicienOnly && (
           <>
-            <div className="border-t border-border my-2" />
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
-              Services
+              Location
             </p>
 
             <Button
-              variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
+              variant={currentView === 'rental-proposal' || currentView === 'rental-workflow' ? 'secondary' : 'ghost'}
               className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('service-proposal')}
+              onClick={() => onNavigate('rental-proposal')}
             >
-              <Layers className="h-3.5 w-3.5" />
-              Prop. Services
+              <Building2 className="h-3.5 w-3.5" />
+              Proposition
             </Button>
 
             <Button
-              variant={currentView === 'service-contracts' ? 'secondary' : 'ghost'}
+              variant={currentView === 'contracts' ? 'secondary' : 'ghost'}
               className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('service-contracts')}
+              onClick={() => onNavigate('contracts')}
             >
               <FileCheck className="h-3.5 w-3.5" />
-              Contrats Services
+              <span className="flex-1 text-left">Contrats</span>
+              {renewingCount > 0 && (
+                <Badge className="h-5 px-1.5 text-[10px] bg-orange-500 hover:bg-orange-500 text-white border-transparent">
+                  {renewingCount}
+                </Badge>
+              )}
             </Button>
 
             <Button
-              variant={currentView === 'service-history' ? 'secondary' : 'ghost'}
+              variant={currentView === 'history' ? 'secondary' : 'ghost'}
               className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('service-history')}
+              onClick={() => onNavigate('history')}
             >
               <History className="h-3.5 w-3.5" />
-              Historique Services
+              Historique
             </Button>
           </>
         )}
 
+        {/* SECTION 2 — Services (admin + technicien) */}
+        {(isAdmin || isTechnicien) && (
+          <>
+            {!isTechnicienOnly && <div className="border-t border-border my-2" />}
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
+              Services
+            </p>
 
+            {isAdmin && (
+              <>
+                <Button
+                  variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('service-proposal')}
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  Prop. Services
+                </Button>
 
-        <div className="border-t border-border my-2" />
+                <Button
+                  variant={currentView === 'service-contracts' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('service-contracts')}
+                >
+                  <FileCheck className="h-3.5 w-3.5" />
+                  Contrats Services
+                </Button>
+
+                <Button
+                  variant={currentView === 'service-history' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('service-history')}
+                >
+                  <History className="h-3.5 w-3.5" />
+                  Historique Services
+                </Button>
+              </>
+            )}
+
+            <Button
+              variant={currentView === 'technician-tracking' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('technician-tracking')}
+            >
+              <ClipboardList className="h-3.5 w-3.5" />
+              Suivi Techniciens
+            </Button>
+          </>
+        )}
+
+        {!isTechnicienOnly && <div className="border-t border-border my-2" />}
 
         {/* Onglet Mes infos - visible pour les commerciaux et les admins */}
         {(isCommercial || isAdmin) && (
@@ -169,7 +187,7 @@ export function AppSidebar({
 
 
         {/* Section Administration - masquée pour les commerciaux */}
-        {canAccessAdmin && (
+        {canAccessAdmin && !isTechnicienOnly && (
           <div className="pt-3 mt-3 border-t border-border">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
               Administration
