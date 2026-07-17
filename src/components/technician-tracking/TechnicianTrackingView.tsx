@@ -181,13 +181,14 @@ export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: Technici
 }
 
 function ReferenceRow({
-  r, isAdmin, onSave, onConsume, onOpenHistory,
+  r, isAdmin, onSave, onConsume, onOpenHistory, onPlan,
 }: {
   r: Ref;
   isAdmin: boolean;
   onSave: (p: { erp_reference: string | null; tickets_initial: number | null; tickets_remaining: number | null }) => void;
   onConsume: () => void;
   onOpenHistory: () => void;
+  onPlan?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [erp, setErp] = useState(r.erp_reference ?? '');
