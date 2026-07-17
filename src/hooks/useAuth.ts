@@ -22,6 +22,7 @@ export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCommercial, setIsCommercial] = useState(false);
+  const [isTechnicien, setIsTechnicien] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
