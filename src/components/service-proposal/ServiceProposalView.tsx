@@ -473,11 +473,17 @@ function CreateForm({ onClose }: { onClose: () => void }) {
 function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: () => void }) {
   // Préchargement du store autonome avec les données de la proposition existante
   useEffect(() => {
-    useServiceProposalStore.getState().loadFromServiceProposal(proposal);
-    const rentalTemplateId = useRentalProposalStore.getState().selectedTemplateId;
-    if (rentalTemplateId) {
-      useServiceProposalStore.getState().selectTemplate(rentalTemplateId);
-    }
+    const serviceStore = useServiceProposalStore.getState();
+    serviceStore.loadFromServiceProposal(proposal);
+
+    const templateStore = useTemplateEditorStore.getState();
+    const serviceTemplate = resolveServiceTemplate({
+      selectedTemplateIds: [serviceStore.selectedTemplateId, useRentalProposalStore.getState().selectedTemplateId],
+      allTemplates: templateStore.allTemplates,
+      getTemplatePublishedVersion: templateStore.getTemplatePublishedVersion,
+    });
+
+    serviceStore.selectTemplate(serviceTemplate?.id ?? null);
   }, [proposal]);
 
   const [clientData, setClientData] = useState<ClientData>({
