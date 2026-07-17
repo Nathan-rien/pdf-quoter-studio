@@ -19,6 +19,7 @@ import { MesInfosView } from "@/components/commercial/MesInfosView";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
 import { GanttView } from "@/components/gantt/GanttView";
+import { TechnicianTrackingView } from "@/components/technician-tracking/TechnicianTrackingView";
 import { cn } from "@/lib/utils";
 import cbproLogo from "@/assets/cbpro-logo.svg.asset.json";
 
@@ -27,8 +28,15 @@ export default function Index() {
   const [highlightedIds, setHighlightedIds] = useState<string[]>([]);
   const [isManualEntry, setIsManualEntry] = useState(false);
   const [serviceAutoOpenCreate, setServiceAutoOpenCreate] = useState(false);
-  const { isAdmin, isCommercial, userRole, signOut } = useAuth();
+  const { isAdmin, isCommercial, isTechnicien, userRole, signOut } = useAuth();
   const canAccessAdmin = userRole === 'admin';
+
+  // Technicien-only users land directly on their tracking view.
+  useEffect(() => {
+    if (isTechnicien && !isAdmin && currentView === 'rental-proposal') {
+      setCurrentView('technician-tracking');
+    }
+  }, [isTechnicien, isAdmin, currentView]);
 
 
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useAdminNotifications(isAdmin);
@@ -119,6 +127,13 @@ export default function Index() {
           />
         ) : null;
 
+      case 'technician-tracking':
+        return (isAdmin || isTechnicien) ? (
+          <TechnicianTrackingView isAdmin={isAdmin} />
+        ) : null;
+
+
+
 
       case 'history':
         return (
@@ -160,6 +175,7 @@ export default function Index() {
         }}
         isAdmin={isAdmin}
         isCommercial={isCommercial}
+        isTechnicien={isTechnicien}
         canAccessAdmin={canAccessAdmin}
         onSignOut={signOut}
       />

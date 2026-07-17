@@ -15,6 +15,7 @@ import {
 import { useValidateProposal, ProposalType } from '@/hooks/useContracts';
 import { supabase } from '@/integrations/supabase/client';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
+import { seedClientServiceReferences } from '@/lib/technician-tracking';
 
 interface ValidateProposalButtonProps {
   proposalId: string;
@@ -76,6 +77,16 @@ export function ValidateProposalButton({
             .update({ attachment_url: uploaded.path, attachment_name: uploaded.name })
             .eq('id', result.id);
         }
+        // Seed technician-tracking references (same source as the PDF)
+        const { data: exp } = await supabase
+          .from('proposal_exports')
+          .select('service_proposal_id')
+          .eq('id', proposalId)
+          .maybeSingle();
+        await seedClientServiceReferences({
+          contractId: result.id,
+          serviceProposalId: (exp as any)?.service_proposal_id ?? null,
+        });
       } catch (err) {
         console.error('[ValidateProposalButton] génération contrat automatique échouée', err);
       }

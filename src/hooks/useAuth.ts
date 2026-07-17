@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'commercial' | 'user';
+type AppRole = 'admin' | 'commercial' | 'technicien' | 'user';
 
 interface UseAuthReturn {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
   isCommercial: boolean;
+  isTechnicien: boolean;
   userRole: AppRole | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -21,6 +22,7 @@ export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCommercial, setIsCommercial] = useState(false);
+  const [isTechnicien, setIsTechnicien] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,7 +40,7 @@ export function useAuth(): UseAuthReturn {
           }, 0);
         } else {
           setIsAdmin(false);
-          setIsCommercial(false);
+          setIsCommercial(false); setIsTechnicien(false);
           setUserRole(null);
         }
       }
@@ -70,22 +72,22 @@ export function useAuth(): UseAuthReturn {
       if (error) {
         console.error('Error checking user role:', error);
         setIsAdmin(false);
-        setIsCommercial(false);
+        setIsCommercial(false); setIsTechnicien(false);
         setUserRole(null);
       } else if (data) {
         const role = data.role as AppRole;
         setUserRole(role);
         setIsAdmin(role === 'admin');
-        setIsCommercial(role === 'commercial');
+        setIsCommercial(role === 'commercial'); setIsTechnicien(role === 'technicien');
       } else {
         setIsAdmin(false);
-        setIsCommercial(false);
+        setIsCommercial(false); setIsTechnicien(false);
         setUserRole(null);
       }
     } catch (err) {
       console.error('Error checking user role:', err);
       setIsAdmin(false);
-      setIsCommercial(false);
+      setIsCommercial(false); setIsTechnicien(false);
       setUserRole(null);
     } finally {
       setIsLoading(false);
@@ -121,7 +123,7 @@ export function useAuth(): UseAuthReturn {
     setUser(null);
     setSession(null);
     setIsAdmin(false);
-    setIsCommercial(false);
+    setIsCommercial(false); setIsTechnicien(false);
     setUserRole(null);
   };
 
@@ -130,6 +132,7 @@ export function useAuth(): UseAuthReturn {
     session,
     isAdmin,
     isCommercial,
+    isTechnicien,
     userRole,
     isLoading,
     signIn,
