@@ -175,6 +175,7 @@ export default function Index() {
         }}
         isAdmin={isAdmin}
         isCommercial={isCommercial}
+        isTechnicien={isTechnicien}
         canAccessAdmin={canAccessAdmin}
         onSignOut={signOut}
       />
