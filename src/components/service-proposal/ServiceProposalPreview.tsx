@@ -19,13 +19,15 @@ import { buildHtmlDataFromStore } from '@/lib/service-proposal-data-builder';
 import type { TemplateVersion } from '@/types/template-editor';
 import type { DocumentScope } from '@/types/pdf-template';
 
-export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
+export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pagesHtml, setPagesHtml] = useState<string[]>([]);
   const [rendering, setRendering] = useState(false);
+  const [mode, setMode] = useState<'devis' | 'contrat'>(initialMode);
 
   const store = useServiceProposalStore();
   const { clientData, lignesData, proposalName } = store;
+
 
   const adminOptions = useOptionsAdminStore((s) => s.options);
   const selectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
