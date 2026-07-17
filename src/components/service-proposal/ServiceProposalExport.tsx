@@ -60,15 +60,15 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
   const { getTemplatePublishedVersion, allTemplates } =
     useTemplateEditorStore();
 
-  const effectiveTemplateId = rentalSelectedTemplateId || selectedTemplateId;
-
   const activeTemplate = useMemo(() => {
     return resolveServiceTemplate({
-      selectedTemplateIds: [effectiveTemplateId],
+      selectedTemplateIds: [selectedTemplateId, rentalSelectedTemplateId],
       allTemplates,
       getTemplatePublishedVersion,
     });
-  }, [effectiveTemplateId, allTemplates, getTemplatePublishedVersion]);
+  }, [selectedTemplateId, rentalSelectedTemplateId, allTemplates, getTemplatePublishedVersion]);
+
+  const effectiveTemplateId = activeTemplate?.id ?? selectedTemplateId ?? rentalSelectedTemplateId ?? null;
 
   const latestVersion = activeTemplate ? getTemplatePublishedVersion(activeTemplate.id) : null;
 
