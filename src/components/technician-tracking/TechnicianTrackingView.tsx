@@ -166,6 +166,7 @@ export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: Technici
                     onSave={(payload) => updateRef.mutate({ id: r.id, ...payload })}
                     onConsume={() => consume.mutate(r.id)}
                     onOpenHistory={() => setHistoryRefId(r.id)}
+                    onPlan={onPlanIntervention ? () => onPlanIntervention({ reference_id: r.id, contract_id: contract.id }) : undefined}
                   />
                 ))}
               </div>
