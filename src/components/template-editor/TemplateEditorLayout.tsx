@@ -352,15 +352,17 @@ export function TemplateEditorLayout() {
                 try {
                   const res = await seedContratCadreTemplate(false);
                   if (res.alreadyExists) {
-                    toast.info('Template "Contrat Cadre Services" déjà présent — aucune modification effectuée.');
+                    toast.success('Nouvelle version publiée à partir du seed — les pages ont été régénérées.', {
+                      description: 'Rechargement...'
+                    });
                   } else {
                     toast.success('Template "Contrat Cadre Services" créé — rechargement...');
-                    setTimeout(() => window.location.reload(), 800);
                   }
+                  setTimeout(() => window.location.reload(), 800);
                 } catch (e: any) {
                   toast.error('Erreur lors de la création du template', { description: e?.message });
                 }
-              }}>
+              }}
                 <FileText className="h-4 w-4 mr-2" />
                 Initialiser Contrat Cadre Services
               </DropdownMenuItem>
