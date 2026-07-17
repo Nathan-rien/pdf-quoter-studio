@@ -38,7 +38,7 @@ const TRANSPORT_LINKS = [
   { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
 ];
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt' | 'technician-tracking';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -46,6 +46,7 @@ interface AppSidebarProps {
   isAdmin?: boolean;
   canAccessAdmin?: boolean;
   isCommercial?: boolean;
+  isTechnicien?: boolean;
   onSignOut?: () => void;
 }
 
