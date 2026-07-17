@@ -103,12 +103,13 @@ function buildPages() {
         rectEl("p2p-tarif-r3-bg", 40, 380, 330, 20, "#f9fafb"),
         textEl("p2p-tarif-r3-lbl", 46, 384, 320, 14, "Ingénieur serveur réseau", { size: 9, bold: true, align: "left" }),
         textEl("p2p-tarif-r3-val", 376, 384, 234, 14, "900 € HT", { size: 9, bold: true, align: "right" }),
-        textEl("p2p-lbl-cond", 40, 500, 570, 15, "Modalités de règlement", { bold: true, size: 10 }),
+        textEl("p2p-lbl-cond", 40, 500, 570, 14, "Modalités de règlement", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
-        { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 10, height: 28 } },
+        { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 11, height: 26 } },
         { id: "service_conditions_page2", pageNumber: 2, type: "service_conditions", sourceSheet: "données", isRequired: false, description: "Modalités de règlement", position: { top: 65, height: 24 } },
       ],
+
       staticElements: [],
     },
     // ================== PAGE 3 — MATÉRIEL ==================
