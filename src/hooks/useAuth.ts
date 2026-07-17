@@ -132,6 +132,7 @@ export function useAuth(): UseAuthReturn {
     session,
     isAdmin,
     isCommercial,
+    isTechnicien,
     userRole,
     isLoading,
     signIn,
