@@ -121,14 +121,15 @@ function buildPages() {
       elements: [
         rectEl("p3m-banner", 20, 20, 610, 40),
         textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p3m-lbl-invest", 40, 78, 570, 15, "Matériel concerné", { bold: true, size: 10 }),
-        textEl("p3m-lbl-options", 40, 420, 570, 15, "Options souscrites (détail)", { bold: true, size: 10 }),
+        textEl("p3m-lbl-invest", 40, 66, 570, 14, "Matériel concerné", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p3m-lbl-options", 40, 442, 570, 14, "Options souscrites (détail)", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
-        { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 12, height: 40 } },
-        { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées (sans prix)", position: { top: 55, height: 35 }, hidePrice: true },
+        { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 11, height: 40 } },
+        { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées (sans prix)", position: { top: 56, height: 35 }, hidePrice: true },
 
       ],
+
       staticElements: [],
     },
     // ================== PAGES CG (ex-1 à ex-6, renumérotées 4-9) ==================
