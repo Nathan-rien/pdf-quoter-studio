@@ -292,6 +292,15 @@ function ReferenceRow({
             </Button>
           )}
 
+          {onPlan && (
+            <Button size="sm" variant="outline" onClick={onPlan}>
+              <CalendarPlus className="h-3.5 w-3.5 mr-1" />
+              Planifier
+            </Button>
+          )}
+
+
+
           {isAdmin && (
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
               <Pencil className="h-4 w-4" />
