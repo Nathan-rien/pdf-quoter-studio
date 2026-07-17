@@ -68,18 +68,19 @@ function buildPages() {
         rectEl("p1c-banner", 20, 20, 610, 40),
         textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
         textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, align: "right", zIndex: 5 }),
-        textEl("p1c-lbl-benef", 40, 90, 570, 15, "Bénéficiaire", { bold: true, size: 10 }),
-        textEl("p1c-lbl-sites", 40, 240, 570, 15, "Sites d'intervention", { bold: true, size: 10 }),
-        textEl("p1c-lbl-op", 40, 400, 570, 15, "Contact opérationnel", { bold: true, size: 10 }),
-        textEl("p1c-lbl-prest", 40, 560, 570, 15, "Prestataires extérieurs", { bold: true, size: 10 }),
+        textEl("p1c-lbl-benef", 40, 82, 570, 14, "Bénéficiaire", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p1c-lbl-sites", 40, 250, 570, 14, "Sites d'intervention", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p1c-lbl-op", 40, 448, 570, 14, "Contact opérationnel", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p1c-lbl-prest", 40, 588, 570, 14, "Prestataires extérieurs", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
-        { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 12, height: 16 } },
-        { id: "service_site_addresses_page1", pageNumber: 1, type: "service_site_addresses", sourceSheet: "client", isRequired: false, description: "Adresses de sites", position: { top: 32, height: 18 } },
-        { id: "service_operational_contact_page1", pageNumber: 1, type: "service_operational_contact", sourceSheet: "client", isRequired: false, description: "Contact opérationnel", position: { top: 52, height: 14 } },
-        { id: "service_external_providers_page1", pageNumber: 1, type: "service_external_providers", sourceSheet: "client", isRequired: false, description: "Prestataires extérieurs", position: { top: 70, height: 20 } },
+        { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 13, height: 17 } },
+        { id: "service_site_addresses_page1", pageNumber: 1, type: "service_site_addresses", sourceSheet: "client", isRequired: false, description: "Adresses de sites", position: { top: 33, height: 20 } },
+        { id: "service_operational_contact_page1", pageNumber: 1, type: "service_operational_contact", sourceSheet: "client", isRequired: false, description: "Contact opérationnel", position: { top: 57, height: 14 } },
+        { id: "service_external_providers_page1", pageNumber: 1, type: "service_external_providers", sourceSheet: "client", isRequired: false, description: "Prestataires extérieurs", position: { top: 74, height: 20 } },
       ],
       staticElements: [],
+
     },
     // ================== PAGE 2 — PÉRIMÈTRE (ANNEXE 1) ==================
     {
