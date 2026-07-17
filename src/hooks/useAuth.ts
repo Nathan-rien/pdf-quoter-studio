@@ -40,7 +40,7 @@ export function useAuth(): UseAuthReturn {
           }, 0);
         } else {
           setIsAdmin(false);
-          setIsCommercial(false);
+          setIsCommercial(false); setIsTechnicien(false);
           setUserRole(null);
         }
       }
@@ -72,22 +72,22 @@ export function useAuth(): UseAuthReturn {
       if (error) {
         console.error('Error checking user role:', error);
         setIsAdmin(false);
-        setIsCommercial(false);
+        setIsCommercial(false); setIsTechnicien(false);
         setUserRole(null);
       } else if (data) {
         const role = data.role as AppRole;
         setUserRole(role);
         setIsAdmin(role === 'admin');
-        setIsCommercial(role === 'commercial');
+        setIsCommercial(role === 'commercial'); setIsTechnicien(role === 'technicien');
       } else {
         setIsAdmin(false);
-        setIsCommercial(false);
+        setIsCommercial(false); setIsTechnicien(false);
         setUserRole(null);
       }
     } catch (err) {
       console.error('Error checking user role:', err);
       setIsAdmin(false);
-      setIsCommercial(false);
+      setIsCommercial(false); setIsTechnicien(false);
       setUserRole(null);
     } finally {
       setIsLoading(false);
@@ -123,7 +123,7 @@ export function useAuth(): UseAuthReturn {
     setUser(null);
     setSession(null);
     setIsAdmin(false);
-    setIsCommercial(false);
+    setIsCommercial(false); setIsTechnicien(false);
     setUserRole(null);
   };
 
