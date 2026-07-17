@@ -7,6 +7,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
 import type { TemplateVersion } from '@/types/template-editor';
+import { isServiceTemplateCandidate } from '@/lib/service-template-selection';
 
 // UUID regex for cloud IDs
 const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -26,7 +27,10 @@ export function TemplateSelector({ viewScope = 'location' }: TemplateSelectorPro
   // Filtrer les templates : uniquement ceux publiés ET associés à la vue courante
   const availableTemplates = allTemplates.filter(template => {
     const version = getTemplatePublishedVersion(template.id);
-    return !!version && template.targetView === viewScope;
+    if (!version) return false;
+    return viewScope === 'services'
+      ? isServiceTemplateCandidate(template)
+      : template.targetView === viewScope;
   });
 
   // Lazy load pages for published versions that don't have pages loaded yet

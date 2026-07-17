@@ -16,6 +16,7 @@ import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
 import { generateServiceProposalHtml } from '@/lib/service-proposal-html-generator';
 import { buildHtmlDataFromStore } from '@/lib/service-proposal-data-builder';
+import { resolveServiceTemplate } from '@/lib/service-template-selection';
 import type { TemplateVersion } from '@/types/template-editor';
 import type { DocumentScope } from '@/types/pdf-template';
 
@@ -30,7 +31,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
 
 
   const adminOptions = useOptionsAdminStore((s) => s.options);
-  const selectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
+  const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
 
   const { isLoading, hasLoaded, loadVersionPages, isLoadingVersion } = useTemplateSync();
   const {
@@ -39,14 +40,12 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
   } = useTemplateEditorStore();
 
   const activeTemplate = useMemo(() => {
-    if (selectedTemplateId) {
-      const found = allTemplates.find((t) => t.id === selectedTemplateId);
-      if (found) return found;
-    }
-    const active = allTemplates.find((t) => t.isActive && !!getTemplatePublishedVersion(t.id));
-    if (active) return active;
-    return allTemplates.find((t) => !!getTemplatePublishedVersion(t.id)) ?? null;
-  }, [selectedTemplateId, allTemplates, getTemplatePublishedVersion]);
+    return resolveServiceTemplate({
+      selectedTemplateIds: [store.selectedTemplateId, rentalSelectedTemplateId],
+      allTemplates,
+      getTemplatePublishedVersion,
+    });
+  }, [store.selectedTemplateId, rentalSelectedTemplateId, allTemplates, getTemplatePublishedVersion]);
 
   const currentVersion: TemplateVersion | null = activeTemplate
     ? getTemplatePublishedVersion(activeTemplate.id)

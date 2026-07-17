@@ -31,13 +31,36 @@ function sanitize(name: string): string {
 async function loadTemplatePages(templateId: string): Promise<any[] | null> {
   const { data } = await supabase
     .from('template_versions')
-    .select('pages_content')
+    .select('pages')
     .eq('template_id', templateId)
-    .eq('status', 'published')
+    .eq('status', 'publie')
     .order('version_number', { ascending: false })
     .limit(1)
     .maybeSingle();
-  const pages = (data as any)?.pages_content;
+  const pages = (data as any)?.pages;
+  return Array.isArray(pages) ? pages : null;
+}
+
+async function loadLatestServiceTemplatePages(): Promise<any[] | null> {
+  const { data: templates } = await supabase
+    .from('pdf_templates')
+    .select('id, name, target_view')
+    .or('target_view.eq.services,name.eq.Contrat Cadre Services');
+
+  const ids = (templates ?? []).map((t: any) => t.id).filter(Boolean);
+  if (ids.length === 0) return null;
+
+  const { data } = await supabase
+    .from('template_versions')
+    .select('pages, version_number, published_at')
+    .in('template_id', ids)
+    .eq('status', 'publie')
+    .order('version_number', { ascending: false })
+    .order('published_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const pages = (data as any)?.pages;
   return Array.isArray(pages) ? pages : null;
 }
 
@@ -80,7 +103,7 @@ export async function generateAndUploadServiceContractPdf(params: {
     console.warn('[service-contract-generator] aucun template lié — génération ignorée');
     return null;
   }
-  const pages = await loadTemplatePages(templateId);
+  const pages = (await loadLatestServiceTemplatePages()) ?? (await loadTemplatePages(templateId));
   if (!pages) {
     console.warn('[service-contract-generator] aucune version publiée trouvée');
     return null;

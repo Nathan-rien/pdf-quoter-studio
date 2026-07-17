@@ -155,10 +155,16 @@ export function useTemplateSync() {
   const [isLoadingVersion, setIsLoadingVersion] = useState(false);
 
   // Charger les templates depuis la base de données (SANS les pages pour éviter le timeout)
-  const loadFromDatabase = useCallback(async () => {
-    if (hasLoaded) return;
+  const loadFromDatabase = useCallback(async (options?: { force?: boolean }) => {
+    const force = options?.force ?? false;
+    if (hasLoaded && !force) return;
 
-    if (templatesMetadataLoaded) {
+    if (force) {
+      templatesMetadataLoaded = false;
+      templatesMetadataLoadPromise = null;
+    }
+
+    if (templatesMetadataLoaded && !force) {
       setIsLoading(false);
       setHasLoaded(true);
       return;
@@ -242,6 +248,11 @@ export function useTemplateSync() {
       setIsLoading(false);
     }
   }, [hasLoaded]);
+
+  const reloadTemplatesFromDatabase = useCallback(async () => {
+    setHasLoaded(false);
+    await loadFromDatabase({ force: true });
+  }, [loadFromDatabase]);
 
   // Charger les pages d'une version spécifique (lazy loading)
   const loadVersionPages = useCallback(async (versionId: string): Promise<TemplatePageContent[] | null> => {
@@ -430,6 +441,7 @@ export function useTemplateSync() {
     isLoadingVersion,
     hasLoaded,
     loadFromDatabase,
+    reloadTemplatesFromDatabase,
     loadVersionPages,
     saveTemplateToDatabase,
     saveVersionToDatabase,

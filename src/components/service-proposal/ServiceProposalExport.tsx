@@ -4,7 +4,7 @@
  * Utilise generateServiceProposalHtml() comme source unique de génération
  * puis convertit en vrai PDF via html2canvas + jsPDF.
  */
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -35,12 +35,13 @@ import { ENTITIES, getCommercialById } from '@/data/commerciaux';
 import { generateServiceProposalHtml } from '@/lib/service-proposal-html-generator';
 import { buildHtmlDataFromStore } from '@/lib/service-proposal-data-builder';
 import { htmlToPdfBlob } from '@/lib/html-to-pdf';
+import { resolveServiceTemplate } from '@/lib/service-template-selection';
 
 export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
 
-  useTemplateSync();
+  const { isLoadingVersion, loadVersionPages } = useTemplateSync();
 
   const store = useServiceProposalStore();
   const {
@@ -56,24 +57,26 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
   const rentalSelectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   const adminOptions = useOptionsAdminStore((s) => s.options);
 
-  const { getActiveTemplate, getTemplatePublishedVersion, allTemplates } =
+  const { getTemplatePublishedVersion, allTemplates } =
     useTemplateEditorStore();
 
   const effectiveTemplateId = rentalSelectedTemplateId || selectedTemplateId;
 
   const activeTemplate = useMemo(() => {
-    if (effectiveTemplateId) {
-      const selected = allTemplates.find((t) => t.id === effectiveTemplateId);
-      if (selected) return selected;
-    }
-    const activePublished = allTemplates.find(
-      (t) => t.isActive && !!getTemplatePublishedVersion(t.id),
-    );
-    if (activePublished) return activePublished;
-    return allTemplates.find((t) => !!getTemplatePublishedVersion(t.id)) || getActiveTemplate();
-  }, [effectiveTemplateId, allTemplates, getActiveTemplate, getTemplatePublishedVersion]);
+    return resolveServiceTemplate({
+      selectedTemplateIds: [effectiveTemplateId],
+      allTemplates,
+      getTemplatePublishedVersion,
+    });
+  }, [effectiveTemplateId, allTemplates, getTemplatePublishedVersion]);
 
   const latestVersion = activeTemplate ? getTemplatePublishedVersion(activeTemplate.id) : null;
+
+  useEffect(() => {
+    if (latestVersion && latestVersion.pages.length === 0 && !isLoadingVersion) {
+      loadVersionPages(latestVersion.id);
+    }
+  }, [latestVersion, isLoadingVersion, loadVersionPages]);
   const visibleTemplatePages = (latestVersion?.pages ?? []).filter((p: any) => {
     const s = p.documentScope ?? 'both';
     return s === 'both' || s === mode;
@@ -182,7 +185,7 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
   };
 
   const handleDownloadPDF = async () => {
-    if (!latestVersion) return;
+    if (!latestVersion || latestVersion.pages.length === 0) return;
     setIsGenerating(true);
     try {
       const data = buildHtmlDataFromStore(store, {

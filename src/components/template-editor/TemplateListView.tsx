@@ -54,7 +54,7 @@ export function TemplateListView() {
     setTemplateTargetView,
   } = useTemplateEditorStore();
 
-  const { deleteTemplateFromDatabase, saveTemplateToDatabase } = useTemplateSync();
+  const { deleteTemplateFromDatabase, saveTemplateToDatabase, reloadTemplatesFromDatabase, loadVersionPages } = useTemplateSync();
 
   const handleEditTemplate = (template: PDFTemplate) => {
     selectTemplate(template.id);
@@ -144,11 +144,12 @@ export function TemplateListView() {
               <DropdownMenuItem onClick={async () => {
                 try {
                   const res = await seedContratCadreTemplate(false);
+                  await reloadTemplatesFromDatabase();
+                  await loadVersionPages(res.versionId);
                   if (res.alreadyExists) {
                     toast.success('Nouvelle version publiée à partir du seed — les pages ont été régénérées.', {
-                      description: 'Rechargement de la liste...'
+                      description: 'La liste affiche maintenant la dernière version.'
                     });
-                    setTimeout(() => window.location.reload(), 600);
                   } else {
                     toast.success('Template "Contrat Cadre Services" créé avec succès.');
                   }
