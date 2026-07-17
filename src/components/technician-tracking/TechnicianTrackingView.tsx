@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Pencil, Ticket, History as HistoryIcon, AlertTriangle, Check, X } from 'lucide-react';
+import { Search, Pencil, Ticket, History as HistoryIcon, AlertTriangle, Check, X, CalendarPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -30,9 +30,10 @@ interface ContractRow {
 
 interface TechnicianTrackingViewProps {
   isAdmin: boolean;
+  onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void;
 }
 
-export function TechnicianTrackingView({ isAdmin }: TechnicianTrackingViewProps) {
+export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: TechnicianTrackingViewProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
@@ -165,6 +166,7 @@ export function TechnicianTrackingView({ isAdmin }: TechnicianTrackingViewProps)
                     onSave={(payload) => updateRef.mutate({ id: r.id, ...payload })}
                     onConsume={() => consume.mutate(r.id)}
                     onOpenHistory={() => setHistoryRefId(r.id)}
+                    onPlan={onPlanIntervention ? () => onPlanIntervention({ reference_id: r.id, contract_id: contract.id }) : undefined}
                   />
                 ))}
               </div>
@@ -179,13 +181,14 @@ export function TechnicianTrackingView({ isAdmin }: TechnicianTrackingViewProps)
 }
 
 function ReferenceRow({
-  r, isAdmin, onSave, onConsume, onOpenHistory,
+  r, isAdmin, onSave, onConsume, onOpenHistory, onPlan,
 }: {
   r: Ref;
   isAdmin: boolean;
   onSave: (p: { erp_reference: string | null; tickets_initial: number | null; tickets_remaining: number | null }) => void;
   onConsume: () => void;
   onOpenHistory: () => void;
+  onPlan?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [erp, setErp] = useState(r.erp_reference ?? '');
@@ -288,6 +291,15 @@ function ReferenceRow({
               Consommer 1 ticket
             </Button>
           )}
+
+          {onPlan && (
+            <Button size="sm" variant="outline" onClick={onPlan}>
+              <CalendarPlus className="h-3.5 w-3.5 mr-1" />
+              Planifier
+            </Button>
+          )}
+
+
 
           {isAdmin && (
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>

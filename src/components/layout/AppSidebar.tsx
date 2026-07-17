@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Layers,
   ClipboardList,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,7 @@ const TRANSPORT_LINKS = [
   { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
 ];
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt' | 'technician-tracking';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt' | 'technician-tracking' | 'service-planning';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -167,6 +168,15 @@ export function AppSidebar({
             >
               <ClipboardList className="h-3.5 w-3.5" />
               Suivi Techniciens
+            </Button>
+
+            <Button
+              variant={currentView === 'service-planning' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('service-planning')}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Planning Services
             </Button>
           </>
         )}

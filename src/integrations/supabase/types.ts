@@ -415,6 +415,56 @@ export type Database = {
           },
         ]
       }
+      intervention_planning: {
+        Row: {
+          commentaire: string | null
+          created_at: string
+          created_by: string | null
+          date_intervention: string
+          duree_estimee_minutes: number | null
+          id: string
+          reference_id: string
+          statut: Database["public"]["Enums"]["intervention_status"]
+          technician_name: string
+          technician_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          commentaire?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_intervention: string
+          duree_estimee_minutes?: number | null
+          id?: string
+          reference_id: string
+          statut?: Database["public"]["Enums"]["intervention_status"]
+          technician_name: string
+          technician_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          commentaire?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_intervention?: string
+          duree_estimee_minutes?: number | null
+          id?: string
+          reference_id?: string
+          statut?: Database["public"]["Enums"]["intervention_status"]
+          technician_name?: string
+          technician_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_planning_reference_id_fkey"
+            columns: ["reference_id"]
+            isOneToOne: false
+            referencedRelation: "client_service_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       options_services: {
         Row: {
           created_at: string
@@ -851,6 +901,7 @@ export type Database = {
       gantt_dependency_type: "finish_to_start" | "start_to_start"
       gantt_priority: "low" | "medium" | "high" | "critical"
       gantt_status: "not_started" | "in_progress" | "done"
+      intervention_status: "prevue" | "realisee" | "annulee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -982,6 +1033,7 @@ export const Constants = {
       gantt_dependency_type: ["finish_to_start", "start_to_start"],
       gantt_priority: ["low", "medium", "high", "critical"],
       gantt_status: ["not_started", "in_progress", "done"],
+      intervention_status: ["prevue", "realisee", "annulee"],
     },
   },
 } as const

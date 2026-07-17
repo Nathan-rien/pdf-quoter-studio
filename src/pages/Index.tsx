@@ -20,6 +20,7 @@ import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
 import { GanttView } from "@/components/gantt/GanttView";
 import { TechnicianTrackingView } from "@/components/technician-tracking/TechnicianTrackingView";
+import { PlanningView, PlanningPrefill } from "@/components/technician-tracking/PlanningView";
 import { cn } from "@/lib/utils";
 import cbproLogo from "@/assets/cbpro-logo.svg.asset.json";
 
@@ -28,6 +29,7 @@ export default function Index() {
   const [highlightedIds, setHighlightedIds] = useState<string[]>([]);
   const [isManualEntry, setIsManualEntry] = useState(false);
   const [serviceAutoOpenCreate, setServiceAutoOpenCreate] = useState(false);
+  const [planningPrefill, setPlanningPrefill] = useState<PlanningPrefill | null>(null);
   const { isAdmin, isCommercial, isTechnicien, userRole, signOut } = useAuth();
   const canAccessAdmin = userRole === 'admin';
 
@@ -129,7 +131,21 @@ export default function Index() {
 
       case 'technician-tracking':
         return (isAdmin || isTechnicien) ? (
-          <TechnicianTrackingView isAdmin={isAdmin} />
+          <TechnicianTrackingView
+            isAdmin={isAdmin}
+            onPlanIntervention={(p) => {
+              setPlanningPrefill(p);
+              setCurrentView('service-planning');
+            }}
+          />
+        ) : null;
+
+      case 'service-planning':
+        return (isAdmin || isTechnicien) ? (
+          <PlanningView
+            prefill={planningPrefill}
+            onPrefillHandled={() => setPlanningPrefill(null)}
+          />
         ) : null;
 
 
