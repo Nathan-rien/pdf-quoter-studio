@@ -169,6 +169,15 @@ export function AppSidebar({
               <ClipboardList className="h-3.5 w-3.5" />
               Suivi Techniciens
             </Button>
+
+            <Button
+              variant={currentView === 'service-planning' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('service-planning')}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Planning Services
+            </Button>
           </>
         )}
 
