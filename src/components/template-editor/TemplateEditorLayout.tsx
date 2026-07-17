@@ -68,7 +68,7 @@ export function TemplateEditorLayout() {
   const [isDiscarding, setIsDiscarding] = useState(false);
   
   // Synchronisation avec le cloud
-  const { isLoading, isSyncing, isLoadingVersion, syncAllToDatabase, saveTemplateToDatabase, loadVersionPages } = useTemplateSync();
+  const { isLoading, isSyncing, isLoadingVersion, syncAllToDatabase, saveTemplateToDatabase, loadVersionPages, reloadTemplatesFromDatabase } = useTemplateSync();
   
   const {
     currentVersion,
@@ -351,14 +351,16 @@ export function TemplateEditorLayout() {
               <DropdownMenuItem onClick={async () => {
                 try {
                   const res = await seedContratCadreTemplate(false);
+                  await reloadTemplatesFromDatabase();
+                  useTemplateEditorStore.getState().selectTemplate(res.templateId);
+                  await loadVersionPages(res.versionId);
                   if (res.alreadyExists) {
                     toast.success('Nouvelle version publiée à partir du seed — les pages ont été régénérées.', {
-                      description: 'Rechargement...'
+                      description: 'La nouvelle version est affichée dans l’éditeur.'
                     });
                   } else {
-                    toast.success('Template "Contrat Cadre Services" créé — rechargement...');
+                    toast.success('Template "Contrat Cadre Services" créé et affiché.');
                   }
-                  setTimeout(() => window.location.reload(), 800);
                 } catch (e: any) {
                   toast.error('Erreur lors de la création du template', { description: e?.message });
                 }

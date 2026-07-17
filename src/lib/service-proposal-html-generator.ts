@@ -179,6 +179,10 @@ export async function generateServiceProposalHtml(
     if (zone.type === 'service_conditions') return Math.max(minHeight, 21);
     if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
     if (zone.type === 'service_signature') return Math.max(minHeight, 14);
+    if (zone.type === 'service_options_summary') {
+      const selected = nosOptions.filter((o) => o.selected);
+      return Math.max(minHeight, Math.min(40, 5 + Math.max(selected.length, 1) * 3));
+    }
     return minHeight;
   };
 
@@ -504,6 +508,34 @@ export async function generateServiceProposalHtml(
   const allPagesHtml: string[] = [];
 
   for (const page of visibleTemplatePages) {
+    const pageHasServiceZones = (page.dynamicZones || []).some((zone: any) =>
+      String(zone.type || '').startsWith('service_'),
+    );
+
+    if (pageHasServiceZones && page.elements.some((el: any) => el.type !== 'text')) {
+      const dynamicZoneLabelIds = new Set([
+        'p1c-lbl-benef',
+        'p1c-lbl-sites',
+        'p1c-lbl-op',
+        'p1c-lbl-prest',
+        'p2p-lbl-summary',
+        'p2p-lbl-cond',
+        'p3m-lbl-invest',
+        'p3m-lbl-options',
+      ]);
+      const duplicatedDynamicLabelIds = page.elements
+        .filter((el: any) => el.type === 'text' && dynamicZoneLabelIds.has(String(el.id || '')))
+        .map((el: any) => el.id);
+      const pageHtml = await renderPageToHTML(
+        page,
+        dynamicContent[page.pageNumber] || '',
+        duplicatedDynamicLabelIds,
+        { boundedTextBoxes: false },
+      );
+      allPagesHtml.push(pageHtml);
+      continue;
+    }
+
     const nonTextElements = page.elements.filter((el: any) => el.type !== 'text');
     const textElements = page.elements
       .filter((el: any) => el.type === 'text')
@@ -560,15 +592,9 @@ export async function generateServiceProposalHtml(
         </div>
       `);
     } else {
-      const existingDynamic = dynamicContent[page.pageNumber] || '';
-      const textAsAbsolute = textFlowHtml
-        ? `<div style="position:absolute;top:7%;left:3%;right:3%;font-family:'Inter',Arial,sans-serif;line-height:1.4;">${textFlowHtml}</div>`
-        : '';
-      const finalDynamic = existingDynamic + textAsAbsolute;
-      const pageWithOnlyNonText = { ...page, elements: nonTextElements };
       const pageHtml = await renderPageToHTML(
-        pageWithOnlyNonText,
-        finalDynamic,
+        page,
+        dynamicContent[page.pageNumber] || '',
         undefined,
         { boundedTextBoxes: false },
       );

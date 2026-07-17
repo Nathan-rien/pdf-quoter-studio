@@ -38,6 +38,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { resolveServiceTemplate } from '@/lib/service-template-selection';
 
 const DEFAULT_CLIENT: ClientData = {
   client_name: '',
@@ -86,10 +87,15 @@ const STATUS_LABELS: Record<ServiceProposal['status'], string> = {
 function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues, dataForm: ServiceDataFormValues) {
   const store = useServiceProposalStore.getState();
   const selectedTemplateId = useRentalProposalStore.getState().selectedTemplateId;
+  const templateStore = useTemplateEditorStore.getState();
 
-  if (selectedTemplateId) {
-    store.selectTemplate(selectedTemplateId);
-  }
+  const serviceTemplate = resolveServiceTemplate({
+    selectedTemplateIds: [store.selectedTemplateId, selectedTemplateId],
+    allTemplates: templateStore.allTemplates,
+    getTemplatePublishedVersion: templateStore.getTemplatePublishedVersion,
+  });
+
+  store.selectTemplate(serviceTemplate?.id ?? null);
 
   store.updateClientData({
     nom: clientData.client_name,
@@ -310,17 +316,21 @@ function ProposalFormShell({
   useEffect(() => {
     if (hasAutoSelectedRef.current) return;
 
-    const currentTemplate = allTemplates.find(t => t.id === selectedRentalTemplateId);
-    const isAlreadyContratCadre = currentTemplate?.name === 'Contrat Cadre Services';
+    const currentTemplate = resolveServiceTemplate({
+      selectedTemplateIds: [selectedRentalTemplateId],
+      allTemplates,
+      getTemplatePublishedVersion,
+    });
 
-    if (isAlreadyContratCadre) {
+    if (currentTemplate?.id === selectedRentalTemplateId) {
       hasAutoSelectedRef.current = true;
       return;
     }
 
-    const contratTemplate = allTemplates.find(
-      t => t.name === 'Contrat Cadre Services' && !!getTemplatePublishedVersion(t.id)
-    );
+    const contratTemplate = resolveServiceTemplate({
+      allTemplates,
+      getTemplatePublishedVersion,
+    });
 
     if (contratTemplate) {
       useRentalProposalStore.getState().selectTemplateForProposal(contratTemplate.id);
@@ -463,11 +473,17 @@ function CreateForm({ onClose }: { onClose: () => void }) {
 function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: () => void }) {
   // Préchargement du store autonome avec les données de la proposition existante
   useEffect(() => {
-    useServiceProposalStore.getState().loadFromServiceProposal(proposal);
-    const rentalTemplateId = useRentalProposalStore.getState().selectedTemplateId;
-    if (rentalTemplateId) {
-      useServiceProposalStore.getState().selectTemplate(rentalTemplateId);
-    }
+    const serviceStore = useServiceProposalStore.getState();
+    serviceStore.loadFromServiceProposal(proposal);
+
+    const templateStore = useTemplateEditorStore.getState();
+    const serviceTemplate = resolveServiceTemplate({
+      selectedTemplateIds: [serviceStore.selectedTemplateId, useRentalProposalStore.getState().selectedTemplateId],
+      allTemplates: templateStore.allTemplates,
+      getTemplatePublishedVersion: templateStore.getTemplatePublishedVersion,
+    });
+
+    serviceStore.selectTemplate(serviceTemplate?.id ?? null);
   }, [proposal]);
 
   const [clientData, setClientData] = useState<ClientData>({
