@@ -68,18 +68,19 @@ function buildPages() {
         rectEl("p1c-banner", 20, 20, 610, 40),
         textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
         textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, align: "right", zIndex: 5 }),
-        textEl("p1c-lbl-benef", 40, 90, 570, 15, "Bénéficiaire", { bold: true, size: 10 }),
-        textEl("p1c-lbl-sites", 40, 240, 570, 15, "Sites d'intervention", { bold: true, size: 10 }),
-        textEl("p1c-lbl-op", 40, 400, 570, 15, "Contact opérationnel", { bold: true, size: 10 }),
-        textEl("p1c-lbl-prest", 40, 560, 570, 15, "Prestataires extérieurs", { bold: true, size: 10 }),
+        textEl("p1c-lbl-benef", 40, 82, 570, 14, "Bénéficiaire", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p1c-lbl-sites", 40, 250, 570, 14, "Sites d'intervention", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p1c-lbl-op", 40, 448, 570, 14, "Contact opérationnel", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p1c-lbl-prest", 40, 588, 570, 14, "Prestataires extérieurs", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
-        { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 12, height: 16 } },
-        { id: "service_site_addresses_page1", pageNumber: 1, type: "service_site_addresses", sourceSheet: "client", isRequired: false, description: "Adresses de sites", position: { top: 32, height: 18 } },
-        { id: "service_operational_contact_page1", pageNumber: 1, type: "service_operational_contact", sourceSheet: "client", isRequired: false, description: "Contact opérationnel", position: { top: 52, height: 14 } },
-        { id: "service_external_providers_page1", pageNumber: 1, type: "service_external_providers", sourceSheet: "client", isRequired: false, description: "Prestataires extérieurs", position: { top: 70, height: 20 } },
+        { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 13, height: 17 } },
+        { id: "service_site_addresses_page1", pageNumber: 1, type: "service_site_addresses", sourceSheet: "client", isRequired: false, description: "Adresses de sites", position: { top: 33, height: 20 } },
+        { id: "service_operational_contact_page1", pageNumber: 1, type: "service_operational_contact", sourceSheet: "client", isRequired: false, description: "Contact opérationnel", position: { top: 57, height: 14 } },
+        { id: "service_external_providers_page1", pageNumber: 1, type: "service_external_providers", sourceSheet: "client", isRequired: false, description: "Prestataires extérieurs", position: { top: 74, height: 20 } },
       ],
       staticElements: [],
+
     },
     // ================== PAGE 2 — PÉRIMÈTRE (ANNEXE 1) ==================
     {
@@ -90,7 +91,7 @@ function buildPages() {
       elements: [
         rectEl("p2p-banner", 20, 20, 610, 40),
         textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p2p-lbl-summary", 40, 78, 570, 15, "Résumé des services souscrits", { bold: true, size: 10 }),
+        textEl("p2p-lbl-summary", 40, 64, 570, 14, "Résumé des services souscrits", { bold: true, size: 10, zIndex: 50 }),
         textEl("p2p-lbl-tarifs", 40, 320, 570, 15, "Interventions sur site en supplément", { bold: true, size: 10 }),
         // Tableau statique éditable dans l'éditeur — 3 lignes de tarifs
         rectEl("p2p-tarif-r1-bg", 40, 340, 330, 20, "#f9fafb"),
@@ -102,12 +103,13 @@ function buildPages() {
         rectEl("p2p-tarif-r3-bg", 40, 380, 330, 20, "#f9fafb"),
         textEl("p2p-tarif-r3-lbl", 46, 384, 320, 14, "Ingénieur serveur réseau", { size: 9, bold: true, align: "left" }),
         textEl("p2p-tarif-r3-val", 376, 384, 234, 14, "900 € HT", { size: 9, bold: true, align: "right" }),
-        textEl("p2p-lbl-cond", 40, 500, 570, 15, "Modalités de règlement", { bold: true, size: 10 }),
+        textEl("p2p-lbl-cond", 40, 500, 570, 14, "Modalités de règlement", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
-        { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 10, height: 28 } },
+        { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 11, height: 26 } },
         { id: "service_conditions_page2", pageNumber: 2, type: "service_conditions", sourceSheet: "données", isRequired: false, description: "Modalités de règlement", position: { top: 65, height: 24 } },
       ],
+
       staticElements: [],
     },
     // ================== PAGE 3 — MATÉRIEL ==================
@@ -119,14 +121,15 @@ function buildPages() {
       elements: [
         rectEl("p3m-banner", 20, 20, 610, 40),
         textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p3m-lbl-invest", 40, 78, 570, 15, "Matériel concerné", { bold: true, size: 10 }),
-        textEl("p3m-lbl-options", 40, 420, 570, 15, "Options souscrites (détail)", { bold: true, size: 10 }),
+        textEl("p3m-lbl-invest", 40, 66, 570, 14, "Matériel concerné", { bold: true, size: 10, zIndex: 50 }),
+        textEl("p3m-lbl-options", 40, 442, 570, 14, "Options souscrites (détail)", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
-        { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 12, height: 40 } },
-        { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées (sans prix)", position: { top: 55, height: 35 }, hidePrice: true },
+        { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 11, height: 40 } },
+        { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées (sans prix)", position: { top: 56, height: 35 }, hidePrice: true },
 
       ],
+
       staticElements: [],
     },
     // ================== PAGES CG (ex-1 à ex-6, renumérotées 4-9) ==================

@@ -19,13 +19,15 @@ import { buildHtmlDataFromStore } from '@/lib/service-proposal-data-builder';
 import type { TemplateVersion } from '@/types/template-editor';
 import type { DocumentScope } from '@/types/pdf-template';
 
-export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
+export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pagesHtml, setPagesHtml] = useState<string[]>([]);
   const [rendering, setRendering] = useState(false);
+  const [mode, setMode] = useState<'devis' | 'contrat'>(initialMode);
 
   const store = useServiceProposalStore();
   const { clientData, lignesData, proposalName } = store;
+
 
   const adminOptions = useOptionsAdminStore((s) => s.options);
   const selectedTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
@@ -159,6 +161,22 @@ export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'c
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md border bg-background p-0.5">
+            <button
+              type="button"
+              onClick={() => { setMode('devis'); setCurrentPage(1); }}
+              className={`px-2.5 py-1 text-[11px] rounded ${mode === 'devis' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Devis
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('contrat'); setCurrentPage(1); }}
+              className={`px-2.5 py-1 text-[11px] rounded ${mode === 'contrat' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Contrat
+            </button>
+          </div>
           <Badge variant="secondary" className="text-[10px]">
             {lignesData.length} ligne{lignesData.length > 1 ? 's' : ''}
           </Badge>
@@ -166,6 +184,7 @@ export function ServiceProposalPreview({ mode = 'devis' }: { mode?: 'devis' | 'c
             {totalPages} page{totalPages > 1 ? 's' : ''}
           </Badge>
         </div>
+
       </div>
 
       <div className="flex items-center justify-between px-4 py-2 bg-muted/50 rounded-lg">
