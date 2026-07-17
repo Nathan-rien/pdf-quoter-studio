@@ -30,9 +30,10 @@ interface ContractRow {
 
 interface TechnicianTrackingViewProps {
   isAdmin: boolean;
+  onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void;
 }
 
-export function TechnicianTrackingView({ isAdmin }: TechnicianTrackingViewProps) {
+export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: TechnicianTrackingViewProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
