@@ -127,6 +127,13 @@ export default function Index() {
           />
         ) : null;
 
+      case 'technician-tracking':
+        return (isAdmin || isTechnicien) ? (
+          <TechnicianTrackingView isAdmin={isAdmin} />
+        ) : null;
+
+
+
 
       case 'history':
         return (
