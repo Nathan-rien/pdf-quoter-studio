@@ -1,63 +1,43 @@
-## Objectif
+## Diagnostic
 
-Fusionner la sélection des services entre "Données" et "Nos Options", ajouter la notion de **Pack** dans le catalogue Options Services, et exposer un champ **Référence ERP (JAJA)** uniquement dans l'admin.
+### 1. Pourquoi seulement 3 pages ?
+`ServiceProposalPreview` est appelé avec `mode="devis"` par défaut. Le filtre `scopeMatches` masque toutes les pages `documentScope: "contrat"`. Or dans le seed actuel :
+- Pages 1, 2, 3 → `"both"` (visibles en devis) ✅
+- Pages 4 à 9 → `"contrat"` (masquées en aperçu devis) → invisibles ici
 
-## 1. Fusion Données ↔ Nos Options (source unique = nosOptions)
+C'est le comportement voulu (le devis ne montre pas les CG), mais rien dans l'UI ne permet à l'utilisateur de basculer en vue "contrat" pour vérifier les 9 pages avant validation.
 
-- **`serviceProposalStore.ts`** :
-  - `selected_services` devient **dérivé** de `nosOptions` (getter/selector) — plus de setter direct.
-  - Chaque `NosOption` sélectionnée est projetée en `ServiceLine` : `{ service_id, label, amount_ht (= prix option ou pack), show_price_mode }`.
-- **`ServiceProposalDataStep.tsx`** :
-  - Supprime toute la partie "ajouter/tarifer un service" (lignes éditables, boutons + / suppression, toggles /mois total).
-  - Affiche en lecture seule la liste des noms des services/packs cochés (une ligne par item, nom seul, empilé verticalement), avec un message "Sélectionnez les services dans l'onglet Nos Options" si vide.
-  - Conserve : total services HT (calculé depuis nosOptions), périodicité, mode de paiement, durée, date de début, champ calculé loyer mensuel/trimestriel.
-- **`ServiceProposalNosOptionsStep.tsx`** : reste la seule source de saisie (checkbox + description + prix).
-- **`useServiceProposals.ts`** : le payload envoyé à Supabase inclut `selected_services` calculé à partir de `nosOptions` au moment du save (pas de doublon en base — on garde `selected_services` en colonne pour compat mais rempli automatiquement).
-- **`ServiceProposalExport.tsx`** / **`ServiceProposalPreview.tsx`** : aucun changement de rendu — ils consomment déjà `selected_services` / zones dynamiques `service_options` et `service_invest_table`.
+### 2. Pourquoi ça se chevauche (page 1 et 2)
+Le seed positionne les libellés statiques (`Bénéficiaire`, `Sites d'intervention`, `Contact opérationnel`, `Prestataires extérieurs`, `Résumé des services souscrits`, `Modalités de règlement`) à des coordonnées `y` fixes en pixels, alors que le rendu des zones dynamiques a son propre flux (chaque zone occupe une bande en % de la page). Les blocs dynamiques s'affichent à leurs positions et écrasent/décalent les libellés → superpositions visibles :
+- Page 1 : "B / S / C / P" empilés en colonne à gauche, contenus dynamiques dessus
+- Page 2 : le titre "Résumé des services souscrits" est superposé à la zone `options_summary`
 
-## 2. Notion de "Pack" dans le catalogue Options Services
+## Correctifs à appliquer
 
-- **Migration DB** sur `public.options_services` :
-  - Ajout `kind text NOT NULL DEFAULT 'option'` (valeurs : `'option' | 'pack'`).
-  - Ajout `pack_service_ids uuid[] DEFAULT '{}'` (liste des services regroupés — pour affichage détail).
-  - Ajout `erp_reference text` (champ JAJA, optionnel).
-- **Types (`options-admin.ts`, `optionsAdminStore.ts`)** :
-  - `ServiceOptionDefinition` reçoit `kind`, `packServiceIds?`, `erpReference?`.
-- **Admin (`OptionsServicesAdmin.tsx`)** :
-  - Nouveau bouton **"Nouveau pack"** à côté de "Nouvelle option".
-- **`OptionsServiceCard.tsx`** :
-  - Affiche un badge "PACK" si `kind === 'pack'`.
-  - Pour un pack : sélecteur multi-services (checkbox list depuis les autres options actives, hors packs) pour composer `packServiceIds`, avec affichage compact des services inclus.
-  - Le prix du pack reste saisi indépendamment (remise possible).
-  - Nouveau champ texte **"Référence ERP (JAJA)"** (visible sur options ET packs, admin uniquement).
-- **`ServiceProposalNosOptionsStep.tsx`** : un pack est sélectionnable exactement comme une option (même UI checkbox + prix). Le détail des services inclus s'affiche en sous-ligne info.
+### A. Aperçu — permettre de voir les 9 pages
+Ajouter un sélecteur (segmented control) dans `ServiceProposalPreview.tsx` : `Devis` / `Contrat`. Il pilote l'état `mode` local (initialisé sur la prop). Le compteur "X pages" reflète le mode courant. Aucune autre logique ne change, l'export continue d'utiliser `mode="devis"` / `mode="contrat"` comme aujourd'hui.
 
-## 3. Champ Référence ERP (JAJA)
+### B. Seed — page 1 (Couverture)
+Restructurer pour que chaque libellé précède immédiatement sa zone dynamique, sans chevauchement :
+- Retirer les 4 libellés statiques placés en dur (`p1c-lbl-benef`, `-sites`, `-op`, `-prest`)
+- Intégrer le libellé dans la `description` de chaque zone dynamique (le renderer de zone affiche déjà un titre), ou ajouter des `textEl` alignés sur le `top` calculé de chaque zone (`top` en % de la zone utile → y en px)
+- Ré-espacer les 4 zones dynamiques verticalement de façon non chevauchante : bénéficiaire (top 10 / h 18), sites (top 30 / h 20), contact op (top 52 / h 16), prestataires (top 70 / h 22)
 
-- Texte libre, optionnel, sur options et packs.
-- Visible/éditable **uniquement** dans `OptionsServicesAdmin.tsx` (via `OptionsServiceCard`).
-- Non exposé dans le devis client, ni dans le preview/export PDF.
-- Aucune intégration technique — fondation seule.
+### C. Seed — page 2 (Périmètre)
+- Remonter le libellé `Résumé des services souscrits` (`p2p-lbl-summary`) au-dessus de la zone `options_summary` avec un `y` cohérent avec `top: 10%` de la zone (≈ y 90)
+- Vérifier que le libellé `Modalités de règlement` (y 500) reste au-dessus de la zone `conditions` (top 65%)
 
-## Fichiers touchés
+### D. Republier la version
+Après modification du seed, republier via le bouton existant "Initialiser Contrat Cadre Services" (déjà upsert versionné) → v17.
 
-- Migration SQL : `options_services` (+ 3 colonnes)
-- `src/types/options-admin.ts`
-- `src/stores/optionsAdminStore.ts`
-- `src/stores/serviceProposalStore.ts`
-- `src/hooks/useServiceProposals.ts`
-- `src/pages/OptionsServicesAdmin.tsx`
-- `src/components/options-admin/OptionsServiceCard.tsx`
-- `src/components/service-proposal/ServiceProposalDataStep.tsx`
-- `src/components/service-proposal/ServiceProposalNosOptionsStep.tsx`
+## Détails techniques
 
-Aucun changement sur `ServiceProposalExport.tsx` / `ServiceProposalPreview.tsx` (consommation inchangée).
+Fichiers touchés :
+- `src/components/service-proposal/ServiceProposalPreview.tsx` : ajouter le toggle `Devis | Contrat` dans l'en-tête du navigateur de pages, état local `mode`.
+- `src/lib/seedContratCadreTemplate.ts` : réécrire les pages 1 et 2 (nouvelles coordonnées, libellés alignés aux zones dynamiques).
 
-## Ordre d'exécution
+Aucun changement de schéma DB, aucun changement d'export PDF.
 
-1. Migration DB (attente approbation).
-2. Types + stores.
-3. Admin (packs + champ ERP).
-4. Refonte Data step + dérivation selected_services.
-5. Adaptation Nos Options step pour afficher packs.
-6. Vérification build.
+## Hors périmètre
+- Pages 4-9 (juridiques) : inchangées.
+- Le mode d'export automatique lors de la validation (génère bien le PDF `contrat` avec les 9 pages) : inchangé.
