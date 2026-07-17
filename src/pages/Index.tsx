@@ -20,6 +20,7 @@ import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
 import { GanttView } from "@/components/gantt/GanttView";
 import { TechnicianTrackingView } from "@/components/technician-tracking/TechnicianTrackingView";
+import { PlanningView, PlanningPrefill } from "@/components/technician-tracking/PlanningView";
 import { cn } from "@/lib/utils";
 import cbproLogo from "@/assets/cbpro-logo.svg.asset.json";
 
