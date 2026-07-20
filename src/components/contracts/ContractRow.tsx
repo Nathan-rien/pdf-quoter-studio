@@ -64,6 +64,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
   const [cessionPercent, setCessionPercent] = useState<number | null>(contract.cession_percent ?? null);
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
+  const { data: proposalOptions } = useContractProposalOptions(isQuick ? null : contract.proposal_id);
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
