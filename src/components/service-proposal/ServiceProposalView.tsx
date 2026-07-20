@@ -391,7 +391,7 @@ function ProposalFormShell({
           <ServiceProposalPreview />
 
           <Separator />
-          <ServiceProposalExport mode="contrat" />
+          <ServiceProposalExport />
         </TabsContent>
       </Tabs>
 
