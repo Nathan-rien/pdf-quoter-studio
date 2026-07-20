@@ -275,7 +275,7 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
               <div className="pt-3 border-t border-border mt-3">
                 {showPriceEditor || option.price ? (
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <Euro className="h-4 w-4 text-muted-foreground" />
                     <Input
                       type="number"
                       step="0.01"
