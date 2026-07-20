@@ -153,6 +153,32 @@ export default function OptionsServicesAdmin() {
           Nouveau pack
         </Button>
         <div className="flex-1" />
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant={kindFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 text-xs px-3"
+            onClick={() => setKindFilter('all')}
+          >
+            Tout
+          </Button>
+          <Button
+            variant={kindFilter === 'option' ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 text-xs px-3"
+            onClick={() => setKindFilter('option')}
+          >
+            Options
+          </Button>
+          <Button
+            variant={kindFilter === 'pack' ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 text-xs px-3"
+            onClick={() => setKindFilter('pack')}
+          >
+            Packs
+          </Button>
+        </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
