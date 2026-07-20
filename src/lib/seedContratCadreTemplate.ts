@@ -35,7 +35,7 @@ function textEl(id: string, x: number, y: number, w: number, h: number, text: st
   };
 }
 
-function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "#e8e8e8") {
+function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "#e8e8e8", bordered = false) {
   return {
     id,
     type: "shape",
@@ -50,7 +50,9 @@ function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "
       backgroundColor: fill,
       backgroundOpacity: 100,
       cornerRadius: 0,
-      border: { enabled: false, color: "#000", width: 1 },
+      border: bordered
+        ? { enabled: true, color: "#e5e7eb", width: 1 }
+        : { enabled: false, color: "#000", width: 1 },
       innerContent: { alignment: { horizontal: "left", vertical: "top" }, padding: 0 },
     },
   };
@@ -91,19 +93,30 @@ function buildPages() {
       elements: [
         rectEl("p2p-banner", 20, 20, 610, 40),
         textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p2p-lbl-summary", 40, 64, 570, 14, "Résumé des services souscrits", { bold: true, size: 10, zIndex: 50 }),
-        textEl("p2p-lbl-tarifs", 40, 330, 570, 15, "Interventions sur site en supplément", { bold: true, size: 10, zIndex: 50 }),
-        // Tableau statique éditable dans l'éditeur — 3 lignes de tarifs
-        rectEl("p2p-tarif-r1-bg", 40, 352, 330, 20, "#f9fafb"),
-        textEl("p2p-tarif-r1-lbl", 46, 356, 320, 14, "Technicien", { size: 9, bold: true, align: "left" }),
-        textEl("p2p-tarif-r1-val", 376, 356, 234, 14, "500 € HT", { size: 9, bold: true, align: "right" }),
-        rectEl("p2p-tarif-r2-bg", 40, 372, 330, 20, "#f9fafb"),
-        textEl("p2p-tarif-r2-lbl", 46, 376, 320, 14, "Administrateur", { size: 9, bold: true, align: "left" }),
-        textEl("p2p-tarif-r2-val", 376, 376, 234, 14, "600 € HT", { size: 9, bold: true, align: "right" }),
-        rectEl("p2p-tarif-r3-bg", 40, 392, 330, 20, "#f9fafb"),
-        textEl("p2p-tarif-r3-lbl", 46, 396, 320, 14, "Ingénieur serveur réseau", { size: 9, bold: true, align: "left" }),
-        textEl("p2p-tarif-r3-val", 376, 396, 234, 14, "900 € HT", { size: 9, bold: true, align: "right" }),
-        textEl("p2p-lbl-cond", 40, 500, 570, 14, "Modalités de règlement", { bold: true, size: 10, zIndex: 50 }),
+        // p2p-lbl-summary retiré — la zone dynamique service_options_summary rend déjà son propre titre "Services & packs souscrits"
+        textEl("p2p-lbl-tarifs", 40, 330, 570, 15, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, size: 11, color: "#1a1a1a", align: "left", zIndex: 50 }),
+        // Tableau statique des tarifs — aligné visuellement sur DATA_TABLE_STYLE / TH_STYLE / TD_STYLE
+        // En-tête
+        rectEl("p2p-tarif-h-lbl-bg", 40, 352, 340, 18, "#f3f4f6", true),
+        textEl("p2p-tarif-h-lbl", 46, 356, 328, 14, "Intervention", { size: 9, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-h-val-bg", 380, 352, 230, 18, "#f3f4f6", true),
+        textEl("p2p-tarif-h-val", 386, 356, 218, 14, "Tarif", { size: 9, bold: true, color: "#1a1a1a", align: "right", zIndex: 2 }),
+        // Ligne 1 (fond blanc)
+        rectEl("p2p-tarif-r1-lbl-bg", 40, 370, 340, 18, "#ffffff", true),
+        textEl("p2p-tarif-r1-lbl", 46, 374, 328, 14, "Technicien", { size: 9, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r1-val-bg", 380, 370, 230, 18, "#ffffff", true),
+        textEl("p2p-tarif-r1-val", 386, 374, 218, 14, "500 € HT", { size: 9, bold: true, color: "#1a1a1a", align: "right", zIndex: 2 }),
+        // Ligne 2 (fond alt)
+        rectEl("p2p-tarif-r2-lbl-bg", 40, 388, 340, 18, "#f9fafb", true),
+        textEl("p2p-tarif-r2-lbl", 46, 392, 328, 14, "Administrateur", { size: 9, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r2-val-bg", 380, 388, 230, 18, "#f9fafb", true),
+        textEl("p2p-tarif-r2-val", 386, 392, 218, 14, "600 € HT", { size: 9, bold: true, color: "#1a1a1a", align: "right", zIndex: 2 }),
+        // Ligne 3 (fond blanc)
+        rectEl("p2p-tarif-r3-lbl-bg", 40, 406, 340, 18, "#ffffff", true),
+        textEl("p2p-tarif-r3-lbl", 46, 410, 328, 14, "Ingénieur serveur réseau", { size: 9, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r3-val-bg", 380, 406, 230, 18, "#ffffff", true),
+        textEl("p2p-tarif-r3-val", 386, 410, 218, 14, "900 € HT", { size: 9, bold: true, color: "#1a1a1a", align: "right", zIndex: 2 }),
+        textEl("p2p-lbl-cond", 40, 500, 570, 14, "MODALITÉS DE RÈGLEMENT", { font: "Outfit", bold: true, size: 11, color: "#1a1a1a", align: "left", zIndex: 50 }),
       ],
       dynamicZones: [
         { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 11, height: 19 } },
