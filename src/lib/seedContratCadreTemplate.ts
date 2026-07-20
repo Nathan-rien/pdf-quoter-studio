@@ -96,7 +96,7 @@ export function buildPages() {
         rectEl("p2p-banner", 20, 20, 610, 40),
         textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
         // p2p-lbl-summary retiré — la zone dynamique service_options_summary rend déjà son propre titre "Services & packs souscrits"
-        textEl("p2p-lbl-tarifs", 26, 326, 598, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
+        textEl("p2p-lbl-tarifs", 26, 326, 598, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, fontWeight: 600, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
         // Tableau statique des tarifs — aligné visuellement sur DATA_TABLE_STYLE / TH_STYLE / TD_STYLE
         // En-tête
         rectEl("p2p-tarif-h-lbl-bg", 26, 352, 358, 24, "#f3f4f6", true),
