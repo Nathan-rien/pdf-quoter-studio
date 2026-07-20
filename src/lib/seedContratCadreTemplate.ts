@@ -7,6 +7,7 @@ type TextOpts = {
   color?: string;
   bold?: boolean;
   align?: "left" | "center" | "right" | "justify";
+  fontWeight?: number | string;
 };
 
 function textEl(id: string, x: number, y: number, w: number, h: number, text: string, opts: TextOpts = {}) {
@@ -31,6 +32,7 @@ function textEl(id: string, x: number, y: number, w: number, h: number, text: st
       textAlign: opts.align ?? "justify",
       listType: "none",
       indentLevel: 0,
+      ...(opts.fontWeight !== undefined ? { fontWeight: opts.fontWeight } : {}),
     },
   };
 }
@@ -94,7 +96,7 @@ export function buildPages() {
         rectEl("p2p-banner", 20, 20, 610, 40),
         textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
         // p2p-lbl-summary retiré — la zone dynamique service_options_summary rend déjà son propre titre "Services & packs souscrits"
-        textEl("p2p-lbl-tarifs", 26, 326, 598, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
+        textEl("p2p-lbl-tarifs", 26, 326, 598, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, fontWeight: 600, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
         // Tableau statique des tarifs — aligné visuellement sur DATA_TABLE_STYLE / TH_STYLE / TD_STYLE
         // En-tête
         rectEl("p2p-tarif-h-lbl-bg", 26, 352, 358, 24, "#f3f4f6", true),
@@ -116,7 +118,7 @@ export function buildPages() {
         textEl("p2p-tarif-r3-lbl", 32, 428, 346, 18, "Ingénieur serveur réseau", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         rectEl("p2p-tarif-r3-val-bg", 384, 424, 240, 24, "#ffffff", true),
         textEl("p2p-tarif-r3-val", 390, 428, 228, 18, "900 € HT", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        textEl("p2p-lbl-cond", 26, 500, 598, 20, "MODALITÉS DE RÈGLEMENT", { font: "Outfit", bold: true, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
+        textEl("p2p-lbl-cond", 26, 500, 598, 20, "MODALITÉS DE RÈGLEMENT", { font: "Outfit", bold: true, fontWeight: 600, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
       ],
       dynamicZones: [
         { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 11, height: 19 } },

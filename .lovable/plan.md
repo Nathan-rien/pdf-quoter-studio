@@ -1,21 +1,19 @@
-## Objectif
-Alléger le gras du tableau « Interventions sur site en supplément » (page 2) pour matcher le tableau « Vos modalités de règlement » juste en dessous.
+## Problème
+Les titres statiques « INTERVENTIONS SUR SITE EN SUPPLÉMENT » et « MODALITÉS DE RÈGLEMENT » (page 2 du template) sont déclarés avec `bold: true`, ce qui est rendu **font-weight: 700** par le générateur d'éléments statiques (`service-proposal-html-generator.ts`, branches `c.bold ? '700' : '400'`).
 
-## Constat
-Dans `src/lib/seedContratCadreTemplate.ts`, toutes les cellules `p2p-tarif-r1/r2/r3` (labels ET valeurs) sont en `bold: true`. Dans le tableau dynamique de règlement rendu par `service-proposal-html-generator.ts`, seules les cellules d'en-tête sont grasses, les libellés en 600 léger et les valeurs en 400/normal.
+Les titres des zones dynamiques (« SERVICES & PACKS SOUSCRITS », « VOS MODALITÉS DE RÈGLEMENT ») utilisent `SECTION_TITLE_STYLE` avec **font-weight: 600**.
 
-## Modification
-Dans `src/lib/seedContratCadreTemplate.ts` (lignes 100-118) :
-- Garder `bold: true` uniquement sur la ligne d'en-tête (`p2p-tarif-h-lbl`, `p2p-tarif-h-val`).
-- Passer `bold: false` sur les libellés des lignes de données (Technicien / Administrateur / Ingénieur serveur réseau).
-- Garder `bold: true` uniquement sur les valeurs de tarif (500/600/900 € HT), alignées à droite comme les montants du tableau règlement — ou les passer aussi en normal si tu préfères la parité totale.
+D'où la différence de graisse visible à l'écran.
 
-## Republication
-Republier une **Version 21** du template « Contrat Cadre Services » en base pour que l'aperçu prenne les changements (les précédentes versions publiées ne se mettent pas à jour toutes seules depuis le seed).
+## Correction
 
-## À confirmer
-Pour les valeurs de tarif (colonne droite : `500 € HT`, `600 € HT`, `900 € HT`) — tu préfères :
-- (A) Les garder en gras (comme les totaux en bas du tableau règlement) ?
-- (B) Les mettre aussi en normal (parité totale avec les libellés) ?
+1. **`src/lib/service-proposal-html-generator.ts`** — étendre le rendu texte statique pour accepter un poids explicite :
+   - Ajouter un champ optionnel `fontWeight?: number | string` dans `content` des éléments texte.
+   - Dans les deux branches qui calculent `const fw = c.bold ? '700' : '400'`, préférer `c.fontWeight` s'il est défini.
 
-Par défaut je pars sur (A) sauf indication contraire.
+2. **`src/lib/seedContratCadreTemplate.ts`** — pour `p2p-lbl-tarifs` et `p2p-lbl-cond` :
+   - Garder `bold: true` (compat) et ajouter `fontWeight: 600` dans les opts → passer via `textEl` (ajouter l'option au helper).
+
+3. **Republier** une nouvelle version (v22) du template « Contrat Cadre Services » en base pour que le rendu prenne effet.
+
+Aucun autre template ni page 4-9 n'est touché.
