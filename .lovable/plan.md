@@ -1,25 +1,23 @@
-## Diagnostic
+## Diagnostic (vérifié)
 
-- Base : la version publiée du template « Contrat Cadre Services » est la **v18 (17/07/2026)**.
-- Contenu de la v18 en base pour `p2p-lbl-tarifs` : `fontFamily: Inter, fontSize: 10, italic/bold`, texte casse mixte — c'est exactement ce qu'on voit dans la capture (petit label bleuté).
-- Les ids `p2p-tarif-h-lbl` / `p2p-tarif-h-val` / `p2p-tarif-r*-lbl-bg` (en-tête + fonds bordés) **n'existent pas** dans la v18 : le tableau reconstruit lors du dernier tour n'a jamais été publié.
-- Conclusion : le code de `seedContratCadreTemplate.ts` est correct, mais aucune republication n'a été déclenchée. L'aperçu et l'export lisent la v18 obsolète.
+- Les zones dynamiques (« Vos modalités de règlement », « Services & packs souscrits ») rendent leur texte via `<div class="dynamic-content">` avec des styles inline en px absolus : `font-size:11px` pour les titres, `9px` pour les cellules. Ces valeurs s'affichent telles quelles sur le canvas 580×820.
+- Les éléments statiques du template (`p2p-lbl-tarifs`, `p2p-tarif-*`) passent par `renderPageToHTML` → `pdf-html-generator.ts` où **`fontSize` est multiplié par `PREVIEW_FONT_SCALE = 0.4`** (avec un min clampé à 6px).
+- Conséquence : `p2p-lbl-tarifs` avec `content.fontSize: 11` s'affiche à `max(11*0.4, 6) = 6px` — d'où le titre minuscule visible dans la capture. Les cellules avec `fontSize: 9` s'affichent aussi à 6px (min).
+- La largeur du tableau (`x:40..610` sur canvas 650, ~88%) est légèrement plus étroite que les zones dynamiques (`left:4%; right:4%` → 92%, soit ~26..624).
 
 ## Plan
 
-1. **Republier le template en base** en appelant `seedContratCadreTemplate()` (via un script one-shot lancé dans le sandbox) pour créer une **v19 publiée** avec :
-   - `p2p-lbl-tarifs` en `SECTION_TITLE_STYLE` (Outfit 11px 600 majuscules #1a1a1a)
-   - `p2p-lbl-cond` idem
-   - `p2p-lbl-summary` supprimé (doublon de la zone dynamique)
-   - Tableau « Interventions sur site » reconstruit : ligne d'en-tête #f3f4f6 (Intervention / Tarif), bordures 1px #e5e7eb sur chaque cellule, alternance #ffffff / #f9fafb, TD_STYLE pour libellés/valeurs
-2. **Vérifier la republication** :
-   - `SELECT version_number, status` sur `template_versions` pour confirmer v19 publiée
-   - Requête JSONB pour confirmer la présence des ids `p2p-tarif-h-lbl`, `p2p-tarif-r1-lbl-bg`, etc. et l'absence de `p2p-lbl-summary`
-3. **Vérifier le rendu** dans l'aperçu du sandbox via Playwright sur une proposition Services en mode Contrat, page 2/3, et capturer un screenshot pour comparer au style du bloc « VOS MODALITÉS DE RÈGLEMENT ».
-4. **Nettoyage** : marquer les anciennes versions v16/v17 en `archive` si nécessaire (v18 reste comme historique). Aucune modification de code applicatif attendue — le fix est purement une republication du seed déjà à jour.
+1. **Reculer les tailles de police en unités éditeur** dans `seedContratCadreTemplate.ts` pour que le rendu final corresponde aux zones dynamiques :
+   - `p2p-lbl-tarifs` et `p2p-lbl-cond` : `fontSize: 11` → **`28`** (rend à ~11px, comme `SECTION_TITLE_STYLE`)
+   - En-têtes de tableau `p2p-tarif-h-lbl`, `p2p-tarif-h-val` : `fontSize: 9` → **`23`** (rend à ~9px, comme `TH_STYLE`)
+   - Cellules libellé/valeur `p2p-tarif-r{1,2,3}-{lbl,val}` : `fontSize: 9` → **`23`** (rend à ~9px, comme `TD_STYLE`)
+2. **Aligner la largeur du tableau sur les zones dynamiques** : passer les rectangles/textes de `x:40, width:570` à **`x:26, width:598`** (soit 4% de marge gauche/droite sur un canvas 650), en conservant le split colonne libellé/valeur `340/230` reproportionné en `358/240`.
+3. **Ajuster la hauteur des lignes** pour rester lisibles : `height: 18` → **`24`** (rend à ~9-10mm scalé), positions y recalculées en conséquence (header à y=352 conservé, lignes espacées de 24 au lieu de 18).
+4. **Republier le template** : appeler `buildPages()` avec le seed mis à jour, insérer une **v20** en base via `psql`, vérifier la présence des nouvelles tailles via requête JSONB.
+5. **Contrôle visuel** : capture Playwright de la page 2/3 en mode Contrat pour comparer la taille du titre et du tableau « Interventions sur site » au bloc « Vos modalités de règlement ».
 
 ## Détails techniques
 
-- Script de republication : Node/tsx exécuté dans le sandbox, important `seedContratCadreTemplate` avec le client Supabase (clé service via env) — pas de modification de fichiers source.
-- Aucun changement dans `service-proposal-html-generator.ts` ni dans les composants d'aperçu.
-- Après validation visuelle, indiquer à l'utilisateur que la v19 est active et qu'un hard refresh peut être nécessaire côté navigateur.
+- Aucune modification de `service-proposal-html-generator.ts` ni de `pdf-html-generator.ts` : on aligne uniquement les valeurs seed sur le pipeline existant.
+- La conversion `× 0.4` est appliquée à **tout** le texte statique du template ; on aurait pu aussi supprimer le scale, mais ça casserait toutes les autres pages du template (juridiques) déjà calibrées.
+- Après republication, un hard refresh navigateur est nécessaire côté utilisateur.
