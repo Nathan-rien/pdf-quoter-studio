@@ -465,9 +465,9 @@ export async function generateServiceProposalHtml(
         ${selected.length === 0
           ? `<p style="${EMPTY_HINT_STYLE}">Aucun élément sélectionné</p>`
           : `<div style="${INFO_CARD_STYLE}">
-              <ul style="margin:0;padding:0 0 0 5mm;${BODY_TEXT_STYLE} list-style:disc;">
-                ${selected.map((o) => `<li style="margin:0.5mm 0;color:#1a1a1a;font-weight:500;">${escapeText(o.name || '—')}</li>`).join('')}
-              </ul>
+              <div style="${BODY_TEXT_STYLE}">
+                ${selected.map((o) => `<p style="margin:0.5mm 0;color:#1a1a1a;font-weight:500;">• ${escapeText(o.name || '—')}</p>`).join('')}
+              </div>
             </div>`}
       </div>`;
   };
