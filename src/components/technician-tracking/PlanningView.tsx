@@ -86,8 +86,19 @@ function startOfWeek(d: Date) {
 function fmtDay(d: Date) {
   return d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 }
-function fmtRange(view: 'day' | 'week', d: Date) {
+function startOfMonth(d: Date) {
+  const x = startOfDay(d);
+  x.setDate(1);
+  return x;
+}
+function endOfMonth(d: Date) {
+  const x = startOfMonth(d);
+  x.setMonth(x.getMonth() + 1);
+  return addDays(x, -1);
+}
+function fmtRange(view: 'day' | 'week' | 'month', d: Date) {
   if (view === 'day') return d.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  if (view === 'month') return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   const start = startOfWeek(d);
   const end = addDays(start, 6);
   return `${start.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} — ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
