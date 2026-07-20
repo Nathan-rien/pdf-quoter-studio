@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { calculateLoyerTrimestriel } from '@/lib/rental-calculations';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { supabase } from '@/integrations/supabase/client';
