@@ -28,12 +28,15 @@ export default function OptionsServicesAdmin() {
     return () => { cancelled = true; };
   }, [setOptions]);
 
-  const filteredOptions = options.filter((opt) =>
-    opt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    opt.services.some((s) =>
-      (typeof s === 'string' ? s : s.text).toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+  const filteredOptions = options.filter((opt) => {
+    const matchesSearch =
+      opt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      opt.services.some((s) =>
+        (typeof s === 'string' ? s : s.text).toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    const matchesKind = kindFilter === 'all' || opt.kind === kindFilter;
+    return matchesSearch && matchesKind;
+  });
 
   const handleAddNewOption = () => {
     addOption({
