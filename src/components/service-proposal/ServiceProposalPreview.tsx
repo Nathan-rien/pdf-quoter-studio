@@ -223,6 +223,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
               title={`Aperçu page ${currentPage}`}
               srcDoc={displayHtml}
               sandbox="allow-same-origin"
+              scrolling="no"
               className="absolute inset-0 w-full h-full border-0"
               style={{ background: '#fff' }}
             />
