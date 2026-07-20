@@ -4,7 +4,7 @@ import {
   FileText, 
   Upload, 
   CheckCircle, 
-  DollarSign, 
+  Euro, 
   Eye, 
   Download,
   AlertCircle,
@@ -32,7 +32,7 @@ interface WorkflowStepIndicatorProps {
 const stepIcons: Record<WorkflowStep, React.ComponentType<{ className?: string }>> = {
   'template': FileText,
   'data-editor': Upload,
-  'csv-import': DollarSign,
+  'csv-import': Euro,
   'preview': Eye,
   'export': Download,
 };
