@@ -7,6 +7,7 @@ type TextOpts = {
   color?: string;
   bold?: boolean;
   align?: "left" | "center" | "right" | "justify";
+  fontWeight?: number | string;
 };
 
 function textEl(id: string, x: number, y: number, w: number, h: number, text: string, opts: TextOpts = {}) {
@@ -31,6 +32,7 @@ function textEl(id: string, x: number, y: number, w: number, h: number, text: st
       textAlign: opts.align ?? "justify",
       listType: "none",
       indentLevel: 0,
+      ...(opts.fontWeight !== undefined ? { fontWeight: opts.fontWeight } : {}),
     },
   };
 }
