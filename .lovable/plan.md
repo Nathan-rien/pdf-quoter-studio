@@ -1,47 +1,53 @@
-## Bug
+## Diagnostic
 
-Dans `proposal_exports` (historique Location), les policies RLS filtrent uniquement sur `created_by = auth.uid()`. Quand un admin crée une proposition et l'attribue à un commercial via `commercial_id`, `created_by` reste l'admin — le commercial ne voit donc jamais la proposition dans son historique.
+Les données ne sont pas perdues en base — je les ai vérifiées : `commercial_id`, `financial_partner` et `cession_percent` sont bien stockés (ex. BDL 4 : `commercial_id='quick'`, `financial_partner='Lixxbail'`, `cession_percent=2`). Le header du contrat les affiche d'ailleurs correctement.
 
-À noter : `service_proposals` a déjà la bonne policy (`commercial_id = get_user_commercial_id(auth.uid())`), donc le correctif se limite à `proposal_exports`. `ServiceHistoryView` est réservé aux admins côté route, donc rien à changer là.
+Le problème est côté formulaire déplié : les composants `Select` de `ContractRow.tsx` n'acceptent que des valeurs présentes dans leur liste d'options. Depuis les récentes normalisations, les listes affichées sont trop restrictives :
 
-## Correctif (migration SQL)
+- **Commercial en charge** : `commercial_id='quick'` (contrats rapides) n'existe pas dans la liste `useCommerciaux` → Select vide.
+- **Partenaire financier** : la constante `FINANCIAL_PARTNERS` ne contient que les libellés « canoniques » (`Lixxbail 1`, `Grenke 1`, `BNP Crédit Bail 1`…). Les valeurs héritées présentes en base — `Lixxbail`, `LIXXBAIL`, `Grenke`, `Olinn`, `BNP Credit Bail 1` — ne matchent aucun `SelectItem` → Select vide (alors que le header, lui, affiche le texte brut).
+- **Cession** : la valeur est bien restaurée dans les boutons (le screenshot le confirme : « 2 % » est actif). Aucun correctif nécessaire, je le mentionne pour rassurer.
 
-Remplacer les policies SELECT / UPDATE / DELETE de `proposal_exports` pour ajouter la condition d'attribution commerciale :
-
-```sql
-DROP POLICY "Users can view own proposals"   ON public.proposal_exports;
-DROP POLICY "Users can update own proposals" ON public.proposal_exports;
-DROP POLICY "Users can delete own proposals" ON public.proposal_exports;
-
-CREATE POLICY "Users can view own proposals" ON public.proposal_exports
-FOR SELECT USING (
-  created_by = auth.uid()
-  OR has_role(auth.uid(), 'admin'::app_role)
-  OR commercial_id = public.get_user_commercial_id(auth.uid())
-);
-
-CREATE POLICY "Users can update own proposals" ON public.proposal_exports
-FOR UPDATE USING (
-  created_by = auth.uid()
-  OR has_role(auth.uid(), 'admin'::app_role)
-  OR commercial_id = public.get_user_commercial_id(auth.uid())
-)
-WITH CHECK (
-  created_by = auth.uid()
-  OR has_role(auth.uid(), 'admin'::app_role)
-  OR commercial_id = public.get_user_commercial_id(auth.uid())
-);
-
-CREATE POLICY "Users can delete own proposals" ON public.proposal_exports
-FOR DELETE USING (
-  created_by = auth.uid()
-  OR has_role(auth.uid(), 'admin'::app_role)
-);
+Distribution constatée en base :
+```
+Lixxbail 1        9    Grenke 1        8
+Lixxbail          5    Grenke          4
+LIXXBAIL          2    Olinn           3
+BNP Credit Bail 1 2
 ```
 
-La policy INSERT reste inchangée (`created_by = auth.uid()`).
+## Correctifs (UI-only, aucune migration destructive)
 
-## Vérification
+Fichier : `src/components/contracts/ContractRow.tsx`
 
-- Se connecter en tant que commercial ; l'historique Location doit lister les propositions dont `commercial_id` correspond, même si `created_by` est un admin.
-- L'admin conserve la visibilité totale ; le créateur d'origine garde l'accès.
+1. **Partenaire financier — tolérer les valeurs héritées**
+   - Construire dynamiquement la liste des options du Select = `FINANCIAL_PARTNERS` ∪ `{ contract.financial_partner }` (si non vide et absent de la liste).
+   - Ainsi la valeur actuelle reste sélectionnée et visible ; l'utilisateur peut la conserver ou la remplacer par un libellé canonique.
+   - Option cosmétique : préfixer les entrées héritées d'un badge « (existant) » dans la liste déroulante.
+
+2. **Commercial en charge — gérer les contrats rapides et les ID inconnus**
+   - Même logique : si `contract.commercial_id` n'est pas dans `commerciaux`, ajouter une option supplémentaire au Select avec pour libellé `contract.commercial_name ?? contract.commercial_id`.
+   - Pour les contrats rapides (`commercial_id='quick'`), afficher « Contrat rapide — {commercial_name} » afin de rester lisible et éditable.
+
+3. **Rien à changer** pour Cession, Loyers HT, Date de mise en place, Durée, Périodicité, Numéro de contrat : ces champs affichent déjà correctement les données stockées.
+
+## Portée
+
+- Vue Contrats Location **et** Contrats Services : les deux utilisent `ContractRow.tsx`, donc un seul fichier à modifier.
+- Aucune migration SQL, aucun changement de schéma, aucun impact sur la logique métier ou les calculs.
+- Aucune donnée n'est réécrite automatiquement — les valeurs héritées restent telles quelles jusqu'à ce que l'utilisateur les modifie manuellement.
+
+## Détails techniques
+
+```ts
+const partnerOptions = contract.financial_partner && !FINANCIAL_PARTNERS.includes(contract.financial_partner)
+  ? [...FINANCIAL_PARTNERS, contract.financial_partner]
+  : FINANCIAL_PARTNERS;
+
+const commercialOptions = sortedCommerciaux.some(c => c.id === commercialId) || !commercialId
+  ? sortedCommerciaux
+  : [
+      ...sortedCommerciaux,
+      { id: commercialId, nom: contract.commercial_name ?? (commercialId === 'quick' ? 'Contrat rapide' : commercialId) },
+    ];
+```

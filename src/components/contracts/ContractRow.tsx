@@ -99,6 +99,23 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
 
+  // Tolérer les valeurs héritées : ajouter la valeur stockée si absente de la liste canonique
+  const partnerOptions = financialPartner && !FINANCIAL_PARTNERS.includes(financialPartner)
+    ? [...FINANCIAL_PARTNERS, financialPartner]
+    : FINANCIAL_PARTNERS;
+
+  const commercialOptions = !commercialId || sortedCommerciaux.some((c) => c.id === commercialId)
+    ? sortedCommerciaux
+    : [
+        ...sortedCommerciaux,
+        {
+          id: commercialId,
+          nom: commercialId === 'quick'
+            ? `Contrat rapide${contract.commercial_name ? ` — ${contract.commercial_name}` : ''}`
+            : (contract.commercial_name ?? commercialId),
+        } as (typeof sortedCommerciaux)[number],
+      ];
+
   function handleSave() {
     const selected = commerciaux.find((c) => c.id === commercialId);
     const manualNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
