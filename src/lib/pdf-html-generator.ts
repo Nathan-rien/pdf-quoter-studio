@@ -469,7 +469,7 @@ export function renderFlowTextElementToHTML(element: EditableElement, idx: numbe
     `font-family: ${fontValue}`,
     `font-size: ${scaledFontSize}px`,
     `color: ${content.color || '#1f2937'}`,
-    `font-weight: ${content.bold ? 'bold' : 'normal'}`,
+    `font-weight: ${(content as any).fontWeight ?? (content.bold ? 'bold' : 'normal')}`,
     `font-style: ${content.italic ? 'italic' : 'normal'}`,
     `text-decoration: ${content.underline ? 'underline' : 'none'}`,
     'line-height: 1.2',
