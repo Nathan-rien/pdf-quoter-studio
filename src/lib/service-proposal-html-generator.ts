@@ -26,7 +26,29 @@ import type {
 import type { OptionService } from '@/stores/rentalProposalStore';
 import type { ServiceOptionDefinition } from '@/types/options-admin';
 
-const SERVICE_ZONE_GAP_PERCENT = 1.25;
+// 10mm rhythm between sections (10 / 297 * 100 ≈ 3.37%)
+const SERVICE_ZONE_GAP_PERCENT = 3.4;
+
+// Unified design tokens for the 3 first pages of the Service Proposal (devis scope)
+const SECTION_TITLE_STYLE =
+  "font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 3mm 0;";
+const INFO_CARD_STYLE =
+  "background:#fafafa;border:1px solid #e5e7eb;border-radius:3px;padding:4mm 5mm;";
+const BODY_TEXT_STYLE =
+  "font-family:'Inter',sans-serif;font-size:9px;font-weight:400;color:#374151;line-height:1.45;";
+const LABEL_STYLE =
+  "font-family:'Inter',sans-serif;font-size:8px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
+const VALUE_STYLE =
+  "font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#1a1a1a;margin:0;";
+const DATA_TABLE_STYLE =
+  "width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#374151;table-layout:fixed;";
+const TH_STYLE =
+  "padding:2mm 3mm;text-align:left;font-weight:600;color:#1a1a1a;background:#f3f4f6;border:1px solid #e5e7eb;font-size:9px;font-family:'Inter',sans-serif;";
+const TD_STYLE =
+  "padding:2mm 3mm;border:1px solid #e5e7eb;color:#374151;vertical-align:top;font-size:9px;font-family:'Inter',sans-serif;overflow-wrap:anywhere;";
+const ROW_ALT_BG = "#f9fafb";
+const EMPTY_HINT_STYLE =
+  "font-family:'Inter',sans-serif;font-size:9px;color:#9ca3af;font-style:italic;margin:0;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
