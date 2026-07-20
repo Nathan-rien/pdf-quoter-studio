@@ -285,7 +285,9 @@ export async function generateServiceProposalHtml(
     ['Mode de règlement', paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : paymentMode === 'allin' ? 'Allin' : '—'],
     ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
     ['Démarrage', startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'],
-    ['Total HT services', `${formatNumber(totalServicesHt)} €`, true],
+    ...(mode !== 'contrat'
+      ? ([['Total HT services', `${formatNumber(totalServicesHt)} €`, true]] as Array<[string, string, boolean?]>)
+      : []),
     ...(periodicRent !== null
       ? ([[
           paymentFrequency === 'mensuel' ? 'Loyer mensuel HT' : 'Loyer trimestriel HT',
