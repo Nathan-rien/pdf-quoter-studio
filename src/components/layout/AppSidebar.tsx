@@ -255,6 +255,14 @@ export function AppSidebar({
                   <Users className="h-3.5 w-3.5" />
                   Accès
                 </Button>
+                <Button
+                  variant={currentView === 'backups' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('backups')}
+                >
+                  <HardDrive className="h-3.5 w-3.5" />
+                  Sauvegardes
+                </Button>
               </>
             )}
           </div>
