@@ -6,9 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Settings, Cloud, CloudOff, Loader2, Check } from "lucide-react";
 
+type KindFilter = 'all' | 'option' | 'pack';
+
 export default function OptionsServicesAdmin() {
   const { options, addOption, setOptions, syncStatus } = useOptionsAdminStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
 
   // Chargement initial depuis la base de données
