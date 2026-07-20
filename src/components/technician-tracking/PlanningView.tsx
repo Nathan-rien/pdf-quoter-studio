@@ -252,8 +252,16 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
   }
 
   function goToday() { setAnchor(startOfDay(new Date())); }
-  function goPrev() { setAnchor(addDays(anchor, view === 'day' ? -1 : -7)); }
-  function goNext() { setAnchor(addDays(anchor, view === 'day' ? 1 : 7)); }
+  function goPrev() {
+    if (view === 'day') setAnchor(addDays(anchor, -1));
+    else if (view === 'week') setAnchor(addDays(anchor, -7));
+    else { const x = new Date(anchor); x.setMonth(x.getMonth() - 1); setAnchor(startOfDay(x)); }
+  }
+  function goNext() {
+    if (view === 'day') setAnchor(addDays(anchor, 1));
+    else if (view === 'week') setAnchor(addDays(anchor, 7));
+    else { const x = new Date(anchor); x.setMonth(x.getMonth() + 1); setAnchor(startOfDay(x)); }
+  }
 
   function handleSlotClick(day: Date, hour: number, minute: number) {
     const d = new Date(day);
