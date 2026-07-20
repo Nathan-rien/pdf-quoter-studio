@@ -310,6 +310,16 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
       </div>
 
       <Card className="overflow-hidden">
+        {view === 'month' ? (
+          <MonthGrid
+            days={days}
+            anchor={anchor}
+            interventions={visibleInterventions}
+            labelForIntervention={labelForIntervention}
+            onDayClick={(d) => setDialog({ mode: 'create', date: (() => { const x = new Date(d); x.setHours(9, 0, 0, 0); return x; })() })}
+            onInterventionClick={(i) => setDialog({ mode: 'edit', intervention: i })}
+          />
+        ) : (
         <div className="grid" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0,1fr))` }}>
           {/* Header */}
           <div className="border-b border-r bg-muted/40" />
@@ -370,7 +380,9 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
             );
           })}
         </div>
+        )}
       </Card>
+
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Badge className="bg-blue-500 hover:bg-blue-500 border-transparent">Prévue</Badge>
