@@ -86,8 +86,19 @@ function startOfWeek(d: Date) {
 function fmtDay(d: Date) {
   return d.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 }
-function fmtRange(view: 'day' | 'week', d: Date) {
+function startOfMonth(d: Date) {
+  const x = startOfDay(d);
+  x.setDate(1);
+  return x;
+}
+function endOfMonth(d: Date) {
+  const x = startOfMonth(d);
+  x.setMonth(x.getMonth() + 1);
+  return addDays(x, -1);
+}
+function fmtRange(view: 'day' | 'week' | 'month', d: Date) {
   if (view === 'day') return d.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  if (view === 'month') return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   const start = startOfWeek(d);
   const end = addDays(start, 6);
   return `${start.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} — ${end.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
@@ -102,14 +113,19 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
   const qc = useQueryClient();
   const { user, isAdmin } = useAuth();
 
-  const [view, setView] = useState<'day' | 'week'>('week');
+  const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [anchor, setAnchor] = useState<Date>(startOfDay(new Date()));
   const [technicianFilter, setTechnicianFilter] = useState<string>('all');
 
   const days = useMemo(() => {
     if (view === 'day') return [anchor];
-    const s = startOfWeek(anchor);
-    return Array.from({ length: 7 }, (_, i) => addDays(s, i));
+    if (view === 'week') {
+      const s = startOfWeek(anchor);
+      return Array.from({ length: 7 }, (_, i) => addDays(s, i));
+    }
+    // month: 6 weeks starting on Monday of the week containing the 1st
+    const s = startOfWeek(startOfMonth(anchor));
+    return Array.from({ length: 42 }, (_, i) => addDays(s, i));
   }, [view, anchor]);
 
   const rangeStart = days[0];
@@ -236,8 +252,16 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
   }
 
   function goToday() { setAnchor(startOfDay(new Date())); }
-  function goPrev() { setAnchor(addDays(anchor, view === 'day' ? -1 : -7)); }
-  function goNext() { setAnchor(addDays(anchor, view === 'day' ? 1 : 7)); }
+  function goPrev() {
+    if (view === 'day') setAnchor(addDays(anchor, -1));
+    else if (view === 'week') setAnchor(addDays(anchor, -7));
+    else { const x = new Date(anchor); x.setMonth(x.getMonth() - 1); setAnchor(startOfDay(x)); }
+  }
+  function goNext() {
+    if (view === 'day') setAnchor(addDays(anchor, 1));
+    else if (view === 'week') setAnchor(addDays(anchor, 7));
+    else { const x = new Date(anchor); x.setMonth(x.getMonth() + 1); setAnchor(startOfDay(x)); }
+  }
 
   function handleSlotClick(day: Date, hour: number, minute: number) {
     const d = new Date(day);
@@ -257,10 +281,11 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Tabs value={view} onValueChange={(v) => setView(v as 'day' | 'week')}>
+          <Tabs value={view} onValueChange={(v) => setView(v as 'day' | 'week' | 'month')}>
             <TabsList>
               <TabsTrigger value="day">Jour</TabsTrigger>
               <TabsTrigger value="week">Semaine</TabsTrigger>
+              <TabsTrigger value="month">Mois</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-1">
@@ -285,6 +310,16 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
       </div>
 
       <Card className="overflow-hidden">
+        {view === 'month' ? (
+          <MonthGrid
+            days={days}
+            anchor={anchor}
+            interventions={visibleInterventions}
+            labelForIntervention={labelForIntervention}
+            onDayClick={(d) => setDialog({ mode: 'create', date: (() => { const x = new Date(d); x.setHours(9, 0, 0, 0); return x; })() })}
+            onInterventionClick={(i) => setDialog({ mode: 'edit', intervention: i })}
+          />
+        ) : (
         <div className="grid" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0,1fr))` }}>
           {/* Header */}
           <div className="border-b border-r bg-muted/40" />
@@ -345,7 +380,9 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
             );
           })}
         </div>
+        )}
       </Card>
+
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Badge className="bg-blue-500 hover:bg-blue-500 border-transparent">Prévue</Badge>
@@ -534,5 +571,71 @@ function InterventionDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MonthGrid({
+  days, anchor, interventions, labelForIntervention, onDayClick, onInterventionClick,
+}: {
+  days: Date[];
+  anchor: Date;
+  interventions: Intervention[];
+  labelForIntervention: (i: Intervention) => { client: string; service: string };
+  onDayClick: (d: Date) => void;
+  onInterventionClick: (i: Intervention) => void;
+}) {
+  const weekdayLabels = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+  const currentMonth = anchor.getMonth();
+  const today = startOfDay(new Date()).getTime();
+
+  return (
+    <div className="grid" style={{ gridTemplateColumns: 'repeat(7, minmax(0,1fr))' }}>
+      {weekdayLabels.map((l) => (
+        <div key={l} className="border-b bg-muted/40 px-2 py-2 text-xs font-semibold text-center">{l}</div>
+      ))}
+      {days.map((day) => {
+        const dayInterventions = interventions
+          .filter((i) => {
+            const d = new Date(i.date_intervention);
+            return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate();
+          })
+          .sort((a, b) => new Date(a.date_intervention).getTime() - new Date(b.date_intervention).getTime());
+        const isOtherMonth = day.getMonth() !== currentMonth;
+        const isToday = startOfDay(day).getTime() === today;
+        return (
+          <div
+            key={day.toISOString()}
+            className={`min-h-[110px] border-b border-r p-1 cursor-pointer hover:bg-primary/5 ${isOtherMonth ? 'bg-muted/20' : ''}`}
+            onClick={() => onDayClick(day)}
+          >
+            <div className={`text-[11px] font-semibold mb-1 flex justify-end ${isOtherMonth ? 'text-muted-foreground' : ''}`}>
+              <span className={isToday ? 'bg-primary text-primary-foreground rounded-full px-1.5' : ''}>
+                {day.getDate()}
+              </span>
+            </div>
+            <div className="space-y-0.5">
+              {dayInterventions.slice(0, 3).map((i) => {
+                const d = new Date(i.date_intervention);
+                const { client } = labelForIntervention(i);
+                return (
+                  <button
+                    key={i.id}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onInterventionClick(i); }}
+                    className={`w-full truncate text-left rounded px-1 py-0.5 text-[10px] border ${STATUT_COLOR[i.statut]}`}
+                    title={`${client} — ${i.technician_name}`}
+                  >
+                    {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} {client}
+                  </button>
+                );
+              })}
+              {dayInterventions.length > 3 && (
+                <div className="text-[10px] text-muted-foreground px-1">+{dayInterventions.length - 3} autres</div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
