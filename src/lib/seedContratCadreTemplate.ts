@@ -118,7 +118,7 @@ export function buildPages() {
         textEl("p2p-tarif-r3-lbl", 32, 428, 346, 18, "Ingénieur serveur réseau", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         rectEl("p2p-tarif-r3-val-bg", 384, 424, 240, 24, "#ffffff", true),
         textEl("p2p-tarif-r3-val", 390, 428, 228, 18, "900 € HT", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        textEl("p2p-lbl-cond", 26, 500, 598, 20, "MODALITÉS DE RÈGLEMENT", { font: "Outfit", bold: true, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
+        textEl("p2p-lbl-cond", 26, 500, 598, 20, "MODALITÉS DE RÈGLEMENT", { font: "Outfit", bold: true, fontWeight: 600, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
       ],
       dynamicZones: [
         { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 11, height: 19 } },
