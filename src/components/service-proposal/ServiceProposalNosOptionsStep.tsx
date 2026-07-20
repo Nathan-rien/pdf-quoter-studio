@@ -63,8 +63,76 @@ export function ServiceProposalNosOptionsStep() {
       addNosOption(option.title, description, option.price?.amount ?? null);
     });
     setSelectedAdminOptions([]);
-    setIsPopoverOpen(false);
+    setPickerKind(null);
   };
+
+  const renderPickerButton = (kind: 'option' | 'pack', label: string) => (
+    <Popover
+      open={pickerKind === kind}
+      onOpenChange={(open) => {
+        setPickerKind(open ? kind : null);
+        if (!open) setSelectedAdminOptions([]);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isLoadingOptions}
+        >
+          {isLoadingOptions ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          {label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+        <div className="space-y-3">
+          <div className="font-medium text-sm">
+            {kind === 'pack' ? 'Packs disponibles' : 'Options disponibles'}
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {filteredAdminOptions.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2 text-center">
+                {kind === 'pack' ? 'Aucun pack actif dans Administration' : 'Aucune option active dans Administration'}
+              </p>
+            ) : filteredAdminOptions.map((option) => (
+              <label
+                key={option.id}
+                className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+              >
+                <Checkbox
+                  checked={selectedAdminOptions.includes(option.id)}
+                  onCheckedChange={() => toggleAdminOption(option.id)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{option.title}</div>
+                  {option.price && (
+                    <div className="text-xs text-muted-foreground">
+                      {option.price.amount} {option.price.unit}
+                    </div>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+          <Button
+            size="sm"
+            className="w-full"
+            disabled={selectedAdminOptions.length === 0}
+            onClick={handleImportSelected}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter{' '}
+            {selectedAdminOptions.length > 0 && `(${selectedAdminOptions.length})`}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 
   return (
     <Card>
@@ -76,59 +144,8 @@ export function ServiceProposalNosOptionsStep() {
           </CardDescription>
         </div>
         <div className="flex gap-2">
-          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isLoadingOptions || activeAdminOptions.length === 0}
-              >
-                {isLoadingOptions ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Importer depuis Admin
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80" align="end">
-              <div className="space-y-3">
-                <div className="font-medium text-sm">Options disponibles</div>
-                <div className="max-h-64 overflow-y-auto space-y-2">
-                  {activeAdminOptions.map((option) => (
-                    <label
-                      key={option.id}
-                      className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={selectedAdminOptions.includes(option.id)}
-                        onCheckedChange={() => toggleAdminOption(option.id)}
-                        className="mt-0.5"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{option.title}</div>
-                        {option.price && (
-                          <div className="text-xs text-muted-foreground">
-                            {option.price.amount} {option.price.unit}
-                          </div>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-                <Button
-                  size="sm"
-                  className="w-full"
-                  disabled={selectedAdminOptions.length === 0}
-                  onClick={handleImportSelected}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter{' '}
-                  {selectedAdminOptions.length > 0 && `(${selectedAdminOptions.length})`}
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
+          {renderPickerButton('option', 'Ajouter Option')}
+          {renderPickerButton('pack', 'Ajouter Pack')}
           <Button variant="outline" size="sm" onClick={() => addNosOption('', '', null)}>
             <Plus className="h-4 w-4 mr-2" />
             Ajouter
