@@ -26,7 +26,29 @@ import type {
 import type { OptionService } from '@/stores/rentalProposalStore';
 import type { ServiceOptionDefinition } from '@/types/options-admin';
 
-const SERVICE_ZONE_GAP_PERCENT = 1.25;
+// 10mm rhythm between sections (10 / 297 * 100 ≈ 3.37%)
+const SERVICE_ZONE_GAP_PERCENT = 3.4;
+
+// Unified design tokens for the 3 first pages of the Service Proposal (devis scope)
+const SECTION_TITLE_STYLE =
+  "font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 3mm 0;";
+const INFO_CARD_STYLE =
+  "background:#fafafa;border:1px solid #e5e7eb;border-radius:3px;padding:4mm 5mm;";
+const BODY_TEXT_STYLE =
+  "font-family:'Inter',sans-serif;font-size:9px;font-weight:400;color:#374151;line-height:1.45;";
+const LABEL_STYLE =
+  "font-family:'Inter',sans-serif;font-size:8px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
+const VALUE_STYLE =
+  "font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#1a1a1a;margin:0;";
+const DATA_TABLE_STYLE =
+  "width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#374151;table-layout:fixed;";
+const TH_STYLE =
+  "padding:2mm 3mm;text-align:left;font-weight:600;color:#1a1a1a;background:#f3f4f6;border:1px solid #e5e7eb;font-size:9px;font-family:'Inter',sans-serif;";
+const TD_STYLE =
+  "padding:2mm 3mm;border:1px solid #e5e7eb;color:#374151;vertical-align:top;font-size:9px;font-family:'Inter',sans-serif;overflow-wrap:anywhere;";
+const ROW_ALT_BG = "#f9fafb";
+const EMPTY_HINT_STYLE =
+  "font-family:'Inter',sans-serif;font-size:9px;color:#9ca3af;font-style:italic;margin:0;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
@@ -214,31 +236,31 @@ export async function generateServiceProposalHtml(
   };
 
   const renderClientZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 10px;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr;">
-        <div style="padding-right: 12px;">
-          <p style="font-size: 7px; color: #6b7280; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 3px 0; font-weight: 600;">Bénéficiaire</p>
-          <div style="font-size: 8px; line-height: 1.3; color: #4b5563;">
-            ${clientData.raisonSociale ? `<p style="font-weight: 700; font-size: 9px; color: #1f2937; margin: 0;">${escapeText(clientData.raisonSociale)}</p>` : ''}
-            ${clientData.nom ? `<p style="margin: 1px 0; font-weight: 600;">${escapeText(clientData.nom)}</p>` : ''}
-            ${clientData.adresse ? `<p style="margin: 1px 0;">${escapeText(clientData.adresse)}</p>` : ''}
-            ${clientData.email ? `<p style="margin: 1px 0;">${escapeText(clientData.email)}</p>` : ''}
-            ${clientData.telephone ? `<p style="margin: 1px 0;">${escapeText(clientData.telephone)}</p>` : ''}
+    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${INFO_CARD_STYLE}">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
+        <div>
+          <p style="${LABEL_STYLE}">Bénéficiaire</p>
+          ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
+          <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+            ${clientData.nom ? `<p style="margin:0.5mm 0;">${escapeText(clientData.nom)}</p>` : ''}
+            ${clientData.adresse ? `<p style="margin:0.5mm 0;">${escapeText(clientData.adresse)}</p>` : ''}
+            ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
+            ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
           </div>
         </div>
-        <div style="border-left: 1px solid #e5e7eb; padding-left: 12px;">
-          <p style="font-size: 7px; color: #6b7280; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 3px 0; font-weight: 600;">Votre interlocuteur</p>
+        <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
+          <p style="${LABEL_STYLE}">Votre interlocuteur</p>
           ${
             selectedCommercial
               ? `
-            <div style="font-size: 8px; line-height: 1.3; color: #4b5563;">
-              <p style="font-weight: 700; font-size: 9px; color: #1f2937; margin: 0;">${escapeText(selectedCommercial.nom)}</p>
-              ${selectedCommercial.telephone ? `<p style="margin: 1px 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
-              ${selectedCommercial.email ? `<p style="margin: 1px 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
-              ${entityLabel ? `<p style="margin: 1px 0;">${escapeText(entityLabel)}</p>` : ''}
+            <p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
+            <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+              ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
+              ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
+              ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
             </div>
           `
-              : '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Non sélectionné</p>'
+              : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
           }
         </div>
       </div>
@@ -273,15 +295,15 @@ export async function generateServiceProposalHtml(
 
   const renderConditionsZone = (zone: PositionedDynamicZone) => `
     <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-      <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Vos modalités de règlement :</p>
-      <table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
+      <p style="${SECTION_TITLE_STYLE}">Vos modalités de règlement</p>
+      <table style="${DATA_TABLE_STYLE}">
         <tbody>
           ${conditionsRows
             .map(
-              ([label, value, bold]) => `
-            <tr>
-              <td style="width: 38%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(label)}</td>
-              <td style="padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; overflow-wrap: anywhere; vertical-align: top; ${bold ? 'font-weight: 700; text-align: right;' : ''}">${escapeText(value)}</td>
+              ([label, value, bold], idx) => `
+            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+              <th scope="row" style="${TH_STYLE} width:38%;">${escapeText(label)}</th>
+              <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#1a1a1a;text-align:right;' : ''}">${escapeText(value)}</td>
             </tr>`,
             )
             .join('')}
@@ -292,11 +314,12 @@ export async function generateServiceProposalHtml(
 
   const renderInvestZone = (zone: PositionedDynamicZone) => `
     <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-      <table style="width: 100%; border-collapse: collapse; font-size: 7.2px; line-height: 1.15; background: white; table-layout: fixed;">
+      <p style="${SECTION_TITLE_STYLE}">Matériel</p>
+      <table style="${DATA_TABLE_STYLE}">
         <thead>
-          <tr style="background: #f3f4f6;">
-            <th style="padding: 3px 5px; text-align: left; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb;">Désignation</th>
-            <th style="padding: 3px 5px; text-align: center; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #e5e7eb; width: 34px;">Qté</th>
+          <tr>
+            <th style="${TH_STYLE}">Désignation</th>
+            <th style="${TH_STYLE} width:16mm;text-align:center;">Qté</th>
           </tr>
         </thead>
         <tbody>
@@ -305,13 +328,13 @@ export async function generateServiceProposalHtml(
               ? lignesData
                   .map(
                     (l, idx) => `
-            <tr style="background: ${idx % 2 === 1 ? '#fafafa' : 'white'};">
-              <td style="padding: 3px 5px; border: 1px solid #e5e7eb; vertical-align: top; overflow-wrap: anywhere; white-space: normal;">${escapeText(l.designation || '-')}</td>
-              <td style="padding: 3px 5px; border: 1px solid #e5e7eb; text-align: center; vertical-align: top;">${escapeText(l.quantite)}</td>
+            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+              <td style="${TD_STYLE} white-space:normal;">${escapeText(l.designation || '-')}</td>
+              <td style="${TD_STYLE} text-align:center;">${escapeText(l.quantite)}</td>
             </tr>`,
                   )
                   .join('')
-              : '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #9ca3af; font-style: italic; border: 1px solid #e5e7eb;">Aucune ligne de service</td></tr>'
+              : `<tr><td colspan="2" style="${TD_STYLE} text-align:center;color:#9ca3af;font-style:italic;">Aucune ligne de service</td></tr>`
           }
         </tbody>
       </table>
@@ -319,8 +342,8 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderSignatureZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; font-size: 9px; color: #1f2937;">
-      <div style="display: flex; justify-content: space-between; gap: 24px;">
+    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${BODY_TEXT_STYLE}">
+      <div style="display: flex; justify-content: space-between; gap: 8mm;">
         <div style="flex: 1;">
           La Société Groupe Cybertek SAS<br />
           Représentée par ${escapeText(selectedCommercial?.nom || commercialData?.commercialId || '—')}<br />
@@ -338,48 +361,60 @@ export async function generateServiceProposalHtml(
 
   const renderOptionsZone = (zone: PositionedDynamicZone) => {
     const selected = nosOptions.filter((o) => o.selected);
-    const rows = selected.length
-      ? selected
-          .map(
-            (opt) => `
-            <tr>
-              <td style="width: 30%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(opt.name || '—')}</td>
-              <td style="padding: 3px 6px; color: #4b5563; border: 1px solid #e5e7eb; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
+    const showPriceCol = !zone.hidePrice && selected.some((o) => o.showPrice !== false);
+    const rows = selected
+      .map(
+        (opt, idx) => `
+            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+              <td style="${TD_STYLE} width:30%;font-weight:600;color:#1a1a1a;">${escapeText(opt.name || '—')}</td>
+              <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
               ${
-                !zone.hidePrice && opt.showPrice !== false
-                  ? `<td style="width: 22%; padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; text-align: right; font-weight: 700; vertical-align: top;">${opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
+                showPriceCol
+                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#1a1a1a;">${opt.showPrice !== false && opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
                   : ''
               }
             </tr>`,
-          )
-          .join('')
-      : '';
+      )
+      .join('');
     return `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Options disponibles :</p>
+        <p style="${SECTION_TITLE_STYLE}">Détail des services</p>
         ${
           selected.length === 0
-            ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucune option sélectionnée</p>'
-            : `<table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;"><tbody>${rows}</tbody></table>`
+            ? `<p style="${EMPTY_HINT_STYLE}">Aucune option sélectionnée</p>`
+            : `<table style="${DATA_TABLE_STYLE}">
+                <thead><tr>
+                  <th style="${TH_STYLE} width:30%;">Service</th>
+                  <th style="${TH_STYLE}">Description</th>
+                  ${showPriceCol ? `<th style="${TH_STYLE} width:22%;text-align:right;">Prix</th>` : ''}
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>`
         }
       </div>
     `;
   };
 
   const renderSiteAddressesZone = (zone: PositionedDynamicZone) => {
-    const rows = siteAddresses.length
-      ? siteAddresses.map((s) => `
-          <tr>
-            <td style="width: 30%; padding: 3px 6px; background: #f9fafb; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; vertical-align: top;">${escapeText(s.label || '—')}</td>
-            <td style="padding: 3px 6px; color: #1f2937; border: 1px solid #e5e7eb; vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere;">${escapeText(s.address || '—')}</td>
-          </tr>`).join('')
-      : '';
+    const rows = siteAddresses
+      .map((s, idx) => `
+          <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+            <td style="${TD_STYLE} width:30%;font-weight:600;color:#1a1a1a;">${escapeText(s.label || '—')}</td>
+            <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(s.address || '—')}</td>
+          </tr>`)
+      .join('');
     return `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Sites d'intervention :</p>
+        <p style="${SECTION_TITLE_STYLE}">Sites d'intervention</p>
         ${siteAddresses.length === 0
-          ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucun site renseigné</p>'
-          : `<table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;"><tbody>${rows}</tbody></table>`}
+          ? `<p style="${EMPTY_HINT_STYLE}">Aucun site renseigné</p>`
+          : `<table style="${DATA_TABLE_STYLE}">
+              <thead><tr>
+                <th style="${TH_STYLE} width:30%;">Site</th>
+                <th style="${TH_STYLE}">Adresse</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>`}
       </div>`;
   };
 
@@ -388,40 +423,37 @@ export async function generateServiceProposalHtml(
     const hasData = op.name || op.role || op.email || op.phone;
     return `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Contact opérationnel :</p>
+        <p style="${SECTION_TITLE_STYLE}">Contact opérationnel</p>
         ${!hasData
-          ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Non renseigné</p>'
-          : `<div style="font-size: 8px; line-height: 1.3; color: #374151; border: 1px solid #e5e7eb; background: #ffffff; border-radius: 4px; padding: 6px 8px;">
-              ${op.name ? `<p style="margin: 0; font-weight: 700; font-size: 9px; color: #1f2937;">${escapeText(op.name)}</p>` : ''}
-              ${op.role ? `<p style="margin: 1px 0;">${escapeText(op.role)}</p>` : ''}
-              ${op.email ? `<p style="margin: 1px 0;">${escapeText(op.email)}</p>` : ''}
-              ${op.phone ? `<p style="margin: 1px 0;">${escapeText(op.phone)}</p>` : ''}
+          ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>`
+          : `<div style="${INFO_CARD_STYLE}">
+              ${op.name ? `<p style="${VALUE_STYLE}">${escapeText(op.name)}</p>` : ''}
+              <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                ${op.role ? `<p style="margin:0.5mm 0;">${escapeText(op.role)}</p>` : ''}
+                ${op.email ? `<p style="margin:0.5mm 0;">${escapeText(op.email)}</p>` : ''}
+                ${op.phone ? `<p style="margin:0.5mm 0;">${escapeText(op.phone)}</p>` : ''}
+              </div>
             </div>`}
       </div>`;
   };
 
   const renderExternalProvidersZone = (zone: PositionedDynamicZone) => {
-    const rows = externalProviders.length
-      ? externalProviders.map((p) => `
-          <tr>
-            <td style="padding: 3px 6px; border: 1px solid #e5e7eb; vertical-align: top; font-weight: 600; color: #1f2937;">${escapeText(p.name || '—')}</td>
-            <td style="padding: 3px 6px; border: 1px solid #e5e7eb; vertical-align: top; color: #4b5563;">${escapeText(p.role || '—')}</td>
-            <td style="padding: 3px 6px; border: 1px solid #e5e7eb; vertical-align: top; color: #4b5563; overflow-wrap: anywhere;">${escapeText(p.contact || '—')}</td>
-          </tr>`).join('')
-      : '';
+    const cards = externalProviders
+      .map((p) => `
+          <div style="${INFO_CARD_STYLE} margin-bottom:2mm;">
+            <p style="${VALUE_STYLE}">${escapeText(p.name || '—')}</p>
+            <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+              ${p.role ? `<p style="margin:0.5mm 0;"><span style="${LABEL_STYLE} display:inline-block;margin:0 2mm 0 0;">Rôle</span>${escapeText(p.role)}</p>` : ''}
+              ${p.contact ? `<p style="margin:0.5mm 0;"><span style="${LABEL_STYLE} display:inline-block;margin:0 2mm 0 0;">Contact</span>${escapeText(p.contact)}</p>` : ''}
+            </div>
+          </div>`)
+      .join('');
     return `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Prestataires extérieurs :</p>
+        <p style="${SECTION_TITLE_STYLE}">Prestataires extérieurs</p>
         ${externalProviders.length === 0
-          ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucun prestataire renseigné</p>'
-          : `<table style="width: 100%; border-collapse: collapse; font-size: 8px; line-height: 1.2; background: white; border: 1px solid #e5e7eb; table-layout: fixed;">
-              <thead><tr style="background: #f3f4f6;">
-                <th style="padding: 3px 6px; text-align: left; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">Nom</th>
-                <th style="padding: 3px 6px; text-align: left; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">Rôle</th>
-                <th style="padding: 3px 6px; text-align: left; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">Contact</th>
-              </tr></thead>
-              <tbody>${rows}</tbody>
-            </table>`}
+          ? `<p style="${EMPTY_HINT_STYLE}">Aucun prestataire renseigné</p>`
+          : cards}
       </div>`;
   };
 
@@ -429,14 +461,17 @@ export async function generateServiceProposalHtml(
     const selected = nosOptions.filter((o) => o.selected);
     return `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #000000; margin: 0 0 4px 0;">Services & packs souscrits :</p>
+        <p style="${SECTION_TITLE_STYLE}">Services & packs souscrits</p>
         ${selected.length === 0
-          ? '<p style="font-size: 8px; color: #9ca3af; font-style: italic; margin: 0;">Aucun élément sélectionné</p>'
-          : `<ul style="margin: 0; padding: 0 0 0 14px; font-size: 9px; line-height: 1.4; color: #1f2937;">
-              ${selected.map((o) => `<li style="margin-bottom: 2px;">${escapeText(o.name || '—')}</li>`).join('')}
-            </ul>`}
+          ? `<p style="${EMPTY_HINT_STYLE}">Aucun élément sélectionné</p>`
+          : `<div style="${INFO_CARD_STYLE}">
+              <div style="${BODY_TEXT_STYLE}">
+                ${selected.map((o) => `<p style="margin:0.5mm 0;color:#1a1a1a;font-weight:500;">• ${escapeText(o.name || '—')}</p>`).join('')}
+              </div>
+            </div>`}
       </div>`;
   };
+
 
   const renderServiceZone = (zone: PositionedDynamicZone) => {
     if (zone.type === 'service_client_info') return renderClientZone(zone);
