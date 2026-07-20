@@ -188,6 +188,19 @@ export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: Technici
       )}
 
       <HistoryDialog refId={historyRefId} onOpenChange={(o) => !o && setHistoryRefId(null)} />
+
+      {bulkContractId && (() => {
+        const g = grouped.find((x) => x.contract.id === bulkContractId);
+        if (!g) return null;
+        return (
+          <BulkPlanDialog
+            open
+            onOpenChange={(o) => !o && setBulkContractId(null)}
+            clientName={g.contract.client_name}
+            refs={g.refs}
+          />
+        );
+      })()}
     </div>
   );
 }
