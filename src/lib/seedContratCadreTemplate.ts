@@ -58,7 +58,7 @@ function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "
   };
 }
 
-function buildPages() {
+export function buildPages() {
   return [
     // ================== PAGE 1 — COUVERTURE ==================
     {
