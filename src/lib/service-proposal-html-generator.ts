@@ -10,7 +10,9 @@ import {
   renderPageToHTML,
   setPdfSubstitutionContext,
 } from '@/lib/pdf-html-generator';
+import { PREVIEW_FONT_SCALE } from '@/lib/canvas-constants';
 import { resolvePackDescription } from '@/lib/pack-description';
+
 import type { DynamicZone } from '@/types/pdf-template';
 import type {
   ClientData,
