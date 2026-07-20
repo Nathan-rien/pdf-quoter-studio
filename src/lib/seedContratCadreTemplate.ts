@@ -72,10 +72,6 @@ export function buildPages() {
         rectEl("p1c-banner", 20, 20, 610, 40),
         textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
         textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, align: "right", zIndex: 5 }),
-        textEl("p1c-lbl-benef", 40, 82, 570, 14, "Bénéficiaire", { bold: true, size: 10, zIndex: 50 }),
-        textEl("p1c-lbl-sites", 40, 242, 570, 14, "Sites d'intervention", { bold: true, size: 10, zIndex: 50 }),
-        textEl("p1c-lbl-op", 40, 428, 570, 14, "Contact opérationnel", { bold: true, size: 10, zIndex: 50 }),
-        textEl("p1c-lbl-prest", 40, 566, 570, 14, "Prestataires extérieurs", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
         { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 12, height: 13 } },
@@ -136,8 +132,6 @@ export function buildPages() {
       elements: [
         rectEl("p3m-banner", 20, 20, 610, 40),
         textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p3m-lbl-invest", 40, 66, 570, 14, "Matériel concerné", { bold: true, size: 10, zIndex: 50 }),
-        textEl("p3m-lbl-options", 40, 442, 570, 14, "Options souscrites (détail)", { bold: true, size: 10, zIndex: 50 }),
       ],
       dynamicZones: [
         { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 11, height: 33 } },
