@@ -22,8 +22,11 @@ export function ServiceProposalNosOptionsStep() {
   const { options: adminOptions, ensureLoaded } = useOptionsAdminStore();
   const activeAdminOptions = adminOptions.filter((opt) => opt.isActive);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [pickerKind, setPickerKind] = useState<null | 'option' | 'pack'>(null);
   const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
+  const filteredAdminOptions = pickerKind === 'pack'
+    ? activeAdminOptions.filter((o) => o.kind === 'pack')
+    : activeAdminOptions.filter((o) => o.kind !== 'pack');
 
   useEffect(() => {
     setIsLoadingOptions(true);
