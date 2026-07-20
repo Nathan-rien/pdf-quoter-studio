@@ -487,7 +487,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
-                  {FINANCIAL_PARTNERS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  {partnerOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
