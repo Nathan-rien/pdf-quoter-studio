@@ -10,7 +10,7 @@ import { ServiceItemEditor } from "./ServiceItemEditor";
 import { 
   Trash2, 
   Plus, 
-  DollarSign,
+  Euro,
   X,
   ChevronDown,
   ChevronRight
