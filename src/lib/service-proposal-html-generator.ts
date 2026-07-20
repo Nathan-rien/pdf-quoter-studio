@@ -12,6 +12,7 @@ import {
 } from '@/lib/pdf-html-generator';
 import { PREVIEW_FONT_SCALE } from '@/lib/canvas-constants';
 import { resolvePackDescription } from '@/lib/pack-description';
+import { getOptionPriceLabel } from '@/lib/options-price-utils';
 
 import type { DynamicZone } from '@/types/pdf-template';
 import type {
