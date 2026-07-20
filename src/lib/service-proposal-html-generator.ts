@@ -10,7 +10,9 @@ import {
   renderPageToHTML,
   setPdfSubstitutionContext,
 } from '@/lib/pdf-html-generator';
+import { PREVIEW_FONT_SCALE } from '@/lib/canvas-constants';
 import { resolvePackDescription } from '@/lib/pack-description';
+
 import type { DynamicZone } from '@/types/pdf-template';
 import type {
   ClientData,
@@ -604,11 +606,12 @@ export async function generateServiceProposalHtml(
       const flowRows = textElements
         .map((el: any) => {
           const c = el.content as any;
-          const fs = Math.max((c.fontSize || 9) * 0.73, 5).toFixed(1);
+          const fs = Math.max((c.fontSize || 9) * PREVIEW_FONT_SCALE, 6).toFixed(1);
           const fw = c.bold ? '700' : '400';
           const td = c.underline ? 'underline' : 'none';
-          const mt = c.bold ? '6px' : '1.5px';
+          const mt = c.bold ? '3px' : '1px';
           const col = c.color || '#1a1a1a';
+
           const inner = (c.text || '')
             .split('\n')
             .map((l: string) => `<span>${esc(l) || '&nbsp;'}</span>`)
