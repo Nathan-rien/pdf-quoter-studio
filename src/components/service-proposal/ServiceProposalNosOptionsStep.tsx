@@ -156,33 +156,73 @@ export function ServiceProposalNosOptionsStep() {
                   onChange={(e) => updateNosOption(opt.id, { description: e.target.value })}
                   className="flex-1 text-sm"
                 />
-                <div className="flex flex-col gap-1.5 min-w-[160px]">
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Prix"
-                      value={opt.price ?? ''}
-                      onChange={(e) =>
-                        updateNosOption(opt.id, {
-                          price: e.target.value ? parseFloat(e.target.value) : null,
-                        })
-                      }
-                      className="w-28 text-sm h-8"
-                    />
-                    <span className="text-xs text-muted-foreground">€ HT</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <span className="text-[10px] text-muted-foreground">Prix visible :</span>
-                    <Switch
-                      checked={opt.showPrice ?? true}
-                      onCheckedChange={(checked) =>
-                        updateNosOption(opt.id, { showPrice: checked })
-                      }
-                      className="scale-75 origin-left"
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const showPriceMode = opt.showPriceMode ?? 'mensuel';
+                  return (
+                    <div className="flex flex-col gap-1.5 min-w-[190px]">
+                      {showPriceMode === 'mensuel' ? (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Prix"
+                            value={opt.price ?? ''}
+                            onChange={(e) =>
+                              updateNosOption(opt.id, {
+                                price: e.target.value ? parseFloat(e.target.value) : null,
+                              })
+                            }
+                            className="w-28 text-sm h-8"
+                          />
+                          <span className="text-xs text-muted-foreground">€ HT / mois</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Total"
+                            value={opt.priceTotal ?? ''}
+                            onChange={(e) =>
+                              updateNosOption(opt.id, {
+                                priceTotal: e.target.value ? parseFloat(e.target.value) : null,
+                              })
+                            }
+                            className="w-28 text-sm h-8"
+                          />
+                          <span className="text-xs text-muted-foreground">€ HT (total sur la durée)</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-muted-foreground">Afficher :</span>
+                        <button
+                          type="button"
+                          onClick={() => updateNosOption(opt.id, { showPriceMode: 'mensuel' })}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${showPriceMode === 'mensuel' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                        >
+                          /mois
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateNosOption(opt.id, { showPriceMode: 'total' })}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${showPriceMode === 'total' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                        >
+                          total
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-muted-foreground">Prix visible :</span>
+                        <Switch
+                          checked={opt.showPrice ?? true}
+                          onCheckedChange={(checked) =>
+                            updateNosOption(opt.id, { showPrice: checked })
+                          }
+                          className="scale-75 origin-left"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
                 <Button
                   variant="ghost"
                   size="icon"
