@@ -281,10 +281,11 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Tabs value={view} onValueChange={(v) => setView(v as 'day' | 'week')}>
+          <Tabs value={view} onValueChange={(v) => setView(v as 'day' | 'week' | 'month')}>
             <TabsList>
               <TabsTrigger value="day">Jour</TabsTrigger>
               <TabsTrigger value="week">Semaine</TabsTrigger>
+              <TabsTrigger value="month">Mois</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-1">
