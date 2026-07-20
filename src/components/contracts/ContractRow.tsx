@@ -385,7 +385,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sortedCommerciaux.map((c) => (
+                  {commercialOptions.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
                   ))}
                 </SelectContent>
