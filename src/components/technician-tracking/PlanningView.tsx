@@ -573,3 +573,69 @@ function InterventionDialog({
     </Dialog>
   );
 }
+
+function MonthGrid({
+  days, anchor, interventions, labelForIntervention, onDayClick, onInterventionClick,
+}: {
+  days: Date[];
+  anchor: Date;
+  interventions: Intervention[];
+  labelForIntervention: (i: Intervention) => { client: string; service: string };
+  onDayClick: (d: Date) => void;
+  onInterventionClick: (i: Intervention) => void;
+}) {
+  const weekdayLabels = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+  const currentMonth = anchor.getMonth();
+  const today = startOfDay(new Date()).getTime();
+
+  return (
+    <div className="grid" style={{ gridTemplateColumns: 'repeat(7, minmax(0,1fr))' }}>
+      {weekdayLabels.map((l) => (
+        <div key={l} className="border-b bg-muted/40 px-2 py-2 text-xs font-semibold text-center">{l}</div>
+      ))}
+      {days.map((day) => {
+        const dayInterventions = interventions
+          .filter((i) => {
+            const d = new Date(i.date_intervention);
+            return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate();
+          })
+          .sort((a, b) => new Date(a.date_intervention).getTime() - new Date(b.date_intervention).getTime());
+        const isOtherMonth = day.getMonth() !== currentMonth;
+        const isToday = startOfDay(day).getTime() === today;
+        return (
+          <div
+            key={day.toISOString()}
+            className={`min-h-[110px] border-b border-r p-1 cursor-pointer hover:bg-primary/5 ${isOtherMonth ? 'bg-muted/20' : ''}`}
+            onClick={() => onDayClick(day)}
+          >
+            <div className={`text-[11px] font-semibold mb-1 flex justify-end ${isOtherMonth ? 'text-muted-foreground' : ''}`}>
+              <span className={isToday ? 'bg-primary text-primary-foreground rounded-full px-1.5' : ''}>
+                {day.getDate()}
+              </span>
+            </div>
+            <div className="space-y-0.5">
+              {dayInterventions.slice(0, 3).map((i) => {
+                const d = new Date(i.date_intervention);
+                const { client } = labelForIntervention(i);
+                return (
+                  <button
+                    key={i.id}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onInterventionClick(i); }}
+                    className={`w-full truncate text-left rounded px-1 py-0.5 text-[10px] border ${STATUT_COLOR[i.statut]}`}
+                    title={`${client} — ${i.technician_name}`}
+                  >
+                    {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} {client}
+                  </button>
+                );
+              })}
+              {dayInterventions.length > 3 && (
+                <div className="text-[10px] text-muted-foreground px-1">+{dayInterventions.length - 3} autres</div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
