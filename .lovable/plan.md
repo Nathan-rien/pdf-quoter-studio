@@ -1,18 +1,47 @@
-## Objectif
-1. Faire correspondre les marges de la page 6 (branche "flowRows", texte-seul) à celles de la page 7 (branche `renderPageToHTML` avec positions absolues).
-2. Supprimer les barres de défilement visibles sur les côtés de l'aperçu iframe.
+## Bug
 
-## Changements
+Dans `proposal_exports` (historique Location), les policies RLS filtrent uniquement sur `created_by = auth.uid()`. Quand un admin crée une proposition et l'attribue à un commercial via `commercial_id`, `created_by` reste l'admin — le commercial ne voit donc jamais la proposition dans son historique.
 
-### 1. `src/lib/service-proposal-html-generator.ts`
-- Dans la branche `flowRows` (page 6, pages sans élément non-texte), remplacer le wrapper `padding:14mm 16mm 18mm 16mm` par des marges alignées sur la mise en page absolue utilisée par les autres pages du contrat.
-  - Les pages "absolues" (page 5, 7) positionnent leurs textes à ~x=60px canvas ≈ 21mm depuis le bord. On alignera le `padding` gauche/droit du flow sur cette même valeur (`padding:14mm 21mm`) pour que la colonne de texte de la page 6 démarre visuellement au même endroit que la page 7.
-  - Top conservé à ~14mm pour rester cohérent avec le premier élément absolu des autres pages (y≈40px).
-- Aucun autre changement de scale/font (déjà harmonisé au tour précédent).
+À noter : `service_proposals` a déjà la bonne policy (`commercial_id = get_user_commercial_id(auth.uid())`), donc le correctif se limite à `proposal_exports`. `ServiceHistoryView` est réservé aux admins côté route, donc rien à changer là.
 
-### 2. `src/components/service-proposal/ServiceProposalPreview.tsx`
-- Ajouter à l'iframe l'attribut `scrolling="no"` **et** injecter dans le `srcDoc` (dans le `<style>` head par page) une règle `html,body{overflow:hidden;}` afin de supprimer les scrollbars horizontales/verticales visibles autour de la feuille A4 dans l'aperçu.
-- Le contenu A4 ne dépasse jamais (page-sheet est déjà `overflow:hidden`), la suppression des scrollbars est purement cosmétique et sans risque de couper du contenu.
+## Correctif (migration SQL)
+
+Remplacer les policies SELECT / UPDATE / DELETE de `proposal_exports` pour ajouter la condition d'attribution commerciale :
+
+```sql
+DROP POLICY "Users can view own proposals"   ON public.proposal_exports;
+DROP POLICY "Users can update own proposals" ON public.proposal_exports;
+DROP POLICY "Users can delete own proposals" ON public.proposal_exports;
+
+CREATE POLICY "Users can view own proposals" ON public.proposal_exports
+FOR SELECT USING (
+  created_by = auth.uid()
+  OR has_role(auth.uid(), 'admin'::app_role)
+  OR commercial_id = public.get_user_commercial_id(auth.uid())
+);
+
+CREATE POLICY "Users can update own proposals" ON public.proposal_exports
+FOR UPDATE USING (
+  created_by = auth.uid()
+  OR has_role(auth.uid(), 'admin'::app_role)
+  OR commercial_id = public.get_user_commercial_id(auth.uid())
+)
+WITH CHECK (
+  created_by = auth.uid()
+  OR has_role(auth.uid(), 'admin'::app_role)
+  OR commercial_id = public.get_user_commercial_id(auth.uid())
+);
+
+CREATE POLICY "Users can delete own proposals" ON public.proposal_exports
+FOR DELETE USING (
+  created_by = auth.uid()
+  OR has_role(auth.uid(), 'admin'::app_role)
+);
+```
+
+La policy INSERT reste inchangée (`created_by = auth.uid()`).
 
 ## Vérification
-- Recharger l'aperçu, naviguer page 5 → page 6 → page 7 : la colonne de texte doit démarrer au même x, et aucune scrollbar ne doit apparaître sur le cadre de l'iframe.
+
+- Se connecter en tant que commercial ; l'historique Location doit lister les propositions dont `commercial_id` correspond, même si `created_by` est un admin.
+- L'admin conserve la visibilité totale ; le créateur d'origine garde l'accès.
