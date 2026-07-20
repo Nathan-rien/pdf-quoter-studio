@@ -120,6 +120,7 @@ export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: Technici
   });
 
   const [historyRefId, setHistoryRefId] = useState<string | null>(null);
+  const [bulkContractId, setBulkContractId] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
