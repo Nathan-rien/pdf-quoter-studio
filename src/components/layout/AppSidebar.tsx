@@ -18,6 +18,7 @@ import {
   Layers,
   ClipboardList,
   CalendarDays,
+  HardDrive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
