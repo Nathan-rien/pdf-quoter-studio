@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import { BulkPlanDialog } from './BulkPlanDialog';
 
 interface Ref {
   id: string;
