@@ -103,7 +103,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
         const sheets = Array.from(doc.body.querySelectorAll<HTMLElement>('.page-sheet'));
         const perPageDocs = sheets.map(
           (s) =>
-            `<!DOCTYPE html><html><head>${headHtml}<style>body{margin:0;background:#fff;}</style></head><body>${s.outerHTML}</body></html>`,
+            `<!DOCTYPE html><html><head>${headHtml}<style>html,body{margin:0;background:#fff;overflow:hidden;}::-webkit-scrollbar{display:none;}</style></head><body>${s.outerHTML}</body></html>`,
         );
         if (!cancelled) setPagesHtml(perPageDocs);
       } catch (err) {
@@ -223,6 +223,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
               title={`Aperçu page ${currentPage}`}
               srcDoc={displayHtml}
               sandbox="allow-same-origin"
+              scrolling="no"
               className="absolute inset-0 w-full h-full border-0"
               style={{ background: '#fff' }}
             />
