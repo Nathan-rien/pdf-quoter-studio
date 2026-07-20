@@ -463,6 +463,16 @@ export async function generateServiceProposalHtml(
 
   const renderOptionsSummaryZone = (zone: PositionedDynamicZone) => {
     const selected = nosOptions.filter((o) => o.selected);
+    const priceLabel = (o: typeof selected[number]): string => {
+      if (o.showPrice === false) return '';
+      const label = getOptionPriceLabel({
+        price: o.price ?? null,
+        priceTotal: (o as any).priceTotal ?? null,
+        showPriceMode: (o as any).showPriceMode ?? 'mensuel',
+        pricingScope: (o as any).pricingScope ?? 'par_machine',
+      });
+      return label ?? '';
+    };
     return `
       <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
         <p style="${SECTION_TITLE_STYLE}">Services & packs souscrits</p>
@@ -470,7 +480,17 @@ export async function generateServiceProposalHtml(
           ? `<p style="${EMPTY_HINT_STYLE}">Aucun élément sélectionné</p>`
           : `<div style="${INFO_CARD_STYLE}">
               <div style="${BODY_TEXT_STYLE}">
-                ${selected.map((o) => `<p style="margin:0.5mm 0;color:#1a1a1a;font-weight:500;">• ${escapeText(o.name || '—')}</p>`).join('')}
+                ${selected.map((o) => {
+                  const price = priceLabel(o);
+                  return `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0.5mm 0;color:#1a1a1a;">
+                    <span style="font-weight:500;">• ${escapeText(o.name || '—')}</span>
+                    ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
+                  </div>`;
+                }).join('')}
+                <div style="display:flex;justify-content:space-between;gap:4mm;margin-top:2mm;padding-top:2mm;border-top:1px solid #e5e7eb;color:#1a1a1a;">
+                  <span style="font-weight:600;">Total Service HT</span>
+                  <span style="font-weight:700;">${formatNumber(totalServicesHt)} €</span>
+                </div>
               </div>
             </div>`}
       </div>`;
