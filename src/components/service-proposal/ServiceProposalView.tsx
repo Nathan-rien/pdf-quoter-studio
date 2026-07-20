@@ -388,9 +388,9 @@ function ProposalFormShell({
           <TemplateSelector viewScope="services" />
         </TabsContent>
         <TabsContent value="preview-export" className="space-y-8">
-          <ServiceProposalPreview />
+          <ServiceProposalPreview mode="contrat" />
           <Separator />
-          <ServiceProposalExport />
+          <ServiceProposalExport mode="contrat" />
         </TabsContent>
       </Tabs>
 
