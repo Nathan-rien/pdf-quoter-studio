@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import { BulkPlanDialog } from './BulkPlanDialog';
 
 interface Ref {
   id: string;
@@ -119,6 +120,7 @@ export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: Technici
   });
 
   const [historyRefId, setHistoryRefId] = useState<string | null>(null);
+  const [bulkContractId, setBulkContractId] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -150,12 +152,22 @@ export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: Technici
         <div className="grid gap-3">
           {grouped.map(({ contract, refs }) => (
             <Card key={contract.id} className="p-4">
-              <div className="flex items-baseline justify-between mb-3">
+              <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
                 <h2 className="font-semibold">{contract.client_name}</h2>
-                <span className="text-xs text-muted-foreground">
-                  {contract.contract_number ?? '—'} · validé le{' '}
-                  {new Date(contract.validated_at).toLocaleDateString('fr-FR')}
-                </span>
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setBulkContractId(contract.id)}
+                  >
+                    <CalendarPlus className="h-3.5 w-3.5 mr-1" />
+                    Tout planifier
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {contract.contract_number ?? '—'} · validé le{' '}
+                    {new Date(contract.validated_at).toLocaleDateString('fr-FR')}
+                  </span>
+                </div>
               </div>
               <div className="divide-y divide-border">
                 {refs.map((r) => (
@@ -176,6 +188,19 @@ export function TechnicianTrackingView({ isAdmin, onPlanIntervention }: Technici
       )}
 
       <HistoryDialog refId={historyRefId} onOpenChange={(o) => !o && setHistoryRefId(null)} />
+
+      {bulkContractId && (() => {
+        const g = grouped.find((x) => x.contract.id === bulkContractId);
+        if (!g) return null;
+        return (
+          <BulkPlanDialog
+            open
+            onOpenChange={(o) => !o && setBulkContractId(null)}
+            clientName={g.contract.client_name}
+            refs={g.refs}
+          />
+        );
+      })()}
     </div>
   );
 }
