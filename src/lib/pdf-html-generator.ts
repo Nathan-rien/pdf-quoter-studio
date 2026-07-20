@@ -230,7 +230,7 @@ function renderTextElementToHTML(element: EditableElement): string {
     fontFamily: fontValue,
     fontSize: `${scaledFontSize}px`,
     color: content.color || '#1f2937',
-    fontWeight: content.bold ? 'bold' : 'normal',
+    fontWeight: (content as any).fontWeight ?? (content.bold ? 'bold' : 'normal'),
     fontStyle: content.italic ? 'italic' : 'normal',
     textDecoration: content.underline ? 'underline' : 'none',
     lineHeight,
