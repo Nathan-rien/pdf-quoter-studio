@@ -308,7 +308,7 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
                     className="text-xs text-muted-foreground"
                     onClick={() => setShowPriceEditor(true)}
                   >
-                    <DollarSign className="h-3 w-3 mr-1" />
+                    <Euro className="h-3 w-3 mr-1" />
                     Ajouter un prix
                   </Button>
                 )}
