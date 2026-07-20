@@ -113,14 +113,19 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
   const qc = useQueryClient();
   const { user, isAdmin } = useAuth();
 
-  const [view, setView] = useState<'day' | 'week'>('week');
+  const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [anchor, setAnchor] = useState<Date>(startOfDay(new Date()));
   const [technicianFilter, setTechnicianFilter] = useState<string>('all');
 
   const days = useMemo(() => {
     if (view === 'day') return [anchor];
-    const s = startOfWeek(anchor);
-    return Array.from({ length: 7 }, (_, i) => addDays(s, i));
+    if (view === 'week') {
+      const s = startOfWeek(anchor);
+      return Array.from({ length: 7 }, (_, i) => addDays(s, i));
+    }
+    // month: 6 weeks starting on Monday of the week containing the 1st
+    const s = startOfWeek(startOfMonth(anchor));
+    return Array.from({ length: 42 }, (_, i) => addDays(s, i));
   }, [view, anchor]);
 
   const rangeStart = days[0];
