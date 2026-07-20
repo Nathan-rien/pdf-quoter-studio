@@ -228,3 +228,46 @@ export function useContractProposalRent(proposalId: string | null | undefined) {
   });
 }
 
+export interface ContractProposalOption {
+  name: string;
+  price: number | null;
+  priceTotal?: number | null;
+  showPriceMode?: 'mensuel' | 'total';
+  showPrice?: boolean;
+}
+
+export function useContractProposalOptions(proposalId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['contract-proposal-options', proposalId],
+    enabled: !!proposalId,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async (): Promise<ContractProposalOption[]> => {
+      if (!proposalId) return [];
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('proposal_state')
+        .eq('id', proposalId)
+        .maybeSingle();
+      if (error || !data) return [];
+      const state: any = (data as any).proposal_state;
+      if (!state) return [];
+      // Service proposal → nosOptions ; Location → optionsServices
+      const source = Array.isArray(state.nosOptions)
+        ? state.nosOptions
+        : Array.isArray(state.optionsServices)
+          ? state.optionsServices
+          : [];
+      return source
+        .filter((o: any) => o?.selected)
+        .map((o: any) => ({
+          name: String(o.name ?? o.title ?? '—'),
+          price: typeof o.price === 'number' ? o.price : null,
+          priceTotal: typeof o.priceTotal === 'number' ? o.priceTotal : null,
+          showPriceMode: o.showPriceMode ?? 'mensuel',
+          showPrice: o.showPrice !== false,
+        }));
+    },
+  });
+}
+
+

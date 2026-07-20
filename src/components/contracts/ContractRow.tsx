@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { calculateLoyerTrimestriel } from '@/lib/rental-calculations';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,6 +64,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
   const [cessionPercent, setCessionPercent] = useState<number | null>(contract.cession_percent ?? null);
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
+  const { data: proposalOptions } = useContractProposalOptions(isQuick ? null : contract.proposal_id);
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
@@ -377,6 +379,27 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               className="h-9 text-sm"
             />
           </div>
+          {proposalOptions && proposalOptions.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Services & options de la proposition</Label>
+              <div className="rounded-md border border-border bg-background/60 p-3 space-y-1.5">
+                {proposalOptions.map((opt, idx) => {
+                  const label = opt.showPrice === false ? '' : (getOptionPriceLabel({
+                    price: opt.price ?? null,
+                    priceTotal: opt.priceTotal ?? null,
+                    showPriceMode: opt.showPriceMode ?? 'mensuel',
+                    pricingScope: 'par_machine',
+                  }) ?? '');
+                  return (
+                    <div key={idx} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium truncate">• {opt.name}</span>
+                      {label && <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{label}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Commercial en charge</Label>
