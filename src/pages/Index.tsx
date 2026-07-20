@@ -8,6 +8,7 @@ import { HistoryView } from "@/components/history/HistoryView";
 import { TemplateEditorLayout } from "@/components/template-editor";
 import { RentalWorkflow } from "@/components/rental-proposal/RentalWorkflow";
 import { AccessManagement } from "@/components/access/AccessManagement";
+import { BackupsView } from "@/components/admin/BackupsView";
 import { StatisticsView } from "@/components/admin/StatisticsView";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { ContractsView } from "@/components/contracts/ContractsView";
@@ -176,6 +177,8 @@ export default function Index() {
         return <GanttView />;
       case 'mes-infos':
         return <MesInfosView />;
+      case 'backups':
+        return <BackupsView />;
       default:
         return null;
     }

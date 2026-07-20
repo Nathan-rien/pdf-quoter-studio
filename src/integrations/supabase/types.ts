@@ -32,6 +32,56 @@ export type Database = {
         }
         Relationships: []
       }
+      backups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          file_path: string
+          id: string
+          kind: string
+          label: string | null
+          restored_from: string | null
+          rows_count: number
+          size_bytes: number
+          tables_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          file_path: string
+          id?: string
+          kind?: string
+          label?: string | null
+          restored_from?: string | null
+          rows_count?: number
+          size_bytes?: number
+          tables_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          file_path?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          restored_from?: string | null
+          rows_count?: number
+          size_bytes?: number
+          tables_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backups_restored_from_fkey"
+            columns: ["restored_from"]
+            isOneToOne: false
+            referencedRelation: "backups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_service_references: {
         Row: {
           contract_id: string
