@@ -103,17 +103,17 @@ export function buildPages() {
         textEl("p2p-tarif-h-val", 390, 356, 228, 18, "Tarif", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
         // Ligne 1 (fond blanc)
         rectEl("p2p-tarif-r1-lbl-bg", 26, 376, 358, 24, "#ffffff", true),
-        textEl("p2p-tarif-r1-lbl", 32, 380, 346, 18, "Technicien", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        textEl("p2p-tarif-r1-lbl", 32, 380, 346, 18, "Technicien", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         rectEl("p2p-tarif-r1-val-bg", 384, 376, 240, 24, "#ffffff", true),
-        textEl("p2p-tarif-r1-val", 390, 380, 228, 18, "500 € HT", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        textEl("p2p-tarif-r1-val", 390, 380, 228, 18, "500 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         // Ligne 2 (fond alt)
         rectEl("p2p-tarif-r2-lbl-bg", 26, 400, 358, 24, "#f9fafb", true),
-        textEl("p2p-tarif-r2-lbl", 32, 404, 346, 18, "Administrateur", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        textEl("p2p-tarif-r2-lbl", 32, 404, 346, 18, "Administrateur", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         rectEl("p2p-tarif-r2-val-bg", 384, 400, 240, 24, "#f9fafb", true),
-        textEl("p2p-tarif-r2-val", 390, 404, 228, 18, "600 € HT", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        textEl("p2p-tarif-r2-val", 390, 404, 228, 18, "600 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         // Ligne 3 (fond blanc)
         rectEl("p2p-tarif-r3-lbl-bg", 26, 424, 358, 24, "#ffffff", true),
-        textEl("p2p-tarif-r3-lbl", 32, 428, 346, 18, "Ingénieur serveur réseau", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        textEl("p2p-tarif-r3-lbl", 32, 428, 346, 18, "Ingénieur serveur réseau", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         rectEl("p2p-tarif-r3-val-bg", 384, 424, 240, 24, "#ffffff", true),
         textEl("p2p-tarif-r3-val", 390, 428, 228, 18, "900 € HT", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
         textEl("p2p-lbl-cond", 26, 500, 598, 20, "MODALITÉS DE RÈGLEMENT", { font: "Outfit", bold: true, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
