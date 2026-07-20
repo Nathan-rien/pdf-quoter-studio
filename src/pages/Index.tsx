@@ -177,6 +177,8 @@ export default function Index() {
         return <GanttView />;
       case 'mes-infos':
         return <MesInfosView />;
+      case 'backups':
+        return <BackupsView />;
       default:
         return null;
     }
