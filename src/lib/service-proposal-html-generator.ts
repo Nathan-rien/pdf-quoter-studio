@@ -622,10 +622,10 @@ export async function generateServiceProposalHtml(
 
       allPagesHtml.push(`
         <div class="page-sheet">
-          <div style="padding:14mm 16mm 18mm 16mm;font-family:'Inter',Arial,sans-serif;height:100%;overflow:hidden;box-sizing:border-box;position:relative;">
+          <div style="padding:14mm 21mm 18mm 21mm;font-family:'Inter',Arial,sans-serif;height:100%;overflow:hidden;box-sizing:border-box;position:relative;">
             ${flowRows}
             ${dynamicContent[page.pageNumber] || ''}
-            <div style="position:absolute;bottom:6mm;left:16mm;right:16mm;font-size:6px;color:#888;text-align:right;border-top:0.5px solid #ddd;padding-top:2px;">GROUPE | CYBERTEK</div>
+            <div style="position:absolute;bottom:6mm;left:21mm;right:21mm;font-size:6px;color:#888;text-align:right;border-top:0.5px solid #ddd;padding-top:2px;">GROUPE | CYBERTEK</div>
           </div>
         </div>
       `);
