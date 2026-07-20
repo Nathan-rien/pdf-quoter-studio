@@ -35,7 +35,7 @@ function textEl(id: string, x: number, y: number, w: number, h: number, text: st
   };
 }
 
-function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "#e8e8e8") {
+function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "#e8e8e8", bordered = false) {
   return {
     id,
     type: "shape",
@@ -50,7 +50,9 @@ function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "
       backgroundColor: fill,
       backgroundOpacity: 100,
       cornerRadius: 0,
-      border: { enabled: false, color: "#000", width: 1 },
+      border: bordered
+        ? { enabled: true, color: "#e5e7eb", width: 1 }
+        : { enabled: false, color: "#000", width: 1 },
       innerContent: { alignment: { horizontal: "left", vertical: "top" }, padding: 0 },
     },
   };
