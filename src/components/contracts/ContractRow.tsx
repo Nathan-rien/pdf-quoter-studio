@@ -379,27 +379,54 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               className="h-9 text-sm"
             />
           </div>
-          {proposalOptions && proposalOptions.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Services & options de la proposition</Label>
-              <div className="rounded-md border border-border bg-background/60 p-3 space-y-1.5">
-                {proposalOptions.map((opt, idx) => {
-                  const label = opt.showPrice === false ? '' : (getOptionPriceLabel({
-                    price: opt.price ?? null,
-                    priceTotal: opt.priceTotal ?? null,
-                    showPriceMode: opt.showPriceMode ?? 'mensuel',
-                    pricingScope: 'par_machine',
-                  }) ?? '');
-                  return (
-                    <div key={idx} className="flex items-center justify-between gap-3 text-sm">
-                      <span className="font-medium truncate">• {opt.name}</span>
-                      {label && <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{label}</span>}
+          {proposalOptions && proposalOptions.length > 0 && (() => {
+            const dur = parseInt(durationMonths) || 0;
+            let totalHt = 0;
+            for (const opt of proposalOptions) {
+              if (typeof opt.priceTotal === 'number') {
+                totalHt += opt.priceTotal;
+              } else if (typeof opt.price === 'number' && dur > 0) {
+                totalHt += opt.price * dur;
+              }
+            }
+            const monthlyHt = dur > 0 ? totalHt / dur : 0;
+            const fmt = (n: number) => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Services & options de la proposition</Label>
+                <div className="rounded-md border border-border bg-background/60 p-3 space-y-1.5">
+                  {proposalOptions.map((opt, idx) => {
+                    const label = opt.showPrice === false ? '' : (getOptionPriceLabel({
+                      price: opt.price ?? null,
+                      priceTotal: opt.priceTotal ?? null,
+                      showPriceMode: opt.showPriceMode ?? 'mensuel',
+                      pricingScope: 'par_machine',
+                    }) ?? '');
+                    return (
+                      <div key={idx} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium truncate">• {opt.name}</span>
+                        {label && <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{label}</span>}
+                      </div>
+                    );
+                  })}
+                  {totalHt > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
+                      <span className="font-semibold">Total Service HT</span>
+                      <span className="font-semibold text-primary">
+                        {fmt(totalHt)} € HT
+                        {dur > 0 && (
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            (soit {fmt(monthlyHt)} €/mois sur {dur} mois)
+                          </span>
+                        )}
+                      </span>
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Commercial en charge</Label>
