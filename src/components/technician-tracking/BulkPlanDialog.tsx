@@ -45,7 +45,7 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
 
   const [selected, setSelected] = useState<Set<string>>(new Set(refs.map((r) => r.id)));
   const [dateLocal, setDateLocal] = useState<string>(defaultDate);
-  const [duration, setDuration] = useState<string>('60');
+  const [duration, setDuration] = useState<string>('1');
   const [technicianName, setTechnicianName] = useState<string>(
     user?.user_metadata?.full_name || user?.email || ''
   );
