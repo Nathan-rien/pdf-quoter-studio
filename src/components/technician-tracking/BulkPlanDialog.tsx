@@ -68,7 +68,7 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
   const mut = useMutation({
     mutationFn: async () => {
       const iso = new Date(dateLocal).toISOString();
-      const dur = duration ? Number(duration) : null;
+      const dur = duration ? Math.round(Number(duration) * 60) : null;
       const name = technicianName.trim() || 'Technicien';
       const rows = Array.from(selected).map((refId) => ({
         reference_id: refId,
