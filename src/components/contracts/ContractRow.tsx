@@ -420,6 +420,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                         {label && <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{label}</span>}
                       </div>
                     );
+                  })}
                   {totalHt > 0 && (
                     <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
                       <span className="font-semibold">Total Service HT</span>
