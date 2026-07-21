@@ -465,7 +465,7 @@ function InterventionDialog({
           ...(canEditAll ? {
             reference_id: referenceId,
             date_intervention: new Date(dateLocal).toISOString(),
-            duree_estimee_minutes: duration ? Number(duration) : null,
+            duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
             technician_name: technicianName.trim() || 'Technicien',
             technician_user_id: iv!.technician_user_id ?? (iv!.technician_name === technicianName ? iv!.technician_user_id : null),
             commentaire: commentaire.trim() || null,
@@ -474,7 +474,7 @@ function InterventionDialog({
       : {
           reference_id: referenceId,
           date_intervention: new Date(dateLocal).toISOString(),
-          duree_estimee_minutes: duration ? Number(duration) : null,
+          duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
           technician_name: technicianName.trim() || 'Technicien',
           technician_user_id: currentUser?.id ?? null,
           commentaire: commentaire.trim() || null,
