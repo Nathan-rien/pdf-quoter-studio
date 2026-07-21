@@ -523,8 +523,8 @@ function InterventionDialog({
               <Input type="datetime-local" value={dateLocal} onChange={(e) => setDateLocal(e.target.value)} disabled={!canEditAll} />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">Durée (min)</label>
-              <Input type="number" min={15} step={15} value={duration} onChange={(e) => setDuration(e.target.value)} disabled={!canEditAll} />
+              <label className="text-xs font-medium mb-1 block">Durée (heure)</label>
+              <Input type="number" min={0.25} step={0.25} value={durationHours} onChange={(e) => setDurationHours(e.target.value)} disabled={!canEditAll} />
             </div>
           </div>
 
