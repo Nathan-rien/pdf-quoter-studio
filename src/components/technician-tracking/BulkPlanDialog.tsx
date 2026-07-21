@@ -147,11 +147,11 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
               />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">Durée (min)</label>
+              <label className="text-xs font-medium mb-1 block">Durée (heure)</label>
               <Input
                 type="number"
-                min={15}
-                step={15}
+                min={0.25}
+                step={0.25}
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
               />
