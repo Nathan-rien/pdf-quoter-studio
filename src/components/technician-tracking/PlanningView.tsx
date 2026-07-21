@@ -439,7 +439,9 @@ function InterventionDialog({
   const [dateLocal, setDateLocal] = useState<string>(
     iv ? toLocalInput(new Date(iv.date_intervention)) : toLocalInput(initial.mode === 'create' ? initial.date : new Date())
   );
-  const [duration, setDuration] = useState<string>(iv?.duree_estimee_minutes?.toString() ?? '60');
+  const [durationHours, setDurationHours] = useState<string>(
+    iv?.duree_estimee_minutes ? String(iv.duree_estimee_minutes / 60) : '1'
+  );
   const [technicianName, setTechnicianName] = useState<string>(
     iv?.technician_name ?? (currentUser?.user_metadata?.full_name || currentUser?.email || '')
   );
@@ -463,7 +465,7 @@ function InterventionDialog({
           ...(canEditAll ? {
             reference_id: referenceId,
             date_intervention: new Date(dateLocal).toISOString(),
-            duree_estimee_minutes: duration ? Number(duration) : null,
+            duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
             technician_name: technicianName.trim() || 'Technicien',
             technician_user_id: iv!.technician_user_id ?? (iv!.technician_name === technicianName ? iv!.technician_user_id : null),
             commentaire: commentaire.trim() || null,
@@ -472,7 +474,7 @@ function InterventionDialog({
       : {
           reference_id: referenceId,
           date_intervention: new Date(dateLocal).toISOString(),
-          duree_estimee_minutes: duration ? Number(duration) : null,
+          duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
           technician_name: technicianName.trim() || 'Technicien',
           technician_user_id: currentUser?.id ?? null,
           commentaire: commentaire.trim() || null,
@@ -521,8 +523,8 @@ function InterventionDialog({
               <Input type="datetime-local" value={dateLocal} onChange={(e) => setDateLocal(e.target.value)} disabled={!canEditAll} />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">Durée (min)</label>
-              <Input type="number" min={15} step={15} value={duration} onChange={(e) => setDuration(e.target.value)} disabled={!canEditAll} />
+              <label className="text-xs font-medium mb-1 block">Durée (heure)</label>
+              <Input type="number" min={0.25} step={0.25} value={durationHours} onChange={(e) => setDurationHours(e.target.value)} disabled={!canEditAll} />
             </div>
           </div>
 

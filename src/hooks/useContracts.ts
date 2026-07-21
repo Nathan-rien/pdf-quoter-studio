@@ -234,6 +234,7 @@ export interface ContractProposalOption {
   priceTotal?: number | null;
   showPriceMode?: 'mensuel' | 'total';
   showPrice?: boolean;
+  erpReference?: string | null;
 }
 
 export function useContractProposalOptions(proposalId: string | null | undefined) {
@@ -257,15 +258,44 @@ export function useContractProposalOptions(proposalId: string | null | undefined
         : Array.isArray(state.optionsServices)
           ? state.optionsServices
           : [];
-      return source
-        .filter((o: any) => o?.selected)
-        .map((o: any) => ({
+      const items = source.filter((o: any) => o?.selected);
+
+      // Collect option/service ids to look up erp_reference from the catalog.
+      const ids = Array.from(
+        new Set(
+          items
+            .map((o: any) => o?.id ?? o?.option_id ?? o?.service_id)
+            .filter((v: any) => typeof v === 'string' && v.length > 0),
+        ),
+      ) as string[];
+
+      const catalog: Record<string, string | null> = {};
+      if (ids.length) {
+        const { data: opts } = await supabase
+          .from('options_services')
+          .select('id, erp_reference')
+          .in('id', ids);
+        (opts ?? []).forEach((o: any) => {
+          catalog[o.id] = o.erp_reference ?? null;
+        });
+      }
+
+      return items.map((o: any) => {
+        const rawErp =
+          (typeof o.erp_reference === 'string' && o.erp_reference) ||
+          (typeof o.erpReference === 'string' && o.erpReference) ||
+          null;
+        const id = o?.id ?? o?.option_id ?? o?.service_id;
+        const erpReference = rawErp ?? (id ? catalog[id] ?? null : null);
+        return {
           name: String(o.name ?? o.title ?? '—'),
           price: typeof o.price === 'number' ? o.price : null,
           priceTotal: typeof o.priceTotal === 'number' ? o.priceTotal : null,
           showPriceMode: o.showPriceMode ?? 'mensuel',
           showPrice: o.showPrice !== false,
-        }));
+          erpReference,
+        };
+      });
     },
   });
 }

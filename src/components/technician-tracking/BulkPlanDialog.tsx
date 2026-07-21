@@ -45,7 +45,7 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
 
   const [selected, setSelected] = useState<Set<string>>(new Set(refs.map((r) => r.id)));
   const [dateLocal, setDateLocal] = useState<string>(defaultDate);
-  const [duration, setDuration] = useState<string>('60');
+  const [duration, setDuration] = useState<string>('1');
   const [technicianName, setTechnicianName] = useState<string>(
     user?.user_metadata?.full_name || user?.email || ''
   );
@@ -68,7 +68,7 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
   const mut = useMutation({
     mutationFn: async () => {
       const iso = new Date(dateLocal).toISOString();
-      const dur = duration ? Number(duration) : null;
+      const dur = duration ? Math.round(Number(duration) * 60) : null;
       const name = technicianName.trim() || 'Technicien';
       const rows = Array.from(selected).map((refId) => ({
         reference_id: refId,
@@ -147,11 +147,11 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
               />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">Durée (min)</label>
+              <label className="text-xs font-medium mb-1 block">Durée (heure)</label>
               <Input
                 type="number"
-                min={15}
-                step={15}
+                min={0.25}
+                step={0.25}
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
               />
