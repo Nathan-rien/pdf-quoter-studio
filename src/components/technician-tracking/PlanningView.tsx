@@ -515,6 +515,24 @@ function InterventionDialog({
                 ))}
               </SelectContent>
             </Select>
+            {referenceId && (() => {
+              const sel = refsForContract.find((r) => r.id === referenceId);
+              if (!sel) return null;
+              return (
+                <div className="mt-1.5">
+                  <span
+                    className={
+                      'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium border ' +
+                      (sel.erp_reference
+                        ? 'bg-blue-100 text-blue-900 border-transparent'
+                        : 'bg-muted text-muted-foreground border-transparent')
+                    }
+                  >
+                    Réf JAJA : {sel.erp_reference || 'non renseigné'}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
