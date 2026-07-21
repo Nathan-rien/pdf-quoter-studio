@@ -56,8 +56,17 @@ export const substituteDynamicPlaceholders = (text: string, context?: Substituti
   
   const currentDate = getCurrentDateFR();
   
+  // Auto-détection : remplacer "Mois 20XX" par la date actuelle
+  // Doit être fait AVANT la substitution {{DATE}} — sinon la date substituée
+  // ("21 juillet 2026") est re-matchée sur "juillet 2026" et re-préfixée du jour,
+  // ce qui produit "21 21 juillet 2026".
+  // On évite aussi de re-matcher si un jour (1-2 chiffres) précède déjà le mois.
+  const moisPattern = MOIS_FR.join('|');
+  const dateRegex = new RegExp(`(?<!\\d\\s)(?<!\\d)(${moisPattern})\\s+20\\d{2}`, 'gi');
+  let result = text.replace(dateRegex, currentDate);
+  
   // Remplacer le placeholder explicite {{DATE}}
-  let result = text.replace(/\{\{DATE\}\}/gi, currentDate);
+  result = result.replace(/\{\{DATE\}\}/gi, currentDate);
   
   // Remplacer le placeholder {{FRAIS_DOSSIER}}
   if (context && context.fraisDossier !== undefined) {
@@ -72,12 +81,6 @@ export const substituteDynamicPlaceholders = (text: string, context?: Substituti
   } else {
     result = result.replace(/\{\{ADRESSE_ENTITE\}\}/gi, '');
   }
-  
-  // Auto-détection : remplacer "Mois 20XX" par la date actuelle
-  // Pattern : un mois français suivi d'un espace et d'une année 20XX
-  const moisPattern = MOIS_FR.join('|');
-  const dateRegex = new RegExp(`(${moisPattern})\\s+20\\d{2}`, 'gi');
-  result = result.replace(dateRegex, currentDate);
   
   // Auto-détection : injecter les frais de dossier dans les templates existants
   // Couvre "Frais de dossier bancaire" seul ou suivi d'un ancien montant en dur
