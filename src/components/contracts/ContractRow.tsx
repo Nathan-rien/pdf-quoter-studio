@@ -404,11 +404,22 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                     }) ?? '');
                     return (
                       <div key={idx} className="flex items-center justify-between gap-3 text-sm">
-                        <span className="font-medium truncate">• {opt.name}</span>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="font-medium truncate">• {opt.name}</span>
+                          <span
+                            className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${
+                              opt.erpReference
+                                ? 'bg-blue-100 text-blue-900 border-transparent'
+                                : 'bg-muted text-muted-foreground border-transparent'
+                            }`}
+                            title="Référence ERP JAJA"
+                          >
+                            JAJA : {opt.erpReference || 'non renseigné'}
+                          </span>
+                        </div>
                         {label && <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{label}</span>}
                       </div>
                     );
-                  })}
                   {totalHt > 0 && (
                     <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
                       <span className="font-semibold">Total Service HT</span>
