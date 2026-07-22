@@ -440,7 +440,10 @@ function InterventionDialog({
     iv ? toLocalInput(new Date(iv.date_intervention)) : toLocalInput(initial.mode === 'create' ? initial.date : new Date())
   );
   const [durationHours, setDurationHours] = useState<string>(
-    iv?.duree_estimee_minutes ? String(iv.duree_estimee_minutes / 60) : '1'
+    iv?.duree_estimee_minutes != null ? String(Math.floor(iv.duree_estimee_minutes / 60)) : '1'
+  );
+  const [durationMinutes, setDurationMinutes] = useState<string>(
+    iv?.duree_estimee_minutes != null ? String(iv.duree_estimee_minutes % 60) : '0'
   );
   const [technicianName, setTechnicianName] = useState<string>(
     iv?.technician_name ?? (currentUser?.user_metadata?.full_name || currentUser?.email || '')
