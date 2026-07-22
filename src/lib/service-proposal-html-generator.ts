@@ -421,17 +421,19 @@ export async function generateServiceProposalHtml(
           </tr>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Sites d'intervention</p>
-        ${siteAddresses.length === 0
-          ? `<p style="${EMPTY_HINT_STYLE}">Aucun site renseigné</p>`
-          : `<table style="${DATA_TABLE_STYLE}">
-              <thead><tr>
-                <th style="${TH_STYLE} width:30%;">Site</th>
-                <th style="${TH_STYLE}">Adresse</th>
-              </tr></thead>
-              <tbody>${rows}</tbody>
-            </table>`}
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Sites d'intervention</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${siteAddresses.length === 0
+            ? `<p style="${EMPTY_HINT_STYLE}">Aucun site renseigné</p>`
+            : `<table style="${DATA_TABLE_STYLE}">
+                <thead><tr>
+                  <th style="${TH_STYLE} width:30%;">Site</th>
+                  <th style="${TH_STYLE}">Adresse</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>`}
+        </div>
       </div>`;
   };
 
