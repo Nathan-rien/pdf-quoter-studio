@@ -541,16 +541,21 @@ function InterventionDialog({
             })()}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium mb-1 block">Date & heure</label>
               <Input type="datetime-local" value={dateLocal} onChange={(e) => setDateLocal(e.target.value)} disabled={!canEditAll} />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">Durée (heure)</label>
-              <Input type="number" min={0.25} step={0.25} value={durationHours} onChange={(e) => setDurationHours(e.target.value)} disabled={!canEditAll} />
+              <label className="text-xs font-medium mb-1 block">Durée (heures)</label>
+              <Input type="number" min={0} step={1} value={durationHours} onChange={(e) => setDurationHours(e.target.value)} disabled={!canEditAll} />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block">Durée (minutes)</label>
+              <Input type="number" min={0} max={59} step={5} value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} disabled={!canEditAll} />
             </div>
           </div>
+
 
           <div>
             <label className="text-xs font-medium mb-1 block">Technicien</label>
