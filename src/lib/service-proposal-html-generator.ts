@@ -692,7 +692,7 @@ export async function generateServiceProposalHtml(
       : '';
 
     // Split across multiple pages if content is too tall (approx 3800 chars/page)
-    const MAX_PARTIES_CHARS = 6000;
+    const MAX_PARTIES_CHARS = 3200;
     const buckets: string[][] = [];
     let current: string[] = [];
     let currentChars = 0;
