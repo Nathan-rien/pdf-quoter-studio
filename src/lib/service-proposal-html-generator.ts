@@ -244,7 +244,6 @@ export async function generateServiceProposalHtml(
   };
 
   const renderClientZone = (zone: PositionedDynamicZone) => `
-  const renderClientZone = (zone: PositionedDynamicZone) => `
     <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
       <div style="${SECTION_BODY_STYLE}">
