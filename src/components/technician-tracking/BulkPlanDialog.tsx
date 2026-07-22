@@ -69,7 +69,8 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
   const mut = useMutation({
     mutationFn: async () => {
       const iso = new Date(dateLocal).toISOString();
-      const dur = duration ? Math.round(Number(duration) * 60) : null;
+      const totalMinutes = (Number(durationHours) || 0) * 60 + (Number(durationMinutes) || 0);
+      const dur = totalMinutes > 0 ? totalMinutes : null;
       const name = technicianName.trim() || 'Technicien';
       const rows = Array.from(selected).map((refId) => ({
         reference_id: refId,
@@ -138,7 +139,7 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
             </ul>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium mb-1 block">Date & heure</label>
               <Input
@@ -148,16 +149,28 @@ export function BulkPlanDialog({ open, onOpenChange, clientName, refs }: Props) 
               />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">Durée (heure)</label>
+              <label className="text-xs font-medium mb-1 block">Durée (heures)</label>
               <Input
                 type="number"
-                min={0.25}
-                step={0.25}
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+                min={0}
+                step={1}
+                value={durationHours}
+                onChange={(e) => setDurationHours(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block">Durée (minutes)</label>
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                step={5}
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(e.target.value)}
               />
             </div>
           </div>
+
 
           <div>
             <label className="text-xs font-medium mb-1 block">Technicien</label>
