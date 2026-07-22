@@ -48,6 +48,53 @@ export function ValidateProposalButton({
   const validateProposal = useValidateProposal();
 
   async function handleConfirm() {
+    // For Service proposals, pull duration / start date / periodicity from the
+    // linked service_proposal so the created contract is pre-filled.
+    let servicePrefill: {
+      duration_months?: number | null;
+      implementation_month?: string | null;
+      payment_frequency?: 'mensuel' | 'trimestriel';
+      monthly_rent_ht?: number | null;
+      quarterly_rent_ht?: number | null;
+    } = {};
+    let servicePropId: string | null = null;
+
+    if (proposalType === 'service') {
+      const { data: exp } = await supabase
+        .from('proposal_exports')
+        .select('service_proposal_id')
+        .eq('id', proposalId)
+        .maybeSingle();
+      servicePropId = (exp as any)?.service_proposal_id ?? null;
+
+      if (servicePropId) {
+        const { data: sp } = await supabase
+          .from('service_proposals')
+          .select('contract_duration, start_date, payment_frequency')
+          .eq('id', servicePropId)
+          .maybeSingle();
+        if (sp) {
+          const duration = (sp as any).contract_duration ?? null;
+          const freq = (sp as any).payment_frequency;
+          const total = typeof amountHt === 'number' ? amountHt : null;
+          const monthly =
+            total != null && duration && duration > 0
+              ? Math.round((total / duration) * 100) / 100
+              : null;
+          const quarterly =
+            monthly != null ? Math.round(monthly * 3 * 100) / 100 : null;
+          servicePrefill = {
+            duration_months: duration,
+            implementation_month: (sp as any).start_date ?? null,
+            payment_frequency:
+              freq === 'trimestriel' ? 'trimestriel' : freq === 'mensuel' ? 'mensuel' : undefined,
+            monthly_rent_ht: monthly,
+            quarterly_rent_ht: quarterly,
+          };
+        }
+      }
+    }
+
     const result = await validateProposal.mutateAsync({
       proposal_id: proposalId,
       proposal_type: proposalType,
@@ -55,10 +102,13 @@ export function ValidateProposalButton({
       commercial_id: commercialId,
       commercial_name: commercialName,
       amount_ht: amountHt,
-      monthly_rent_ht: monthlyRentHt,
+      monthly_rent_ht: servicePrefill.monthly_rent_ht ?? monthlyRentHt,
+      quarterly_rent_ht: servicePrefill.quarterly_rent_ht,
       template_name: templateName,
       financial_partner: financialPartner ?? null,
-      duration_months: durationMonths ?? null,
+      duration_months: servicePrefill.duration_months ?? durationMonths ?? null,
+      implementation_month: servicePrefill.implementation_month ?? null,
+      payment_frequency: servicePrefill.payment_frequency,
     });
     setOpen(false);
     onValidated?.(result.id);
@@ -77,15 +127,9 @@ export function ValidateProposalButton({
             .update({ attachment_url: uploaded.path, attachment_name: uploaded.name })
             .eq('id', result.id);
         }
-        // Seed technician-tracking references (same source as the PDF)
-        const { data: exp } = await supabase
-          .from('proposal_exports')
-          .select('service_proposal_id')
-          .eq('id', proposalId)
-          .maybeSingle();
         await seedClientServiceReferences({
           contractId: result.id,
-          serviceProposalId: (exp as any)?.service_proposal_id ?? null,
+          serviceProposalId: servicePropId,
         });
       } catch (err) {
         console.error('[ValidateProposalButton] génération contrat automatique échouée', err);
