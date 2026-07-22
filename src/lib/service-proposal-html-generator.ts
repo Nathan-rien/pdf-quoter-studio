@@ -52,6 +52,11 @@ const TD_STYLE =
 const ROW_ALT_BG = "#f9fafb";
 const EMPTY_HINT_STYLE =
   "font-family:'Inter',sans-serif;font-size:9px;color:#9ca3af;font-style:italic;margin:0;";
+const SECTION_WRAPPER_STYLE =
+  "border:1px solid #e5e7eb;border-radius:3px;overflow:hidden;background:#ffffff;";
+const SECTION_BANNER_STYLE =
+  "background:#f3f4f6;color:#1a1a1a;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2.5mm 4mm;border-bottom:2px solid #d1d5db;";
+const SECTION_BODY_STYLE = "padding:4mm;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
@@ -239,32 +244,35 @@ export async function generateServiceProposalHtml(
   };
 
   const renderClientZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${INFO_CARD_STYLE}">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
-        <div>
-          <p style="${LABEL_STYLE}">Bénéficiaire</p>
-          ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
-          <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-            ${clientData.nom ? `<p style="margin:0.5mm 0;">${escapeText(clientData.nom)}</p>` : ''}
-            ${clientData.adresse ? `<p style="margin:0.5mm 0;">${escapeText(clientData.adresse)}</p>` : ''}
-            ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
-            ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
-          </div>
-        </div>
-        <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
-          <p style="${LABEL_STYLE}">Votre interlocuteur</p>
-          ${
-            selectedCommercial
-              ? `
-            <p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
+    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
+          <div>
+            <p style="${LABEL_STYLE}">Bénéficiaire</p>
+            ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
             <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-              ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
-              ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
-              ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
+              ${clientData.nom ? `<p style="margin:0.5mm 0;">${escapeText(clientData.nom)}</p>` : ''}
+              ${clientData.adresse ? `<p style="margin:0.5mm 0;">${escapeText(clientData.adresse)}</p>` : ''}
+              ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
+              ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
             </div>
-          `
-              : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
-          }
+          </div>
+          <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
+            <p style="${LABEL_STYLE}">Votre interlocuteur</p>
+            ${
+              selectedCommercial
+                ? `
+              <p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
+              <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
+                ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
+                ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
+              </div>
+            `
+                : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
+            }
+          </div>
         </div>
       </div>
     </div>
@@ -299,21 +307,23 @@ export async function generateServiceProposalHtml(
   ];
 
   const renderConditionsZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-      <p style="${SECTION_TITLE_STYLE}">Vos modalités de règlement</p>
-      <table style="${DATA_TABLE_STYLE}">
-        <tbody>
-          ${conditionsRows
-            .map(
-              ([label, value, bold], idx) => `
-            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-              <th scope="row" style="${TH_STYLE} width:38%;">${escapeText(label)}</th>
-              <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#1a1a1a;text-align:right;' : ''}">${escapeText(value)}</td>
-            </tr>`,
-            )
-            .join('')}
-        </tbody>
-      </table>
+    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Vos modalités de règlement</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <table style="${DATA_TABLE_STYLE}">
+          <tbody>
+            ${conditionsRows
+              .map(
+                ([label, value, bold], idx) => `
+              <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                <th scope="row" style="${TH_STYLE} width:38%;">${escapeText(label)}</th>
+                <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#1a1a1a;text-align:right;' : ''}">${escapeText(value)}</td>
+              </tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 
@@ -382,20 +392,22 @@ export async function generateServiceProposalHtml(
       )
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Détail des services</p>
-        ${
-          selected.length === 0
-            ? `<p style="${EMPTY_HINT_STYLE}">Aucune option sélectionnée</p>`
-            : `<table style="${DATA_TABLE_STYLE}">
-                <thead><tr>
-                  <th style="${TH_STYLE} width:30%;">Service</th>
-                  <th style="${TH_STYLE}">Description</th>
-                  ${showPriceCol ? `<th style="${TH_STYLE} width:22%;text-align:right;">Prix</th>` : ''}
-                </tr></thead>
-                <tbody>${rows}</tbody>
-              </table>`
-        }
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Détail des services</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${
+            selected.length === 0
+              ? `<p style="${EMPTY_HINT_STYLE}">Aucune option sélectionnée</p>`
+              : `<table style="${DATA_TABLE_STYLE}">
+                  <thead><tr>
+                    <th style="${TH_STYLE} width:30%;">Service</th>
+                    <th style="${TH_STYLE}">Description</th>
+                    ${showPriceCol ? `<th style="${TH_STYLE} width:22%;text-align:right;">Prix</th>` : ''}
+                  </tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>`
+          }
+        </div>
       </div>
     `;
   };
@@ -409,17 +421,19 @@ export async function generateServiceProposalHtml(
           </tr>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Sites d'intervention</p>
-        ${siteAddresses.length === 0
-          ? `<p style="${EMPTY_HINT_STYLE}">Aucun site renseigné</p>`
-          : `<table style="${DATA_TABLE_STYLE}">
-              <thead><tr>
-                <th style="${TH_STYLE} width:30%;">Site</th>
-                <th style="${TH_STYLE}">Adresse</th>
-              </tr></thead>
-              <tbody>${rows}</tbody>
-            </table>`}
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Sites d'intervention</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${siteAddresses.length === 0
+            ? `<p style="${EMPTY_HINT_STYLE}">Aucun site renseigné</p>`
+            : `<table style="${DATA_TABLE_STYLE}">
+                <thead><tr>
+                  <th style="${TH_STYLE} width:30%;">Site</th>
+                  <th style="${TH_STYLE}">Adresse</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>`}
+        </div>
       </div>`;
   };
 
@@ -427,18 +441,20 @@ export async function generateServiceProposalHtml(
     const op = operationalContact ?? { name: '', role: '', email: '', phone: '' };
     const hasData = op.name || op.role || op.email || op.phone;
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Contact opérationnel</p>
-        ${!hasData
-          ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>`
-          : `<div style="${INFO_CARD_STYLE}">
-              ${op.name ? `<p style="${VALUE_STYLE}">${escapeText(op.name)}</p>` : ''}
-              <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                ${op.role ? `<p style="margin:0.5mm 0;">${escapeText(op.role)}</p>` : ''}
-                ${op.email ? `<p style="margin:0.5mm 0;">${escapeText(op.email)}</p>` : ''}
-                ${op.phone ? `<p style="margin:0.5mm 0;">${escapeText(op.phone)}</p>` : ''}
-              </div>
-            </div>`}
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Contact opérationnel</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${!hasData
+            ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>`
+            : `<div>
+                ${op.name ? `<p style="${VALUE_STYLE}">${escapeText(op.name)}</p>` : ''}
+                <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                  ${op.role ? `<p style="margin:0.5mm 0;">${escapeText(op.role)}</p>` : ''}
+                  ${op.email ? `<p style="margin:0.5mm 0;">${escapeText(op.email)}</p>` : ''}
+                  ${op.phone ? `<p style="margin:0.5mm 0;">${escapeText(op.phone)}</p>` : ''}
+                </div>
+              </div>`}
+        </div>
       </div>`;
   };
 
@@ -454,11 +470,13 @@ export async function generateServiceProposalHtml(
           </div>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Prestataires extérieurs</p>
-        ${externalProviders.length === 0
-          ? `<p style="${EMPTY_HINT_STYLE}">Aucun prestataire renseigné</p>`
-          : cards}
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Prestataires extérieurs</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${externalProviders.length === 0
+            ? `<p style="${EMPTY_HINT_STYLE}">Aucun prestataire renseigné</p>`
+            : cards}
+        </div>
       </div>`;
   };
 
@@ -475,25 +493,27 @@ export async function generateServiceProposalHtml(
       return label ?? '';
     };
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Services & packs souscrits</p>
-        ${selected.length === 0
-          ? `<p style="${EMPTY_HINT_STYLE}">Aucun élément sélectionné</p>`
-          : `<div style="${INFO_CARD_STYLE}">
-              <div style="${BODY_TEXT_STYLE}">
-                ${selected.map((o) => {
-                  const price = priceLabel(o);
-                  return `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0.5mm 0;color:#1a1a1a;">
-                    <span style="font-weight:500;">• ${escapeText(o.name || '—')}</span>
-                    ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
-                  </div>`;
-                }).join('')}
-                <div style="display:flex;justify-content:space-between;gap:4mm;margin-top:2mm;padding-top:2mm;border-top:1px solid #e5e7eb;color:#1a1a1a;">
-                  <span style="font-weight:600;">Total Service HT</span>
-                  <span style="font-weight:700;">${formatNumber(totalServicesHt)} €</span>
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Services &amp; packs souscrits</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${selected.length === 0
+            ? `<p style="${EMPTY_HINT_STYLE}">Aucun élément sélectionné</p>`
+            : `<div>
+                <div style="${BODY_TEXT_STYLE}">
+                  ${selected.map((o) => {
+                    const price = priceLabel(o);
+                    return `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0.5mm 0;color:#1a1a1a;">
+                      <span style="font-weight:500;">• ${escapeText(o.name || '—')}</span>
+                      ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
+                    </div>`;
+                  }).join('')}
+                  <div style="display:flex;justify-content:space-between;gap:4mm;margin-top:2mm;padding-top:2mm;border-top:1px solid #e5e7eb;color:#1a1a1a;">
+                    <span style="font-weight:600;">Total Service HT</span>
+                    <span style="font-weight:700;">${formatNumber(totalServicesHt)} €</span>
+                  </div>
                 </div>
-              </div>
-            </div>`}
+              </div>`}
+        </div>
       </div>`;
   };
 
@@ -672,7 +692,7 @@ export async function generateServiceProposalHtml(
       : '';
 
     // Split across multiple pages if content is too tall (approx 3800 chars/page)
-    const MAX_PARTIES_CHARS = 3800;
+    const MAX_PARTIES_CHARS = 3200;
     const buckets: string[][] = [];
     let current: string[] = [];
     let currentChars = 0;
@@ -695,7 +715,7 @@ export async function generateServiceProposalHtml(
         buckets.length === 1
           ? 'Contrat cadre — Parties contractantes'
           : `Contrat cadre — Parties contractantes (${idx + 1}/${buckets.length})`;
-      renderedPartiesPagesHtml.push(renderCgShell(title, body));
+      renderedPartiesPagesHtml.push(renderCgShell(title, body, 'overflow:visible;height:auto;min-height:calc(100% - 22mm);'));
     });
   }
 
