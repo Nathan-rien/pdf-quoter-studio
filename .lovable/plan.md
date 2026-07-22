@@ -1,31 +1,50 @@
-## Objectif
+## Correctif juridique — Ajout Article V "Responsabilité Prestataire" dans le template Contrat Cadre Services
 
-Dans le dialogue « Nouvelle intervention » / « Modifier l'intervention » du Planning Services, dès qu'un client (contrat) est sélectionné, afficher automatiquement les coordonnées client renseignées lors de la proposition Services associée (adresse, téléphone, email, contact opérationnel, sites d'intervention).
+### Fichier modifié
+`src/lib/seedContratCadreTemplate.ts`
 
-## Portée
+### 1. Page 6 (`pageNumber: 6`, "Art. III à V") — insertion du nouvel article
 
-Fichier : `src/components/technician-tracking/PlanningView.tsx` uniquement. Aucune modification back-end : les données existent déjà dans `service_proposals` (`client_address`, `client_email`, `client_phone`, `client_company`, `client_siret`, `operational_contact`, `site_addresses`) et sont liées aux contrats via `contracts.proposal_id` → `proposal_exports.service_proposal_id` (déjà utilisé ailleurs, cf. `useContractProposalOptions`).
+Après l'article IV (body à y=345, h=90 → fin ≈ 435), ajouter :
 
-## Changements
+- **Titre `p3-art5`** (nouveau) : `textEl("p3-art5", 40, 450, 570, 15, "V - RESPONSABILITE PRESTATAIRE", { bold: true })`
+- **Corps `p3-art5-body`** (nouveau) : `textEl("p3-art5-body", 40, 475, 570, 300, "1.1 …\n\n1.2 …")` — hauteur calibrée sur la longueur réelle (paragraphe 1.1 très long ~10 lignes, 1.2 ~5 lignes) au même ratio que l'article V actuel (3 paragraphes = 180).
 
-1. Étendre `contractsQ` (déjà chargé) pour inclure `proposal_id` afin de retrouver la proposition.
-2. Ajouter une nouvelle query `useQuery(['pl-client-info', contractId])` dans `InterventionDialog`, déclenchée uniquement quand `contractId` est défini. Elle :
-   - lit `contracts.proposal_id`
-   - remonte au `service_proposal` correspondant (via `proposal_exports.service_proposal_id`)
-   - renvoie `{ client_company, client_address, client_phone, client_email, operational_contact, site_addresses }`.
-3. Sous le `<Select>` client, insérer un encart en lecture seule « Coordonnées client » affichant :
-   - Société / SIRET
-   - Adresse principale
-   - Téléphone + email (cliquables `tel:` / `mailto:`)
-   - Contact opérationnel (nom, rôle, téléphone, email) si présent
-   - Liste des sites d'intervention (label + adresse) si présent
-   - État de chargement / message « Aucune coordonnée renseignée » si vide.
-4. Les champs restent purement informatifs (lecture seule) — aucun impact sur la mutation d'enregistrement de l'intervention.
+Le texte inséré est exactement celui fourni (1.1 sur la responsabilité directe/indirecte + plafond d'indemnisation, 1.2 sur l'obligation de sauvegarde préalable).
 
-## Détails techniques
+**Déplacement de l'ancien Article V (Facturation) → Page 7** : puisque la page 6 est saturée après l'ajout (art III 50→305, art IV 320→435, nouveau V 450→775), l'ancien "V - FACTURATION" est repoussé sur la page 7 et devient "VI - FACTURATION".
 
-- Réutiliser le style de badges/cartes déjà utilisé dans le dialogue (Tailwind, `bg-muted`, `text-xs`).
-- Ne pas dupliquer la logique de résolution proposition → utiliser un petit helper local dans le fichier pour rester ciblé.
-- Gérer les cas :
-  - contrat sans `proposal_id` (ancien contrat rapide) → afficher « Aucune coordonnée liée à ce contrat ».
-  - `operational_contact` / `site_addresses` peuvent être `null` ou tableaux vides.
+### 2. Page 7 (`pageNumber: 7`, actuellement "Art. VI à VIII") — accueil de Facturation + renumérotation
+
+Nouveau contenu (mise en forme identique, seuls libellés/positions changent) :
+
+- `VI - FACTURATION` (ex art V page 6) — titre y=50, body y=75, h=180 (identique à l'existant)
+- `VII - DUREE` (ex VI) — titre y=245, body y=270, h=130
+- `VIII - RESOLUTION DU CONTRAT` (ex VII) — titre y=410, body y=435, h=110
+- `IX - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE` (ex VIII) — titre y=560, body y=585, h=80
+
+Titre de la page (`title`) mis à jour : `"Art. VI à IX"`.
+
+### 3. Page 8 (`pageNumber: 8`) — renumérotation seule (positions inchangées)
+
+- `IX - CLAUSES DU CONTRAT` → `X - CLAUSES DU CONTRAT`
+- `X - INDEPENDANCE DES CLAUSES` → `XI - INDEPENDANCE DES CLAUSES`
+- `XI - INDEPENDANCE DES PARTIES` → `XII - INDEPENDANCE DES PARTIES`
+- `XII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE` → `XIII - …`
+
+Titre de la page mis à jour : `"Art. X à XIII"`.
+
+Aucun changement de x/y/hauteur ni de style sur cette page — seuls les libellés changent. Les IDs (`p5-art9`, `p5-art10`, …) restent inchangés pour ne pas invalider les versions existantes.
+
+### 4. Pages 9 (Signatures) et pages 1-5 : aucun changement.
+
+### 5. Publication d'une nouvelle version
+
+Aucune modification de `seedContratCadreTemplate()` : la fonction publie déjà automatiquement une nouvelle version (`max(version_number)+1`, status `publie`) à chaque exécution. Après build, déclencher la re-publication depuis l'UI Éditeur de template (bouton "Regénérer / republier Contrat Cadre Services") pour créer la nouvelle version en base.
+
+### Vérifications post-changement
+
+- Aperçu Proposition Services → page CG 6 : art III / IV / **V nouveau** sans chevauchement ni dépassement.
+- Page 7 : art VI (Facturation) / VII / VIII / IX bien alignés, dernière ligne ≤ marge basse.
+- Page 8 : numérotation X → XIII, textes identiques.
+- Export PDF `contrat` : les 4 pages juridiques restent au bon `documentScope: "contrat"`.

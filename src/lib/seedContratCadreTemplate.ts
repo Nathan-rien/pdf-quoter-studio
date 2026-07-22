@@ -240,14 +240,14 @@ export function buildPages() {
           90,
           "La Société BENEFICIAIRE s'engage expressément à fournir, pendant toute la durée du présent contrat, au PRESTATAIRE, toutes les informations, tous les renseignements, tous les documents et toute l'assistance raisonnablement nécessaires pour lui permettre de réaliser l'objet du contrat."
         ),
-        textEl("p3-art5", 40, 450, 570, 15, "V - FACTURATION", { bold: true }),
+        textEl("p3-art5", 40, 450, 570, 15, "V - RESPONSABILITE PRESTATAIRE", { bold: true }),
         textEl(
           "p3-art5-body",
           40,
           475,
           570,
-          180,
-          "La rémunération des prestations définies dans le contrat d'application fera l'objet d'une redevance dont le montant et la périodicité sont précisés dans le contrat d'application annexé aux présentes.\n\nLes Prestations seront facturées dès la signature du contrat d'application par le client. A défaut de paiement de la somme due, LE PRESTATAIRE se réserve le droit de suspendre l'exécution des prestations, 10 jours après mise en demeure de règlement demeurée infructueuse.\n\nLe BENEFICIAIRE accepte toute information par voie électronique ainsi que la fourniture de toute pièce de facturation sous format électronique."
+          300,
+          "1.1 La Société PRESTATAIRE sera responsable que des dommages directs qu'elle pourrait causer au BENEFICIAIRE dans l'exécution des prestations de services. Elle ne pourra être tenue responsable des préjudices Indirects — tels que préjudice commercial, perte de clientèle, perte de commande, perte de chiffre d'affaires, perte de bénéfice ou encore manque à gagner — subis par le BENEFICIAIRE. En tout état de cause, l'Indemnité totale due par le PRESTATAIRE au BENEFICIAIRE en réparation de son préjudice au titre de la réalisation de la prestation de service ne pourra jamais excéder le montant total qui sera payé au PRESTATAIRE par le BENEFICIAIRE dans le cadre de la réalisation de la prestation de service.\n\n1.2 La société BENEFICIAIRE doit s'assurer avant toute intervention du PRESTATAIRE qu'une sauvegarde complète des applications et des données a été préalablement réalisée. En aucun cas le PRESTATAIRE ne pourra être tenu responsable de la perte de données et ce sans que ne puisse être remis en cause les termes du présent contrat."
         ),
       ],
       dynamicZones: [],
@@ -255,33 +255,42 @@ export function buildPages() {
     },
     {
       pageNumber: 7,
-      title: "Art. VI à VIII + Conditions particulières",
+      title: "Art. VI à IX",
       type: "static",
       documentScope: "contrat",
       elements: [
-        textEl("p4-art6", 40, 50, 570, 15, "VI - DUREE", { bold: true }),
+        textEl("p4-art5", 40, 50, 570, 15, "VI - FACTURATION", { bold: true }),
+        textEl(
+          "p4-art5-body",
+          40,
+          75,
+          570,
+          180,
+          "La rémunération des prestations définies dans le contrat d'application fera l'objet d'une redevance dont le montant et la périodicité sont précisés dans le contrat d'application annexé aux présentes.\n\nLes Prestations seront facturées dès la signature du contrat d'application par le client. A défaut de paiement de la somme due, LE PRESTATAIRE se réserve le droit de suspendre l'exécution des prestations, 10 jours après mise en demeure de règlement demeurée infructueuse.\n\nLe BENEFICIAIRE accepte toute information par voie électronique ainsi que la fourniture de toute pièce de facturation sous format électronique."
+        ),
+        textEl("p4-art6", 40, 270, 570, 15, "VII - DUREE", { bold: true }),
         textEl(
           "p4-art6-body",
           40,
-          75,
+          295,
           570,
           130,
           "Le présent contrat cadre est conclu pour une durée indéterminée. Il pourra être rompu par l'une ou l'autre des Parties, à sa date anniversaire par l'envoi d'une lettre recommandée avec avis de réception à l'autre Partie en respectant un préavis de 3 mois.\n\nEn revanche, le contrat d'application est conclu pour une durée ferme, déterminée par décision du BÉNÉFICIAIRE. À son terme, il pourra être renouvelé au moyen de la signature d'un nouveau contrat d'application."
         ),
-        textEl("p4-art7", 40, 220, 570, 15, "VII - RESOLUTION DU CONTRAT", { bold: true }),
+        textEl("p4-art7", 40, 440, 570, 15, "VIII - RESOLUTION DU CONTRAT", { bold: true }),
         textEl(
           "p4-art7-body",
           40,
-          245,
+          465,
           570,
           110,
           "En cas de non-respect par l'une ou l'autre des parties des obligations suivantes :\n- Défaut de paiement de la facturation par le BENEFICIAIRE,\n- Défaillance d'une des Parties dans le respect des obligations visées aux articles du présent contrat, celui-ci pourra être résolu au gré de la partie lésée, TRENTE (30) jours après mise en demeure restée sans effet."
         ),
-        textEl("p4-art8", 40, 370, 570, 15, "VIII - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
+        textEl("p4-art8", 40, 590, 570, 15, "IX - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
         textEl(
           "p4-art8-body",
           40,
-          395,
+          615,
           570,
           80,
           "Les parties s'engagent à considérer comme strictement confidentiels l'ensemble des documents, informations et données communiqués dans le cadre du présent contrat, pendant toute sa durée et sans limitation après son expiration."
@@ -292,11 +301,11 @@ export function buildPages() {
     },
     {
       pageNumber: 8,
-      title: "Art. IX à XII",
+      title: "Art. X à XIII",
       type: "static",
       documentScope: "contrat",
       elements: [
-        textEl("p5-art9", 40, 50, 570, 15, "IX - CLAUSES DU CONTRAT", { bold: true }),
+        textEl("p5-art9", 40, 50, 570, 15, "X - CLAUSES DU CONTRAT", { bold: true }),
         textEl(
           "p5-art9-body",
           40,
@@ -305,7 +314,7 @@ export function buildPages() {
           60,
           "Les parties conviennent expressément qu'aucune des clauses du contrat ne pourra être réputée comminatoire ou de style, mais qu'elles doivent toutes recevoir leur pleine et entière exécution."
         ),
-        textEl("p5-art10", 40, 150, 570, 15, "X - INDEPENDANCE DES CLAUSES", { bold: true }),
+        textEl("p5-art10", 40, 150, 570, 15, "XI - INDEPENDANCE DES CLAUSES", { bold: true }),
         textEl(
           "p5-art10-body",
           40,
@@ -314,7 +323,7 @@ export function buildPages() {
           70,
           "Toute disposition du présent contrat qui serait ou deviendrait illégale sera entièrement indépendante ; les autres dispositions n'en seront pas affectées et produiront leurs effets."
         ),
-        textEl("p5-art11", 40, 260, 570, 15, "XI - INDEPENDANCE DES PARTIES", { bold: true }),
+        textEl("p5-art11", 40, 260, 570, 15, "XII - INDEPENDANCE DES PARTIES", { bold: true }),
         textEl(
           "p5-art11-body",
           40,
@@ -323,7 +332,7 @@ export function buildPages() {
           110,
           "Les parties déclarent expressément qu'elles sont et demeureront des partenaires commerciaux et professionnels indépendants, assumant chacun les risques et conséquences de leur propre exploitation. Aucun lien de subordination ne saurait être recherché dans le présent Contrat de services."
         ),
-        textEl("p5-art12", 40, 410, 570, 15, "XII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
+        textEl("p5-art12", 40, 410, 570, 15, "XIII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
         textEl(
           "p5-art12-body",
           40,
