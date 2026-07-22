@@ -52,6 +52,11 @@ const TD_STYLE =
 const ROW_ALT_BG = "#f9fafb";
 const EMPTY_HINT_STYLE =
   "font-family:'Inter',sans-serif;font-size:9px;color:#9ca3af;font-style:italic;margin:0;";
+const SECTION_WRAPPER_STYLE =
+  "border:1px solid #e5e7eb;border-radius:3px;overflow:hidden;background:#ffffff;";
+const SECTION_BANNER_STYLE =
+  "background:#f3f4f6;color:#1a1a1a;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2.5mm 4mm;border-bottom:2px solid #d1d5db;";
+const SECTION_BODY_STYLE = "padding:4mm;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
