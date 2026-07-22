@@ -78,7 +78,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
     return s === 'both' || s === mode;
   };
   const visibleTemplatePages = currentVersion?.pages.filter(scopeMatches) ?? [];
-  const totalPages = Math.max(1, visibleTemplatePages.length);
+  const totalPages = Math.max(1, pagesHtml.length || visibleTemplatePages.length);
 
   // Regenerate HTML each time relevant store fields or template change
   useEffect(() => {
