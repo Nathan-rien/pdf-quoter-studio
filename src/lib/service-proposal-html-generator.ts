@@ -650,32 +650,56 @@ export async function generateServiceProposalHtml(
     (p: any) => !isPartiesPage(p) && !isSignaturePage(p),
   );
 
-  const renderedPartiesHtml = new Map<number, string>();
+  const renderedPartiesPagesHtml: string[] = [];
   for (const page of partiesPages) {
     const texts = (page.elements || [])
       .filter((el: any) => el.type === 'text' && !CG_BANNER_TEXT_IDS.has(String(el.id)))
       .sort((a: any, b: any) => a.position.y - b.position.y);
-    const body = texts
-      .map((el: any) => {
-        const c = el.content as any;
-        const raw = String(c?.text ?? '');
-        const fw = c?.bold ? '700' : '400';
-        const align = c?.textAlign || 'left';
-        const col = c?.bold ? '#ffffff' : '#e5e7eb';
-        return `<div style="font-family:'Inter',sans-serif;font-size:8.5px;font-weight:${fw};color:${col};line-height:1.65;text-align:${align};margin-bottom:3mm;white-space:pre-wrap;">${escCg(raw)}</div>`;
-      })
-      .join('');
+    const rendered = texts.map((el: any) => {
+      const c = el.content as any;
+      const raw = String(c?.text ?? '');
+      const fw = c?.bold ? '700' : '400';
+      const align = c?.textAlign || 'left';
+      const col = c?.bold ? '#1a1a1a' : '#374151';
+      return {
+        html: `<div style="font-family:'Inter',sans-serif;font-size:8px;font-weight:${fw};color:${col};line-height:1.55;text-align:${align};margin-bottom:2mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
+        chars: raw.length,
+      };
+    });
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:4mm;color:#e5e7eb;font-size:8px;">${dyn}</div>`
+      ? `<div style="margin-top:3mm;color:#374151;font-size:8px;">${dyn}</div>`
       : '';
-    renderedPartiesHtml.set(
-      page.pageNumber,
-      renderCgShell('Contrat cadre — Parties contractantes', body + dynWrapped),
-    );
+
+    // Split across multiple pages if content is too tall (approx 3800 chars/page)
+    const MAX_PARTIES_CHARS = 3800;
+    const buckets: string[][] = [];
+    let current: string[] = [];
+    let currentChars = 0;
+    for (const r of rendered) {
+      if (currentChars + r.chars > MAX_PARTIES_CHARS && current.length > 0) {
+        buckets.push(current);
+        current = [];
+        currentChars = 0;
+      }
+      current.push(r.html);
+      currentChars += r.chars;
+    }
+    if (current.length > 0) buckets.push(current);
+    if (buckets.length === 0) buckets.push([]);
+
+    buckets.forEach((bucket, idx) => {
+      const isLast = idx === buckets.length - 1;
+      const body = bucket.join('') + (isLast ? dynWrapped : '');
+      const title =
+        buckets.length === 1
+          ? 'Contrat cadre — Parties contractantes'
+          : `Contrat cadre — Parties contractantes (${idx + 1}/${buckets.length})`;
+      renderedPartiesPagesHtml.push(renderCgShell(title, body));
+    });
   }
 
-  const renderedSignatureHtml = new Map<number, string>();
+  const renderedSignaturePagesHtml: string[] = [];
   for (const page of signaturePages) {
     const texts = (page.elements || [])
       .filter((el: any) => el.type === 'text' && !CG_BANNER_TEXT_IDS.has(String(el.id)))
@@ -684,16 +708,15 @@ export async function generateServiceProposalHtml(
       .map((el: any) => {
         const c = el.content as any;
         const raw = String(c?.text ?? '');
-        return `<div style="font-family:'Inter',sans-serif;font-size:9px;color:#e5e7eb;line-height:1.65;margin-bottom:3mm;">${escCg(raw)}</div>`;
+        return `<div style="font-family:'Inter',sans-serif;font-size:9px;color:#1a1a1a;line-height:1.55;margin-bottom:2mm;">${escCg(raw)}</div>`;
       })
       .join('');
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:10mm;color:#e5e7eb;font-size:9px;">${dyn}</div>`
+      ? `<div style="margin-top:6mm;color:#1a1a1a;font-size:9px;">${dyn}</div>`
       : '';
-    renderedSignatureHtml.set(
-      page.pageNumber,
-      renderCgShell('Signatures', body + dynWrapped),
+    renderedSignaturePagesHtml.push(
+      renderCgShell('Signatures', `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`),
     );
   }
 
