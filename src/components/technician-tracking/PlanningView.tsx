@@ -44,7 +44,9 @@ interface ContractRow {
   id: string;
   client_name: string;
   contract_number: string | null;
+  proposal_id: string | null;
 }
+
 
 export interface PlanningPrefill {
   reference_id: string;
