@@ -138,7 +138,8 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contracts')
-        .select('id, client_name, contract_number')
+        .select('id, client_name, contract_number, proposal_id')
+
         .eq('proposal_type', 'service')
         .order('client_name');
       if (error) throw error;
