@@ -1,24 +1,31 @@
-## Corrections demandées
+## Objectif
 
-### 1. Afficher la Réf JAJA sur les contrats Services
-Dans le bloc « Services & options de la proposition » de la vue contrat (`ContractRow.tsx`), la référence JAJA n'est pas remontée aujourd'hui.
+Dans le dialogue « Nouvelle intervention » / « Modifier l'intervention » du Planning Services, dès qu'un client (contrat) est sélectionné, afficher automatiquement les coordonnées client renseignées lors de la proposition Services associée (adresse, téléphone, email, contact opérationnel, sites d'intervention).
 
-- `src/hooks/useContracts.ts` — `useContractProposalOptions` : inclure `erp_reference` dans le mapping (lecture depuis `nosOptions[].erp_reference` / `optionsServices[].erp_reference`, avec fallback sur le catalogue `options_services` via `option_id` si absent dans le snapshot).
-- `src/components/contracts/ContractRow.tsx` : afficher un badge « JAJA : xxx » (ou « JAJA : non renseigné » en muted) à côté du nom de chaque option listée.
+## Portée
 
-### 2. Suivi Technicien : bien reprendre la Réf JAJA
-Actuellement `src/lib/technician-tracking.ts` récupère `erp_reference` uniquement via le catalogue `options_services` (match par `option_id`). Si l'option de la proposition a une Réf JAJA saisie directement (override) ou si le lien catalogue est perdu, le badge reste « non renseigné ».
+Fichier : `src/components/technician-tracking/PlanningView.tsx` uniquement. Aucune modification back-end : les données existent déjà dans `service_proposals` (`client_address`, `client_email`, `client_phone`, `client_company`, `client_siret`, `operational_contact`, `site_addresses`) et sont liées aux contrats via `contracts.proposal_id` → `proposal_exports.service_proposal_id` (déjà utilisé ailleurs, cf. `useContractProposalOptions`).
 
-- `src/lib/technician-tracking.ts` : lors de la construction de `client_service_references`, prioriser `erp_reference` provenant de l'option de la proposition (snapshot `nosOptions[].erp_reference`), puis fallback catalogue, puis valeur déjà stockée en base sur `client_service_references.erp_reference`.
-- S'assurer que la vue `TechnicianTrackingView.tsx` continue d'afficher ce champ (déjà OK — badge ligne 290).
+## Changements
 
-### 3. Nouvelle intervention : saisir la durée en heures
-Aujourd'hui le champ demande une valeur en minutes.
-
-- `src/components/technician-tracking/PlanningView.tsx` (form « Nouvelle intervention ») : renommer le label en **« Durée (heure) »**, input `type="number"` `step=0.25` `min=0.25`, et convertir vers/depuis minutes lors du save (stockage inchangé : `duree_estimee_minutes = heures * 60`).
-- `src/components/technician-tracking/BulkPlanDialog.tsx` : même changement (label + conversion) pour cohérence.
+1. Étendre `contractsQ` (déjà chargé) pour inclure `proposal_id` afin de retrouver la proposition.
+2. Ajouter une nouvelle query `useQuery(['pl-client-info', contractId])` dans `InterventionDialog`, déclenchée uniquement quand `contractId` est défini. Elle :
+   - lit `contracts.proposal_id`
+   - remonte au `service_proposal` correspondant (via `proposal_exports.service_proposal_id`)
+   - renvoie `{ client_company, client_address, client_phone, client_email, operational_contact, site_addresses }`.
+3. Sous le `<Select>` client, insérer un encart en lecture seule « Coordonnées client » affichant :
+   - Société / SIRET
+   - Adresse principale
+   - Téléphone + email (cliquables `tel:` / `mailto:`)
+   - Contact opérationnel (nom, rôle, téléphone, email) si présent
+   - Liste des sites d'intervention (label + adresse) si présent
+   - État de chargement / message « Aucune coordonnée renseignée » si vide.
+4. Les champs restent purement informatifs (lecture seule) — aucun impact sur la mutation d'enregistrement de l'intervention.
 
 ## Détails techniques
-- Type `ContractProposalOption` étendu avec `erp_reference: string | null`.
-- Aucune migration DB nécessaire (les champs existent déjà dans `options_services`, `client_service_references`, et dans le snapshot JSON).
-- Pas de changement de logique métier au-delà de l'affichage et de l'unité d'entrée.
+
+- Réutiliser le style de badges/cartes déjà utilisé dans le dialogue (Tailwind, `bg-muted`, `text-xs`).
+- Ne pas dupliquer la logique de résolution proposition → utiliser un petit helper local dans le fichier pour rester ciblé.
+- Gérer les cas :
+  - contrat sans `proposal_id` (ancien contrat rapide) → afficher « Aucune coordonnée liée à ce contrat ».
+  - `operational_contact` / `site_addresses` peuvent être `null` ou tableaux vides.
