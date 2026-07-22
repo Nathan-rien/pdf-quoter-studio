@@ -307,21 +307,23 @@ export async function generateServiceProposalHtml(
   ];
 
   const renderConditionsZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-      <p style="${SECTION_TITLE_STYLE}">Vos modalités de règlement</p>
-      <table style="${DATA_TABLE_STYLE}">
-        <tbody>
-          ${conditionsRows
-            .map(
-              ([label, value, bold], idx) => `
-            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-              <th scope="row" style="${TH_STYLE} width:38%;">${escapeText(label)}</th>
-              <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#1a1a1a;text-align:right;' : ''}">${escapeText(value)}</td>
-            </tr>`,
-            )
-            .join('')}
-        </tbody>
-      </table>
+    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Vos modalités de règlement</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <table style="${DATA_TABLE_STYLE}">
+          <tbody>
+            ${conditionsRows
+              .map(
+                ([label, value, bold], idx) => `
+              <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                <th scope="row" style="${TH_STYLE} width:38%;">${escapeText(label)}</th>
+                <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#1a1a1a;text-align:right;' : ''}">${escapeText(value)}</td>
+              </tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 
