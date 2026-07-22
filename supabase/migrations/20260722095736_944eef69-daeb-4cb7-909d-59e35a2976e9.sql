@@ -1,0 +1,2 @@
+ALTER TABLE public.service_proposals DROP CONSTRAINT IF EXISTS service_proposals_payment_mode_check;
+ALTER TABLE public.service_proposals ADD CONSTRAINT service_proposals_payment_mode_check CHECK (payment_mode = ANY (ARRAY['prelevement'::text, 'virement'::text, 'allin'::text]));
