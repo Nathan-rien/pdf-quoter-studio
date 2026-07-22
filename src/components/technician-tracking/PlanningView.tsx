@@ -461,6 +461,9 @@ function InterventionDialog({
 
   function submit() {
     if (!referenceId) return;
+    const totalMinutes =
+      (Number(durationHours) || 0) * 60 + (Number(durationMinutes) || 0);
+    const dureeVal = totalMinutes > 0 ? totalMinutes : null;
     const payload: Partial<Intervention> & { id?: string } = isEdit
       ? {
           id: iv!.id,
@@ -468,7 +471,7 @@ function InterventionDialog({
           ...(canEditAll ? {
             reference_id: referenceId,
             date_intervention: new Date(dateLocal).toISOString(),
-            duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
+            duree_estimee_minutes: dureeVal,
             technician_name: technicianName.trim() || 'Technicien',
             technician_user_id: iv!.technician_user_id ?? (iv!.technician_name === technicianName ? iv!.technician_user_id : null),
             commentaire: commentaire.trim() || null,
@@ -477,7 +480,7 @@ function InterventionDialog({
       : {
           reference_id: referenceId,
           date_intervention: new Date(dateLocal).toISOString(),
-          duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
+          duree_estimee_minutes: dureeVal,
           technician_name: technicianName.trim() || 'Technicien',
           technician_user_id: currentUser?.id ?? null,
           commentaire: commentaire.trim() || null,
