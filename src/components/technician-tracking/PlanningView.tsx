@@ -440,7 +440,10 @@ function InterventionDialog({
     iv ? toLocalInput(new Date(iv.date_intervention)) : toLocalInput(initial.mode === 'create' ? initial.date : new Date())
   );
   const [durationHours, setDurationHours] = useState<string>(
-    iv?.duree_estimee_minutes ? String(iv.duree_estimee_minutes / 60) : '1'
+    iv?.duree_estimee_minutes != null ? String(Math.floor(iv.duree_estimee_minutes / 60)) : '1'
+  );
+  const [durationMinutes, setDurationMinutes] = useState<string>(
+    iv?.duree_estimee_minutes != null ? String(iv.duree_estimee_minutes % 60) : '0'
   );
   const [technicianName, setTechnicianName] = useState<string>(
     iv?.technician_name ?? (currentUser?.user_metadata?.full_name || currentUser?.email || '')
@@ -458,6 +461,9 @@ function InterventionDialog({
 
   function submit() {
     if (!referenceId) return;
+    const totalMinutes =
+      (Number(durationHours) || 0) * 60 + (Number(durationMinutes) || 0);
+    const dureeVal = totalMinutes > 0 ? totalMinutes : null;
     const payload: Partial<Intervention> & { id?: string } = isEdit
       ? {
           id: iv!.id,
@@ -465,7 +471,7 @@ function InterventionDialog({
           ...(canEditAll ? {
             reference_id: referenceId,
             date_intervention: new Date(dateLocal).toISOString(),
-            duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
+            duree_estimee_minutes: dureeVal,
             technician_name: technicianName.trim() || 'Technicien',
             technician_user_id: iv!.technician_user_id ?? (iv!.technician_name === technicianName ? iv!.technician_user_id : null),
             commentaire: commentaire.trim() || null,
@@ -474,7 +480,7 @@ function InterventionDialog({
       : {
           reference_id: referenceId,
           date_intervention: new Date(dateLocal).toISOString(),
-          duree_estimee_minutes: durationHours ? Math.round(Number(durationHours) * 60) : null,
+          duree_estimee_minutes: dureeVal,
           technician_name: technicianName.trim() || 'Technicien',
           technician_user_id: currentUser?.id ?? null,
           commentaire: commentaire.trim() || null,
@@ -535,16 +541,21 @@ function InterventionDialog({
             })()}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium mb-1 block">Date & heure</label>
               <Input type="datetime-local" value={dateLocal} onChange={(e) => setDateLocal(e.target.value)} disabled={!canEditAll} />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">Durée (heure)</label>
-              <Input type="number" min={0.25} step={0.25} value={durationHours} onChange={(e) => setDurationHours(e.target.value)} disabled={!canEditAll} />
+              <label className="text-xs font-medium mb-1 block">Durée (heures)</label>
+              <Input type="number" min={0} step={1} value={durationHours} onChange={(e) => setDurationHours(e.target.value)} disabled={!canEditAll} />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block">Durée (minutes)</label>
+              <Input type="number" min={0} max={59} step={5} value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} disabled={!canEditAll} />
             </div>
           </div>
+
 
           <div>
             <label className="text-xs font-medium mb-1 block">Technicien</label>
