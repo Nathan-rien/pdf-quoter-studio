@@ -539,6 +539,16 @@ function InterventionDialog({
             </Select>
           </div>
 
+          {contractId && (
+            <ClientInfoBlock
+              loading={clientInfoQ.isLoading}
+              info={clientInfoQ.data}
+              hasProposal={!!selectedContract?.proposal_id}
+            />
+          )}
+
+
+
           <div>
             <label className="text-xs font-medium mb-1 block">Service / référence</label>
             <Select value={referenceId} onValueChange={setReferenceId} disabled={!contractId || !canEditAll}>
