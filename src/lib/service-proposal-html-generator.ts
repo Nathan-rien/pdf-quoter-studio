@@ -441,18 +441,20 @@ export async function generateServiceProposalHtml(
     const op = operationalContact ?? { name: '', role: '', email: '', phone: '' };
     const hasData = op.name || op.role || op.email || op.phone;
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Contact opérationnel</p>
-        ${!hasData
-          ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>`
-          : `<div style="${INFO_CARD_STYLE}">
-              ${op.name ? `<p style="${VALUE_STYLE}">${escapeText(op.name)}</p>` : ''}
-              <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                ${op.role ? `<p style="margin:0.5mm 0;">${escapeText(op.role)}</p>` : ''}
-                ${op.email ? `<p style="margin:0.5mm 0;">${escapeText(op.email)}</p>` : ''}
-                ${op.phone ? `<p style="margin:0.5mm 0;">${escapeText(op.phone)}</p>` : ''}
-              </div>
-            </div>`}
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Contact opérationnel</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${!hasData
+            ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>`
+            : `<div>
+                ${op.name ? `<p style="${VALUE_STYLE}">${escapeText(op.name)}</p>` : ''}
+                <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                  ${op.role ? `<p style="margin:0.5mm 0;">${escapeText(op.role)}</p>` : ''}
+                  ${op.email ? `<p style="margin:0.5mm 0;">${escapeText(op.email)}</p>` : ''}
+                  ${op.phone ? `<p style="margin:0.5mm 0;">${escapeText(op.phone)}</p>` : ''}
+                </div>
+              </div>`}
+        </div>
       </div>`;
   };
 
