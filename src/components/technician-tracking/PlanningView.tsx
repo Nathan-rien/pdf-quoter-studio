@@ -44,7 +44,9 @@ interface ContractRow {
   id: string;
   client_name: string;
   contract_number: string | null;
+  proposal_id: string | null;
 }
+
 
 export interface PlanningPrefill {
   reference_id: string;
@@ -136,7 +138,8 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contracts')
-        .select('id, client_name, contract_number')
+        .select('id, client_name, contract_number, proposal_id')
+
         .eq('proposal_type', 'service')
         .order('client_name');
       if (error) throw error;
@@ -456,6 +459,33 @@ function InterventionDialog({
     [refs, contractId]
   );
 
+  const selectedContract = useMemo(
+    () => contracts.find((c) => c.id === contractId) ?? null,
+    [contracts, contractId]
+  );
+
+  const clientInfoQ = useQuery({
+    queryKey: ['pl-client-info', selectedContract?.proposal_id],
+    enabled: !!selectedContract?.proposal_id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data: exp } = await supabase
+        .from('proposal_exports')
+        .select('service_proposal_id')
+        .eq('id', selectedContract!.proposal_id!)
+        .maybeSingle();
+      const spId = (exp as any)?.service_proposal_id;
+      if (!spId) return null;
+      const { data: sp } = await supabase
+        .from('service_proposals')
+        .select('client_company, client_address, client_phone, client_email, client_siret, operational_contact, site_addresses')
+        .eq('id', spId)
+        .maybeSingle();
+      return (sp as any) ?? null;
+    },
+  });
+
+
   const isOwner = iv?.created_by === currentUser?.id;
   const canEditAll = !isEdit || isAdmin || isOwner;
 
@@ -508,6 +538,16 @@ function InterventionDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {contractId && (
+            <ClientInfoBlock
+              loading={clientInfoQ.isLoading}
+              info={clientInfoQ.data}
+              hasProposal={!!selectedContract?.proposal_id}
+            />
+          )}
+
+
 
           <div>
             <label className="text-xs font-medium mb-1 block">Service / référence</label>
@@ -670,3 +710,126 @@ function MonthGrid({
     </div>
   );
 }
+
+interface ClientInfo {
+  client_company?: string | null;
+  client_address?: string | null;
+  client_phone?: string | null;
+  client_email?: string | null;
+  client_siret?: string | null;
+  operational_contact?: any;
+  site_addresses?: any;
+}
+
+function ClientInfoBlock({
+  loading, info, hasProposal,
+}: { loading: boolean; info: ClientInfo | null | undefined; hasProposal: boolean }) {
+  if (!hasProposal) {
+    return (
+      <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        Aucune coordonnée liée à ce contrat.
+      </div>
+    );
+  }
+  if (loading) {
+    return (
+      <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        Chargement des coordonnées…
+      </div>
+    );
+  }
+  if (!info) {
+    return (
+      <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        Aucune coordonnée renseignée.
+      </div>
+    );
+  }
+
+  const op = info.operational_contact && typeof info.operational_contact === 'object' ? info.operational_contact : null;
+  const opHas = op && (op.full_name || op.role || op.phone || op.email);
+  const sites: any[] = Array.isArray(info.site_addresses) ? info.site_addresses : [];
+
+  const hasAnything =
+    info.client_company || info.client_address || info.client_phone ||
+    info.client_email || info.client_siret || opHas || sites.length > 0;
+
+  if (!hasAnything) {
+    return (
+      <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        Aucune coordonnée renseignée.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/40 px-3 py-2 space-y-2 text-xs">
+      <div className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
+        Coordonnées client
+      </div>
+      {(info.client_company || info.client_siret) && (
+        <div>
+          {info.client_company && <span className="font-medium">{info.client_company}</span>}
+          {info.client_siret && (
+            <span className="text-muted-foreground"> · SIRET {info.client_siret}</span>
+          )}
+        </div>
+      )}
+      {info.client_address && (
+        <div className="whitespace-pre-line">{info.client_address}</div>
+      )}
+      {(info.client_phone || info.client_email) && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {info.client_phone && (
+            <a href={`tel:${info.client_phone}`} className="text-blue-700 hover:underline">
+              📞 {info.client_phone}
+            </a>
+          )}
+          {info.client_email && (
+            <a href={`mailto:${info.client_email}`} className="text-blue-700 hover:underline">
+              ✉ {info.client_email}
+            </a>
+          )}
+        </div>
+      )}
+      {opHas && (
+        <div className="pt-1 border-t border-border/60">
+          <div className="font-medium text-[11px] text-muted-foreground mb-0.5">
+            Contact opérationnel
+          </div>
+          <div>
+            {op.full_name && <span className="font-medium">{op.full_name}</span>}
+            {op.role && <span className="text-muted-foreground"> — {op.role}</span>}
+          </div>
+          {(op.phone || op.email) && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {op.phone && (
+                <a href={`tel:${op.phone}`} className="text-blue-700 hover:underline">📞 {op.phone}</a>
+              )}
+              {op.email && (
+                <a href={`mailto:${op.email}`} className="text-blue-700 hover:underline">✉ {op.email}</a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {sites.length > 0 && (
+        <div className="pt-1 border-t border-border/60">
+          <div className="font-medium text-[11px] text-muted-foreground mb-0.5">
+            Sites d'intervention
+          </div>
+          <ul className="space-y-0.5">
+            {sites.map((s: any, idx: number) => (
+              <li key={idx}>
+                {s?.label && <span className="font-medium">{s.label}</span>}
+                {s?.label && s?.address && <span> — </span>}
+                {s?.address && <span className="whitespace-pre-line">{s.address}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
