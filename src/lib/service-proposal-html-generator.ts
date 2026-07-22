@@ -470,11 +470,13 @@ export async function generateServiceProposalHtml(
           </div>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Prestataires extérieurs</p>
-        ${externalProviders.length === 0
-          ? `<p style="${EMPTY_HINT_STYLE}">Aucun prestataire renseigné</p>`
-          : cards}
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Prestataires extérieurs</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${externalProviders.length === 0
+            ? `<p style="${EMPTY_HINT_STYLE}">Aucun prestataire renseigné</p>`
+            : cards}
+        </div>
       </div>`;
   };
 
