@@ -459,6 +459,33 @@ function InterventionDialog({
     [refs, contractId]
   );
 
+  const selectedContract = useMemo(
+    () => contracts.find((c) => c.id === contractId) ?? null,
+    [contracts, contractId]
+  );
+
+  const clientInfoQ = useQuery({
+    queryKey: ['pl-client-info', selectedContract?.proposal_id],
+    enabled: !!selectedContract?.proposal_id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data: exp } = await supabase
+        .from('proposal_exports')
+        .select('service_proposal_id')
+        .eq('id', selectedContract!.proposal_id!)
+        .maybeSingle();
+      const spId = (exp as any)?.service_proposal_id;
+      if (!spId) return null;
+      const { data: sp } = await supabase
+        .from('service_proposals')
+        .select('client_company, client_address, client_phone, client_email, client_siret, operational_contact, site_addresses')
+        .eq('id', spId)
+        .maybeSingle();
+      return (sp as any) ?? null;
+    },
+  });
+
+
   const isOwner = iv?.created_by === currentUser?.id;
   const canEditAll = !isEdit || isAdmin || isOwner;
 
