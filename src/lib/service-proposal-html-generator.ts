@@ -779,15 +779,9 @@ export async function generateServiceProposalHtml(
     if (cgPageNumbers.has(page.pageNumber)) {
       if (!cgBlockEmitted) {
         cgBlockEmitted = true;
-        for (const p of partiesPages) {
-          const html = renderedPartiesHtml.get(p.pageNumber);
-          if (html) allPagesHtml.push(html);
-        }
+        for (const html of renderedPartiesPagesHtml) allPagesHtml.push(html);
         for (const html of renderedArticlesHtml) allPagesHtml.push(html);
-        for (const p of signaturePages) {
-          const html = renderedSignatureHtml.get(p.pageNumber);
-          if (html) allPagesHtml.push(html);
-        }
+        for (const html of renderedSignaturePagesHtml) allPagesHtml.push(html);
       }
       continue;
     }
