@@ -392,20 +392,22 @@ export async function generateServiceProposalHtml(
       )
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-        <p style="${SECTION_TITLE_STYLE}">Détail des services</p>
-        ${
-          selected.length === 0
-            ? `<p style="${EMPTY_HINT_STYLE}">Aucune option sélectionnée</p>`
-            : `<table style="${DATA_TABLE_STYLE}">
-                <thead><tr>
-                  <th style="${TH_STYLE} width:30%;">Service</th>
-                  <th style="${TH_STYLE}">Description</th>
-                  ${showPriceCol ? `<th style="${TH_STYLE} width:22%;text-align:right;">Prix</th>` : ''}
-                </tr></thead>
-                <tbody>${rows}</tbody>
-              </table>`
-        }
+      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Détail des services</div>
+        <div style="${SECTION_BODY_STYLE}">
+          ${
+            selected.length === 0
+              ? `<p style="${EMPTY_HINT_STYLE}">Aucune option sélectionnée</p>`
+              : `<table style="${DATA_TABLE_STYLE}">
+                  <thead><tr>
+                    <th style="${TH_STYLE} width:30%;">Service</th>
+                    <th style="${TH_STYLE}">Description</th>
+                    ${showPriceCol ? `<th style="${TH_STYLE} width:22%;text-align:right;">Prix</th>` : ''}
+                  </tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>`
+          }
+        </div>
       </div>
     `;
   };
