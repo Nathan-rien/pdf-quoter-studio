@@ -575,26 +575,26 @@ export async function generateServiceProposalHtml(
       .replace(/>/g, '&gt;');
 
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#9ca3af;border-top:0.5px solid #374151;padding-top:3mm;">
+    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;">
       <div style="flex:1;">
         Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
         RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
       </div>
-      <div style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#e5e7eb;letter-spacing:2px;white-space:nowrap;">GROUPE | CYBERTEK</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#1a1a1a;letter-spacing:2px;white-space:nowrap;">GROUPE | CYBERTEK</div>
     </div>
   `;
 
   const renderCgHeader = (title: string) => `
-    <div style="background:#f3f4f6;color:#1a1a1a;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5mm 14mm;border-bottom:2px solid #d1d5db;">
+    <div style="background:#f3f4f6;color:#1a1a1a;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5mm 14mm;border-bottom:2px solid #e5e7eb;">
       ${escCg(title)}
     </div>
   `;
 
-  const renderCgShell = (title: string, bodyHtml: string) => `
-    <div class="page-sheet" style="background:#1a1a1a;">
+  const renderCgShell = (title: string, bodyHtml: string, bodyStyle: string = '') => `
+    <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         ${renderCgHeader(title)}
-        <div style="padding:8mm 14mm 30mm 14mm;height:calc(100% - 22mm);overflow:hidden;box-sizing:border-box;">
+        <div style="padding:8mm 14mm 30mm 14mm;height:calc(100% - 22mm);overflow:hidden;box-sizing:border-box;${bodyStyle}">
           ${bodyHtml}
         </div>
         ${CG_FOOTER_HTML}
@@ -616,7 +616,7 @@ export async function generateServiceProposalHtml(
     const isTitle = !!c?.bold && raw.length < 120 && !raw.includes('\n');
     if (isTitle) {
       return {
-        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;margin:4mm 0 1.5mm 0;padding-bottom:1mm;border-bottom:1px solid #4b5563;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin:4mm 0 1.5mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
         chars: raw.length,
         isTitle: true,
       };
@@ -625,7 +625,7 @@ export async function generateServiceProposalHtml(
     const body = paragraphs
       .map(
         (p) =>
-          `<p style="font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.55;color:#e5e7eb;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
+          `<p style="font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.55;color:#374151;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
       )
       .join('');
     return { html: body, chars: raw.length, isTitle: false };
@@ -650,32 +650,56 @@ export async function generateServiceProposalHtml(
     (p: any) => !isPartiesPage(p) && !isSignaturePage(p),
   );
 
-  const renderedPartiesHtml = new Map<number, string>();
+  const renderedPartiesPagesHtml: string[] = [];
   for (const page of partiesPages) {
     const texts = (page.elements || [])
       .filter((el: any) => el.type === 'text' && !CG_BANNER_TEXT_IDS.has(String(el.id)))
       .sort((a: any, b: any) => a.position.y - b.position.y);
-    const body = texts
-      .map((el: any) => {
-        const c = el.content as any;
-        const raw = String(c?.text ?? '');
-        const fw = c?.bold ? '700' : '400';
-        const align = c?.textAlign || 'left';
-        const col = c?.bold ? '#ffffff' : '#e5e7eb';
-        return `<div style="font-family:'Inter',sans-serif;font-size:8.5px;font-weight:${fw};color:${col};line-height:1.65;text-align:${align};margin-bottom:3mm;white-space:pre-wrap;">${escCg(raw)}</div>`;
-      })
-      .join('');
+    const rendered = texts.map((el: any) => {
+      const c = el.content as any;
+      const raw = String(c?.text ?? '');
+      const fw = c?.bold ? '700' : '400';
+      const align = c?.textAlign || 'left';
+      const col = c?.bold ? '#1a1a1a' : '#374151';
+      return {
+        html: `<div style="font-family:'Inter',sans-serif;font-size:8px;font-weight:${fw};color:${col};line-height:1.55;text-align:${align};margin-bottom:2mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
+        chars: raw.length,
+      };
+    });
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:4mm;color:#e5e7eb;font-size:8px;">${dyn}</div>`
+      ? `<div style="margin-top:3mm;color:#374151;font-size:8px;">${dyn}</div>`
       : '';
-    renderedPartiesHtml.set(
-      page.pageNumber,
-      renderCgShell('Contrat cadre — Parties contractantes', body + dynWrapped),
-    );
+
+    // Split across multiple pages if content is too tall (approx 3800 chars/page)
+    const MAX_PARTIES_CHARS = 3800;
+    const buckets: string[][] = [];
+    let current: string[] = [];
+    let currentChars = 0;
+    for (const r of rendered) {
+      if (currentChars + r.chars > MAX_PARTIES_CHARS && current.length > 0) {
+        buckets.push(current);
+        current = [];
+        currentChars = 0;
+      }
+      current.push(r.html);
+      currentChars += r.chars;
+    }
+    if (current.length > 0) buckets.push(current);
+    if (buckets.length === 0) buckets.push([]);
+
+    buckets.forEach((bucket, idx) => {
+      const isLast = idx === buckets.length - 1;
+      const body = bucket.join('') + (isLast ? dynWrapped : '');
+      const title =
+        buckets.length === 1
+          ? 'Contrat cadre — Parties contractantes'
+          : `Contrat cadre — Parties contractantes (${idx + 1}/${buckets.length})`;
+      renderedPartiesPagesHtml.push(renderCgShell(title, body));
+    });
   }
 
-  const renderedSignatureHtml = new Map<number, string>();
+  const renderedSignaturePagesHtml: string[] = [];
   for (const page of signaturePages) {
     const texts = (page.elements || [])
       .filter((el: any) => el.type === 'text' && !CG_BANNER_TEXT_IDS.has(String(el.id)))
@@ -684,16 +708,15 @@ export async function generateServiceProposalHtml(
       .map((el: any) => {
         const c = el.content as any;
         const raw = String(c?.text ?? '');
-        return `<div style="font-family:'Inter',sans-serif;font-size:9px;color:#e5e7eb;line-height:1.65;margin-bottom:3mm;">${escCg(raw)}</div>`;
+        return `<div style="font-family:'Inter',sans-serif;font-size:9px;color:#1a1a1a;line-height:1.55;margin-bottom:2mm;">${escCg(raw)}</div>`;
       })
       .join('');
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:10mm;color:#e5e7eb;font-size:9px;">${dyn}</div>`
+      ? `<div style="margin-top:6mm;color:#1a1a1a;font-size:9px;">${dyn}</div>`
       : '';
-    renderedSignatureHtml.set(
-      page.pageNumber,
-      renderCgShell('Signatures', body + dynWrapped),
+    renderedSignaturePagesHtml.push(
+      renderCgShell('Signatures', `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`),
     );
   }
 
@@ -756,15 +779,9 @@ export async function generateServiceProposalHtml(
     if (cgPageNumbers.has(page.pageNumber)) {
       if (!cgBlockEmitted) {
         cgBlockEmitted = true;
-        for (const p of partiesPages) {
-          const html = renderedPartiesHtml.get(p.pageNumber);
-          if (html) allPagesHtml.push(html);
-        }
+        for (const html of renderedPartiesPagesHtml) allPagesHtml.push(html);
         for (const html of renderedArticlesHtml) allPagesHtml.push(html);
-        for (const p of signaturePages) {
-          const html = renderedSignatureHtml.get(p.pageNumber);
-          if (html) allPagesHtml.push(html);
-        }
+        for (const html of renderedSignaturePagesHtml) allPagesHtml.push(html);
       }
       continue;
     }
