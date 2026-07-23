@@ -720,7 +720,7 @@ export async function generateServiceProposalHtml(
         buckets.length === 1
           ? 'Parties contractantes'
           : `Parties contractantes (${idx + 1}/${buckets.length})`;
-      renderedPartiesPagesHtml.push(renderCgShell(title, body, 'overflow:visible;height:auto;min-height:calc(100% - 22mm);'));
+      renderedPartiesPagesHtml.push(renderCgShell(title, body));
     });
   }
 
