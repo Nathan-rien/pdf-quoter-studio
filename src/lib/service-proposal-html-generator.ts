@@ -46,7 +46,7 @@ const VALUE_STYLE =
 const DATA_TABLE_STYLE =
   "width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#374151;table-layout:fixed;";
 const TH_STYLE =
-  "padding:2mm 3mm;text-align:left;font-weight:600;color:#1a1a1a;background:#f3f4f6;border:1px solid #e5e7eb;font-size:9px;font-family:'Inter',sans-serif;";
+  "padding:2mm 3mm;text-align:left;font-weight:700;color:#ffffff;background:#1a1a1a;border:1px solid #1a1a1a;font-size:9px;font-family:'Inter',sans-serif;letter-spacing:0.3px;";
 const TD_STYLE =
   "padding:2mm 3mm;border:1px solid #e5e7eb;color:#374151;vertical-align:top;font-size:9px;font-family:'Inter',sans-serif;overflow-wrap:anywhere;";
 const ROW_ALT_BG = "#f9fafb";
