@@ -1,30 +1,18 @@
-Cinq ajustements sur le devis Services (`src/lib/service-proposal-html-generator.ts`, sauf point 5 qui touche aussi `src/lib/pack-description.ts`).
+## Problème
 
-### 1. Retirer la ligne « Services » du tableau « Vos modalités de règlement »
-Dans `conditionsRows` (~ligne 275), supprimer la première entrée `['Services', ...]`. Le tableau commence désormais par « Périodicité ».
+L'agrandissement du logo (280×76) a fait grossir le bandeau noir et forcé le titre "CONTRAT CADRE DE PRESTATIONS DE SERVICES" sur deux lignes, tout en poussant le contenu vers le bas.
 
-### 2. Réduire les marges latérales des pages du devis
-Passer le padding horizontal de 10 mm à 6 mm dans les conteneurs des pages du devis :
-- `shell-content` (ligne 845) : `padding:2mm 6mm 0 6mm`
-- bandeau titre `renderCgHeader` (ligne 643) : `padding:6mm 6mm`
-- pied de page `CG_FOOTER_HTML` du devis (ligne 633) : `padding:2mm 6mm 2mm 6mm`
-(Les pages contrat conservent leurs marges actuelles.)
+## Correctif
 
-### 3. Pied de page sur une seule ligne
-Sur le pied de page du devis (ligne 633), forcer la ligne surlignée « Groupe Cybertek — SAS au capital … » à tenir sur **une seule ligne** :
-- Retirer le saut de ligne HTML entre les deux phrases (fusionner en une seule chaîne séparée par `·`).
-- Ajouter `white-space:nowrap; overflow:hidden; text-overflow:ellipsis` au bloc de texte.
-- Réduire la taille de police à 6.5 px si nécessaire pour tenir dans la largeur.
+Dans `src/lib/service-proposal-html-generator.ts`, fonction `renderCgHeader` (ligne 708) :
 
-### 4. Harmoniser le style des libellés dans les encarts
-Rendre les libellés type « BÉNÉFICIAIRE » / « VOTRE INTERLOCUTEUR » en **noir** au lieu de gris clair : modifier `LABEL_STYLE` (ligne 91) : `color:#9ca3af` → `color:#111111`. Cette constante est utilisée par tous les encarts (Coordonnées, etc.) donc l'harmonisation est globale.
+1. Rendre le bandeau à hauteur fixe (identique à l'ancienne, ~17mm) via `height` explicite et `position:relative`, pour qu'il ne s'étire plus avec le logo.
+2. Positionner le logo en `position:absolute` (à droite, centré verticalement) afin qu'il puisse rester grand (280×76) sans influer sur la hauteur du bandeau.
+3. Réserver via `padding-right` la place du logo pour que le titre ne passe pas dessous, tout en gardant la taille de police actuelle (14px) → titre sur une seule ligne.
 
-### 5. Remplir la colonne « Description » de « Détail des services »
-Actuellement `resolvePackDescription` retourne `opt.description` (souvent vide pour un service simple importé sans sous-lignes). Améliorer la résolution :
-- Ajouter dans `resolvePackDescription` (`src/lib/pack-description.ts`) un fallback : si l'option n'est pas un pack (ou si sa description est vide), rechercher dans `adminOptions` une entrée dont le `title` correspond (case-insensitive) à `opt.name`, et composer la description à partir de ses `services` (via `serviceItemToLines`, en incluant sous-items).
-- Priorité : description manuelle non vide → composition depuis pack (existant) → composition depuis service admin homonyme → chaîne vide.
-- Le générateur (`renderOptionsZone`) reçoit déjà `adminOptions` et appelle `resolvePackDescription`, donc aucun changement supplémentaire côté rendu.
+Aucun autre changement (padding pages, tailles de police, contenu, footer) — uniquement le bandeau et le positionnement du logo.
 
-### Vérification
-- Build TS (typecheck automatique).
-- Aperçu du devis Services : vérifier disparition ligne Services, marges plus fines, pied de page compact 2 lignes (dont la 1re surlignée en une ligne), libellés noirs, et descriptions présentes dans « Détail des services ».
+## Vérification
+
+- Build OK.
+- Screenshot Playwright de la page 1 pour confirmer bandeau à hauteur normale + titre sur une ligne + logo agrandi conservé.
