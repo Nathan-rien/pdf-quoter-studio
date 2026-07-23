@@ -618,12 +618,12 @@ export async function generateServiceProposalHtml(
   // Footer is anchored to a strictly reserved bottom band (24mm high).
   // Content area above stops before this band so nothing can overlap it.
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 14mm 6mm 14mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
+    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 14mm 6mm 14mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
       <div style="flex:1;">
-        Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
-        RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
+        Groupe Cybertek — SAS au capital de 4 471 800 € · TVA intracom. FR78408772960 · RCS Bordeaux 408 772 960<br/>
+        Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr
       </div>
-      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:22px;width:auto;max-width:70px;flex-shrink:0;" />
+      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="width:110px;height:35px;object-fit:contain;flex-shrink:0;" />
     </div>
   `;
 
