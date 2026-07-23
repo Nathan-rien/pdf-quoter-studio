@@ -995,8 +995,8 @@ export async function generateServiceProposalHtml(
     @media screen { .page-sheet { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; } }
     img { max-width: 100%; height: auto; }
     .dynamic-content { position: static; z-index: 40; }
-    .shell-content > .shell-block { display: block; position: static; margin: 0 0 90mm 0; }
-    .shell-content > .shell-block:last-child { margin-bottom: 0; }
+    .shell-content .shell-block { display: block; position: static; margin: 0 0 90mm 0; }
+    .shell-content .shell-block:last-child { margin-bottom: 0; }
 
     .rich-text p, .rich-text div { margin: 0; padding: 0; }
     ul, ol { list-style: none !important; margin: 0 !important; padding: 0 !important; }
