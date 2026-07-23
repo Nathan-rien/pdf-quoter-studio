@@ -273,7 +273,6 @@ export async function generateServiceProposalHtml(
       : null;
 
   const conditionsRows: Array<[string, string, boolean?]> = [
-    ['Services', selectedServices.map((s) => s.label).join(', ') || '—'],
     ['Périodicité', paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'],
     ['Mode de règlement', paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : paymentMode === 'allin' ? 'Allin' : '—'],
     ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
