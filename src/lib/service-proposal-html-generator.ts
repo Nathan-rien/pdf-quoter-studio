@@ -615,7 +615,8 @@ export async function generateServiceProposalHtml(
 
   const CBPRO_LOGO_URL = '/__l5e/assets-v1/0991e1b4-5b95-4112-9fd7-da00ecefcca0/cbpro-logo.svg';
 
-  // Footer is anchored to a strictly reserved bottom band (24mm high).
+  // Footer is anchored to a strictly reserved bottom band (24mm high for
+  // contract pages; devis pages use a slimmer 16mm variant below).
   // Content area above stops before this band so nothing can overlap it.
   const CG_FOOTER_HTML = `
     <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 10mm 6mm 10mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:8px;line-height:1.35;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
@@ -624,6 +625,17 @@ export async function generateServiceProposalHtml(
         Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr
       </div>
       <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="width:110px;height:35px;object-fit:contain;flex-shrink:0;" />
+    </div>
+  `;
+
+  // Slimmer footer used on devis pages (pages 1-3) to leave more room for content.
+  const DEVIS_FOOTER_HTML = `
+    <div style="position:absolute;left:0;right:0;bottom:0;height:16mm;padding:2mm 10mm 2mm 10mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:6mm;font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.3;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
+      <div style="flex:1;">
+        Groupe Cybertek — SAS au capital de 4 471 800 € · TVA intracom. FR78408772960 · RCS Bordeaux 408 772 960<br/>
+        Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr
+      </div>
+      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="width:80px;height:25px;object-fit:contain;flex-shrink:0;" />
     </div>
   `;
 
@@ -824,16 +836,16 @@ export async function generateServiceProposalHtml(
   // Devis pages 1-3 render through a shell (same header + footer as CG pages),
   // stacking zone blocks vertically so content flows and never overlaps the footer.
   // Devis pages 1-3 render through a shell that mirrors the CG shell:
-  // strict absolute reservation of the bottom 24mm for the footer, content
-  // clipped by overflow:hidden above the footer band.
+  // strict absolute reservation of the bottom 16mm for the slimmer devis
+  // footer, content clipped by overflow:hidden above the footer band.
   const renderShellPage = (title: string, blocksHtml: string) => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;">
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;">
           <div data-shell-scale>${blocksHtml}</div>
         </div>
-        ${CG_FOOTER_HTML}
+        ${DEVIS_FOOTER_HTML}
       </div>
     </div>
   `;
