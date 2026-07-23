@@ -800,11 +800,14 @@ export async function generateServiceProposalHtml(
 
   // Devis pages 1-3 render through a shell (same header + footer as CG pages),
   // stacking zone blocks vertically so content flows and never overlaps the footer.
+  // Devis pages 1-3 render through a shell that mirrors the CG shell:
+  // strict absolute reservation of the bottom 24mm for the footer, content
+  // clipped by overflow:hidden above the footer band.
   const renderShellPage = (title: string, blocksHtml: string) => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        ${renderCgHeader(title)}
-        <div style="padding:8mm 14mm 30mm 14mm;height:calc(100% - 22mm);overflow:hidden;box-sizing:border-box;">
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;">
           <div style="display:flex;flex-direction:column;gap:5mm;">
             ${blocksHtml}
           </div>
@@ -813,6 +816,7 @@ export async function generateServiceProposalHtml(
       </div>
     </div>
   `;
+
 
 
   let cgBlockEmitted = false;
