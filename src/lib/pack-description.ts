@@ -46,10 +46,27 @@ export function resolvePackDescription(
   opt: OptionService,
   adminOptions: ServiceOptionDefinition[],
 ): string {
+  // 1) Description manuelle non vide → priorité
+  const manual = (opt.description || '').trim();
+  if (manual) return opt.description;
+
+  // 2) Pack : recomposer depuis packServiceIds
   const sourcePackId = (opt as OptionService & { sourcePackId?: string | null }).sourcePackId;
   if (sourcePackId) {
     const pack = adminOptions.find((o) => o.id === sourcePackId && o.kind === 'pack');
     if (pack) return buildPackDescription(pack, adminOptions);
   }
-  return opt.description || '';
+
+  // 3) Fallback : service admin homonyme → composer depuis ses services
+  const name = (opt.name || '').trim().toLowerCase();
+  if (name) {
+    const svc = adminOptions.find((o) => (o.title || '').trim().toLowerCase() === name);
+    if (svc) {
+      if (svc.kind === 'pack') return buildPackDescription(svc, adminOptions);
+      const lines = (svc.services || []).map(serviceItemToLines);
+      if (lines.length > 0) return lines.join('\n');
+    }
+  }
+
+  return '';
 }
