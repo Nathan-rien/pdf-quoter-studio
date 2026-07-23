@@ -32,31 +32,36 @@ import type { ServiceOptionDefinition } from '@/types/options-admin';
 // 10mm rhythm between sections (10 / 297 * 100 ≈ 3.37%)
 const SERVICE_ZONE_GAP_PERCENT = 3.4;
 
-// Unified design tokens for the 3 first pages of the Service Proposal (devis scope)
+// Unified design tokens — Service Proposal (devis + contrat)
 const SECTION_TITLE_STYLE =
-  "font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 3mm 0;";
+  "font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.75px;margin:0 0 3mm 0;";
 const INFO_CARD_STYLE =
-  "background:#fafafa;border:1px solid #e5e7eb;border-radius:3px;padding:4mm 5mm;";
+  "background:#ffffff;border:1px solid #d1d5db;border-radius:8px;padding:4mm 5mm;";
+// Secondary/detail text
 const BODY_TEXT_STYLE =
-  "font-family:'Inter',sans-serif;font-size:9px;font-weight:400;color:#374151;line-height:1.45;";
+  "font-family:'Inter',sans-serif;font-size:12.5px;font-weight:400;color:#4b5563;line-height:1.5;";
+// Field label (BÉNÉFICIAIRE, VOTRE INTERLOCUTEUR, …)
 const LABEL_STYLE =
-  "font-family:'Inter',sans-serif;font-size:8px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
+  "font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
+// Primary value under a label
 const VALUE_STYLE =
-  "font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#1a1a1a;margin:0;";
+  "font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:#111111;margin:0;";
+// Flat data tables (no header background box, alternating row bands, thin dividers)
 const DATA_TABLE_STYLE =
-  "width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#374151;table-layout:fixed;";
+  "width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.5;color:#4b5563;table-layout:fixed;";
 const TH_STYLE =
-  "padding:2mm 3mm;text-align:left;font-weight:700;color:#ffffff;background:#1a1a1a;border:1px solid #1a1a1a;font-size:9px;font-family:'Inter',sans-serif;letter-spacing:0.3px;";
+  "padding:3mm 4mm;text-align:left;font-weight:700;color:#111111;background:transparent;border:none;border-bottom:2px solid #4b5563;font-size:11.5px;font-family:'Inter',sans-serif;letter-spacing:0.05em;text-transform:uppercase;";
 const TD_STYLE =
-  "padding:2mm 3mm;border:1px solid #e5e7eb;color:#374151;vertical-align:top;font-size:9px;font-family:'Inter',sans-serif;overflow-wrap:anywhere;";
+  "padding:3mm 4mm;border:none;border-bottom:1px solid #f0f1f3;color:#4b5563;vertical-align:top;font-size:12.5px;font-family:'Inter',sans-serif;overflow-wrap:anywhere;";
 const ROW_ALT_BG = "#f9fafb";
 const EMPTY_HINT_STYLE =
-  "font-family:'Inter',sans-serif;font-size:9px;color:#9ca3af;font-style:italic;margin:0;";
+  "font-family:'Inter',sans-serif;font-size:12.5px;color:#9ca3af;font-style:italic;margin:0;";
+// Section card: white background, rounded, thin grey border. Banner sits on the top edge.
 const SECTION_WRAPPER_STYLE =
-  "border:1px solid #e5e7eb;border-radius:3px;overflow:hidden;background:#ffffff;";
+  "border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#ffffff;";
 const SECTION_BANNER_STYLE =
-  "background:#f3f4f6;color:#1a1a1a;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2.5mm 4mm;border-bottom:2px solid #d1d5db;";
-const SECTION_BODY_STYLE = "padding:4mm;";
+  "background:#4b5563;color:#ffffff;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:0.75px;text-transform:uppercase;padding:3mm 5mm;";
+const SECTION_BODY_STYLE = "padding:5mm 6mm;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
@@ -316,8 +321,8 @@ export async function generateServiceProposalHtml(
               .map(
                 ([label, value, bold], idx) => `
               <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-                <th scope="row" style="${TH_STYLE} width:38%;">${escapeText(label)}</th>
-                <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#1a1a1a;text-align:right;' : ''}">${escapeText(value)}</td>
+                <td style="padding:3mm 4mm;border:none;border-bottom:1px solid #f0f1f3;font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;width:38%;vertical-align:top;">${escapeText(label)}</td>
+                <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#111111;text-align:right;' : ''}">${escapeText(value)}</td>
               </tr>`,
               )
               .join('')}
@@ -345,7 +350,7 @@ export async function generateServiceProposalHtml(
                     .map(
                       (l, idx) => `
               <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-                <td style="${TD_STYLE} white-space:normal;">${escapeText(l.designation || '-')}</td>
+                <td style="${TD_STYLE} white-space:normal;font-weight:700;color:#111111;">${escapeText(l.designation || '-')}</td>
                 <td style="${TD_STYLE} text-align:center;">${escapeText(l.quantite)}</td>
               </tr>`,
                     )
@@ -383,11 +388,11 @@ export async function generateServiceProposalHtml(
       .map(
         (opt, idx) => `
             <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-              <td style="${TD_STYLE} width:30%;font-weight:600;color:#1a1a1a;">${escapeText(opt.name || '—')}</td>
+              <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(opt.name || '—')}</td>
               <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
               ${
                 showPriceCol
-                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#1a1a1a;">${opt.showPrice !== false && opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
+                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${opt.showPrice !== false && opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
                   : ''
               }
             </tr>`,
@@ -418,7 +423,7 @@ export async function generateServiceProposalHtml(
     const rows = siteAddresses
       .map((s, idx) => `
           <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-            <td style="${TD_STYLE} width:30%;font-weight:600;color:#1a1a1a;">${escapeText(s.label || '—')}</td>
+            <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(s.label || '—')}</td>
             <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(s.address || '—')}</td>
           </tr>`)
       .join('');
@@ -594,17 +599,17 @@ export async function generateServiceProposalHtml(
   const CBPRO_LOGO_URL = '/__l5e/assets-v1/0991e1b4-5b95-4112-9fd7-da00ecefcca0/cbpro-logo.svg';
 
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;">
+    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:3mm;">
       <div style="flex:1;">
         Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
         RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
       </div>
-      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:12mm;width:auto;flex-shrink:0;" />
+      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:22px;width:auto;max-width:70px;flex-shrink:0;" />
     </div>
   `;
 
   const renderCgHeader = (title: string) => `
-    <div style="background:#1a1a1a;color:#ffffff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5mm 14mm;border-bottom:2px solid #1a1a1a;">
+    <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm 14mm;">
       ${escCg(title)}
     </div>
   `;
@@ -712,8 +717,8 @@ export async function generateServiceProposalHtml(
       const body = bucket.join('') + (isLast ? dynWrapped : '');
       const title =
         buckets.length === 1
-          ? 'Contrat cadre — Parties contractantes'
-          : `Contrat cadre — Parties contractantes (${idx + 1}/${buckets.length})`;
+          ? 'Parties contractantes'
+          : `Parties contractantes (${idx + 1}/${buckets.length})`;
       renderedPartiesPagesHtml.push(renderCgShell(title, body, 'overflow:visible;height:auto;min-height:calc(100% - 22mm);'));
     });
   }
@@ -795,12 +800,12 @@ export async function generateServiceProposalHtml(
   // Inject the same footer (address + Cybertek Pro logo) on devis pages 1-3
   for (const devisPageNum of [1, 2, 3]) {
     dynamicContent[devisPageNum] = `${dynamicContent[devisPageNum] || ''}
-      <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;z-index:1000;">
+      <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:3mm;z-index:1000;">
         <div style="flex:1;">
           Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
           RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
         </div>
-        <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:12mm;width:auto;flex-shrink:0;" />
+        <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:22px;width:auto;max-width:70px;flex-shrink:0;" />
       </div>
     `;
   }

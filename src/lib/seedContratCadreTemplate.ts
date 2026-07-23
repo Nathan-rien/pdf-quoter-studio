@@ -69,8 +69,8 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p1c-banner", 20, 20, 610, 40, "#1a1a1a"),
-        textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
+        rectEl("p1c-banner", 20, 20, 610, 40, "#000000"),
+        textEl("p1c-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 14, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
         textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
       ],
       dynamicZones: [
@@ -89,8 +89,8 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p2p-banner", 20, 20, 610, 40, "#1a1a1a"),
-        textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
+        rectEl("p2p-banner", 20, 20, 610, 40, "#000000"),
+        textEl("p2p-title", 30, 25, 590, 30, "PÉRIMÈTRE D'INTERVENTION", { size: 14, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
         // Bannière de section "Interventions sur site en supplément" (style aligné sur SECTION_BANNER_STYLE)
         rectEl("p2p-lbl-tarifs-bg", 26, 322, 598, 28, "#f3f4f6", true),
         textEl("p2p-lbl-tarifs", 32, 328, 586, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, fontWeight: 700, size: 26, color: "#1a1a1a", align: "left", zIndex: 50 }),
@@ -130,8 +130,8 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p3m-banner", 20, 20, 610, 40, "#1a1a1a"),
-        textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
+        rectEl("p3m-banner", 20, 20, 610, 40, "#000000"),
+        textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 14, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
       ],
       dynamicZones: [
         { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 11, height: 33 } },
