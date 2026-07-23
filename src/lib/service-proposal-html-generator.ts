@@ -83,7 +83,7 @@ const SERVICE_ZONE_GAP_PERCENT = 3.4;
 const SECTION_TITLE_STYLE =
   "font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.75px;margin:0 0 3mm 0;";
 const INFO_CARD_STYLE =
-  "background:#ffffff;border:1px solid #d1d5db;border-radius:8px;padding:4mm 5mm;";
+  "background:#ffffff;border:1px solid #d1d5db;border-radius:8px;padding:5mm 6mm;";
 // Secondary/detail text
 const BODY_TEXT_STYLE =
   "font-family:'Inter',sans-serif;font-size:12.5px;font-weight:400;color:#4b5563;line-height:1.5;";
