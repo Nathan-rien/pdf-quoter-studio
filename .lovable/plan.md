@@ -1,21 +1,15 @@
-## Ajustements de mise en page (template Contrat Cadre Services)
+## Objectif
+Vérifier et forcer l'augmentation de l'espacement vertical entre les encarts (`.shell-block`) sur les pages du template "Contrat Cadre Services", en passant à **90mm**.
 
-Trois modifications ciblées dans `src/lib/service-proposal-html-generator.ts`, appliquées uniformément sur toutes les pages (devis 1-3 et contrat 4-9).
+## Constat
+Le CSS actuel (`src/lib/service-proposal-html-generator.ts`, ligne 998) contient bien `margin: 0 0 20mm 0` sur `.shell-block`. Si l'aperçu ne change pas visuellement, c'est probablement dû au cache navigateur/preview qui sert encore l'ancienne version compilée — ou bien la valeur de 20mm est visuellement trop proche de la précédente (14mm) pour être perçue.
 
-### 1) Marges latérales réduites — plus de place pour les tableaux
-Le shell réserve actuellement `padding:0 14mm` à gauche/droite du contenu, en plus des paddings internes des cartes. Passer les paddings horizontaux latéraux de **14mm → 10mm** sur :
-- `renderCgShell` (ligne 644) : `padding:6mm 14mm 0 14mm` → `padding:6mm 10mm 0 10mm`
-- `renderShellPage` (ligne 833) : idem
-- `renderCgHeader` (ligne 631) : `padding:6mm 14mm` → `padding:6mm 10mm` pour que le bandeau reste aligné avec le contenu
-- `CG_FOOTER_HTML` (ligne 621) : `padding:3mm 14mm 6mm 14mm` → `padding:3mm 10mm 6mm 10mm`
+## Modification
+Dans `src/lib/service-proposal-html-generator.ts` :
+- Ligne 998 : remplacer `margin: 0 0 20mm 0` par `margin: 0 0 90mm 0` sur `.shell-content > .shell-block`.
 
-Gain : ~8mm de largeur utile pour les tableaux et cartes de section.
+Aucune autre logique n'est modifiée. Le mécanisme `fitPageContentBlocks` continuera à réduire automatiquement l'ensemble via `transform: scale()` si l'accumulation d'espacement + contenu dépasse la zone disponible avant le pied de page réservé (24mm).
 
-### 2) Encarts moins collés entre eux
-Le CSS actuel `.shell-content > .shell-block { margin: 0 0 10mm 0 }` (ligne 998) est à peine perceptible visuellement une fois combiné aux cartes bordurées. Passer à **14mm** pour un espacement plus aéré entre chaque section.
-
-### 3) Texte pied de page plus petit
-`CG_FOOTER_HTML` (ligne 621) : `font-size:9px` → **`font-size:8px`** avec `line-height:1.35`. Le texte reste sur 2 lignes et gagne en discrétion.
-
-### Vérification
-Reload de l'aperçu : les cartes/tableaux s'étendent plus près des bords, l'espace entre chaque encart est visiblement plus grand, le texte du pied de page est nettement plus petit tout en restant lisible et sur 2 lignes.
+## Vérification
+- Recharger l'aperçu de la proposition EXTENDE (Ctrl+F5 pour contourner le cache).
+- Confirmer visuellement que les encarts COORDONNÉES / SITES D'INTERVENTION / CONTACT OPÉRATIONNEL / PRESTATAIRES EXTÉRIEURS sont nettement plus espacés qu'auparavant.
