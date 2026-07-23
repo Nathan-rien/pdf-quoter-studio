@@ -321,8 +321,8 @@ export async function generateServiceProposalHtml(
               .map(
                 ([label, value, bold], idx) => `
               <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-                <th scope="row" style="${TH_STYLE} width:38%;">${escapeText(label)}</th>
-                <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#1a1a1a;text-align:right;' : ''}">${escapeText(value)}</td>
+                <td style="padding:3mm 4mm;border:none;border-bottom:1px solid #f0f1f3;font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;width:38%;vertical-align:top;">${escapeText(label)}</td>
+                <td style="${TD_STYLE} ${bold ? 'font-weight:700;color:#111111;text-align:right;' : ''}">${escapeText(value)}</td>
               </tr>`,
               )
               .join('')}
