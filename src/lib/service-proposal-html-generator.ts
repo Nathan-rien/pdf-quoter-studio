@@ -818,9 +818,17 @@ export async function generateServiceProposalHtml(
       continue;
     }
 
+    // Devis pages (documentScope 'both'): unified shell rendering.
+    if ((page.documentScope ?? 'both') === 'both') {
+      const title = String(page.title || '').trim() || 'Contrat cadre de prestations de services';
+      allPagesHtml.push(renderShellPage(title, dynamicContent[page.pageNumber] || ''));
+      continue;
+    }
+
     const pageHasServiceZones = (page.dynamicZones || []).some((zone: any) =>
       String(zone.type || '').startsWith('service_'),
     );
+
 
     if (pageHasServiceZones && page.elements.some((el: any) => el.type !== 'text')) {
       const dynamicZoneLabelIds = new Set([
