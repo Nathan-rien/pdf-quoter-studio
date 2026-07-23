@@ -328,31 +328,33 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderInvestZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-      <p style="${SECTION_TITLE_STYLE}">Matériel</p>
-      <table style="${DATA_TABLE_STYLE}">
-        <thead>
-          <tr>
-            <th style="${TH_STYLE}">Désignation</th>
-            <th style="${TH_STYLE} width:16mm;text-align:center;">Qté</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${
-            lignesData.length > 0
-              ? lignesData
-                  .map(
-                    (l, idx) => `
-            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-              <td style="${TD_STYLE} white-space:normal;">${escapeText(l.designation || '-')}</td>
-              <td style="${TD_STYLE} text-align:center;">${escapeText(l.quantite)}</td>
-            </tr>`,
-                  )
-                  .join('')
-              : `<tr><td colspan="2" style="${TD_STYLE} text-align:center;color:#9ca3af;font-style:italic;">Aucune ligne de service</td></tr>`
-          }
-        </tbody>
-      </table>
+    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Matériel concerné</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <table style="${DATA_TABLE_STYLE}">
+          <thead>
+            <tr>
+              <th style="${TH_STYLE}">Désignation</th>
+              <th style="${TH_STYLE} width:16mm;text-align:center;">Qté</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              lignesData.length > 0
+                ? lignesData
+                    .map(
+                      (l, idx) => `
+              <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                <td style="${TD_STYLE} white-space:normal;">${escapeText(l.designation || '-')}</td>
+                <td style="${TD_STYLE} text-align:center;">${escapeText(l.quantite)}</td>
+              </tr>`,
+                    )
+                    .join('')
+                : `<tr><td colspan="2" style="${TD_STYLE} text-align:center;color:#9ca3af;font-style:italic;">Aucune ligne de service</td></tr>`
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 
