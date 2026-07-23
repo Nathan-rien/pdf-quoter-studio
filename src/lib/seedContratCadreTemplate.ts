@@ -130,7 +130,7 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p3m-banner", 20, 20, 610, 40),
+        rectEl("p3m-banner", 20, 20, 610, 40, "#1a1a1a"),
         textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
       ],
       dynamicZones: [
