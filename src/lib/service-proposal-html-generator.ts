@@ -831,7 +831,7 @@ export async function generateServiceProposalHtml(
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
         <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;">
-          ${blocksHtml}
+          <div data-shell-scale>${blocksHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
       </div>
