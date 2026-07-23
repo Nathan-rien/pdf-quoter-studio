@@ -1,58 +1,37 @@
 
-# Refonte visuelle des pages CG (Contrat Cadre Services)
+# Correctif du fit auto sur les pages devis/contrat
 
-Objectif : redessiner les pages `documentScope: 'contrat'` (actuellement 4 à 9) du template "Contrat Cadre Services" avec fond sombre, bandeau clair, texte deux colonnes et pied de page corporate — sans modifier une seule ligne du texte juridique ni les pages 1-3 (devis).
+## Diagnostic
 
-## 1. Approche technique
+Sur la page 1/3 (capture EXTENDE), la bannière "PRESTATAIRES EXTÉRIEURS" est plaquée contre le pied de page — aucun scale n'a été appliqué visuellement. Pourtant `fitPageContentBlocks` détecte bien le débordement.
 
-Le rendu de ces pages passe aujourd'hui par la branche "flow" de `src/lib/service-proposal-html-generator.ts` (lignes ~628-654) : quand une page n'a que des éléments texte, on jette leurs positions absolues et on les empile en flux dans un `<div>` A4. C'est cette branche qui applique déjà le fond blanc, le padding et le footer "GROUPE | CYBERTEK".
+Cause : dans `src/lib/service-proposal-html-generator.ts` (fonction `fitPageContentBlocks`, lignes ~50-74), la réduction n'est appliquée **qu'au dernier `.shell-block`** :
 
-Plutôt que de bricoler des dizaines de `rectEl` sombres dans le seed (fragile, coordonnées absolues), on introduit un **rendu spécifique aux pages CG** dans le générateur HTML. Le seed reste la source de vérité pour le texte ; le générateur applique la présentation.
+```
+const last = blocks[blocks.length - 1];
+last.style.transform = `scale(${factor})`;
+```
 
-## 2. Modifications
+Or ici, le débordement n'est pas causé par la taille intrinsèque du dernier bloc — c'est la hauteur cumulée des blocs précédents (Coordonnées + Sites + Contact opérationnel) qui pousse "Prestataires extérieurs" hors zone. Scaler uniquement le dernier bloc ne libère aucun espace au-dessus, donc le bandeau reste visuellement à la même position et le contenu du bloc final est simplement clippé par `overflow:hidden`.
 
-### 2.1 `src/lib/service-proposal-html-generator.ts`
+## Correctif
 
-Ajouter une branche dédiée avant la branche `flowRows` actuelle :
+Changer la cible du scale : appliquer `transform: scale(f)` sur **un wrapper englobant TOUS les `.shell-block` de la page**, pas sur le dernier seul. Ainsi la hauteur totale du contenu diminue proportionnellement et chaque bloc remonte, y compris le premier.
 
-- Détection : `page.documentScope === 'contrat'` ET `nonTextElements.length === 0` (couvre pages 5-8, et 9 après ajustement) — plus une variante pour la page 4 qui contient un rectangle banner (on ignore ses non-text elements et on la rebuild).
-- Rendu :
-  - `.page-sheet` avec `background:#1a1a1a` inline (override le blanc par défaut).
-  - **Bandeau titre** : `<div>` pleine largeur, fond `#f3f4f6`, texte `#1a1a1a` gras majuscules, hauteur ~14mm, contenu = `page.title` (ou un titre dérivé, ex. "CONDITIONS GÉNÉRALES").
-  - **Corps deux colonnes** : `<div style="column-count:2;column-gap:8mm;column-fill:balance;">`. On y injecte les textes des articles du seed dans l'ordre Y, avec :
-    - titres d'article (détectés par `c.bold === true` sur une ligne courte type "III - …") → `<h3>` blanc pur, souligné, `break-after: avoid`, `break-inside: avoid`.
-    - corps → `<p>` couleur `#e5e7eb`, `line-height:1.5`, `break-inside: avoid` pour éviter les coupures moches en milieu de paragraphe (les paragraphes 1.1/1.2 restent séparés par le `\n\n` existant).
-  - **Pied de page** : `position:absolute; bottom:8mm`, texte clair `#9ca3af` centré, contenant les coordonnées Groupe Cybertek (déjà présentes en texte libre page 1 : SAS capital 4 471 800 €, 130 rue Achard 33300 Bordeaux, RCS Bordeaux 408 772 960, TVA, tél/email/site à récupérer du même bloc) + logo (petit `<img>` ou texte "GROUPE | CYBERTEK" si le logo n'est pas dispo dans le contexte HTML).
-  - `overflow:hidden` sur le conteneur pour respecter la contrainte demandée.
+### Modifications dans `src/lib/service-proposal-html-generator.ts`
 
-### 2.2 Repagination automatique
+1. **Rendu** : dans `renderShellPage` et `renderCgShell`, envelopper la concaténation des `.shell-block` dans un unique `<div class="shell-scale-wrapper" data-shell-scale>...</div>` placé à l'intérieur du `.shell-content`. Ce wrapper reste en flux normal (pas de position absolute), ses enfants gardent leur `margin-bottom:6mm`.
 
-Puisque deux colonnes doublent la capacité, on **agrège** le contenu des pages 5-8 (articles I à XIII) et on laisse le CSS multi-colonnes le répartir. Concrètement :
+2. **`fitPageContentBlocks`** : cibler `[data-shell-scale]` au lieu du dernier `.shell-block`. Boucle inchangée (paliers 0.95 → 0.75), même détection `scrollHeight > clientHeight` sur le `.shell-content` parent, même compensation de largeur `width: 100/f %` sur le wrapper.
 
-- Nouvelle fonction interne `collectContratArticles(pages)` qui concatène, dans l'ordre, les éléments texte des pages `documentScope: 'contrat'` en excluant la page couverture (4) et la page signatures (9).
-- Mesure côté rendu : on essaie d'abord de tout mettre sur **une seule page CG** (bandeau + 2 colonnes + footer). Si le contenu déborde (détection via une passe DOM offscreen dans un iframe déjà utilisée pour la pagination — sinon fallback heuristique : ~4 500 caractères par page à 2 colonnes en 9pt), on découpe en 2 pages, puis 3 si nécessaire. Cible attendue : **2 pages**.
-- Les pages 4 (parties signataires) et 9 (signatures) restent des pages séparées, mais adoptent le même style sombre + bandeau + footer, sans colonnage (contenu structuré).
+3. Nettoyage : supprimer la logique qui touchait `last.style.*`.
 
-Résultat probable : couverture + périmètre + matériel (1-3 inchangées) → **page 4 "Parties"** → **pages 5-6 "Conditions générales"** (2 colonnes) → **page 7 "Signatures"**. Les titres de page sont mis à jour en conséquence.
+## Pourquoi ça marche
 
-### 2.3 `src/lib/seedContratCadreTemplate.ts`
+- Un scale sur le wrapper englobant réduit **la hauteur totale** effectivement occupée par tous les blocs — le premier bloc remonte aussi, ce qui libère la place manquante en bas.
+- Aucun changement de contenu, de police ou de layout dans les blocs eux-mêmes ; c'est purement visuel via `transform`.
+- Le mécanisme reste idempotent (reset du transform à chaque appel), et le plancher 0.75 + `overflow:hidden` du parent garantit qu'on ne recouvre jamais le pied de page.
 
-- **Aucune modification du texte juridique.**
-- Suppression des `rectEl` banner et des `textEl` de titre décoratifs sur les pages CG (4-9), puisque le bandeau est désormais rendu par le générateur. Les articles restent tels quels (positions Y conservées uniquement pour l'ordre de tri).
-- La page 4 garde ses `textEl` "ENTRE LES SOUSSIGNEES", bloc Cybertek, "D'UNE PART", etc. + sa zone dynamique `service_client_info`.
-- La page 9 garde `p6-fait`, `p6-le` et la zone dynamique `service_signature`.
-- Republier une nouvelle version du template (incrément `version_number`) via `seedContratCadreTemplate()` — déjà géré par la fonction existante.
+## Vérification
 
-## 3. Points de vigilance
-
-- **Anti-régression pages 1-3 et preview PDF devis** : la nouvelle branche est gardée par `documentScope === 'contrat'`, donc invisible en mode `devis`.
-- **Print** : `column-count` est bien supporté par Chromium (utilisé pour `window.print()`). On force `-webkit-column-break-inside: avoid` sur les titres d'article pour éviter qu'un titre finisse seul en bas de colonne.
-- **Overflow** : `overflow:hidden` sur le sheet + logique de découpe multi-pages garantit qu'aucun mot n'est coupé.
-- **Footer** : les coordonnées exactes sont extraites du texte `p1-cybertek` déjà présent dans le seed (source unique de vérité, aucun ajout de donnée).
-- **Preview iframe** : `ServiceProposalPreview.tsx` consomme déjà le HTML généré ; aucune modif nécessaire là-bas.
-
-## 4. Livrable
-
-- Générateur mis à jour avec la branche dark/2-cols + footer.
-- Seed nettoyé (banners CG retirés) et republié (nouvelle version).
-- Vérification visuelle via la preview iframe sur une proposition de test (mode contrat) : bandeau clair, fond `#1a1a1a`, texte clair sur 2 colonnes, footer coordonnées + logo, pagination ramenée à ~2 pages CG, aucun débordement.
+Rebuild, ouvrir la proposition EXTENDE, page 1/3 : "Prestataires extérieurs" doit s'afficher intégralement au-dessus du pied de page (au besoin visiblement rétréci d'un cran). Le pied de page reste dans sa bande de 24mm intacte. Pages 2/3 et 3/3, ainsi que les pages contrat 4-9, doivent conserver leur rendu actuel (pas de scale si pas de débordement).
