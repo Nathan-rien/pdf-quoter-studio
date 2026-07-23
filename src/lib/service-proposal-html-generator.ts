@@ -350,7 +350,7 @@ export async function generateServiceProposalHtml(
                     .map(
                       (l, idx) => `
               <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-                <td style="${TD_STYLE} white-space:normal;">${escapeText(l.designation || '-')}</td>
+                <td style="${TD_STYLE} white-space:normal;font-weight:700;color:#111111;">${escapeText(l.designation || '-')}</td>
                 <td style="${TD_STYLE} text-align:center;">${escapeText(l.quantite)}</td>
               </tr>`,
                     )
