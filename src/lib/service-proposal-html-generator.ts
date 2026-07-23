@@ -46,7 +46,7 @@ const VALUE_STYLE =
 const DATA_TABLE_STYLE =
   "width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#374151;table-layout:fixed;";
 const TH_STYLE =
-  "padding:2mm 3mm;text-align:left;font-weight:600;color:#1a1a1a;background:#f3f4f6;border:1px solid #e5e7eb;font-size:9px;font-family:'Inter',sans-serif;";
+  "padding:2mm 3mm;text-align:left;font-weight:700;color:#ffffff;background:#1a1a1a;border:1px solid #1a1a1a;font-size:9px;font-family:'Inter',sans-serif;letter-spacing:0.3px;";
 const TD_STYLE =
   "padding:2mm 3mm;border:1px solid #e5e7eb;color:#374151;vertical-align:top;font-size:9px;font-family:'Inter',sans-serif;overflow-wrap:anywhere;";
 const ROW_ALT_BG = "#f9fafb";
@@ -328,31 +328,33 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderInvestZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)};">
-      <p style="${SECTION_TITLE_STYLE}">Matériel</p>
-      <table style="${DATA_TABLE_STYLE}">
-        <thead>
-          <tr>
-            <th style="${TH_STYLE}">Désignation</th>
-            <th style="${TH_STYLE} width:16mm;text-align:center;">Qté</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${
-            lignesData.length > 0
-              ? lignesData
-                  .map(
-                    (l, idx) => `
-            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-              <td style="${TD_STYLE} white-space:normal;">${escapeText(l.designation || '-')}</td>
-              <td style="${TD_STYLE} text-align:center;">${escapeText(l.quantite)}</td>
-            </tr>`,
-                  )
-                  .join('')
-              : `<tr><td colspan="2" style="${TD_STYLE} text-align:center;color:#9ca3af;font-style:italic;">Aucune ligne de service</td></tr>`
-          }
-        </tbody>
-      </table>
+    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Matériel concerné</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <table style="${DATA_TABLE_STYLE}">
+          <thead>
+            <tr>
+              <th style="${TH_STYLE}">Désignation</th>
+              <th style="${TH_STYLE} width:16mm;text-align:center;">Qté</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              lignesData.length > 0
+                ? lignesData
+                    .map(
+                      (l, idx) => `
+              <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                <td style="${TD_STYLE} white-space:normal;">${escapeText(l.designation || '-')}</td>
+                <td style="${TD_STYLE} text-align:center;">${escapeText(l.quantite)}</td>
+              </tr>`,
+                    )
+                    .join('')
+                : `<tr><td colspan="2" style="${TD_STYLE} text-align:center;color:#9ca3af;font-style:italic;">Aucune ligne de service</td></tr>`
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 
@@ -570,13 +572,8 @@ export async function generateServiceProposalHtml(
     });
   });
 
-  if (selectedCommercial?.adresse) {
-    dynamicContent[1] = `${dynamicContent[1] || ''}
-      <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 1000;">
-        ${escapeText(selectedCommercial.adresse)}
-      </div>
-    `;
-  }
+  // (Devis pages 1-3 footer is injected below alongside the Cybertek Pro logo)
+
 
   // --- Assemble full HTML doc ---
   const PDF_BASE_WIDTH = 580;
@@ -594,18 +591,20 @@ export async function generateServiceProposalHtml(
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
+  const CBPRO_LOGO_URL = '/__l5e/assets-v1/0991e1b4-5b95-4112-9fd7-da00ecefcca0/cbpro-logo.svg';
+
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;">
+    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;">
       <div style="flex:1;">
         Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
         RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
       </div>
-      <div style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#1a1a1a;letter-spacing:2px;white-space:nowrap;">GROUPE | CYBERTEK</div>
+      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:12mm;width:auto;flex-shrink:0;" />
     </div>
   `;
 
   const renderCgHeader = (title: string) => `
-    <div style="background:#f3f4f6;color:#1a1a1a;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5mm 14mm;border-bottom:2px solid #e5e7eb;">
+    <div style="background:#1a1a1a;color:#ffffff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5mm 14mm;border-bottom:2px solid #1a1a1a;">
       ${escCg(title)}
     </div>
   `;
@@ -791,6 +790,19 @@ export async function generateServiceProposalHtml(
           : `Conditions générales (${idx + 1}/${buckets.length})`;
       renderedArticlesHtml.push(renderCgShell(title, body));
     });
+  }
+
+  // Inject the same footer (address + Cybertek Pro logo) on devis pages 1-3
+  for (const devisPageNum of [1, 2, 3]) {
+    dynamicContent[devisPageNum] = `${dynamicContent[devisPageNum] || ''}
+      <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;z-index:1000;">
+        <div style="flex:1;">
+          Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
+          RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
+        </div>
+        <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:12mm;width:auto;flex-shrink:0;" />
+      </div>
+    `;
   }
 
   let cgBlockEmitted = false;

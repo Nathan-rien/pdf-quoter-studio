@@ -69,9 +69,9 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p1c-banner", 20, 20, 610, 40),
+        rectEl("p1c-banner", 20, 20, 610, 40, "#1a1a1a"),
         textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, align: "right", zIndex: 5 }),
+        textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
       ],
       dynamicZones: [
         { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 12, height: 13 } },
@@ -89,31 +89,31 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p2p-banner", 20, 20, 610, 40),
+        rectEl("p2p-banner", 20, 20, 610, 40, "#1a1a1a"),
         textEl("p2p-title", 30, 25, 590, 30, "ANNEXE 1 — PÉRIMÈTRE D'INTERVENTION", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        // p2p-lbl-summary retiré — la zone dynamique service_options_summary rend déjà son propre titre "Services & packs souscrits"
-        textEl("p2p-lbl-tarifs", 26, 326, 598, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, fontWeight: 600, size: 28, color: "#1a1a1a", align: "left", zIndex: 50 }),
-        // Tableau statique des tarifs — aligné visuellement sur DATA_TABLE_STYLE / TH_STYLE / TD_STYLE
-        // En-tête
-        rectEl("p2p-tarif-h-lbl-bg", 26, 352, 358, 24, "#f3f4f6", true),
-        textEl("p2p-tarif-h-lbl", 32, 356, 346, 18, "Intervention", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-h-val-bg", 384, 352, 240, 24, "#f3f4f6", true),
-        textEl("p2p-tarif-h-val", 390, 356, 228, 18, "Tarif", { size: 23, bold: true, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        // Bannière de section "Interventions sur site en supplément" (style aligné sur SECTION_BANNER_STYLE)
+        rectEl("p2p-lbl-tarifs-bg", 26, 322, 598, 28, "#f3f4f6", true),
+        textEl("p2p-lbl-tarifs", 32, 328, 586, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, fontWeight: 700, size: 26, color: "#1a1a1a", align: "left", zIndex: 50 }),
+        // Tableau statique des tarifs — en-tête aligné sur TH_STYLE (fond noir / texte blanc)
+        rectEl("p2p-tarif-h-lbl-bg", 26, 356, 358, 24, "#1a1a1a", true),
+        textEl("p2p-tarif-h-lbl", 32, 360, 346, 18, "Intervention", { size: 23, bold: true, color: "#ffffff", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-h-val-bg", 384, 356, 240, 24, "#1a1a1a", true),
+        textEl("p2p-tarif-h-val", 390, 360, 228, 18, "Tarif", { size: 23, bold: true, color: "#ffffff", align: "left", zIndex: 2 }),
         // Ligne 1 (fond blanc)
-        rectEl("p2p-tarif-r1-lbl-bg", 26, 376, 358, 24, "#ffffff", true),
-        textEl("p2p-tarif-r1-lbl", 32, 380, 346, 18, "Technicien", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-r1-val-bg", 384, 376, 240, 24, "#ffffff", true),
-        textEl("p2p-tarif-r1-val", 390, 380, 228, 18, "500 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r1-lbl-bg", 26, 380, 358, 24, "#ffffff", true),
+        textEl("p2p-tarif-r1-lbl", 32, 384, 346, 18, "Technicien", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r1-val-bg", 384, 380, 240, 24, "#ffffff", true),
+        textEl("p2p-tarif-r1-val", 390, 384, 228, 18, "500 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         // Ligne 2 (fond alt)
-        rectEl("p2p-tarif-r2-lbl-bg", 26, 400, 358, 24, "#f9fafb", true),
-        textEl("p2p-tarif-r2-lbl", 32, 404, 346, 18, "Administrateur", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-r2-val-bg", 384, 400, 240, 24, "#f9fafb", true),
-        textEl("p2p-tarif-r2-val", 390, 404, 228, 18, "600 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r2-lbl-bg", 26, 404, 358, 24, "#f9fafb", true),
+        textEl("p2p-tarif-r2-lbl", 32, 408, 346, 18, "Administrateur", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r2-val-bg", 384, 404, 240, 24, "#f9fafb", true),
+        textEl("p2p-tarif-r2-val", 390, 408, 228, 18, "600 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         // Ligne 3 (fond blanc)
-        rectEl("p2p-tarif-r3-lbl-bg", 26, 424, 358, 24, "#ffffff", true),
-        textEl("p2p-tarif-r3-lbl", 32, 428, 346, 18, "Ingénieur serveur réseau", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-r3-val-bg", 384, 424, 240, 24, "#ffffff", true),
-        textEl("p2p-tarif-r3-val", 390, 428, 228, 18, "900 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r3-lbl-bg", 26, 428, 358, 24, "#ffffff", true),
+        textEl("p2p-tarif-r3-lbl", 32, 432, 346, 18, "Ingénieur serveur réseau", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
+        rectEl("p2p-tarif-r3-val-bg", 384, 428, 240, 24, "#ffffff", true),
+        textEl("p2p-tarif-r3-val", 390, 432, 228, 18, "900 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
         
       ],
       dynamicZones: [
@@ -130,7 +130,7 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p3m-banner", 20, 20, 610, 40),
+        rectEl("p3m-banner", 20, 20, 610, 40, "#1a1a1a"),
         textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
       ],
       dynamicZones: [
@@ -148,8 +148,8 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "contrat",
       elements: [
-        rectEl("p1-banner", 20, 20, 610, 40),
-        textEl("p1-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, align: "left" }),
+        rectEl("p1-banner", 20, 20, 610, 40, "#1a1a1a"),
+        textEl("p1-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left" }),
         textEl("p1-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
         textEl("p1-ss", 40, 80, 570, 15, "ENTRE LES SOUSSIGNEES :", { bold: true }),
         textEl(
