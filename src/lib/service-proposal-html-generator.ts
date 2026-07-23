@@ -839,8 +839,8 @@ export async function generateServiceProposalHtml(
   const renderShellPage = (title: string, blocksHtml: string) => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title, '6mm')}</div>
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 6mm 0 6mm;box-sizing:border-box;overflow:hidden;">
           <div data-shell-scale>${blocksHtml}</div>
         </div>
         ${DEVIS_FOOTER_HTML}
