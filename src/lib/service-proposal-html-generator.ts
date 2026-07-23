@@ -53,25 +53,26 @@ export function fitPageContentBlocks(root: HTMLElement | Document): void {
     scope.querySelectorAll<HTMLElement>('[data-shell-content]'),
   );
   for (const content of contents) {
-    const overflows = () => content.scrollHeight > content.clientHeight + 1;
-    if (!overflows()) continue;
-    const blocks = Array.from(content.querySelectorAll<HTMLElement>('.shell-block'));
-    const last = blocks[blocks.length - 1];
-    if (!last) continue;
+    const wrapper = content.querySelector<HTMLElement>('[data-shell-scale]');
+    if (!wrapper) continue;
 
     // Reset any previous transform so re-runs stay idempotent.
-    last.style.transform = '';
-    last.style.transformOrigin = 'top left';
-    last.style.width = '';
+    wrapper.style.transform = '';
+    wrapper.style.transformOrigin = 'top left';
+    wrapper.style.width = '';
+
+    const overflows = () => content.scrollHeight > content.clientHeight + 1;
+    if (!overflows()) continue;
 
     const paliers = [0.95, 0.9, 0.85, 0.8, 0.75];
     for (const factor of paliers) {
-      last.style.width = `${(100 / factor).toFixed(3)}%`;
-      last.style.transform = `scale(${factor})`;
+      wrapper.style.width = `${(100 / factor).toFixed(3)}%`;
+      wrapper.style.transform = `scale(${factor})`;
       if (!overflows()) break;
     }
   }
 }
+
 
 
 
@@ -641,7 +642,7 @@ export async function generateServiceProposalHtml(
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
         <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
-          ${bodyHtml}
+          <div data-shell-scale>${bodyHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
       </div>
@@ -830,7 +831,7 @@ export async function generateServiceProposalHtml(
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
         <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;">
-          ${blocksHtml}
+          <div data-shell-scale>${blocksHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
       </div>
