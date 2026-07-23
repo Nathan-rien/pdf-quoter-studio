@@ -592,8 +592,10 @@ export async function generateServiceProposalHtml(
 
   const CBPRO_LOGO_URL = '/__l5e/assets-v1/0991e1b4-5b95-4112-9fd7-da00ecefcca0/cbpro-logo.svg';
 
+  // Footer is anchored to a strictly reserved bottom band (24mm high).
+  // Content area above stops before this band so nothing can overlap it.
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:3mm;">
+    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 14mm 6mm 14mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
       <div style="flex:1;">
         Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
         RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
@@ -608,17 +610,22 @@ export async function generateServiceProposalHtml(
     </div>
   `;
 
+  // Shell layout — strict, absolute reservation:
+  //   header  : top 0, natural height (~17mm)
+  //   content : top 22mm → bottom 24mm  (overflow:hidden, clips before footer)
+  //   footer  : bottom 0, height 24mm  (never overlapped by content)
   const renderCgShell = (title: string, bodyHtml: string, bodyStyle: string = '') => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        ${renderCgHeader(title)}
-        <div style="padding:8mm 14mm 30mm 14mm;height:calc(100% - 22mm);overflow:hidden;box-sizing:border-box;${bodyStyle}">
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
           ${bodyHtml}
         </div>
         ${CG_FOOTER_HTML}
       </div>
     </div>
   `;
+
 
   const CG_BANNER_TEXT_IDS = new Set<string>([
     'p1-title', 'p1-date',
