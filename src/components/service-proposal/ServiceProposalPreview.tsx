@@ -14,8 +14,9 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
-import { generateServiceProposalHtml } from '@/lib/service-proposal-html-generator';
+import { generateServiceProposalHtml, fitPageContentBlocks } from '@/lib/service-proposal-html-generator';
 import { buildHtmlDataFromStore } from '@/lib/service-proposal-data-builder';
+
 import { resolveServiceTemplate } from '@/lib/service-template-selection';
 import type { TemplateVersion } from '@/types/template-editor';
 import type { DocumentScope } from '@/types/pdf-template';
@@ -226,7 +227,14 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
               scrolling="no"
               className="absolute inset-0 w-full h-full border-0"
               style={{ background: '#fff' }}
+              onLoad={(e) => {
+                try {
+                  const doc = (e.currentTarget as HTMLIFrameElement).contentDocument;
+                  if (doc) fitPageContentBlocks(doc);
+                } catch { /* ignore cross-origin */ }
+              }}
             />
+
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
               Aucun contenu à afficher

@@ -29,6 +29,61 @@ import type {
 import type { OptionService } from '@/stores/rentalProposalStore';
 import type { ServiceOptionDefinition } from '@/types/options-admin';
 
+/**
+ * Auto-shrink the last block on every `[data-shell-content]` page container
+ * if its content overflows the reserved area (before the footer band).
+ *
+ * Strategy: for each overflowing shell, walk the last `.shell-block` and
+ * progressively reduce every descendant's font-size / line-height in ~4%
+ * steps (down to an 8px floor). If it still overflows after the floor, the
+ * container's `overflow:hidden` clips the residual cleanly — the footer
+ * band underneath is never covered.
+ *
+ * Called by both the PDF export (before html2canvas capture) and the
+ * preview iframe (on load), so both stay in visual sync.
+ */
+export function fitPageContentBlocks(root: HTMLElement | Document): void {
+  const scope: ParentNode = root instanceof Document ? root : root;
+  const contents = Array.from(
+    scope.querySelectorAll<HTMLElement>('[data-shell-content]'),
+  );
+  for (const content of contents) {
+    const overflows = () => content.scrollHeight > content.clientHeight + 1;
+    if (!overflows()) continue;
+    const blocks = Array.from(content.querySelectorAll<HTMLElement>('.shell-block'));
+    const last = blocks[blocks.length - 1];
+    if (!last) continue;
+
+    const win = last.ownerDocument?.defaultView;
+    if (!win) continue;
+
+    const targets: HTMLElement[] = [last, ...Array.from(last.querySelectorAll<HTMLElement>('*'))];
+    const snapshot = targets.map((el) => {
+      const cs = win.getComputedStyle(el);
+      const fs = parseFloat(cs.fontSize) || 0;
+      const lhRaw = cs.lineHeight;
+      const lh = lhRaw && lhRaw !== 'normal' ? parseFloat(lhRaw) : 0;
+      return { el, fs, lh };
+    });
+
+    for (let step = 1; step <= 20 && overflows(); step += 1) {
+      const factor = Math.max(0.6, 1 - step * 0.04);
+      snapshot.forEach(({ el, fs, lh }) => {
+        if (fs) {
+          const nf = Math.max(8, fs * factor);
+          el.style.fontSize = `${nf.toFixed(2)}px`;
+        }
+        if (lh) {
+          const nl = Math.max(10, lh * factor);
+          el.style.lineHeight = `${nl.toFixed(2)}px`;
+        }
+      });
+      if (factor <= 0.6) break;
+    }
+  }
+}
+
+
 // 10mm rhythm between sections (10 / 297 * 100 ≈ 3.37%)
 const SERVICE_ZONE_GAP_PERCENT = 3.4;
 
@@ -558,14 +613,17 @@ export async function generateServiceProposalHtml(
   }, {});
 
   // Preserve source order of zones on each page (as declared in the template).
+  // Wrap each rendered zone in a `.shell-block` div so the fit helper can target
+  // the last block on a page for auto-shrink if it overflows the reserved area.
   Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
     zones.forEach((zone) => {
       const html = renderServiceZone(zone as PositionedDynamicZone);
       if (!html) return;
       const page = Number(pageNumber);
-      dynamicContent[page] = `${dynamicContent[page] || ''}${html}`;
+      dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${html}</div>`;
     });
   });
+
 
 
   // (Devis pages 1-3 footer is injected below alongside the Cybertek Pro logo)
@@ -589,8 +647,10 @@ export async function generateServiceProposalHtml(
 
   const CBPRO_LOGO_URL = '/__l5e/assets-v1/0991e1b4-5b95-4112-9fd7-da00ecefcca0/cbpro-logo.svg';
 
+  // Footer is anchored to a strictly reserved bottom band (24mm high).
+  // Content area above stops before this band so nothing can overlap it.
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:3mm;">
+    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 14mm 6mm 14mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
       <div style="flex:1;">
         Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
         RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
@@ -605,17 +665,22 @@ export async function generateServiceProposalHtml(
     </div>
   `;
 
+  // Shell layout — strict, absolute reservation:
+  //   header  : top 0, natural height (~17mm)
+  //   content : top 22mm → bottom 24mm  (overflow:hidden, clips before footer)
+  //   footer  : bottom 0, height 24mm  (never overlapped by content)
   const renderCgShell = (title: string, bodyHtml: string, bodyStyle: string = '') => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        ${renderCgHeader(title)}
-        <div style="padding:8mm 14mm 30mm 14mm;height:calc(100% - 22mm);overflow:hidden;box-sizing:border-box;${bodyStyle}">
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
           ${bodyHtml}
         </div>
         ${CG_FOOTER_HTML}
       </div>
     </div>
   `;
+
 
   const CG_BANNER_TEXT_IDS = new Set<string>([
     'p1-title', 'p1-date',
@@ -710,7 +775,7 @@ export async function generateServiceProposalHtml(
         buckets.length === 1
           ? 'Parties contractantes'
           : `Parties contractantes (${idx + 1}/${buckets.length})`;
-      renderedPartiesPagesHtml.push(renderCgShell(title, body, 'overflow:visible;height:auto;min-height:calc(100% - 22mm);'));
+      renderedPartiesPagesHtml.push(renderCgShell(title, body));
     });
   }
 
@@ -790,11 +855,14 @@ export async function generateServiceProposalHtml(
 
   // Devis pages 1-3 render through a shell (same header + footer as CG pages),
   // stacking zone blocks vertically so content flows and never overlaps the footer.
+  // Devis pages 1-3 render through a shell that mirrors the CG shell:
+  // strict absolute reservation of the bottom 24mm for the footer, content
+  // clipped by overflow:hidden above the footer band.
   const renderShellPage = (title: string, blocksHtml: string) => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        ${renderCgHeader(title)}
-        <div style="padding:8mm 14mm 30mm 14mm;height:calc(100% - 22mm);overflow:hidden;box-sizing:border-box;">
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;">
           <div style="display:flex;flex-direction:column;gap:5mm;">
             ${blocksHtml}
           </div>
@@ -803,6 +871,7 @@ export async function generateServiceProposalHtml(
       </div>
     </div>
   `;
+
 
 
   let cgBlockEmitted = false;
