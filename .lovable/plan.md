@@ -1,37 +1,21 @@
+## Ajustements de mise en page (template Contrat Cadre Services)
 
-# Correctif du fit auto sur les pages devis/contrat
+Trois modifications ciblées dans `src/lib/service-proposal-html-generator.ts`, appliquées uniformément sur toutes les pages (devis 1-3 et contrat 4-9).
 
-## Diagnostic
+### 1) Marges latérales réduites — plus de place pour les tableaux
+Le shell réserve actuellement `padding:0 14mm` à gauche/droite du contenu, en plus des paddings internes des cartes. Passer les paddings horizontaux latéraux de **14mm → 10mm** sur :
+- `renderCgShell` (ligne 644) : `padding:6mm 14mm 0 14mm` → `padding:6mm 10mm 0 10mm`
+- `renderShellPage` (ligne 833) : idem
+- `renderCgHeader` (ligne 631) : `padding:6mm 14mm` → `padding:6mm 10mm` pour que le bandeau reste aligné avec le contenu
+- `CG_FOOTER_HTML` (ligne 621) : `padding:3mm 14mm 6mm 14mm` → `padding:3mm 10mm 6mm 10mm`
 
-Sur la page 1/3 (capture EXTENDE), la bannière "PRESTATAIRES EXTÉRIEURS" est plaquée contre le pied de page — aucun scale n'a été appliqué visuellement. Pourtant `fitPageContentBlocks` détecte bien le débordement.
+Gain : ~8mm de largeur utile pour les tableaux et cartes de section.
 
-Cause : dans `src/lib/service-proposal-html-generator.ts` (fonction `fitPageContentBlocks`, lignes ~50-74), la réduction n'est appliquée **qu'au dernier `.shell-block`** :
+### 2) Encarts moins collés entre eux
+Le CSS actuel `.shell-content > .shell-block { margin: 0 0 10mm 0 }` (ligne 998) est à peine perceptible visuellement une fois combiné aux cartes bordurées. Passer à **14mm** pour un espacement plus aéré entre chaque section.
 
-```
-const last = blocks[blocks.length - 1];
-last.style.transform = `scale(${factor})`;
-```
+### 3) Texte pied de page plus petit
+`CG_FOOTER_HTML` (ligne 621) : `font-size:9px` → **`font-size:8px`** avec `line-height:1.35`. Le texte reste sur 2 lignes et gagne en discrétion.
 
-Or ici, le débordement n'est pas causé par la taille intrinsèque du dernier bloc — c'est la hauteur cumulée des blocs précédents (Coordonnées + Sites + Contact opérationnel) qui pousse "Prestataires extérieurs" hors zone. Scaler uniquement le dernier bloc ne libère aucun espace au-dessus, donc le bandeau reste visuellement à la même position et le contenu du bloc final est simplement clippé par `overflow:hidden`.
-
-## Correctif
-
-Changer la cible du scale : appliquer `transform: scale(f)` sur **un wrapper englobant TOUS les `.shell-block` de la page**, pas sur le dernier seul. Ainsi la hauteur totale du contenu diminue proportionnellement et chaque bloc remonte, y compris le premier.
-
-### Modifications dans `src/lib/service-proposal-html-generator.ts`
-
-1. **Rendu** : dans `renderShellPage` et `renderCgShell`, envelopper la concaténation des `.shell-block` dans un unique `<div class="shell-scale-wrapper" data-shell-scale>...</div>` placé à l'intérieur du `.shell-content`. Ce wrapper reste en flux normal (pas de position absolute), ses enfants gardent leur `margin-bottom:6mm`.
-
-2. **`fitPageContentBlocks`** : cibler `[data-shell-scale]` au lieu du dernier `.shell-block`. Boucle inchangée (paliers 0.95 → 0.75), même détection `scrollHeight > clientHeight` sur le `.shell-content` parent, même compensation de largeur `width: 100/f %` sur le wrapper.
-
-3. Nettoyage : supprimer la logique qui touchait `last.style.*`.
-
-## Pourquoi ça marche
-
-- Un scale sur le wrapper englobant réduit **la hauteur totale** effectivement occupée par tous les blocs — le premier bloc remonte aussi, ce qui libère la place manquante en bas.
-- Aucun changement de contenu, de police ou de layout dans les blocs eux-mêmes ; c'est purement visuel via `transform`.
-- Le mécanisme reste idempotent (reset du transform à chaque appel), et le plancher 0.75 + `overflow:hidden` du parent garantit qu'on ne recouvre jamais le pied de page.
-
-## Vérification
-
-Rebuild, ouvrir la proposition EXTENDE, page 1/3 : "Prestataires extérieurs" doit s'afficher intégralement au-dessus du pied de page (au besoin visiblement rétréci d'un cran). Le pied de page reste dans sa bande de 24mm intacte. Pages 2/3 et 3/3, ainsi que les pages contrat 4-9, doivent conserver leur rendu actuel (pas de scale si pas de débordement).
+### Vérification
+Reload de l'aperçu : les cartes/tableaux s'étendent plus près des bords, l'espace entre chaque encart est visiblement plus grand, le texte du pied de page est nettement plus petit tout en restant lisible et sur 2 lignes.

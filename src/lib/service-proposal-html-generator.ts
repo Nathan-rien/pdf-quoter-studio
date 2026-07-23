@@ -618,7 +618,7 @@ export async function generateServiceProposalHtml(
   // Footer is anchored to a strictly reserved bottom band (24mm high).
   // Content area above stops before this band so nothing can overlap it.
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 14mm 6mm 14mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
+    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 10mm 6mm 10mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:8px;line-height:1.35;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
       <div style="flex:1;">
         Groupe Cybertek — SAS au capital de 4 471 800 € · TVA intracom. FR78408772960 · RCS Bordeaux 408 772 960<br/>
         Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr
@@ -628,7 +628,7 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderCgHeader = (title: string) => `
-    <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm 14mm;">
+    <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm 10mm;">
       ${escCg(title)}
     </div>
   `;
@@ -641,7 +641,7 @@ export async function generateServiceProposalHtml(
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
           <div data-shell-scale>${bodyHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
@@ -830,7 +830,7 @@ export async function generateServiceProposalHtml(
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;">
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;">
           <div data-shell-scale>${blocksHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
@@ -995,7 +995,7 @@ export async function generateServiceProposalHtml(
     @media screen { .page-sheet { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; } }
     img { max-width: 100%; height: auto; }
     .dynamic-content { position: static; z-index: 40; }
-    .shell-content > .shell-block { display: block; position: static; margin: 0 0 10mm 0; }
+    .shell-content > .shell-block { display: block; position: static; margin: 0 0 14mm 0; }
     .shell-content > .shell-block:last-child { margin-bottom: 0; }
 
     .rich-text p, .rich-text div { margin: 0; padding: 0; }
