@@ -198,58 +198,14 @@ export async function generateServiceProposalHtml(
         .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 72)), 0),
     );
 
-  const estimateServiceZoneHeight = (zone: DynamicZone): number => {
-    const minHeight = getZoneMinHeight(zone);
-    if (zone.type === 'service_invest_table') {
-      const visualRows = lignesData.length > 0
-        ? lignesData.reduce((total, ligne) => total + estimateTextVisualLines(ligne.designation || '-'), 0)
-        : 1;
-      return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
-    }
-    if (zone.type === 'service_options') {
-      const selected = nosOptions.filter((o) => o.selected);
-      const rows = selected.length || 1;
-      return Math.max(minHeight, Math.min(82, 6 + rows * 4));
-    }
-    if (zone.type === 'service_conditions') return Math.max(minHeight, 21);
-    if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
-    if (zone.type === 'service_signature') return Math.max(minHeight, 14);
-    if (zone.type === 'service_options_summary') {
-      const selected = nosOptions.filter((o) => o.selected);
-      return Math.max(minHeight, Math.min(40, 5 + Math.max(selected.length, 1) * 3));
-    }
-    return minHeight;
-  };
+  // Block wrapper (no absolute positioning) — every zone renders as a flow card.
+  // Devis pages 1-3 stack these vertically inside a shell that reserves footer space,
+  // so section heights follow real content and never overlap the footer.
+  const BLOCK_WRAPPER_STYLE = `${SECTION_WRAPPER_STYLE}display:block;`;
 
-  const layoutServiceZones = (zones: Array<DynamicZone & { pageNumber: number }>): PositionedDynamicZone[] => {
-    let currentBottom = 0;
-    return [...zones]
-      .sort((a, b) => getZoneTop(a) - getZoneTop(b))
-      .map((zone) => {
-        const minHeight = getZoneMinHeight(zone);
-        const estimatedHeight = estimateServiceZoneHeight(zone);
-        const naturalTop = getZoneTop(zone);
-        const adjustedTop = Math.max(naturalTop, currentBottom > 0 ? currentBottom + SERVICE_ZONE_GAP_PERCENT : naturalTop);
-        const safeTop = Math.min(adjustedTop, Math.max(1, 96 - minHeight));
-        currentBottom = Math.max(currentBottom, safeTop + estimatedHeight);
-        return { ...zone, layoutTop: safeTop, layoutMinHeight: minHeight };
-      });
-  };
-
-  const getServiceZoneStyle = (zone: PositionedDynamicZone) => {
-    return [
-      'position: absolute',
-      `top: ${zone.layoutTop ?? getZoneTop(zone)}%`,
-      'left: 4%',
-      'right: 4%',
-      `min-height: ${zone.layoutMinHeight ?? getZoneMinHeight(zone)}%`,
-      'z-index: 1000',
-      'overflow: visible',
-    ].join('; ');
-  };
 
   const renderClientZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+    <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
       <div style="${SECTION_BODY_STYLE}">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
@@ -312,7 +268,7 @@ export async function generateServiceProposalHtml(
   ];
 
   const renderConditionsZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+    <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Vos modalités de règlement</div>
       <div style="${SECTION_BODY_STYLE}">
         <table style="${DATA_TABLE_STYLE}">
@@ -333,7 +289,7 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderInvestZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+    <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Matériel concerné</div>
       <div style="${SECTION_BODY_STYLE}">
         <table style="${DATA_TABLE_STYLE}">
@@ -364,7 +320,7 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderSignatureZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${BODY_TEXT_STYLE}">
+    <div style="${BODY_TEXT_STYLE}">
       <div style="display: flex; justify-content: space-between; gap: 8mm;">
         <div style="flex: 1;">
           La Société Groupe Cybertek SAS<br />
@@ -399,7 +355,7 @@ export async function generateServiceProposalHtml(
       )
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Détail des services</div>
         <div style="${SECTION_BODY_STYLE}">
           ${
@@ -428,7 +384,7 @@ export async function generateServiceProposalHtml(
           </tr>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Sites d'intervention</div>
         <div style="${SECTION_BODY_STYLE}">
           ${siteAddresses.length === 0
@@ -448,7 +404,7 @@ export async function generateServiceProposalHtml(
     const op = operationalContact ?? { name: '', role: '', email: '', phone: '' };
     const hasData = op.name || op.role || op.email || op.phone;
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Contact opérationnel</div>
         <div style="${SECTION_BODY_STYLE}">
           ${!hasData
@@ -477,7 +433,7 @@ export async function generateServiceProposalHtml(
           </div>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Prestataires extérieurs</div>
         <div style="${SECTION_BODY_STYLE}">
           ${externalProviders.length === 0
@@ -500,7 +456,7 @@ export async function generateServiceProposalHtml(
       return label ?? '';
     };
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Services &amp; packs souscrits</div>
         <div style="${SECTION_BODY_STYLE}">
           ${selected.length === 0
@@ -525,6 +481,37 @@ export async function generateServiceProposalHtml(
   };
 
 
+  const TARIFS_ROWS: Array<[string, string]> = [
+    ['Technicien', '500 € HT'],
+    ['Administrateur', '600 € HT'],
+    ['Ingénieur serveur réseau', '900 € HT'],
+  ];
+
+  const renderTarifsZone = () => `
+    <div style="${BLOCK_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Interventions sur site en supplément</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <table style="${DATA_TABLE_STYLE}">
+          <thead>
+            <tr>
+              <th style="${TH_STYLE}">Intervention</th>
+              <th style="${TH_STYLE} width:40mm;text-align:right;">Tarif</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${TARIFS_ROWS.map(
+              ([label, value], idx) => `
+              <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                <td style="${TD_STYLE} font-weight:700;color:#111111;">${escapeText(label)}</td>
+                <td style="${TD_STYLE} text-align:right;font-weight:700;color:#111111;">${escapeText(value)}</td>
+              </tr>`,
+            ).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
   const renderServiceZone = (zone: PositionedDynamicZone) => {
     if (zone.type === 'service_client_info') return renderClientZone(zone);
     if (zone.type === 'service_conditions') return renderConditionsZone(zone);
@@ -535,8 +522,10 @@ export async function generateServiceProposalHtml(
     if (zone.type === 'service_operational_contact') return renderOperationalContactZone(zone);
     if (zone.type === 'service_external_providers') return renderExternalProvidersZone(zone);
     if (zone.type === 'service_options_summary') return renderOptionsSummaryZone(zone);
+    if ((zone.type as string) === 'service_tarifs_interventions') return renderTarifsZone();
     return '';
   };
+
 
   const serviceZones = latestVersion.pages.flatMap((page: any) =>
     (page.dynamicZones || [])
@@ -568,14 +557,16 @@ export async function generateServiceProposalHtml(
     return acc;
   }, {});
 
+  // Preserve source order of zones on each page (as declared in the template).
   Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
-    layoutServiceZones(zones).forEach((zone) => {
-      const html = renderServiceZone(zone);
+    zones.forEach((zone) => {
+      const html = renderServiceZone(zone as PositionedDynamicZone);
       if (!html) return;
       const page = Number(pageNumber);
       dynamicContent[page] = `${dynamicContent[page] || ''}${html}`;
     });
   });
+
 
   // (Devis pages 1-3 footer is injected below alongside the Cybertek Pro logo)
 
@@ -797,18 +788,22 @@ export async function generateServiceProposalHtml(
     });
   }
 
-  // Inject the same footer (address + Cybertek Pro logo) on devis pages 1-3
-  for (const devisPageNum of [1, 2, 3]) {
-    dynamicContent[devisPageNum] = `${dynamicContent[devisPageNum] || ''}
-      <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:3mm;z-index:1000;">
-        <div style="flex:1;">
-          Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
-          RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
+  // Devis pages 1-3 render through a shell (same header + footer as CG pages),
+  // stacking zone blocks vertically so content flows and never overlaps the footer.
+  const renderShellPage = (title: string, blocksHtml: string) => `
+    <div class="page-sheet" style="background:#ffffff;">
+      <div style="position:relative;width:100%;height:100%;overflow:hidden;">
+        ${renderCgHeader(title)}
+        <div style="padding:8mm 14mm 30mm 14mm;height:calc(100% - 22mm);overflow:hidden;box-sizing:border-box;">
+          <div style="display:flex;flex-direction:column;gap:5mm;">
+            ${blocksHtml}
+          </div>
         </div>
-        <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:22px;width:auto;max-width:70px;flex-shrink:0;" />
+        ${CG_FOOTER_HTML}
       </div>
-    `;
-  }
+    </div>
+  `;
+
 
   let cgBlockEmitted = false;
 
@@ -823,9 +818,17 @@ export async function generateServiceProposalHtml(
       continue;
     }
 
+    // Devis pages (documentScope 'both'): unified shell rendering.
+    if ((page.documentScope ?? 'both') === 'both') {
+      const title = String(page.title || '').trim() || 'Contrat cadre de prestations de services';
+      allPagesHtml.push(renderShellPage(title, dynamicContent[page.pageNumber] || ''));
+      continue;
+    }
+
     const pageHasServiceZones = (page.dynamicZones || []).some((zone: any) =>
       String(zone.type || '').startsWith('service_'),
     );
+
 
     if (pageHasServiceZones && page.elements.some((el: any) => el.type !== 'text')) {
       const dynamicZoneLabelIds = new Set([
