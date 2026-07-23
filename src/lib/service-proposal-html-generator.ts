@@ -481,6 +481,37 @@ export async function generateServiceProposalHtml(
   };
 
 
+  const TARIFS_ROWS: Array<[string, string]> = [
+    ['Technicien', '500 € HT'],
+    ['Administrateur', '600 € HT'],
+    ['Ingénieur serveur réseau', '900 € HT'],
+  ];
+
+  const renderTarifsZone = () => `
+    <div style="${BLOCK_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Interventions sur site en supplément</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <table style="${DATA_TABLE_STYLE}">
+          <thead>
+            <tr>
+              <th style="${TH_STYLE}">Intervention</th>
+              <th style="${TH_STYLE} width:40mm;text-align:right;">Tarif</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${TARIFS_ROWS.map(
+              ([label, value], idx) => `
+              <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                <td style="${TD_STYLE} font-weight:700;color:#111111;">${escapeText(label)}</td>
+                <td style="${TD_STYLE} text-align:right;font-weight:700;color:#111111;">${escapeText(value)}</td>
+              </tr>`,
+            ).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
   const renderServiceZone = (zone: PositionedDynamicZone) => {
     if (zone.type === 'service_client_info') return renderClientZone(zone);
     if (zone.type === 'service_conditions') return renderConditionsZone(zone);
@@ -491,8 +522,10 @@ export async function generateServiceProposalHtml(
     if (zone.type === 'service_operational_contact') return renderOperationalContactZone(zone);
     if (zone.type === 'service_external_providers') return renderExternalProvidersZone(zone);
     if (zone.type === 'service_options_summary') return renderOptionsSummaryZone(zone);
+    if ((zone.type as string) === 'service_tarifs_interventions') return renderTarifsZone();
     return '';
   };
+
 
   const serviceZones = latestVersion.pages.flatMap((page: any) =>
     (page.dynamicZones || [])
