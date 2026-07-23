@@ -388,11 +388,11 @@ export async function generateServiceProposalHtml(
       .map(
         (opt, idx) => `
             <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-              <td style="${TD_STYLE} width:30%;font-weight:600;color:#1a1a1a;">${escapeText(opt.name || '—')}</td>
+              <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(opt.name || '—')}</td>
               <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
               ${
                 showPriceCol
-                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#1a1a1a;">${opt.showPrice !== false && opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
+                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${opt.showPrice !== false && opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
                   : ''
               }
             </tr>`,
