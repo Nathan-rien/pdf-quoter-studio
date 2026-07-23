@@ -797,6 +797,19 @@ export async function generateServiceProposalHtml(
     });
   }
 
+  // Inject the same footer (address + Cybertek Pro logo) on devis pages 1-3
+  for (const devisPageNum of [1, 2, 3]) {
+    dynamicContent[devisPageNum] = `${dynamicContent[devisPageNum] || ''}
+      <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;z-index:1000;">
+        <div style="flex:1;">
+          Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
+          RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
+        </div>
+        <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:12mm;width:auto;flex-shrink:0;" />
+      </div>
+    `;
+  }
+
   let cgBlockEmitted = false;
 
   for (const page of visibleTemplatePages) {
