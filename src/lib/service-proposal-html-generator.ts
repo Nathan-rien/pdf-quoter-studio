@@ -214,36 +214,12 @@ export async function generateServiceProposalHtml(
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
 
-  const getFallbackZoneTop = (zone: DynamicZone): number => {
-    switch (zone.type) {
-      case 'service_client_info': return 82;
-      case 'service_conditions': return 65;
-      case 'service_invest_table': return 12;
-      case 'service_options': return 55;
-      case 'service_site_addresses': return 32;
-      case 'service_operational_contact': return 52;
-      case 'service_external_providers': return 70;
-      case 'service_options_summary': return 10;
-      default: return 65;
-    }
-  };
+  // Devis pages 1-3 zones are rendered as flow blocks stacked inside the
+  // shell (renderShellPage). There is no more absolute positioning based on
+  // fixed % coordinates — each block's height follows its real content, so
+  // `fitPageContentBlocks` can measure real overflow and shrink the last
+  // block when needed instead of letting it be clipped without warning.
 
-  const getFallbackZoneHeight = (zone: DynamicZone): number => {
-    switch (zone.type) {
-      case 'service_client_info': return 10;
-      case 'service_conditions': return 21;
-      case 'service_invest_table': return 30;
-      case 'service_options': return 18;
-      case 'service_site_addresses': return 18;
-      case 'service_operational_contact': return 14;
-      case 'service_external_providers': return 20;
-      case 'service_options_summary': return 28;
-      default: return 18;
-    }
-  };
-
-  const getZoneTop = (zone: DynamicZone): number => zone.position?.top ?? getFallbackZoneTop(zone);
-  const getZoneMinHeight = (zone: DynamicZone): number => zone.position?.height ?? getFallbackZoneHeight(zone);
 
   const estimateTextVisualLines = (text: string): number =>
     Math.max(
