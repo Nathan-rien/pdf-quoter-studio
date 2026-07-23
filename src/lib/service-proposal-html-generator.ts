@@ -717,8 +717,8 @@ export async function generateServiceProposalHtml(
       const body = bucket.join('') + (isLast ? dynWrapped : '');
       const title =
         buckets.length === 1
-          ? 'Contrat cadre — Parties contractantes'
-          : `Contrat cadre — Parties contractantes (${idx + 1}/${buckets.length})`;
+          ? 'Parties contractantes'
+          : `Parties contractantes (${idx + 1}/${buckets.length})`;
       renderedPartiesPagesHtml.push(renderCgShell(title, body, 'overflow:visible;height:auto;min-height:calc(100% - 22mm);'));
     });
   }
