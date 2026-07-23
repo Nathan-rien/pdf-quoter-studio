@@ -572,13 +572,8 @@ export async function generateServiceProposalHtml(
     });
   });
 
-  if (selectedCommercial?.adresse) {
-    dynamicContent[1] = `${dynamicContent[1] || ''}
-      <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 8px; color: #6b7280; z-index: 1000;">
-        ${escapeText(selectedCommercial.adresse)}
-      </div>
-    `;
-  }
+  // (Devis pages 1-3 footer is injected below alongside the Cybertek Pro logo)
+
 
   // --- Assemble full HTML doc ---
   const PDF_BASE_WIDTH = 580;
