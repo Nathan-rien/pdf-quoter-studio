@@ -13,6 +13,7 @@ import {
 import { PREVIEW_FONT_SCALE } from '@/lib/canvas-constants';
 import { resolvePackDescription } from '@/lib/pack-description';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
+import cbproWhiteLogo from '@/assets/logos/cbpro-wht-filled-baseline.svg';
 
 import type { DynamicZone } from '@/types/pdf-template';
 import type {
