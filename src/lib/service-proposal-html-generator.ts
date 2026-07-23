@@ -360,13 +360,18 @@ export async function generateServiceProposalHtml(
     </div>
   `;
 
-  const renderOptionsZone = (zone: PositionedDynamicZone) => {
-    const selected = nosOptions.filter((o) => o.selected);
-    const showPriceCol = !zone.hidePrice && selected.some((o) => o.showPrice !== false);
-    const rows = selected
+  const renderOptionsBlock = (
+    zone: PositionedDynamicZone,
+    chunk: typeof nosOptions,
+    isContinuation: boolean,
+    startIdx: number,
+  ) => {
+    const showPriceCol =
+      !zone.hidePrice && nosOptions.filter((o) => o.selected).some((o) => o.showPrice !== false);
+    const rows = chunk
       .map(
-        (opt, idx) => `
-            <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+        (opt, i) => `
+            <tr style="background:${(startIdx + i) % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
               <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(opt.name || '—')}</td>
               <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
               ${
@@ -379,10 +384,10 @@ export async function generateServiceProposalHtml(
       .join('');
     return `
       <div style="${BLOCK_WRAPPER_STYLE}">
-        <div style="${SECTION_BANNER_STYLE}">Détail des services</div>
+        <div style="${SECTION_BANNER_STYLE}">Détail des services${isContinuation ? ' (suite)' : ''}</div>
         <div style="${SECTION_BODY_STYLE}">
           ${
-            selected.length === 0
+            chunk.length === 0
               ? `<p style="${EMPTY_HINT_STYLE}">Aucune option sélectionnée</p>`
               : `<table style="${DATA_TABLE_STYLE}">
                   <thead><tr>
@@ -397,6 +402,53 @@ export async function generateServiceProposalHtml(
       </div>
     `;
   };
+
+  // Split options into a first chunk + continuation chunks based on rough
+  // per-row "visual lines" so long descriptions push overflow to a new page.
+  const renderOptionsZoneSplit = (
+    zone: PositionedDynamicZone,
+    firstBudget: number,
+    contBudget: number,
+  ): string[] => {
+    const selected = nosOptions.filter((o) => o.selected);
+    if (selected.length === 0) return [renderOptionsBlock(zone, [], false, 0)];
+    const rowCost = (opt: (typeof selected)[number]) => {
+      const desc = resolvePackDescription(opt, adminOptions) || '';
+      return 1.5 + estimateTextVisualLines(desc);
+    };
+    const chunks: Array<typeof selected> = [];
+    let current: typeof selected = [];
+    let used = 0;
+    let budget = firstBudget;
+    for (const opt of selected) {
+      const cost = rowCost(opt);
+      if (current.length > 0 && used + cost > budget) {
+        chunks.push(current);
+        current = [];
+        used = 0;
+        budget = contBudget;
+      }
+      current.push(opt);
+      used += cost;
+    }
+    if (current.length > 0) chunks.push(current);
+    let startIdx = 0;
+    return chunks.map((chunk, i) => {
+      const html = renderOptionsBlock(zone, chunk, i > 0, startIdx);
+      startIdx += chunk.length;
+      return html;
+    });
+  };
+
+  // Legacy single-block renderer (used when the split path isn't taken).
+  const renderOptionsZone = (zone: PositionedDynamicZone) =>
+    renderOptionsBlock(
+      zone,
+      nosOptions.filter((o) => o.selected),
+      false,
+      0,
+    );
+
 
   const renderSiteAddressesZone = (zone: PositionedDynamicZone) => {
     const rows = siteAddresses
@@ -584,10 +636,29 @@ export async function generateServiceProposalHtml(
   // Wrap each rendered zone in a `.shell-block` div so the fit helper can target
   // the last block on a page for auto-shrink if it overflows the reserved area.
   Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
+    const page = Number(pageNumber);
+    const onlyOptions =
+      zones.length === 1 && zones[0].type === 'service_options';
     zones.forEach((zone) => {
+      if (zone.type === 'service_options') {
+        // Adaptive budgets (visual-line units): looser when the page contains
+        // only this zone, tighter when it shares the page with other blocks.
+        const blocks = renderOptionsZoneSplit(
+          zone as PositionedDynamicZone,
+          onlyOptions ? 32 : 14,
+          32,
+        );
+        dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${blocks[0]}</div>`;
+        if (blocks.length > 1) {
+          extraPagesAfter[page] = [
+            ...(extraPagesAfter[page] || []),
+            ...blocks.slice(1).map((b) => `<div class="shell-block">${b}</div>`),
+          ];
+        }
+        return;
+      }
       const html = renderServiceZone(zone as PositionedDynamicZone);
       if (!html) return;
-      const page = Number(pageNumber);
       dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${html}</div>`;
     });
   });
@@ -637,7 +708,7 @@ export async function generateServiceProposalHtml(
   const renderCgHeader = (title: string, hPad: string = '10mm') => `
     <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm ${hPad};display:flex;align-items:center;justify-content:space-between;gap:8mm;">
       <div style="flex:1;min-width:0;">${escCg(title)}</div>
-      <img src="${cbproWhiteLogo}" alt="Cybertek Pro" style="width:90px;height:24px;object-fit:contain;flex-shrink:0;" />
+      <img src="${cbproWhiteLogo}" alt="Cybertek Pro" style="width:140px;height:38px;object-fit:contain;flex-shrink:0;" />
     </div>
   `;
 
@@ -866,6 +937,12 @@ export async function generateServiceProposalHtml(
     if ((page.documentScope ?? 'both') === 'both') {
       const title = String(page.title || '').trim() || 'Contrat cadre de prestations de services';
       allPagesHtml.push(renderShellPage(title, dynamicContent[page.pageNumber] || ''));
+      const extras = extraPagesAfter[page.pageNumber];
+      if (extras && extras.length > 0) {
+        for (const extra of extras) {
+          allPagesHtml.push(renderShellPage(title, extra));
+        }
+      }
       continue;
     }
 
