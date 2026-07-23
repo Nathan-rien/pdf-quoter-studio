@@ -69,8 +69,10 @@ export async function htmlToPdfBlob(htmlContent: string): Promise<Blob> {
 
   try {
     await waitForAssets(container);
+    fitPageContentBlocks(container);
 
     const sheets = Array.from(pagesWrap.querySelectorAll<HTMLElement>('.page-sheet'));
+
     if (sheets.length === 0) {
       throw new Error('No .page-sheet elements found in generator output');
     }
