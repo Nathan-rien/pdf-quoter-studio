@@ -83,7 +83,7 @@ const SERVICE_ZONE_GAP_PERCENT = 3.4;
 const SECTION_TITLE_STYLE =
   "font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.75px;margin:0 0 3mm 0;";
 const INFO_CARD_STYLE =
-  "background:#ffffff;border:1px solid #d1d5db;border-radius:8px;padding:4mm 5mm;";
+  "background:#ffffff;border:1px solid #d1d5db;border-radius:8px;padding:5mm 6mm;";
 // Secondary/detail text
 const BODY_TEXT_STYLE =
   "font-family:'Inter',sans-serif;font-size:12.5px;font-weight:400;color:#4b5563;line-height:1.5;";
@@ -108,7 +108,7 @@ const SECTION_WRAPPER_STYLE =
   "border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#ffffff;";
 const SECTION_BANNER_STYLE =
   "background:#4b5563;color:#ffffff;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:0.75px;text-transform:uppercase;padding:3mm 5mm;";
-const SECTION_BODY_STYLE = "padding:5mm 6mm;";
+const SECTION_BODY_STYLE = "padding:6mm 7mm;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
@@ -618,12 +618,12 @@ export async function generateServiceProposalHtml(
   // Footer is anchored to a strictly reserved bottom band (24mm high).
   // Content area above stops before this band so nothing can overlap it.
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 14mm 6mm 14mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.45;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
+    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 14mm 6mm 14mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:9px;line-height:1.4;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
       <div style="flex:1;">
-        Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
-        RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
+        Groupe Cybertek — SAS au capital de 4 471 800 € · TVA intracom. FR78408772960 · RCS Bordeaux 408 772 960<br/>
+        Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr
       </div>
-      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:22px;width:auto;max-width:70px;flex-shrink:0;" />
+      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="width:110px;height:35px;object-fit:contain;flex-shrink:0;" />
     </div>
   `;
 
@@ -995,7 +995,7 @@ export async function generateServiceProposalHtml(
     @media screen { .page-sheet { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; } }
     img { max-width: 100%; height: auto; }
     .dynamic-content { position: static; z-index: 40; }
-    .shell-content > .shell-block { display: block; position: static; margin: 0 0 6mm 0; }
+    .shell-content > .shell-block { display: block; position: static; margin: 0 0 10mm 0; }
     .shell-content > .shell-block:last-child { margin-bottom: 0; }
 
     .rich-text p, .rich-text div { margin: 0; padding: 0; }
