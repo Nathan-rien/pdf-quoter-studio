@@ -148,8 +148,8 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "contrat",
       elements: [
-        rectEl("p1-banner", 20, 20, 610, 40),
-        textEl("p1-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, align: "left" }),
+        rectEl("p1-banner", 20, 20, 610, 40, "#1a1a1a"),
+        textEl("p1-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left" }),
         textEl("p1-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
         textEl("p1-ss", 40, 80, 570, 15, "ENTRE LES SOUSSIGNEES :", { bold: true }),
         textEl(
