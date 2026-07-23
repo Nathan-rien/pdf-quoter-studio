@@ -108,7 +108,7 @@ const SECTION_WRAPPER_STYLE =
   "border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#ffffff;";
 const SECTION_BANNER_STYLE =
   "background:#4b5563;color:#ffffff;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:0.75px;text-transform:uppercase;padding:3mm 5mm;";
-const SECTION_BODY_STYLE = "padding:5mm 6mm;";
+const SECTION_BODY_STYLE = "padding:6mm 7mm;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
