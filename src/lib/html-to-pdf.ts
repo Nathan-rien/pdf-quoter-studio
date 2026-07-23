@@ -6,6 +6,8 @@
  */
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { fitPageContentBlocks } from '@/lib/service-proposal-html-generator';
+
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
