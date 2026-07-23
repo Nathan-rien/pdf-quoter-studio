@@ -198,55 +198,11 @@ export async function generateServiceProposalHtml(
         .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 72)), 0),
     );
 
-  const estimateServiceZoneHeight = (zone: DynamicZone): number => {
-    const minHeight = getZoneMinHeight(zone);
-    if (zone.type === 'service_invest_table') {
-      const visualRows = lignesData.length > 0
-        ? lignesData.reduce((total, ligne) => total + estimateTextVisualLines(ligne.designation || '-'), 0)
-        : 1;
-      return Math.max(minHeight, Math.min(82, 8 + visualRows * 2.45 + 6));
-    }
-    if (zone.type === 'service_options') {
-      const selected = nosOptions.filter((o) => o.selected);
-      const rows = selected.length || 1;
-      return Math.max(minHeight, Math.min(82, 6 + rows * 4));
-    }
-    if (zone.type === 'service_conditions') return Math.max(minHeight, 21);
-    if (zone.type === 'service_client_info') return Math.max(minHeight, 10);
-    if (zone.type === 'service_signature') return Math.max(minHeight, 14);
-    if (zone.type === 'service_options_summary') {
-      const selected = nosOptions.filter((o) => o.selected);
-      return Math.max(minHeight, Math.min(40, 5 + Math.max(selected.length, 1) * 3));
-    }
-    return minHeight;
-  };
+  // Block wrapper (no absolute positioning) — every zone renders as a flow card.
+  // Devis pages 1-3 stack these vertically inside a shell that reserves footer space,
+  // so section heights follow real content and never overlap the footer.
+  const BLOCK_WRAPPER_STYLE = `${SECTION_WRAPPER_STYLE}display:block;`;
 
-  const layoutServiceZones = (zones: Array<DynamicZone & { pageNumber: number }>): PositionedDynamicZone[] => {
-    let currentBottom = 0;
-    return [...zones]
-      .sort((a, b) => getZoneTop(a) - getZoneTop(b))
-      .map((zone) => {
-        const minHeight = getZoneMinHeight(zone);
-        const estimatedHeight = estimateServiceZoneHeight(zone);
-        const naturalTop = getZoneTop(zone);
-        const adjustedTop = Math.max(naturalTop, currentBottom > 0 ? currentBottom + SERVICE_ZONE_GAP_PERCENT : naturalTop);
-        const safeTop = Math.min(adjustedTop, Math.max(1, 96 - minHeight));
-        currentBottom = Math.max(currentBottom, safeTop + estimatedHeight);
-        return { ...zone, layoutTop: safeTop, layoutMinHeight: minHeight };
-      });
-  };
-
-  const getServiceZoneStyle = (zone: PositionedDynamicZone) => {
-    return [
-      'position: absolute',
-      `top: ${zone.layoutTop ?? getZoneTop(zone)}%`,
-      'left: 4%',
-      'right: 4%',
-      `min-height: ${zone.layoutMinHeight ?? getZoneMinHeight(zone)}%`,
-      'z-index: 1000',
-      'overflow: visible',
-    ].join('; ');
-  };
 
   const renderClientZone = (zone: PositionedDynamicZone) => `
     <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
