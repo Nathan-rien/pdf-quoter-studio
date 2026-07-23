@@ -557,14 +557,16 @@ export async function generateServiceProposalHtml(
     return acc;
   }, {});
 
+  // Preserve source order of zones on each page (as declared in the template).
   Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
-    layoutServiceZones(zones).forEach((zone) => {
-      const html = renderServiceZone(zone);
+    zones.forEach((zone) => {
+      const html = renderServiceZone(zone as PositionedDynamicZone);
       if (!html) return;
       const page = Number(pageNumber);
       dynamicContent[page] = `${dynamicContent[page] || ''}${html}`;
     });
   });
+
 
   // (Devis pages 1-3 footer is injected below alongside the Cybertek Pro logo)
 
