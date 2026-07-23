@@ -423,7 +423,7 @@ export async function generateServiceProposalHtml(
     const rows = siteAddresses
       .map((s, idx) => `
           <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-            <td style="${TD_STYLE} width:30%;font-weight:600;color:#1a1a1a;">${escapeText(s.label || '—')}</td>
+            <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(s.label || '—')}</td>
             <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(s.address || '—')}</td>
           </tr>`)
       .join('');
