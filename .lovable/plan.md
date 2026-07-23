@@ -1,15 +1,14 @@
-## Objectif
-Vérifier et forcer l'augmentation de l'espacement vertical entre les encarts (`.shell-block`) sur les pages du template "Contrat Cadre Services", en passant à **90mm**.
+## Cause racine
+Le sélecteur CSS actuel `.shell-content > .shell-block` (ligne 998) cible les enfants **directs** de `.shell-content`. Or, depuis l'introduction du wrapper de mise à l'échelle (`<div data-shell-scale>` aux lignes 645 et 834), les `.shell-block` sont désormais enfants de `data-shell-scale`, pas de `.shell-content`. **La marge de 90mm (comme les 20mm précédents) n'est jamais appliquée** — l'espacement visible provient uniquement des `margin-bottom` internes des zones dynamiques.
 
-## Constat
-Le CSS actuel (`src/lib/service-proposal-html-generator.ts`, ligne 998) contient bien `margin: 0 0 20mm 0` sur `.shell-block`. Si l'aperçu ne change pas visuellement, c'est probablement dû au cache navigateur/preview qui sert encore l'ancienne version compilée — ou bien la valeur de 20mm est visuellement trop proche de la précédente (14mm) pour être perçue.
-
-## Modification
+## Correction
 Dans `src/lib/service-proposal-html-generator.ts` :
-- Ligne 998 : remplacer `margin: 0 0 20mm 0` par `margin: 0 0 90mm 0` sur `.shell-content > .shell-block`.
 
-Aucune autre logique n'est modifiée. Le mécanisme `fitPageContentBlocks` continuera à réduire automatiquement l'ensemble via `transform: scale()` si l'accumulation d'espacement + contenu dépasse la zone disponible avant le pied de page réservé (24mm).
+- Ligne 998 : remplacer le sélecteur `.shell-content > .shell-block` par `.shell-content .shell-block` (descendant, plus enfant direct).
+- Ligne 999 : idem pour la règle `:last-child`.
+
+Garder la valeur à `90mm` comme demandé.
 
 ## Vérification
-- Recharger l'aperçu de la proposition EXTENDE (Ctrl+F5 pour contourner le cache).
-- Confirmer visuellement que les encarts COORDONNÉES / SITES D'INTERVENTION / CONTACT OPÉRATIONNEL / PRESTATAIRES EXTÉRIEURS sont nettement plus espacés qu'auparavant.
+- Recharger l'aperçu de la proposition EXTENDE.
+- Confirmer que les 4 encarts (COORDONNÉES, SITES D'INTERVENTION, CONTACT OPÉRATIONNEL, PRESTATAIRES EXTÉRIEURS) sont désormais nettement plus espacés. Si le total dépasse la hauteur disponible, `fitPageContentBlocks` réduira automatiquement l'ensemble via `transform: scale()` (plancher 0.75), sans chevaucher le pied de page.
