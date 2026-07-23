@@ -558,14 +558,17 @@ export async function generateServiceProposalHtml(
   }, {});
 
   // Preserve source order of zones on each page (as declared in the template).
+  // Wrap each rendered zone in a `.shell-block` div so the fit helper can target
+  // the last block on a page for auto-shrink if it overflows the reserved area.
   Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
     zones.forEach((zone) => {
       const html = renderServiceZone(zone as PositionedDynamicZone);
       if (!html) return;
       const page = Number(pageNumber);
-      dynamicContent[page] = `${dynamicContent[page] || ''}${html}`;
+      dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${html}</div>`;
     });
   });
+
 
 
   // (Devis pages 1-3 footer is injected below alongside the Cybertek Pro logo)
