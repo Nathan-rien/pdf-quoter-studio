@@ -937,6 +937,12 @@ export async function generateServiceProposalHtml(
     if ((page.documentScope ?? 'both') === 'both') {
       const title = String(page.title || '').trim() || 'Contrat cadre de prestations de services';
       allPagesHtml.push(renderShellPage(title, dynamicContent[page.pageNumber] || ''));
+      const extras = extraPagesAfter[page.pageNumber];
+      if (extras && extras.length > 0) {
+        for (const extra of extras) {
+          allPagesHtml.push(renderShellPage(title, extra));
+        }
+      }
       continue;
     }
 
