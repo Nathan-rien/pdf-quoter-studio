@@ -205,7 +205,7 @@ export async function generateServiceProposalHtml(
 
 
   const renderClientZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+    <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
       <div style="${SECTION_BODY_STYLE}">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
@@ -268,7 +268,7 @@ export async function generateServiceProposalHtml(
   ];
 
   const renderConditionsZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+    <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Vos modalités de règlement</div>
       <div style="${SECTION_BODY_STYLE}">
         <table style="${DATA_TABLE_STYLE}">
@@ -289,7 +289,7 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderInvestZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+    <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Matériel concerné</div>
       <div style="${SECTION_BODY_STYLE}">
         <table style="${DATA_TABLE_STYLE}">
@@ -320,7 +320,7 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderSignatureZone = (zone: PositionedDynamicZone) => `
-    <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${BODY_TEXT_STYLE}">
+    <div style="${BODY_TEXT_STYLE}">
       <div style="display: flex; justify-content: space-between; gap: 8mm;">
         <div style="flex: 1;">
           La Société Groupe Cybertek SAS<br />
@@ -355,7 +355,7 @@ export async function generateServiceProposalHtml(
       )
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Détail des services</div>
         <div style="${SECTION_BODY_STYLE}">
           ${
@@ -384,7 +384,7 @@ export async function generateServiceProposalHtml(
           </tr>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Sites d'intervention</div>
         <div style="${SECTION_BODY_STYLE}">
           ${siteAddresses.length === 0
@@ -404,7 +404,7 @@ export async function generateServiceProposalHtml(
     const op = operationalContact ?? { name: '', role: '', email: '', phone: '' };
     const hasData = op.name || op.role || op.email || op.phone;
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Contact opérationnel</div>
         <div style="${SECTION_BODY_STYLE}">
           ${!hasData
@@ -433,7 +433,7 @@ export async function generateServiceProposalHtml(
           </div>`)
       .join('');
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Prestataires extérieurs</div>
         <div style="${SECTION_BODY_STYLE}">
           ${externalProviders.length === 0
@@ -456,7 +456,7 @@ export async function generateServiceProposalHtml(
       return label ?? '';
     };
     return `
-      <div class="dynamic-content" style="${getServiceZoneStyle(zone)}; ${SECTION_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Services &amp; packs souscrits</div>
         <div style="${SECTION_BODY_STYLE}">
           ${selected.length === 0
