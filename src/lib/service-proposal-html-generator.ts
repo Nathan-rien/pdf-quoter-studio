@@ -645,7 +645,7 @@ export async function generateServiceProposalHtml(
         // only this zone, tighter when it shares the page with other blocks.
         const blocks = renderOptionsZoneSplit(
           zone as PositionedDynamicZone,
-          onlyOptions ? 32 : 14,
+          onlyOptions ? 32 : 8,
           32,
         );
         dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${blocks[0]}</div>`;
