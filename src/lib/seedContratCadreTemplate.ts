@@ -63,16 +63,13 @@ function rectEl(id: string, x: number, y: number, w: number, h: number, fill = "
 export function buildPages() {
   return [
     // ================== PAGE 1 — COUVERTURE ==================
+    // Rendu 100% via le générateur (renderShellPage) : aucun élément statique.
     {
       pageNumber: 1,
-      title: "Couverture",
+      title: "Contrat cadre de prestations de services",
       type: "dynamic_partial",
       documentScope: "both",
-      elements: [
-        rectEl("p1c-banner", 20, 20, 610, 40, "#000000"),
-        textEl("p1c-title", 30, 25, 590, 30, "CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 14, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
-      ],
+      elements: [],
       dynamicZones: [
         { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 12, height: 13 } },
         { id: "service_site_addresses_page1", pageNumber: 1, type: "service_site_addresses", sourceSheet: "client", isRequired: false, description: "Adresses de sites", position: { top: 30, height: 16 } },
@@ -80,47 +77,19 @@ export function buildPages() {
         { id: "service_external_providers_page1", pageNumber: 1, type: "service_external_providers", sourceSheet: "client", isRequired: false, description: "Prestataires extérieurs", position: { top: 69, height: 18 } },
       ],
       staticElements: [],
-
     },
-    // ================== PAGE 2 — PÉRIMÈTRE (ANNEXE 1) ==================
+    // ================== PAGE 2 — PÉRIMÈTRE ==================
     {
       pageNumber: 2,
-      title: "Périmètre d'intervention (Annexe 1)",
+      title: "Périmètre d'intervention",
       type: "dynamic_partial",
       documentScope: "both",
-      elements: [
-        rectEl("p2p-banner", 20, 20, 610, 40, "#000000"),
-        textEl("p2p-title", 30, 25, 590, 30, "PÉRIMÈTRE D'INTERVENTION", { size: 14, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        // Bannière de section "Interventions sur site en supplément" (style aligné sur SECTION_BANNER_STYLE)
-        rectEl("p2p-lbl-tarifs-bg", 26, 322, 598, 28, "#f3f4f6", true),
-        textEl("p2p-lbl-tarifs", 32, 328, 586, 20, "INTERVENTIONS SUR SITE EN SUPPLÉMENT", { font: "Outfit", bold: true, fontWeight: 700, size: 26, color: "#1a1a1a", align: "left", zIndex: 50 }),
-        // Tableau statique des tarifs — en-tête aligné sur TH_STYLE (fond noir / texte blanc)
-        rectEl("p2p-tarif-h-lbl-bg", 26, 356, 358, 24, "#1a1a1a", true),
-        textEl("p2p-tarif-h-lbl", 32, 360, 346, 18, "Intervention", { size: 23, bold: true, color: "#ffffff", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-h-val-bg", 384, 356, 240, 24, "#1a1a1a", true),
-        textEl("p2p-tarif-h-val", 390, 360, 228, 18, "Tarif", { size: 23, bold: true, color: "#ffffff", align: "left", zIndex: 2 }),
-        // Ligne 1 (fond blanc)
-        rectEl("p2p-tarif-r1-lbl-bg", 26, 380, 358, 24, "#ffffff", true),
-        textEl("p2p-tarif-r1-lbl", 32, 384, 346, 18, "Technicien", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-r1-val-bg", 384, 380, 240, 24, "#ffffff", true),
-        textEl("p2p-tarif-r1-val", 390, 384, 228, 18, "500 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        // Ligne 2 (fond alt)
-        rectEl("p2p-tarif-r2-lbl-bg", 26, 404, 358, 24, "#f9fafb", true),
-        textEl("p2p-tarif-r2-lbl", 32, 408, 346, 18, "Administrateur", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-r2-val-bg", 384, 404, 240, 24, "#f9fafb", true),
-        textEl("p2p-tarif-r2-val", 390, 408, 228, 18, "600 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        // Ligne 3 (fond blanc)
-        rectEl("p2p-tarif-r3-lbl-bg", 26, 428, 358, 24, "#ffffff", true),
-        textEl("p2p-tarif-r3-lbl", 32, 432, 346, 18, "Ingénieur serveur réseau", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        rectEl("p2p-tarif-r3-val-bg", 384, 428, 240, 24, "#ffffff", true),
-        textEl("p2p-tarif-r3-val", 390, 432, 228, 18, "900 € HT", { size: 23, bold: false, color: "#1a1a1a", align: "left", zIndex: 2 }),
-        
-      ],
+      elements: [],
       dynamicZones: [
         { id: "service_options_summary_page2", pageNumber: 2, type: "service_options_summary", sourceSheet: "options", isRequired: false, description: "Résumé des services/packs cochés", position: { top: 11, height: 19 } },
+        { id: "service_tarifs_interventions_page2", pageNumber: 2, type: "service_tarifs_interventions", sourceSheet: "données", isRequired: false, description: "Interventions sur site en supplément", position: { top: 40, height: 24 } },
         { id: "service_conditions_page2", pageNumber: 2, type: "service_conditions", sourceSheet: "données", isRequired: false, description: "Modalités de règlement", position: { top: 65, height: 24 } },
       ],
-
       staticElements: [],
     },
     // ================== PAGE 3 — MATÉRIEL ==================
@@ -129,22 +98,17 @@ export function buildPages() {
       title: "Matériel",
       type: "dynamic_partial",
       documentScope: "both",
-      elements: [
-        rectEl("p3m-banner", 20, 20, 610, 40, "#000000"),
-        textEl("p3m-title", 30, 25, 590, 30, "MATÉRIEL", { size: 14, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-      ],
+      elements: [],
       dynamicZones: [
         { id: "service_invest_table_page3", pageNumber: 3, type: "service_invest_table", sourceSheet: "invest_services", isRequired: false, description: "Matériel concerné", position: { top: 11, height: 33 } },
         { id: "service_options_page3", pageNumber: 3, type: "service_options", sourceSheet: "options", isRequired: false, description: "Options détaillées (sans prix)", position: { top: 56, height: 35 }, hidePrice: true },
-
       ],
-
       staticElements: [],
     },
     // ================== PAGES CG (ex-1 à ex-6, renumérotées 4-9) ==================
     {
       pageNumber: 4,
-      title: "Entre les soussignées",
+      title: "Parties contractantes",
       type: "dynamic_partial",
       documentScope: "contrat",
       elements: [
