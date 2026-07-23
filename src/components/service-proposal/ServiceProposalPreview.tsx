@@ -227,7 +227,14 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
               scrolling="no"
               className="absolute inset-0 w-full h-full border-0"
               style={{ background: '#fff' }}
+              onLoad={(e) => {
+                try {
+                  const doc = (e.currentTarget as HTMLIFrameElement).contentDocument;
+                  if (doc) fitPageContentBlocks(doc);
+                } catch { /* ignore cross-origin */ }
+              }}
             />
+
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
               Aucun contenu à afficher
