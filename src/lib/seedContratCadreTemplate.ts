@@ -69,9 +69,9 @@ export function buildPages() {
       type: "dynamic_partial",
       documentScope: "both",
       elements: [
-        rectEl("p1c-banner", 20, 20, 610, 40),
+        rectEl("p1c-banner", 20, 20, 610, 40, "#1a1a1a"),
         textEl("p1c-title", 30, 25, 590, 30, "COUVERTURE — CONTRAT CADRE DE PRESTATIONS DE SERVICES", { size: 12, bold: true, color: "#ffffff", align: "left", zIndex: 5 }),
-        textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, align: "right", zIndex: 5 }),
+        textEl("p1c-date", 474, 62, 280, 20, "{{DATE}}", { size: 11, bold: true, color: "#ffffff", align: "right", zIndex: 5 }),
       ],
       dynamicZones: [
         { id: "service_client_info_page1", pageNumber: 1, type: "service_client_info", sourceSheet: "client", isRequired: true, description: "Identité du bénéficiaire", position: { top: 12, height: 13 } },
