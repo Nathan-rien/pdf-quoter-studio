@@ -708,7 +708,7 @@ export async function generateServiceProposalHtml(
   const renderCgHeader = (title: string, hPad: string = '10mm') => `
     <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm ${hPad};display:flex;align-items:center;justify-content:space-between;gap:8mm;">
       <div style="flex:1;min-width:0;">${escCg(title)}</div>
-      <img src="${cbproWhiteLogo}" alt="Cybertek Pro" style="width:90px;height:24px;object-fit:contain;flex-shrink:0;" />
+      <img src="${cbproWhiteLogo}" alt="Cybertek Pro" style="width:140px;height:38px;object-fit:contain;flex-shrink:0;" />
     </div>
   `;
 
