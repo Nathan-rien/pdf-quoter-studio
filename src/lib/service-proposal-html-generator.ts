@@ -641,18 +641,26 @@ export async function generateServiceProposalHtml(
       zones.length === 1 && zones[0].type === 'service_options';
     zones.forEach((zone) => {
       if (zone.type === 'service_options') {
-        // Adaptive budgets (visual-line units): looser when the page contains
-        // only this zone, tighter when it shares the page with other blocks.
+        // Options zone always renders on dedicated page(s) so its text size
+        // stays uniform (no auto-shrink caused by sharing a page with other
+        // large blocks like "Matériel").
         const blocks = renderOptionsZoneSplit(
           zone as PositionedDynamicZone,
-          onlyOptions ? 32 : 8,
+          32,
           32,
         );
-        dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${blocks[0]}</div>`;
-        if (blocks.length > 1) {
+        if (onlyOptions) {
+          dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${blocks[0]}</div>`;
+          if (blocks.length > 1) {
+            extraPagesAfter[page] = [
+              ...(extraPagesAfter[page] || []),
+              ...blocks.slice(1).map((b) => `<div class="shell-block">${b}</div>`),
+            ];
+          }
+        } else {
           extraPagesAfter[page] = [
             ...(extraPagesAfter[page] || []),
-            ...blocks.slice(1).map((b) => `<div class="shell-block">${b}</div>`),
+            ...blocks.map((b) => `<div class="shell-block">${b}</div>`),
           ];
         }
         return;
