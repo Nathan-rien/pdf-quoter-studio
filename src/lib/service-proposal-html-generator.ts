@@ -596,18 +596,20 @@ export async function generateServiceProposalHtml(
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
+  const CBPRO_LOGO_URL = '/__l5e/assets-v1/0991e1b4-5b95-4112-9fd7-da00ecefcca0/cbpro-logo.svg';
+
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;">
+    <div style="position:absolute;left:14mm;right:14mm;bottom:8mm;display:flex;justify-content:space-between;align-items:center;gap:8mm;font-family:'Inter',sans-serif;font-size:6.5px;line-height:1.45;color:#6b7280;border-top:0.5px solid #e5e7eb;padding-top:3mm;">
       <div style="flex:1;">
         Groupe Cybertek — SAS au capital de 4 471 800 € · Siège : Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux<br/>
         RCS Bordeaux 408 772 960 · TVA intracommunautaire FR 27 408 772 960 · Tél. 05 56 39 39 39 · contact@groupe-cybertek.fr · www.groupe-cybertek.fr
       </div>
-      <div style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#1a1a1a;letter-spacing:2px;white-space:nowrap;">GROUPE | CYBERTEK</div>
+      <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="height:12mm;width:auto;flex-shrink:0;" />
     </div>
   `;
 
   const renderCgHeader = (title: string) => `
-    <div style="background:#f3f4f6;color:#1a1a1a;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5mm 14mm;border-bottom:2px solid #e5e7eb;">
+    <div style="background:#1a1a1a;color:#ffffff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5mm 14mm;border-bottom:2px solid #1a1a1a;">
       ${escCg(title)}
     </div>
   `;
