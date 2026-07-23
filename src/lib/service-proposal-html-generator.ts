@@ -214,36 +214,12 @@ export async function generateServiceProposalHtml(
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
 
-  const getFallbackZoneTop = (zone: DynamicZone): number => {
-    switch (zone.type) {
-      case 'service_client_info': return 82;
-      case 'service_conditions': return 65;
-      case 'service_invest_table': return 12;
-      case 'service_options': return 55;
-      case 'service_site_addresses': return 32;
-      case 'service_operational_contact': return 52;
-      case 'service_external_providers': return 70;
-      case 'service_options_summary': return 10;
-      default: return 65;
-    }
-  };
+  // Devis pages 1-3 zones are rendered as flow blocks stacked inside the
+  // shell (renderShellPage). There is no more absolute positioning based on
+  // fixed % coordinates — each block's height follows its real content, so
+  // `fitPageContentBlocks` can measure real overflow and shrink the last
+  // block when needed instead of letting it be clipped without warning.
 
-  const getFallbackZoneHeight = (zone: DynamicZone): number => {
-    switch (zone.type) {
-      case 'service_client_info': return 10;
-      case 'service_conditions': return 21;
-      case 'service_invest_table': return 30;
-      case 'service_options': return 18;
-      case 'service_site_addresses': return 18;
-      case 'service_operational_contact': return 14;
-      case 'service_external_providers': return 20;
-      case 'service_options_summary': return 28;
-      default: return 18;
-    }
-  };
-
-  const getZoneTop = (zone: DynamicZone): number => zone.position?.top ?? getFallbackZoneTop(zone);
-  const getZoneMinHeight = (zone: DynamicZone): number => zone.position?.height ?? getFallbackZoneHeight(zone);
 
   const estimateTextVisualLines = (text: string): number =>
     Math.max(
@@ -863,14 +839,13 @@ export async function generateServiceProposalHtml(
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
         <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:6mm 14mm 0 14mm;box-sizing:border-box;overflow:hidden;">
-          <div style="display:flex;flex-direction:column;gap:5mm;">
-            ${blocksHtml}
-          </div>
+          ${blocksHtml}
         </div>
         ${CG_FOOTER_HTML}
       </div>
     </div>
   `;
+
 
 
 
@@ -1027,7 +1002,10 @@ export async function generateServiceProposalHtml(
     .page { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; position: relative; overflow: hidden; background: white; }
     @media screen { .page-sheet { width: ${PDF_BASE_WIDTH}px; height: ${PDF_BASE_HEIGHT.toFixed(3)}px; } }
     img { max-width: 100%; height: auto; }
-    .dynamic-content { position: absolute; z-index: 40; }
+    .dynamic-content { position: static; z-index: 40; }
+    .shell-content > .shell-block { display: block; position: static; margin: 0 0 6mm 0; }
+    .shell-content > .shell-block:last-child { margin-bottom: 0; }
+
     .rich-text p, .rich-text div { margin: 0; padding: 0; }
     ul, ol { list-style: none !important; margin: 0 !important; padding: 0 !important; }
   </style>
