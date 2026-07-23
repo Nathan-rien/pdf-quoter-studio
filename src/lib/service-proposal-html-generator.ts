@@ -89,7 +89,7 @@ const BODY_TEXT_STYLE =
   "font-family:'Inter',sans-serif;font-size:12.5px;font-weight:400;color:#4b5563;line-height:1.5;";
 // Field label (BÉNÉFICIAIRE, VOTRE INTERLOCUTEUR, …)
 const LABEL_STYLE =
-  "font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
+  "font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
 // Primary value under a label
 const VALUE_STYLE =
   "font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:#111111;margin:0;";
@@ -273,7 +273,6 @@ export async function generateServiceProposalHtml(
       : null;
 
   const conditionsRows: Array<[string, string, boolean?]> = [
-    ['Services', selectedServices.map((s) => s.label).join(', ') || '—'],
     ['Périodicité', paymentFrequency === 'mensuel' ? 'Mensuelle' : paymentFrequency === 'trimestriel' ? 'Trimestrielle' : '—'],
     ['Mode de règlement', paymentMode === 'prelevement' ? 'Prélèvement automatique' : paymentMode === 'virement' ? 'Virement bancaire' : paymentMode === 'allin' ? 'Allin' : '—'],
     ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
@@ -630,17 +629,16 @@ export async function generateServiceProposalHtml(
 
   // Slimmer footer used on devis pages (pages 1-3) to leave more room for content.
   const DEVIS_FOOTER_HTML = `
-    <div style="position:absolute;left:0;right:0;bottom:0;height:16mm;padding:2mm 10mm 2mm 10mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:6mm;font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.3;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
-      <div style="flex:1;">
-        Groupe Cybertek — SAS au capital de 4 471 800 € · TVA intracom. FR78408772960 · RCS Bordeaux 408 772 960<br/>
-        Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr
+    <div style="position:absolute;left:0;right:0;bottom:0;height:16mm;padding:2mm 6mm 2mm 6mm;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:6mm;font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.3;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
+      <div style="flex:1;min-width:0;">
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:6.5px;">Groupe Cybertek — SAS au capital de 4 471 800 € · TVA intracom. FR78408772960 · RCS Bordeaux 408 772 960 · Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr</div>
       </div>
       <img src="${CBPRO_LOGO_URL}" alt="Cybertek Pro" style="width:80px;height:25px;object-fit:contain;flex-shrink:0;" />
     </div>
   `;
 
-  const renderCgHeader = (title: string) => `
-    <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm 10mm;">
+  const renderCgHeader = (title: string, hPad: string = '10mm') => `
+    <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm ${hPad};">
       ${escCg(title)}
     </div>
   `;
@@ -841,8 +839,8 @@ export async function generateServiceProposalHtml(
   const renderShellPage = (title: string, blocksHtml: string) => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title, '6mm')}</div>
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 6mm 0 6mm;box-sizing:border-box;overflow:hidden;">
           <div data-shell-scale>${blocksHtml}</div>
         </div>
         ${DEVIS_FOOTER_HTML}

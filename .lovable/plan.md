@@ -1,14 +1,30 @@
-## Cause racine
-Le sélecteur CSS actuel `.shell-content > .shell-block` (ligne 998) cible les enfants **directs** de `.shell-content`. Or, depuis l'introduction du wrapper de mise à l'échelle (`<div data-shell-scale>` aux lignes 645 et 834), les `.shell-block` sont désormais enfants de `data-shell-scale`, pas de `.shell-content`. **La marge de 90mm (comme les 20mm précédents) n'est jamais appliquée** — l'espacement visible provient uniquement des `margin-bottom` internes des zones dynamiques.
+Cinq ajustements sur le devis Services (`src/lib/service-proposal-html-generator.ts`, sauf point 5 qui touche aussi `src/lib/pack-description.ts`).
 
-## Correction
-Dans `src/lib/service-proposal-html-generator.ts` :
+### 1. Retirer la ligne « Services » du tableau « Vos modalités de règlement »
+Dans `conditionsRows` (~ligne 275), supprimer la première entrée `['Services', ...]`. Le tableau commence désormais par « Périodicité ».
 
-- Ligne 998 : remplacer le sélecteur `.shell-content > .shell-block` par `.shell-content .shell-block` (descendant, plus enfant direct).
-- Ligne 999 : idem pour la règle `:last-child`.
+### 2. Réduire les marges latérales des pages du devis
+Passer le padding horizontal de 10 mm à 6 mm dans les conteneurs des pages du devis :
+- `shell-content` (ligne 845) : `padding:2mm 6mm 0 6mm`
+- bandeau titre `renderCgHeader` (ligne 643) : `padding:6mm 6mm`
+- pied de page `CG_FOOTER_HTML` du devis (ligne 633) : `padding:2mm 6mm 2mm 6mm`
+(Les pages contrat conservent leurs marges actuelles.)
 
-Garder la valeur à `90mm` comme demandé.
+### 3. Pied de page sur une seule ligne
+Sur le pied de page du devis (ligne 633), forcer la ligne surlignée « Groupe Cybertek — SAS au capital … » à tenir sur **une seule ligne** :
+- Retirer le saut de ligne HTML entre les deux phrases (fusionner en une seule chaîne séparée par `·`).
+- Ajouter `white-space:nowrap; overflow:hidden; text-overflow:ellipsis` au bloc de texte.
+- Réduire la taille de police à 6.5 px si nécessaire pour tenir dans la largeur.
 
-## Vérification
-- Recharger l'aperçu de la proposition EXTENDE.
-- Confirmer que les 4 encarts (COORDONNÉES, SITES D'INTERVENTION, CONTACT OPÉRATIONNEL, PRESTATAIRES EXTÉRIEURS) sont désormais nettement plus espacés. Si le total dépasse la hauteur disponible, `fitPageContentBlocks` réduira automatiquement l'ensemble via `transform: scale()` (plancher 0.75), sans chevaucher le pied de page.
+### 4. Harmoniser le style des libellés dans les encarts
+Rendre les libellés type « BÉNÉFICIAIRE » / « VOTRE INTERLOCUTEUR » en **noir** au lieu de gris clair : modifier `LABEL_STYLE` (ligne 91) : `color:#9ca3af` → `color:#111111`. Cette constante est utilisée par tous les encarts (Coordonnées, etc.) donc l'harmonisation est globale.
+
+### 5. Remplir la colonne « Description » de « Détail des services »
+Actuellement `resolvePackDescription` retourne `opt.description` (souvent vide pour un service simple importé sans sous-lignes). Améliorer la résolution :
+- Ajouter dans `resolvePackDescription` (`src/lib/pack-description.ts`) un fallback : si l'option n'est pas un pack (ou si sa description est vide), rechercher dans `adminOptions` une entrée dont le `title` correspond (case-insensitive) à `opt.name`, et composer la description à partir de ses `services` (via `serviceItemToLines`, en incluant sous-items).
+- Priorité : description manuelle non vide → composition depuis pack (existant) → composition depuis service admin homonyme → chaîne vide.
+- Le générateur (`renderOptionsZone`) reçoit déjà `adminOptions` et appelle `resolvePackDescription`, donc aucun changement supplémentaire côté rendu.
+
+### Vérification
+- Build TS (typecheck automatique).
+- Aperçu du devis Services : vérifier disparition ligne Services, marges plus fines, pied de page compact 2 lignes (dont la 1re surlignée en une ligne), libellés noirs, et descriptions présentes dans « Détail des services ».
