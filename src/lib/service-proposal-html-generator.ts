@@ -33,11 +33,16 @@ import type { ServiceOptionDefinition } from '@/types/options-admin';
  * Auto-shrink the last block on every `[data-shell-content]` page container
  * if its content overflows the reserved area (before the footer band).
  *
- * Strategy: for each overflowing shell, walk the last `.shell-block` and
- * progressively reduce every descendant's font-size / line-height in ~4%
- * steps (down to an 8px floor). If it still overflows after the floor, the
- * container's `overflow:hidden` clips the residual cleanly — the footer
- * band underneath is never covered.
+ * Strategy: for each overflowing shell, apply a CSS `transform: scale(f)`
+ * on the last `.shell-block` (transform-origin: top left). This scales
+ * text, borders and spacing uniformly — regardless of how each inner
+ * element sets its own font-size via inline styles. To keep the block
+ * visually full-width after scaling, we pre-inflate its width to
+ * `100 / f %` so it lands back at 100% once scaled down.
+ *
+ * Progressive palier: 0.95, 0.9, 0.85, … down to a 0.75 floor. If the
+ * content still overflows at the floor, the shell's `overflow:hidden`
+ * clips it cleanly — the footer band underneath is never covered.
  *
  * Called by both the PDF export (before html2canvas capture) and the
  * preview iframe (on load), so both stay in visual sync.
@@ -54,34 +59,20 @@ export function fitPageContentBlocks(root: HTMLElement | Document): void {
     const last = blocks[blocks.length - 1];
     if (!last) continue;
 
-    const win = last.ownerDocument?.defaultView;
-    if (!win) continue;
+    // Reset any previous transform so re-runs stay idempotent.
+    last.style.transform = '';
+    last.style.transformOrigin = 'top left';
+    last.style.width = '';
 
-    const targets: HTMLElement[] = [last, ...Array.from(last.querySelectorAll<HTMLElement>('*'))];
-    const snapshot = targets.map((el) => {
-      const cs = win.getComputedStyle(el);
-      const fs = parseFloat(cs.fontSize) || 0;
-      const lhRaw = cs.lineHeight;
-      const lh = lhRaw && lhRaw !== 'normal' ? parseFloat(lhRaw) : 0;
-      return { el, fs, lh };
-    });
-
-    for (let step = 1; step <= 20 && overflows(); step += 1) {
-      const factor = Math.max(0.6, 1 - step * 0.04);
-      snapshot.forEach(({ el, fs, lh }) => {
-        if (fs) {
-          const nf = Math.max(8, fs * factor);
-          el.style.fontSize = `${nf.toFixed(2)}px`;
-        }
-        if (lh) {
-          const nl = Math.max(10, lh * factor);
-          el.style.lineHeight = `${nl.toFixed(2)}px`;
-        }
-      });
-      if (factor <= 0.6) break;
+    const paliers = [0.95, 0.9, 0.85, 0.8, 0.75];
+    for (const factor of paliers) {
+      last.style.width = `${(100 / factor).toFixed(3)}%`;
+      last.style.transform = `scale(${factor})`;
+      if (!overflows()) break;
     }
   }
 }
+
 
 
 // 10mm rhythm between sections (10 / 297 * 100 ≈ 3.37%)
