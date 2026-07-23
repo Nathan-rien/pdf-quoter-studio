@@ -636,10 +636,29 @@ export async function generateServiceProposalHtml(
   // Wrap each rendered zone in a `.shell-block` div so the fit helper can target
   // the last block on a page for auto-shrink if it overflows the reserved area.
   Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
+    const page = Number(pageNumber);
+    const onlyOptions =
+      zones.length === 1 && zones[0].type === 'service_options';
     zones.forEach((zone) => {
+      if (zone.type === 'service_options') {
+        // Adaptive budgets (visual-line units): looser when the page contains
+        // only this zone, tighter when it shares the page with other blocks.
+        const blocks = renderOptionsZoneSplit(
+          zone as PositionedDynamicZone,
+          onlyOptions ? 32 : 14,
+          32,
+        );
+        dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${blocks[0]}</div>`;
+        if (blocks.length > 1) {
+          extraPagesAfter[page] = [
+            ...(extraPagesAfter[page] || []),
+            ...blocks.slice(1).map((b) => `<div class="shell-block">${b}</div>`),
+          ];
+        }
+        return;
+      }
       const html = renderServiceZone(zone as PositionedDynamicZone);
       if (!html) return;
-      const page = Number(pageNumber);
       dynamicContent[page] = `${dynamicContent[page] || ''}<div class="shell-block">${html}</div>`;
     });
   });
