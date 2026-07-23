@@ -89,7 +89,7 @@ const BODY_TEXT_STYLE =
   "font-family:'Inter',sans-serif;font-size:12.5px;font-weight:400;color:#4b5563;line-height:1.5;";
 // Field label (BÉNÉFICIAIRE, VOTRE INTERLOCUTEUR, …)
 const LABEL_STYLE =
-  "font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
+  "font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;";
 // Primary value under a label
 const VALUE_STYLE =
   "font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:#111111;margin:0;";
