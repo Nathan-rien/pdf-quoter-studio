@@ -637,8 +637,8 @@ export async function generateServiceProposalHtml(
     </div>
   `;
 
-  const renderCgHeader = (title: string) => `
-    <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm 10mm;">
+  const renderCgHeader = (title: string, hPad: string = '10mm') => `
+    <div style="background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:6mm ${hPad};">
       ${escCg(title)}
     </div>
   `;
