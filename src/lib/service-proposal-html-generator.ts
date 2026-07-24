@@ -67,26 +67,23 @@ export function fitPageContentBlocks(root: HTMLElement | Document): void {
   }
 
   // First pass: find the smallest scale factor needed across ALL shells so
-  // every page ends up rendered at the same typographic size.
+  // every page ends up rendered at the same typographic size. CSS transforms
+  // do not change scrollHeight/clientHeight, so the fit check must be based on
+  // the scaled visual height instead of re-reading overflow after transform.
   const paliers = [1, 0.95, 0.9, 0.85, 0.8, 0.75];
   let uniformFactor = 1;
   for (const { content, wrapper } of entries) {
-    const overflows = () => content.scrollHeight > content.clientHeight + 1;
-    if (!overflows()) continue;
+    const availableHeight = content.clientHeight;
+    const wrapperHeight = Math.max(wrapper.scrollHeight, wrapper.getBoundingClientRect().height);
+    if (wrapperHeight <= availableHeight + 1) continue;
     let picked = paliers[paliers.length - 1];
     for (const factor of paliers) {
-      if (factor === 1) continue;
-      wrapper.style.width = `${(100 / factor).toFixed(3)}%`;
-      wrapper.style.transform = `scale(${factor})`;
-      if (!overflows()) {
+      if (wrapperHeight * factor <= availableHeight + 1) {
         picked = factor;
         break;
       }
     }
     if (picked < uniformFactor) uniformFactor = picked;
-    // Reset before final pass.
-    wrapper.style.transform = '';
-    wrapper.style.width = '';
   }
 
   // Second pass: apply the same factor to every shell for uniform text size.
