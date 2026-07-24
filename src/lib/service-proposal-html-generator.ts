@@ -892,7 +892,7 @@ export async function generateServiceProposalHtml(
         return (a.position?.y ?? 0) - (b.position?.y ?? 0);
       });
 
-    const MAX_CHARS_PER_PAGE = 4200;
+    const MAX_CHARS_PER_PAGE = 2300;
     const rendered = allArticleElements.map((el: any) => renderArticle(el));
 
     const buckets: Array<Array<typeof rendered[number]>> = [];
