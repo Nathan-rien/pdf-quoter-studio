@@ -81,6 +81,34 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
   const visibleTemplatePages = currentVersion?.pages.filter(scopeMatches) ?? [];
   const totalPages = Math.max(1, pagesHtml.length || visibleTemplatePages.length);
 
+  const waitForPreviewAssets = async (root: HTMLElement): Promise<void> => {
+    try {
+      const fontsReady = (document as any).fonts?.ready;
+      if (fontsReady) await Promise.race([fontsReady, new Promise((resolve) => setTimeout(resolve, 1200))]);
+    } catch {
+      /* ignore */
+    }
+    const images = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+    await Promise.all(
+      images.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) return resolve();
+            const timeout = setTimeout(resolve, 1200);
+            img.onload = () => {
+              clearTimeout(timeout);
+              resolve();
+            };
+            img.onerror = () => {
+              clearTimeout(timeout);
+              resolve();
+            };
+          }),
+      ),
+    );
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  };
+
   // Regenerate HTML each time relevant store fields or template change
   useEffect(() => {
     let cancelled = false;
@@ -97,15 +125,40 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
           docTitle: proposalName || clientData.raisonSociale || 'Aperçu',
         });
         const fullHtml = await generateServiceProposalHtml(data, mode);
-        // Split into per-page documents so navigation is instant
+        // Apply the fit on the full document before splitting into iframes.
+        // Otherwise each page is measured alone and text sizes diverge.
         const parser = new DOMParser();
         const doc = parser.parseFromString(fullHtml, 'text/html');
         const headHtml = doc.head.innerHTML;
-        const sheets = Array.from(doc.body.querySelectorAll<HTMLElement>('.page-sheet'));
+
+        const measureRoot = document.createElement('div');
+        measureRoot.style.position = 'fixed';
+        measureRoot.style.left = '0';
+        measureRoot.style.top = '-10000px';
+        measureRoot.style.width = '210mm';
+        measureRoot.style.background = '#ffffff';
+        measureRoot.style.pointerEvents = 'none';
+        measureRoot.style.zIndex = '-1';
+
+        const styleWrap = document.createElement('div');
+        styleWrap.innerHTML = headHtml;
+        styleWrap.querySelectorAll('title, meta').forEach((node) => node.remove());
+        measureRoot.appendChild(styleWrap);
+
+        const pagesWrap = document.createElement('div');
+        pagesWrap.innerHTML = doc.body.innerHTML;
+        measureRoot.appendChild(pagesWrap);
+        document.body.appendChild(measureRoot);
+
+        await waitForPreviewAssets(measureRoot);
+        fitPageContentBlocks(measureRoot);
+
+        const sheets = Array.from(pagesWrap.querySelectorAll<HTMLElement>('.page-sheet'));
         const perPageDocs = sheets.map(
           (s) =>
             `<!DOCTYPE html><html><head>${headHtml}<style>html,body{margin:0;background:#fff;overflow:hidden;}::-webkit-scrollbar{display:none;}</style></head><body>${s.outerHTML}</body></html>`,
         );
+        document.body.removeChild(measureRoot);
         if (!cancelled) setPagesHtml(perPageDocs);
       } catch (err) {
         console.error('[ServiceProposalPreview] generation error', err);
@@ -227,12 +280,6 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
               scrolling="no"
               className="absolute inset-0 w-full h-full border-0"
               style={{ background: '#fff' }}
-              onLoad={(e) => {
-                try {
-                  const doc = (e.currentTarget as HTMLIFrameElement).contentDocument;
-                  if (doc) fitPageContentBlocks(doc);
-                } catch { /* ignore cross-origin */ }
-              }}
             />
 
           ) : (
