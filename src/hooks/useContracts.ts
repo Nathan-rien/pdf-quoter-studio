@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInMonths, addMonths, parseISO } from 'date-fns';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
+import { generateServiceContractNumber } from '@/lib/contract-numbering';
 
 export type PaymentFrequency = 'mensuel' | 'trimestriel';
 export type ProposalType = 'location' | 'service';
@@ -75,7 +76,14 @@ export function useValidateProposal() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (payload: Omit<Contract, 'id' | 'validated_at' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase.from('contracts').insert(payload).select().single();
+      const contractNumber = payload.proposal_type === 'service' && !payload.contract_number
+        ? await generateServiceContractNumber(payload.client_name)
+        : payload.contract_number;
+      const { data, error } = await supabase
+        .from('contracts')
+        .insert({ ...payload, contract_number: contractNumber })
+        .select()
+        .single();
       if (error) throw error;
       return data as Contract;
     },
@@ -114,16 +122,22 @@ export function useCreateQuickContract() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (proposalType: ProposalType = 'location'): Promise<Contract> => {
+      const clientName = 'Nouveau contrat';
+      const contractNumber = proposalType === 'service'
+        ? await generateServiceContractNumber(clientName)
+        : null;
+      const insertPayload = {
+        proposal_id: null,
+        proposal_type: proposalType,
+        client_name: clientName,
+        commercial_id: 'quick',
+        commercial_name: '',
+        is_quick_contract: true,
+        ...(contractNumber ? { contract_number: contractNumber } : {}),
+      };
       const { data, error } = await supabase
         .from('contracts')
-        .insert({
-          proposal_id: null,
-          proposal_type: proposalType,
-          client_name: 'Nouveau contrat',
-          commercial_id: 'quick',
-          commercial_name: '',
-          is_quick_contract: true,
-        })
+        .insert(insertPayload)
         .select()
         .single();
       if (error) throw error;
