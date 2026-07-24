@@ -53,23 +53,47 @@ export function fitPageContentBlocks(root: HTMLElement | Document): void {
   const contents = Array.from(
     scope.querySelectorAll<HTMLElement>('[data-shell-content]'),
   );
+
+  type Entry = { content: HTMLElement; wrapper: HTMLElement };
+  const entries: Entry[] = [];
   for (const content of contents) {
     const wrapper = content.querySelector<HTMLElement>('[data-shell-scale]');
     if (!wrapper) continue;
-
     // Reset any previous transform so re-runs stay idempotent.
     wrapper.style.transform = '';
     wrapper.style.transformOrigin = 'top left';
     wrapper.style.width = '';
+    entries.push({ content, wrapper });
+  }
 
+  // First pass: find the smallest scale factor needed across ALL shells so
+  // every page ends up rendered at the same typographic size.
+  const paliers = [1, 0.95, 0.9, 0.85, 0.8, 0.75];
+  let uniformFactor = 1;
+  for (const { content, wrapper } of entries) {
     const overflows = () => content.scrollHeight > content.clientHeight + 1;
     if (!overflows()) continue;
-
-    const paliers = [0.95, 0.9, 0.85, 0.8, 0.75];
+    let picked = paliers[paliers.length - 1];
     for (const factor of paliers) {
+      if (factor === 1) continue;
       wrapper.style.width = `${(100 / factor).toFixed(3)}%`;
       wrapper.style.transform = `scale(${factor})`;
-      if (!overflows()) break;
+      if (!overflows()) {
+        picked = factor;
+        break;
+      }
+    }
+    if (picked < uniformFactor) uniformFactor = picked;
+    // Reset before final pass.
+    wrapper.style.transform = '';
+    wrapper.style.width = '';
+  }
+
+  // Second pass: apply the same factor to every shell for uniform text size.
+  if (uniformFactor < 1) {
+    for (const { wrapper } of entries) {
+      wrapper.style.width = `${(100 / uniformFactor).toFixed(3)}%`;
+      wrapper.style.transform = `scale(${uniformFactor})`;
     }
   }
 }
