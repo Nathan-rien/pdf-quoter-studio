@@ -178,7 +178,7 @@ export async function generateAndUploadServiceContractPdf(params: {
   const pdfBlob = await htmlToPdfBlob(html);
 
   // 8. Upload
-  const fileName = `Contrat_Services_${sanitize(clientName)}_${
+  const fileName = `Contrat_Cadre_Services_${sanitize(clientName)}_${
     new Date().toISOString().split('T')[0]
   }.pdf`;
   const path = `contracts/${contractId}/${Date.now()}-${fileName}`;
