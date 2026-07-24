@@ -929,7 +929,7 @@ export async function generateServiceProposalHtml(
       const forceBreak =
         buckets.length === 0 &&
         item.isTitle &&
-        /(IX\s*-\s*OBLIGATIONS\s+DE\s+DISCRETION|X\s*-\s*CLAUSES\s+DU\s+CONTRAT|XI\s*-\s*INDEPENDANCE)/i.test(item.html);
+        /XI\s*-\s*INDEPENDANCE/i.test(item.html);
       const overflow = (forceBreak || currentChars + item.chars > budget) && current.length > 0;
       if (overflow) {
         if (!forceBreak && !item.isTitle && current.length > 0 && current[current.length - 1].isTitle) {
