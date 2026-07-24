@@ -620,7 +620,11 @@ export async function generateServiceProposalHtml(
     if (zone.type === 'service_options') return renderOptionsZone(zone);
     if (zone.type === 'service_site_addresses') return renderSiteAddressesZone(zone);
     if (zone.type === 'service_operational_contact') return renderOperationalContactZone(zone);
-    if (zone.type === 'service_external_providers') return renderExternalProvidersZone(zone);
+    if (zone.type === 'service_external_providers') {
+      // Prestataires extérieurs: uniquement dans le PDF Contrat, jamais dans le Devis.
+      if (mode !== 'contrat') return '';
+      return renderExternalProvidersZone(zone);
+    }
     if (zone.type === 'service_options_summary') return renderOptionsSummaryZone(zone);
     if ((zone.type as string) === 'service_tarifs_interventions') return renderTarifsZone();
     return '';
