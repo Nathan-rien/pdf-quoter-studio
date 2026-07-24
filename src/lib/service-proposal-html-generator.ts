@@ -924,7 +924,7 @@ export async function generateServiceProposalHtml(
 
     buckets.forEach((bucket, idx) => {
       const bodyInner = bucket.map((b) => b.html).join('');
-      const body = `<div style="column-count:2;column-gap:8mm;column-fill:balance;height:100%;">${bodyInner}</div>`;
+      const body = `<div style="column-count:2;column-gap:8mm;column-fill:balance;height:100%;font-size:12.5px;line-height:1.5;">${bodyInner}</div>`;
       const title =
         buckets.length === 1
           ? 'Conditions générales'
