@@ -748,13 +748,13 @@ export async function generateServiceProposalHtml(
 
   // Shell layout — strict, absolute reservation:
   //   header  : top 0, natural height (~17mm)
-  //   content : top 22mm → bottom 24mm  (overflow:hidden, clips before footer)
-  //   footer  : bottom 0, height 24mm  (never overlapped by content)
+  //   content : top 16mm → bottom 16mm  (overflow:hidden, clips before footer)
+  //   footer  : bottom 0, height 16mm  (never overlapped by content)
   const renderCgShell = (title: string, bodyHtml: string, bodyStyle: string = '') => `
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:18mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
+        <div class="shell-content" data-shell-content style="position:absolute;top:16mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
           <div data-shell-scale>${bodyHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
