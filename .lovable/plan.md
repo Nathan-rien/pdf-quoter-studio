@@ -1,23 +1,31 @@
-## Objectif
+````text
+Objectif
+--------
+Réduire de 1 mm l'espace vertical entre les deux paragraphes surlignés dans les Conditions Générales du contrat services (page 6 du PDF contrat).
 
-Sur les pages CG du contrat services, laisser le texte remplir la colonne de gauche jusqu'au bandeau du bas, puis basculer naturellement dans la colonne de droite — au lieu de la répartition équilibrée actuelle qui crée un gros trou en bas de la colonne de gauche (visible sur la capture, sous l'article IV).
+Constat
+-------
+Dans src/lib/service-proposal-html-generator.ts, les paragraphes des articles CG sont générés avec un style inline imposant une marge inférieure de 2 mm :
 
-## Cause confirmée
+  margin:0 0 2mm 0
 
-Dans `src/lib/service-proposal-html-generator.ts` ligne 979, le conteneur des articles CG utilise `column-fill:balance`. Cette valeur force le navigateur à égaliser la hauteur des deux colonnes → la colonne de gauche s'arrête tôt (juste après IV) pour équilibrer avec la droite.
+C'est cette marge qui crée l'espace entre les paragraphes successifs, notamment entre le paragraphe précédant "Cela étant exposé..." et le paragraphe surligné.
 
-## Modification
+Plan de modification
+--------------------
+1. Dans la fonction renderArticle (ligne ~789), remplacer la marge inférieure des balises <p> des articles CG de 2 mm à 1 mm :
+   - Avant : margin:0 0 2mm 0
+   - Après : margin:0 0 1mm 0
 
-1. Ligne 979 : remplacer `column-fill:balance` par `column-fill:auto` pour que la colonne de gauche se remplisse jusqu'en bas avant de déborder sur la droite.
+2. Vérifier que ce changement n'affecte que les pages CG (documentScope: 'contrat') car renderArticle n'est utilisée que pour articlePages.
 
-2. Lignes 929-932 : retirer les forçages de saut de page sur les articles IX et X (ajoutés au tour précédent). Garder uniquement XI comme point de bascule vers la page 7, puisque le flux naturel prendra désormais en charge la répartition IV → V → VI… dans les colonnes.
+3. Lancer un build TypeScript pour valider la modification.
 
-## Fichier concerné
+Fichier concerné
+----------------
+- src/lib/service-proposal-html-generator.ts
 
-- `src/lib/service-proposal-html-generator.ts`
-
-## Résultat attendu
-
-- Page 6 : IV enchaîne avec V dans la colonne gauche, puis le texte déborde en colonne droite en atteignant le bandeau bas.
-- Page 7 : reprend à partir de XI comme demandé précédemment, avec signatures en bas.
-- Plus d'espace vide visible en milieu de colonne gauche page 6.
+Impact attendu
+--------------
+L'espace entre les paragraphes des Conditions Générales sera réduit de 1 mm, ce qui resserrera le bloc d'intro avant les articles numérotés sans modifier la structure des pages ni la taille de police.
+````
