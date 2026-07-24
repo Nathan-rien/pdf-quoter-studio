@@ -926,9 +926,13 @@ export async function generateServiceProposalHtml(
     for (let i = 0; i < rendered.length; i++) {
       const item = rendered[i];
       const budget = buckets.length === 0 ? MAX_CHARS_FIRST_PAGE : MAX_CHARS_PER_PAGE;
-      const overflow = currentChars + item.chars > budget && current.length > 0;
+      const forceBreak =
+        buckets.length === 0 &&
+        item.isTitle &&
+        /XI\s*-\s*INDEPENDANCE/i.test(item.html);
+      const overflow = (forceBreak || currentChars + item.chars > budget) && current.length > 0;
       if (overflow) {
-        if (!item.isTitle && current.length > 0 && current[current.length - 1].isTitle) {
+        if (!forceBreak && !item.isTitle && current.length > 0 && current[current.length - 1].isTitle) {
           const orphanTitle = current.pop()!;
           currentChars -= orphanTitle.chars;
           buckets.push(current);
@@ -943,6 +947,7 @@ export async function generateServiceProposalHtml(
       current.push(item);
       currentChars += item.chars;
     }
+
     if (current.length > 0) buckets.push(current);
 
     // Ensure the last bucket leaves room for signatures: overflow into an extra page if needed.
