@@ -145,6 +145,7 @@ export type Database = {
           contract_number: string | null
           created_at: string
           duration_months: number | null
+          external_providers: Json
           financial_partner: string | null
           id: string
           implementation_month: string | null
@@ -169,6 +170,7 @@ export type Database = {
           contract_number?: string | null
           created_at?: string
           duration_months?: number | null
+          external_providers?: Json
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
@@ -193,6 +195,7 @@ export type Database = {
           contract_number?: string | null
           created_at?: string
           duration_months?: number | null
+          external_providers?: Json
           financial_partner?: string | null
           id?: string
           implementation_month?: string | null
