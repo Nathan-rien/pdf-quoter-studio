@@ -771,25 +771,28 @@ export async function generateServiceProposalHtml(
     'p1c-title', 'p1c-date',
   ]);
 
-  const renderArticle = (el: any): { html: string; chars: number; isTitle: boolean } => {
+  type RenderedArticleItem = { html: string; chars: number; isTitle: boolean };
+
+  const renderArticle = (el: any): RenderedArticleItem[] => {
     const c = el.content as any;
     const raw = String(c?.text ?? '');
     const isTitle = !!c?.bold && raw.length < 120 && !raw.includes('\n');
     if (isTitle) {
-      return {
+      return [{
         html: `<h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;min-height:2.4em;box-sizing:border-box;line-height:1.2;display:block;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
         chars: raw.length,
         isTitle: true,
-      };
+      }];
     }
-    const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-    const body = paragraphs
-      .map(
-        (p) =>
-          `<p style="font-family:'Inter',sans-serif;font-size:9.5px;line-height:1.5;color:#374151;margin:0 0 1mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
-      )
-      .join('');
-    return { html: body, chars: raw.length, isTitle: false };
+    const paragraphs = raw
+      .split(/\n\n+|\n(?=\s*\d+(?:\.\d+)*\s+)/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    return paragraphs.map((p) => ({
+      html: `<p style="font-family:'Inter',sans-serif;font-size:9.5px;line-height:1.5;color:#374151;margin:0 0 1mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
+      chars: p.length,
+      isTitle: false,
+    }));
 
   };
 
@@ -906,7 +909,7 @@ export async function generateServiceProposalHtml(
     const MAX_CHARS_PER_PAGE = 5950;
     // Reserve space on the last page for the signature block appended below the columns.
     const MAX_CHARS_LAST_PAGE = signatureBlockHtml ? MAX_CHARS_PER_PAGE - 1100 : MAX_CHARS_PER_PAGE;
-    const allRendered = allArticleElements.map((el: any) => renderArticle(el));
+    const allRendered = allArticleElements.flatMap((el: any) => renderArticle(el));
 
     // Extract intro: all items before the first title (rendered full-width on page 1).
     const firstTitleIdx = allRendered.findIndex((r) => r.isTitle);
@@ -971,12 +974,43 @@ export async function generateServiceProposalHtml(
       }
     }
 
+    const splitBucketIntoColumns = (bucket: RenderedArticleItem[], pageBudget: number) => {
+      const totalChars = bucket.reduce((s, it) => s + it.chars, 0);
+      if (totalChars <= 1800) return { left: bucket, right: [] as RenderedArticleItem[] };
+
+      const targetLeftChars = Math.min(
+        Math.ceil(pageBudget / 2),
+        Math.ceil(totalChars * 0.56),
+      );
+      let splitAt = bucket.length;
+      let leftChars = 0;
+
+      for (let i = 0; i < bucket.length; i++) {
+        const item = bucket[i];
+        if (i > 0 && leftChars + item.chars > targetLeftChars) {
+          splitAt = i;
+          break;
+        }
+        leftChars += item.chars;
+      }
+
+      if (splitAt < bucket.length && splitAt > 0 && bucket[splitAt - 1].isTitle) {
+        splitAt -= 1;
+      }
+
+      return {
+        left: bucket.slice(0, splitAt),
+        right: bucket.slice(splitAt),
+      };
+    };
+
     buckets.forEach((bucket, idx) => {
-      const bodyInner = bucket.map((b) => b.html).join('');
       const isLast = idx === buckets.length - 1;
       const isFirst = idx === 0;
       const columnsFlex = (isLast && signatureBlockHtml) || (isFirst && introHtml);
-      const columnsBlock = `<div style="column-count:2;column-gap:8mm;column-fill:auto;${columnsFlex ? 'flex:1;min-height:0;' : 'height:100%;'}">${bodyInner}</div>`;
+      const pageBudget = isFirst ? MAX_CHARS_FIRST_PAGE : (isLast ? MAX_CHARS_LAST_PAGE : MAX_CHARS_PER_PAGE);
+      const { left, right } = splitBucketIntoColumns(bucket, pageBudget);
+      const columnsBlock = `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8mm;${columnsFlex ? 'flex:1;min-height:0;' : 'height:100%;'}"><div style="min-width:0;height:100%;overflow:hidden;">${left.map((b) => b.html).join('')}</div><div style="min-width:0;height:100%;overflow:hidden;">${right.map((b) => b.html).join('')}</div></div>`;
       let body: string;
       if (isFirst && introHtml) {
         body = `<div style="display:flex;flex-direction:column;height:100%;">${introHtml}${columnsBlock}${isLast && signatureBlockHtml ? signatureBlockHtml : ''}</div>`;
