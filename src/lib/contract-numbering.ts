@@ -5,15 +5,25 @@ function normalizeClientName(clientName: string): string {
   return clientName.trim().replace(/\s+/g, ' ');
 }
 
-export async function generateServiceContractNumber(clientName: string, date = new Date()): Promise<string | null> {
+export async function generateServiceContractNumber(
+  clientName: string,
+  date = new Date(),
+  excludeContractId?: string,
+): Promise<string | null> {
   const normalizedClientName = normalizeClientName(clientName);
   if (!normalizedClientName) return null;
 
-  const { count, error } = await supabase
+  let query = supabase
     .from('contracts')
     .select('id', { count: 'exact', head: true })
     .eq('proposal_type', 'service')
     .eq('client_name', normalizedClientName);
+
+  if (excludeContractId) {
+    query = query.neq('id', excludeContractId);
+  }
+
+  const { count, error } = await query;
 
   if (error) throw error;
 
