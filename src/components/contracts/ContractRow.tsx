@@ -270,8 +270,24 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1_000);
   }
 
+  async function handleSignedAttachment(path = attachmentUrl) {
+    if (!path) return;
+    const { data, error } = await supabase.storage
+      .from('contract-attachments')
+      .createSignedUrl(path, 60);
+    if (error || !data?.signedUrl) {
+      toast({ title: 'Erreur', description: "Impossible de générer le lien de téléchargement.", variant: 'destructive' });
+      return;
+    }
+    window.open(data.signedUrl, '_blank');
+  }
+
   async function handleDownloadAttachment(path = attachmentUrl) {
-    await handleAttachmentFile('download', path);
+    if (isServiceContract) {
+      await handleAttachmentFile('download', path);
+      return;
+    }
+    await handleSignedAttachment(path);
   }
 
   async function handleRemoveAttachment() {
@@ -384,7 +400,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0 disabled:opacity-40"
               title={attachmentUrl ? 'Visualiser le PDF joint' : 'Aucune proposition ni PDF joint'}
               disabled={!attachmentUrl}
-              onClick={(e) => { e.stopPropagation(); handleAttachmentFile('preview'); }}
+              onClick={(e) => { e.stopPropagation(); isServiceContract ? handleAttachmentFile('preview') : handleSignedAttachment(); }}
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -410,7 +426,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               onClick={(e) => {
                 e.stopPropagation();
                 if (isServiceContract) handleOpenServiceContractPdf('preview');
-                else if (attachmentUrl) handleAttachmentFile('preview');
+                else if (attachmentUrl) handleSignedAttachment();
                 else onVisualize?.(contract);
               }}
             >
