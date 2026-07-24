@@ -903,7 +903,7 @@ export async function generateServiceProposalHtml(
         return (a.position?.y ?? 0) - (b.position?.y ?? 0);
       });
 
-    const MAX_CHARS_PER_PAGE = 6200;
+    const MAX_CHARS_PER_PAGE = 5500;
     // Reserve space on the last page for the signature block appended below the columns.
     const MAX_CHARS_LAST_PAGE = signatureBlockHtml ? MAX_CHARS_PER_PAGE - 1100 : MAX_CHARS_PER_PAGE;
     const allRendered = allArticleElements.map((el: any) => renderArticle(el));
