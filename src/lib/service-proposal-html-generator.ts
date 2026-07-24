@@ -786,7 +786,7 @@ export async function generateServiceProposalHtml(
     const body = paragraphs
       .map(
         (p) =>
-          `<p style="font-family:'Inter',sans-serif;font-size:9.5px;line-height:1.5;color:#374151;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
+          `<p style="font-family:'Inter',sans-serif;font-size:9.5px;line-height:1.5;color:#374151;margin:0 0 1mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
       )
       .join('');
     return { html: body, chars: raw.length, isTitle: false };
