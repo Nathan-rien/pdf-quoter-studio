@@ -866,6 +866,7 @@ export async function generateServiceProposalHtml(
   }
 
   const renderedSignaturePagesHtml: string[] = [];
+  let signatureFooterHtml = '';
   for (const page of signaturePages) {
     const texts = (page.elements || [])
       .filter((el: any) => el.type === 'text' && !CG_BANNER_TEXT_IDS.has(String(el.id)))
@@ -882,10 +883,15 @@ export async function generateServiceProposalHtml(
       ? `<div style="margin-top:6mm;color:#111111;font-size:11.5px;">${dyn}</div>`
       : '';
 
-    renderedSignaturePagesHtml.push(
-      renderCgShell('Signatures', `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`),
-    );
+    signatureFooterHtml += `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`;
   }
+
+  const signatureBlockHtml = signatureFooterHtml
+    ? `<div style="flex:0 0 auto;margin-top:6mm;border-top:1px solid #e5e7eb;padding-top:4mm;">
+         <h3 style="font-family:'Outfit',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 3mm 0;">Signatures</h3>
+         ${signatureFooterHtml}
+       </div>`
+    : '';
 
   const renderedArticlesHtml: string[] = [];
   if (articlePages.length > 0) {
@@ -901,6 +907,8 @@ export async function generateServiceProposalHtml(
       });
 
     const MAX_CHARS_PER_PAGE = 4200;
+    // Reserve space on the last page for the signature block appended below the columns.
+    const MAX_CHARS_LAST_PAGE = signatureBlockHtml ? MAX_CHARS_PER_PAGE - 1400 : MAX_CHARS_PER_PAGE;
     const rendered = allArticleElements.map((el: any) => renderArticle(el));
 
     const buckets: Array<Array<typeof rendered[number]>> = [];
@@ -910,8 +918,6 @@ export async function generateServiceProposalHtml(
       const item = rendered[i];
       const overflow = currentChars + item.chars > MAX_CHARS_PER_PAGE && current.length > 0;
       if (overflow) {
-        // If we're about to place a body paragraph and the previous item is
-        // its title, pop the orphan title back to the next page.
         if (!item.isTitle && current.length > 0 && current[current.length - 1].isTitle) {
           const orphanTitle = current.pop()!;
           currentChars -= orphanTitle.chars;
@@ -929,16 +935,47 @@ export async function generateServiceProposalHtml(
     }
     if (current.length > 0) buckets.push(current);
 
+    // Ensure the last bucket leaves room for signatures: overflow into an extra page if needed.
+    if (signatureBlockHtml && buckets.length > 0) {
+      let last = buckets[buckets.length - 1];
+      let lastChars = last.reduce((s, it) => s + it.chars, 0);
+      if (lastChars > MAX_CHARS_LAST_PAGE) {
+        const moved: typeof rendered = [];
+        while (lastChars > MAX_CHARS_LAST_PAGE && last.length > 1) {
+          const it = last.pop()!;
+          lastChars -= it.chars;
+          moved.unshift(it);
+        }
+        // Avoid orphan title at end of previous bucket
+        if (last.length > 0 && last[last.length - 1].isTitle) {
+          const orphan = last.pop()!;
+          lastChars -= orphan.chars;
+          moved.unshift(orphan);
+        }
+        if (moved.length > 0) buckets.push(moved);
+      }
+    }
+
     buckets.forEach((bucket, idx) => {
       const bodyInner = bucket.map((b) => b.html).join('');
-      const body = `<div style="column-count:2;column-gap:8mm;column-fill:balance;height:100%;">${bodyInner}</div>`;
+      const isLast = idx === buckets.length - 1;
+      const columnsBlock = `<div style="column-count:2;column-gap:8mm;column-fill:balance;${isLast && signatureBlockHtml ? 'flex:1;min-height:0;' : 'height:100%;'}">${bodyInner}</div>`;
+      const body = isLast && signatureBlockHtml
+        ? `<div style="display:flex;flex-direction:column;height:100%;">${columnsBlock}${signatureBlockHtml}</div>`
+        : columnsBlock;
       const title =
         buckets.length === 1
           ? 'Conditions générales'
           : `Conditions générales (${idx + 1}/${buckets.length})`;
       renderedArticlesHtml.push(renderCgShell(title, body));
     });
+  } else if (signatureBlockHtml) {
+    // Fallback: no article pages, keep signatures as their own page.
+    renderedSignaturePagesHtml.push(
+      renderCgShell('Signatures', `<div style="display:flex;flex-direction:column;height:100%;">${signatureBlockHtml}</div>`),
+    );
   }
+
 
   // Devis pages 1-3 render through a shell (same header + footer as CG pages),
   // stacking zone blocks vertically so content flows and never overlaps the footer.
