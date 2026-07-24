@@ -702,7 +702,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               <div className="flex items-center gap-2 flex-wrap p-2 border border-border rounded-md bg-background">
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm truncate flex-1 min-w-0">{attachmentName ?? 'Fichier PDF'}</span>
-                <Button variant="outline" size="sm" onClick={handleDownloadAttachment} className="gap-1">
+                <Button variant="outline" size="sm" onClick={() => handleDownloadAttachment()} className="gap-1">
                   <Download className="h-3.5 w-3.5" /> Télécharger
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-1">
