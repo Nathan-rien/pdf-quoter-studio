@@ -1,35 +1,39 @@
-# Fusion des Signatures dans la dernière page CG (Contrats Services)
-
 ## Objectif
-Supprimer la page 8 dédiée aux Signatures et déplacer son contenu (Fait à / Le / blocs Cybertek + Bénéficiaire / lignes "Signature : ___") en bas de la page 7 (dernière page des Conditions générales), à la suite du texte des articles. Le PDF Contrat passe ainsi de 8 à 7 pages.
+Sur la première page des Conditions générales (contrat), afficher les 4 paragraphes d'introduction (« Le présent Contrat Cadre… » → « Cela étant exposé, il a été convenu et arrêté ce qui suit : ») sur toute la largeur de la page, puis démarrer la mise en 2 colonnes uniquement à partir de l'article « I - DEFINITION DES SERVICES RENDUS ».
 
-## Changement (fichier unique)
-`src/lib/service-proposal-html-generator.ts`
+## Fichier modifié
+`src/lib/service-proposal-html-generator.ts` (uniquement)
 
-1. **Ne plus émettre la page Signatures séparément**
-   - Dans la boucle finale (`for (const page of visibleTemplatePages)`), retirer l'ajout de `renderedSignaturePagesHtml` comme pages autonomes.
+## Changements
 
-2. **Générer un bloc "Signatures" en HTML full-width** (pas de 2 colonnes)
-   - Réutiliser la logique actuelle de `signaturePages` (zones `service_signature` + textes) pour produire un `signatureFooterHtml` : titre "Signatures" léger + "Fait à / Le ____" + les 2 colonnes Société/Bénéficiaire alignées (containers 18mm déjà en place) + lignes "Signature : ______".
-   - Hauteur cible d'environ 55–60 mm.
+1. **Détecter le bloc d'intro** dans `allArticleElements` :
+   - L'intro = tous les éléments situés avant le premier `isTitle` (articles romains I, II, …).
+   - Ces éléments sont retirés de la liste `rendered` utilisée pour le packing en colonnes.
 
-3. **Injecter ce bloc sous les colonnes d'articles de la DERNIÈRE page CG**
-   - Dans le rendu des `buckets` d'articles, détecter le dernier bucket (`idx === buckets.length - 1`).
-   - Enveloppe : `<div style="display:flex;flex-direction:column;height:100%;">` avec :
-     - Bloc articles 2 colonnes en `flex:1;min-height:0;` (hauteur réduite pour laisser place aux signatures)
-     - `signatureFooterHtml` en `flex:0 0 auto;margin-top:6mm;border-top:1px solid #e5e7eb;padding-top:4mm;`
-   - Titre du shell reste "Conditions générales (n/n)".
+2. **Rendre l'intro en pleine largeur** :
+   - Générer `introHtml` en concaténant les `html` des items d'intro (mêmes styles que les paragraphes actuels, `text-align:justify`, `font-size:10.5px`, etc.).
+   - L'envelopper dans un conteneur `<div style="width:100%;margin-bottom:4mm;">…</div>`.
 
-4. **Ajuster le budget de caractères du dernier bucket**
-   - Réduire `MAX_CHARS_PER_PAGE` uniquement pour le dernier bucket (ex. `MAX_CHARS_PER_PAGE - 1400`) afin d'éviter que les colonnes ne débordent sur le bloc signatures. Implémentation : après le remplissage glouton existant, si le dernier bucket dépasse le nouveau seuil, repousser les derniers éléments (en respectant la règle des titres orphelins déjà en place) vers un bucket supplémentaire — dans ce cas, l'avant-dernier bucket devient standard et le nouveau dernier contient la fin des articles + signatures.
+3. **Injection sur la 1re page CG uniquement** :
+   - Dans la boucle `buckets.forEach`, pour `idx === 0`, préfixer le shell body par `introHtml` et faire suivre du `columnsBlock` habituel :
+     ```
+     <div style="display:flex;flex-direction:column;height:100%;">
+       {introHtml}
+       {columnsBlock (flex:1;min-height:0;)}
+       {signatureBlockHtml si isLast}
+     </div>
+     ```
+   - Les autres pages CG conservent le rendu 2 colonnes actuel.
 
-5. **Compte de pages**
-   - La numérotation "Page x / y" du footer se recalcule automatiquement puisqu'elle est calculée à partir de `allPagesHtml.length` — vérifier que l'affichage passe bien à `Page 7 / 7`.
+4. **Ajuster le budget de caractères du 1er bucket** :
+   - Réduire `MAX_CHARS_PER_PAGE` pour le premier bucket uniquement (env. −1200 caractères) afin de laisser la place à l'intro sans faire déborder les colonnes sur le footer. Implémentation : après le remplissage glouton actuel, si le 1er bucket dépasse le nouveau seuil, repousser ses derniers items vers le 2e bucket (en respectant la règle des titres orphelins déjà en place).
 
-## Points hors périmètre
-- Aucun changement de contenu (textes, articles, mentions légales).
-- Aucun changement dans le template stocké (`seedContratCadreTemplate.ts`) : la page Signatures existe toujours dans la source mais n'est plus rendue comme page dédiée.
-- Aucun impact sur le PDF Devis ni sur les Contrats Location.
+## Hors périmètre
+- Aucun changement de texte, ni du template `seedContratCadreTemplate.ts`.
+- Aucun impact sur le devis, sur les autres pages CG, ni sur les Contrats Location.
+- Bloc Signatures en bas de la dernière page CG inchangé.
 
 ## Vérification
-- Générer le PDF d'un contrat services existant, contrôler visuellement : dernière page = fin des articles CG (2 colonnes) + bloc Signatures aligné en bas, footer "Page 7/7", plus de page 8 vide.
+Générer un PDF Contrat Services et vérifier :
+- Page 1 CG (actuellement « 1/2 ») : les 4 paragraphes d'intro s'étendent sur toute la largeur ; les articles I, II, III… reprennent en 2 colonnes en dessous.
+- Pages CG suivantes : rendu 2 colonnes identique à aujourd'hui, footer et pagination conservés.
