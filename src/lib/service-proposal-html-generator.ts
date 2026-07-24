@@ -780,7 +780,7 @@ export async function generateServiceProposalHtml(
     const isTitle = !!c?.bold && raw.length < 120 && !raw.includes('\n');
     if (isTitle) {
       return {
-        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
         chars: raw.length,
         isTitle: true,
       };
@@ -789,7 +789,7 @@ export async function generateServiceProposalHtml(
     const body = paragraphs
       .map(
         (p) =>
-          `<p style="font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.5;color:#374151;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
+          `<p style="font-family:'Inter',sans-serif;font-size:9.5px;line-height:1.5;color:#374151;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
       )
       .join('');
     return { html: body, chars: raw.length, isTitle: false };
@@ -827,13 +827,13 @@ export async function generateServiceProposalHtml(
       const align = c?.textAlign || 'left';
       const col = c?.bold ? '#1a1a1a' : '#374151';
       return {
-        html: `<div style="font-family:'Inter',sans-serif;font-size:10.5px;font-weight:${fw};color:${col};line-height:1.5;text-align:${align};margin-bottom:2mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
+        html: `<div style="font-family:'Inter',sans-serif;font-size:9.5px;font-weight:${fw};color:${col};line-height:1.5;text-align:${align};margin-bottom:2mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
         chars: raw.length,
       };
     });
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:3mm;color:#374151;font-size:10.5px;">${dyn}</div>`
+      ? `<div style="margin-top:3mm;color:#374151;font-size:9.5px;">${dyn}</div>`
       : '';
 
     // Split across multiple pages if content is too tall (approx chars/page tuned to font size)
@@ -875,12 +875,12 @@ export async function generateServiceProposalHtml(
       .map((el: any) => {
         const c = el.content as any;
         const raw = String(c?.text ?? '');
-        return `<div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#111111;line-height:1.5;margin-bottom:2mm;">${escCg(raw)}</div>`;
+        return `<div style="font-family:'Inter',sans-serif;font-size:10.5px;color:#111111;line-height:1.5;margin-bottom:2mm;">${escCg(raw)}</div>`;
       })
       .join('');
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:6mm;color:#111111;font-size:11.5px;">${dyn}</div>`
+      ? `<div style="margin-top:6mm;color:#111111;font-size:10.5px;">${dyn}</div>`
       : '';
 
     signatureFooterHtml += `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`;
@@ -888,7 +888,7 @@ export async function generateServiceProposalHtml(
 
   const signatureBlockHtml = signatureFooterHtml
     ? `<div style="flex:0 0 auto;margin-top:6mm;border-top:1px solid #e5e7eb;padding-top:4mm;">
-         <h3 style="font-family:'Outfit',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 3mm 0;">Signatures</h3>
+         <h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 3mm 0;">Signatures</h3>
          ${signatureFooterHtml}
        </div>`
     : '';
