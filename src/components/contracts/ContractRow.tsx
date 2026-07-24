@@ -241,7 +241,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     }
   }
 
-  async function handleAttachmentFile(mode: 'preview' | 'download', path = attachmentUrl) {
+  async function handleAttachmentFile(mode: 'preview' | 'download', path = attachmentUrl, fileName = attachmentName) {
     if (!path) return;
     const { data, error } = await supabase.storage
       .from('contract-attachments')
@@ -263,7 +263,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     }
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.download = attachmentName ?? path.split('/').pop() ?? 'contrat.pdf';
+    link.download = fileName ?? path.split('/').pop() ?? 'contrat.pdf';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -330,7 +330,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       if (attachmentUrl && attachmentUrl !== uploaded.path) {
         await supabase.storage.from('contract-attachments').remove([attachmentUrl]);
       }
-      await handleAttachmentFile(mode, uploaded.path);
+      await handleAttachmentFile(mode, uploaded.path, uploaded.name);
     } catch (err) {
       toast({ title: 'Erreur', description: (err as Error).message || 'Impossible de générer le contrat.', variant: 'destructive' });
     } finally {
