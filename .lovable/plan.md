@@ -1,16 +1,13 @@
-## Objectif
-Aligner la taille du bandeau (pied de page) des pages Contrat Services sur celui, plus fin, des pages Devis.
-
 ## Constat
-`src/lib/service-proposal-html-generator.ts` :
-- `CG_FOOTER_HTML` : hauteur 24mm, padding 3mm/6mm, font 8px.
-- `DEVIS_FOOTER_HTML` : hauteur 16mm, padding 2mm, font 6.5px.
-- `renderCgShell` réserve `bottom:24mm` pour laisser la place au footer épais.
+Sur la page 6 (CG 1/2) du Contrat Services, le texte déborde sous le nouveau bandeau bas alors qu'il reste de l'espace libre entre l'en-tête noir et le début du contenu. Dans `src/lib/service-proposal-html-generator.ts` :
+- `renderCgHeader` : hauteur 17mm.
+- `renderCgShell` : contenu positionné à `top:22mm` (5mm d'écart au-dessus).
 
-## Changements (fichier unique)
-1. Réduire `CG_FOOTER_HTML` aux mêmes dimensions/typographie que `DEVIS_FOOTER_HTML` (hauteur 16mm, padding 2mm, texte 6.5px, une seule ligne compacte).
-2. Mettre à jour `renderCgShell` : `bottom:24mm` → `bottom:16mm` pour la zone contenu.
-3. Ne pas modifier l'en-tête noir ni la logique de pagination.
+## Changement
+Fichier unique : `src/lib/service-proposal-html-generator.ts`, dans `renderCgShell`.
+
+- Réduire l'offset supérieur du contenu de `top:22mm` à `top:18mm` (colle le contenu juste sous l'en-tête, en gardant 1mm de respiration).
+- Pas de modification du footer, de la pagination, ni des tailles de police.
 
 ## Résultat
-Toutes les pages du contrat services (couverture, périmètre, matériel, CG) affichent le même bandeau bas discret que le devis, libérant ~8mm de contenu par page.
+Le contenu des pages CG gagne ~4mm en hauteur utile, ce qui absorbe le débordement actuel sous le bandeau bas sur la page 6.
