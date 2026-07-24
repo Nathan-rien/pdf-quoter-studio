@@ -1,39 +1,28 @@
 ## Objectif
-Sur la première page des Conditions générales (contrat), afficher les 4 paragraphes d'introduction (« Le présent Contrat Cadre… » → « Cela étant exposé, il a été convenu et arrêté ce qui suit : ») sur toute la largeur de la page, puis démarrer la mise en 2 colonnes uniquement à partir de l'article « I - DEFINITION DES SERVICES RENDUS ».
+Éliminer l'espace vide en bas des pages Conditions Générales du Contrat Services (actuellement 3 pages CG dont la dernière quasi vide). Cible : 2 pages CG bien remplies, signatures pinées en bas de la dernière page.
 
-## Fichier modifié
-`src/lib/service-proposal-html-generator.ts` (uniquement)
+## Constat
+Dans `src/lib/service-proposal-html-generator.ts`, la pagination CG utilise des budgets caractères conservateurs :
+- `MAX_CHARS_PER_PAGE = 4200`
+- `MAX_CHARS_LAST_PAGE = MAX_CHARS_PER_PAGE - 1400` (réserve signatures)
+- `MAX_CHARS_FIRST_PAGE = MAX_CHARS_PER_PAGE - introChars - 400`
+
+Avec la réduction récente des polices (9.5 / 10.5 px), ces budgets sont sous-dimensionnés → une 3ᵉ page CG est créée pour ne recevoir que l'article XIII + les signatures.
 
 ## Changements
+Fichier unique : `src/lib/service-proposal-html-generator.ts` (bloc CG, ~lignes 909-970).
 
-1. **Détecter le bloc d'intro** dans `allArticleElements` :
-   - L'intro = tous les éléments situés avant le premier `isTitle` (articles romains I, II, …).
-   - Ces éléments sont retirés de la liste `rendered` utilisée pour le packing en colonnes.
+1. Recalibrer les budgets caractères pour refléter la taille de police actuelle :
+   - `MAX_CHARS_PER_PAGE` : 4200 → ~6200
+   - Réserve signatures : 1400 → ~1100 (le bloc a été condensé)
+   - Réserve intro pleine largeur : 400 → ~300
+2. Conserver la logique existante (split par colonnes, éviter titre orphelin, flex pinning des signatures).
+3. Garder la génération d'une page supplémentaire uniquement si le contenu déborde réellement (fallback intact).
 
-2. **Rendre l'intro en pleine largeur** :
-   - Générer `introHtml` en concaténant les `html` des items d'intro (mêmes styles que les paragraphes actuels, `text-align:justify`, `font-size:10.5px`, etc.).
-   - L'envelopper dans un conteneur `<div style="width:100%;margin-bottom:4mm;">…</div>`.
+## Résultat attendu
+- Page 6/7 : intro pleine largeur + articles I → V (comme aujourd'hui, un peu plus dense).
+- Page 7/7 : articles VI → XIII + bloc Signatures épinglé en bas, sans grande zone vide.
+- Aucune modification de contenu, de style, ni de structure des pages devis.
 
-3. **Injection sur la 1re page CG uniquement** :
-   - Dans la boucle `buckets.forEach`, pour `idx === 0`, préfixer le shell body par `introHtml` et faire suivre du `columnsBlock` habituel :
-     ```
-     <div style="display:flex;flex-direction:column;height:100%;">
-       {introHtml}
-       {columnsBlock (flex:1;min-height:0;)}
-       {signatureBlockHtml si isLast}
-     </div>
-     ```
-   - Les autres pages CG conservent le rendu 2 colonnes actuel.
-
-4. **Ajuster le budget de caractères du 1er bucket** :
-   - Réduire `MAX_CHARS_PER_PAGE` pour le premier bucket uniquement (env. −1200 caractères) afin de laisser la place à l'intro sans faire déborder les colonnes sur le footer. Implémentation : après le remplissage glouton actuel, si le 1er bucket dépasse le nouveau seuil, repousser ses derniers items vers le 2e bucket (en respectant la règle des titres orphelins déjà en place).
-
-## Hors périmètre
-- Aucun changement de texte, ni du template `seedContratCadreTemplate.ts`.
-- Aucun impact sur le devis, sur les autres pages CG, ni sur les Contrats Location.
-- Bloc Signatures en bas de la dernière page CG inchangé.
-
-## Vérification
-Générer un PDF Contrat Services et vérifier :
-- Page 1 CG (actuellement « 1/2 ») : les 4 paragraphes d'intro s'étendent sur toute la largeur ; les articles I, II, III… reprennent en 2 colonnes en dessous.
-- Pages CG suivantes : rendu 2 colonnes identique à aujourd'hui, footer et pagination conservés.
+## Validation
+Après implémentation : ouvrir un contrat services existant, vérifier que le PDF Contrat Cadre Services fait 7 pages (3 devis + 4 contrat : couverture/périmètre/matériel + 2 CG au lieu de 3) et que le bas de chaque page CG est rempli.
