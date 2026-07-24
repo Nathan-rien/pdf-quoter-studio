@@ -126,17 +126,18 @@ export function useCreateQuickContract() {
       const contractNumber = proposalType === 'service'
         ? await generateServiceContractNumber(clientName)
         : null;
+      const insertPayload = {
+        proposal_id: null,
+        proposal_type: proposalType,
+        client_name: clientName,
+        commercial_id: 'quick',
+        commercial_name: '',
+        is_quick_contract: true,
+        ...(contractNumber ? { contract_number: contractNumber } : {}),
+      };
       const { data, error } = await supabase
         .from('contracts')
-        .insert({
-          proposal_id: null,
-          proposal_type: proposalType,
-          client_name: clientName,
-          commercial_id: 'quick',
-          commercial_name: '',
-          is_quick_contract: true,
-          contract_number: contractNumber,
-        })
+        .insert(insertPayload)
         .select()
         .single();
       if (error) throw error;
