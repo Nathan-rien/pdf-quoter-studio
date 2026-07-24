@@ -906,9 +906,9 @@ export async function generateServiceProposalHtml(
         return (a.position?.y ?? 0) - (b.position?.y ?? 0);
       });
 
-    const MAX_CHARS_PER_PAGE = 4200;
+    const MAX_CHARS_PER_PAGE = 6200;
     // Reserve space on the last page for the signature block appended below the columns.
-    const MAX_CHARS_LAST_PAGE = signatureBlockHtml ? MAX_CHARS_PER_PAGE - 1400 : MAX_CHARS_PER_PAGE;
+    const MAX_CHARS_LAST_PAGE = signatureBlockHtml ? MAX_CHARS_PER_PAGE - 1100 : MAX_CHARS_PER_PAGE;
     const allRendered = allArticleElements.map((el: any) => renderArticle(el));
 
     // Extract intro: all items before the first title (rendered full-width on page 1).
@@ -921,7 +921,7 @@ export async function generateServiceProposalHtml(
       : '';
     const introChars = introItems.reduce((s, i) => s + i.chars, 0);
     // Reduce the first bucket's char budget to leave room for the full-width intro block.
-    const MAX_CHARS_FIRST_PAGE = introHtml ? Math.max(MAX_CHARS_PER_PAGE - introChars - 400, 1500) : MAX_CHARS_PER_PAGE;
+    const MAX_CHARS_FIRST_PAGE = introHtml ? Math.max(MAX_CHARS_PER_PAGE - introChars - 300, 2000) : MAX_CHARS_PER_PAGE;
 
     const buckets: Array<Array<typeof rendered[number]>> = [];
     let current: Array<typeof rendered[number]> = [];
