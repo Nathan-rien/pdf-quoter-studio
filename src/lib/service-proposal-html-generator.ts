@@ -866,13 +866,14 @@ export async function generateServiceProposalHtml(
       .map((el: any) => {
         const c = el.content as any;
         const raw = String(c?.text ?? '');
-        return `<div style="font-family:'Inter',sans-serif;font-size:9px;color:#1a1a1a;line-height:1.55;margin-bottom:2mm;">${escCg(raw)}</div>`;
+        return `<div style="font-family:'Inter',sans-serif;font-size:11.5px;color:#111111;line-height:1.5;margin-bottom:2mm;">${escCg(raw)}</div>`;
       })
       .join('');
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:6mm;color:#1a1a1a;font-size:9px;">${dyn}</div>`
+      ? `<div style="margin-top:6mm;color:#111111;font-size:11.5px;">${dyn}</div>`
       : '';
+
     renderedSignaturePagesHtml.push(
       renderCgShell('Signatures', `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`),
     );
