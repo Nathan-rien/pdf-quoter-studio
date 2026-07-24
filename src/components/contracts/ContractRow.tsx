@@ -144,7 +144,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       isServiceContract &&
       isQuick &&
       contract.client_name === 'Nouveau contrat' &&
-      savedClientName !== contract.client_name;
+      savedClientName !== contract.client_name &&
+      contractNumber.trim() === (contract.contract_number ?? '');
     let nextContractNumber = contractNumber.trim() || null;
 
     try {
