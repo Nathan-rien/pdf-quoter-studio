@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useValidateProposal, ProposalType } from '@/hooks/useContracts';
+import { useValidateProposal, ProposalType, ContractExternalProvider } from '@/hooks/useContracts';
 import { supabase } from '@/integrations/supabase/client';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { seedClientServiceReferences } from '@/lib/technician-tracking';
@@ -59,7 +59,7 @@ export function ValidateProposalButton({
       payment_frequency?: 'mensuel' | 'trimestriel';
       monthly_rent_ht?: number | null;
       quarterly_rent_ht?: number | null;
-      external_providers?: unknown[];
+      external_providers?: ContractExternalProvider[];
     } = {};
     let servicePropId: string | null = null;
 
