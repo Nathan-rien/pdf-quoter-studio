@@ -772,7 +772,7 @@ export async function generateServiceProposalHtml(
     const isTitle = !!c?.bold && raw.length < 120 && !raw.includes('\n');
     if (isTitle) {
       return {
-        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin:4mm 0 1.5mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
         chars: raw.length,
         isTitle: true,
       };
@@ -781,10 +781,11 @@ export async function generateServiceProposalHtml(
     const body = paragraphs
       .map(
         (p) =>
-          `<p style="font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.55;color:#374151;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
+          `<p style="font-family:'Inter',sans-serif;font-size:10.5px;line-height:1.5;color:#374151;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
       )
       .join('');
     return { html: body, chars: raw.length, isTitle: false };
+
   };
 
   const cgPages = visibleTemplatePages.filter(
