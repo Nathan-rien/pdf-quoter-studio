@@ -367,14 +367,18 @@ export async function generateServiceProposalHtml(
     <div style="${BODY_TEXT_STYLE}">
       <div style="display: flex; justify-content: space-between; gap: 8mm;">
         <div style="flex: 1;">
-          La Société Groupe Cybertek SAS<br />
-          Représentée par ${escapeText(selectedCommercial?.nom || commercialData?.commercialId || '—')}<br />
-          Directeur Services et Solutions<br /><br /><br />
+          <div style="min-height: 18mm;">
+            La Société Groupe Cybertek SAS<br />
+            Représentée par ${escapeText(selectedCommercial?.nom || commercialData?.commercialId || '—')}<br />
+            Directeur Services et Solutions
+          </div>
           Signature : _______________
         </div>
         <div style="flex: 1;">
-          La Société ${escapeText(clientData.raisonSociale || clientData.nom)}<br />
-          Représentée par ${escapeText(clientData.nom)}<br /><br /><br />
+          <div style="min-height: 18mm;">
+            La Société ${escapeText(clientData.raisonSociale || clientData.nom)}<br />
+            Représentée par ${escapeText(clientData.nom)}
+          </div>
           Signature : _______________
         </div>
       </div>
