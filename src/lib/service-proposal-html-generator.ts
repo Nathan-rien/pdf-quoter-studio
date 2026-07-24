@@ -779,7 +779,7 @@ export async function generateServiceProposalHtml(
       const isXIII = /^\s*XIII\s*-/i.test(raw);
       if (isXIII) {
         return {
-          html: `<div style="height:10mm;"></div><h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+          html: `<div style="height:8mm;"></div><h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
           chars: raw.length,
           isTitle: true,
         };
