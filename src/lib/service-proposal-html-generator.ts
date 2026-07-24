@@ -976,8 +976,7 @@ export async function generateServiceProposalHtml(
       const isLast = idx === buckets.length - 1;
       const isFirst = idx === 0;
       const columnsFlex = (isLast && signatureBlockHtml) || (isFirst && introHtml);
-      const columnFill = isFirst ? 'auto' : 'balance';
-      const columnsBlock = `<div style="column-count:2;column-gap:8mm;column-fill:${columnFill};${columnsFlex ? 'flex:1;min-height:0;' : 'height:100%;'}">${bodyInner}</div>`;
+      const columnsBlock = `<div style="column-count:2;column-gap:8mm;column-fill:balance;${columnsFlex ? 'flex:1;min-height:0;' : 'height:100%;'}">${bodyInner}</div>`;
       let body: string;
       if (isFirst && introHtml) {
         body = `<div style="display:flex;flex-direction:column;height:100%;">${introHtml}${columnsBlock}${isLast && signatureBlockHtml ? signatureBlockHtml : ''}</div>`;
