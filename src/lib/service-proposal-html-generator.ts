@@ -727,11 +727,8 @@ export async function generateServiceProposalHtml(
   // contract pages; devis pages use a slimmer 16mm variant below).
   // Content area above stops before this band so nothing can overlap it.
   const CG_FOOTER_HTML = `
-    <div style="position:absolute;left:0;right:0;bottom:0;height:24mm;padding:3mm 10mm 6mm 10mm;box-sizing:border-box;display:flex;align-items:center;font-family:'Inter',sans-serif;font-size:8px;line-height:1.35;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
-      <div style="flex:1;">
-        Groupe Cybertek — SAS au capital de 4 471 800 € · TVA intracom. FR78408772960 · RCS Bordeaux 408 772 960<br/>
-        Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr
-      </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:16mm;padding:2mm 6mm 2mm 6mm;box-sizing:border-box;display:flex;align-items:center;font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.35;color:#9ca3af;border-top:1px solid #e5e7eb;background:#ffffff;">
+        <div style="font-size:6.5px;">Groupe Cybertek SAS au capital de 4 471 800€ · TVA INTRACOM FR78408772960 · RCS BORDEAUX 408 772 960 · Zone d'activités Achard Bat U, 130 rue Achard, 33300 Bordeaux · Tél. 05 56 11 88 99 · commercial@cybertek-pro.fr · www.cybertek-pro.fr</div>
     </div>
   `;
 
@@ -757,7 +754,7 @@ export async function generateServiceProposalHtml(
     <div class="page-sheet" style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
         <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:24mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
           <div data-shell-scale>${bodyHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
