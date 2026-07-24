@@ -106,7 +106,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
           }),
       ),
     );
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   };
 
   // Regenerate HTML each time relevant store fields or template change
