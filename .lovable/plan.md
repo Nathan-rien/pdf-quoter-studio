@@ -1,13 +1,31 @@
-## Constat
-Sur la page 6 (CG 1/2) du Contrat Services, le texte déborde sous le nouveau bandeau bas alors qu'il reste de l'espace libre entre l'en-tête noir et le début du contenu. Dans `src/lib/service-proposal-html-generator.ts` :
-- `renderCgHeader` : hauteur 17mm.
-- `renderCgShell` : contenu positionné à `top:22mm` (5mm d'écart au-dessus).
+````text
+Objectif
+--------
+Réduire de 1 mm l'espace vertical entre les deux paragraphes surlignés dans les Conditions Générales du contrat services (page 6 du PDF contrat).
 
-## Changement
-Fichier unique : `src/lib/service-proposal-html-generator.ts`, dans `renderCgShell`.
+Constat
+-------
+Dans src/lib/service-proposal-html-generator.ts, les paragraphes des articles CG sont générés avec un style inline imposant une marge inférieure de 2 mm :
 
-- Réduire l'offset supérieur du contenu de `top:22mm` à `top:18mm` (colle le contenu juste sous l'en-tête, en gardant 1mm de respiration).
-- Pas de modification du footer, de la pagination, ni des tailles de police.
+  margin:0 0 2mm 0
 
-## Résultat
-Le contenu des pages CG gagne ~4mm en hauteur utile, ce qui absorbe le débordement actuel sous le bandeau bas sur la page 6.
+C'est cette marge qui crée l'espace entre les paragraphes successifs, notamment entre le paragraphe précédant "Cela étant exposé..." et le paragraphe surligné.
+
+Plan de modification
+--------------------
+1. Dans la fonction renderArticle (ligne ~789), remplacer la marge inférieure des balises <p> des articles CG de 2 mm à 1 mm :
+   - Avant : margin:0 0 2mm 0
+   - Après : margin:0 0 1mm 0
+
+2. Vérifier que ce changement n'affecte que les pages CG (documentScope: 'contrat') car renderArticle n'est utilisée que pour articlePages.
+
+3. Lancer un build TypeScript pour valider la modification.
+
+Fichier concerné
+----------------
+- src/lib/service-proposal-html-generator.ts
+
+Impact attendu
+--------------
+L'espace entre les paragraphes des Conditions Générales sera réduit de 1 mm, ce qui resserrera le bloc d'intro avant les articles numérotés sans modifier la structure des pages ni la taille de police.
+````
