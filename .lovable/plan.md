@@ -1,25 +1,26 @@
-## Problème
+## Plan
 
-À la validation d'une proposition Services, `generateAndUploadServiceContractPdf` produit bien le PDF **contrat** (mode `'contrat'`) et le stocke dans `contract-attachments`, puis renseigne `attachment_url` / `attachment_name` sur le contrat.
+1. **Corriger le téléchargement/visualisation PDF des Contrats Services**
+   - Remplacer l’ouverture directe du lien de stockage externe par un téléchargement du fichier en Blob côté application.
+   - Pour **Visualiser**, ouvrir un `blob:` local dans un nouvel onglet.
+   - Pour **Télécharger**, déclencher un vrai téléchargement local avec le nom du fichier du contrat.
+   - Conserver la logique existante qui régénère un PDF Contrat Services si le fichier attaché est absent ou ancien.
 
-Mais dans `ContractRow.tsx`, pour un contrat "normal" (non rapide) :
-- Le bouton **œil** appelle `onVisualize(contract)` → ouvre l'aperçu **devis** de la proposition.
-- Le bouton **télécharger** appelle `handleDownloadProposal()` qui va chercher `proposal_exports.pdf_html_content` → c'est le HTML du **devis**, pas le contrat.
+2. **Séparer les actions Visualiser et Télécharger**
+   - Garder le même rendu UI, mais faire en sorte que le bouton œil prévisualise et le bouton téléchargement télécharge réellement.
+   - Appliquer ce comportement aux contrats Services sans modifier le comportement métier des contrats Location.
 
-Le PDF contrat déjà généré et attaché (`attachment_url`) est ignoré. Résultat : on télécharge le devis au lieu du contrat.
+3. **Générer automatiquement le numéro de contrat Services**
+   - Ajouter une génération automatique uniquement pour `proposal_type = 'service'`.
+   - Format prévu : `YYYYMMDD-N`, par exemple `20260724-1`.
+   - Le suffixe `N` correspondra au rang du contrat pour ce même client : premier contrat client `-1`, deuxième `-2`, etc.
+   - À la validation d’une proposition Services ou à la création d’un contrat Services rapide, renseigner ce numéro automatiquement si le champ est vide.
+   - Ne pas appliquer cette génération aux Contrats Location.
 
-## Correctif
+4. **Préserver l’édition manuelle existante**
+   - Le champ “Numéro de contrat” restera éditable.
+   - Si un numéro existe déjà, il ne sera pas écrasé automatiquement.
 
-Dans `src/components/contracts/ContractRow.tsx`, pour les contrats non rapides :
-
-1. **Priorité au PDF contrat attaché** : si `contract.attachment_url` existe, les boutons œil et téléchargement utilisent `handleDownloadAttachment()` (signed URL du bucket `contract-attachments`) au lieu du flux devis.
-2. **Fallback inchangé** : si `attachment_url` est absent (ancien contrat, génération échouée), on retombe sur le comportement actuel (aperçu / impression du HTML devis via `proposal_exports.pdf_html_content`).
-3. **Titres des boutons** mis à jour dynamiquement : "Visualiser le contrat" / "Télécharger le contrat" quand le PDF contrat est présent, sinon "Visualiser la proposition" / "Télécharger la proposition".
-
-Aucune modification de `service-contract-generator.ts`, `ValidateProposalButton.tsx`, ni du schéma DB.
-
-## Portée
-
-- Fichier touché : `src/components/contracts/ContractRow.tsx` uniquement.
-- Affecte à la fois la vue Contrats Location et Contrats Services (même composant de ligne).
-- Pour la vue Location, `attachment_url` n'est en général pas rempli automatiquement, donc le comportement reste inchangé.
+5. **Validation**
+   - Vérifier que le bouton de téléchargement ne mène plus vers une page `*.supabase.co` bloquée par Chrome.
+   - Vérifier que les nouveaux contrats Services reçoivent un numéro conforme, sans impact sur les contrats Location.
