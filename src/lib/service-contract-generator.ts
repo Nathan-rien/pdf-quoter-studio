@@ -41,27 +41,46 @@ async function loadTemplatePages(templateId: string): Promise<any[] | null> {
   return Array.isArray(pages) ? pages : null;
 }
 
-async function loadLatestServiceTemplatePages(): Promise<any[] | null> {
-  const { data: templates } = await supabase
-    .from('pdf_templates')
-    .select('id, name, target_view')
-    .or('target_view.eq.services,name.eq.Contrat Cadre Services');
+function hasContractScopedPages(pages: any[] | null): pages is any[] {
+  return Array.isArray(pages) && pages.some((page: any) => page?.documentScope === 'contrat');
+}
 
-  const ids = (templates ?? []).map((t: any) => t.id).filter(Boolean);
+async function loadLatestPublishedPagesForTemplateIds(ids: string[]): Promise<any[] | null> {
   if (ids.length === 0) return null;
 
-  const { data } = await supabase
+  const { data: versions } = await supabase
     .from('template_versions')
-    .select('pages, version_number, published_at')
+    .select('pages, version_number, published_at, template_id')
     .in('template_id', ids)
     .eq('status', 'publie')
     .order('version_number', { ascending: false })
     .order('published_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
 
-  const pages = (data as any)?.pages;
-  return Array.isArray(pages) ? pages : null;
+  for (const version of versions ?? []) {
+    const pages = (version as any)?.pages;
+    if (hasContractScopedPages(pages)) return pages;
+  }
+  return null;
+}
+
+async function loadLatestServiceContractTemplatePages(): Promise<any[] | null> {
+  const { data: contractTemplates } = await supabase
+    .from('pdf_templates')
+    .select('id')
+    .eq('name', 'Contrat Cadre Services');
+
+  const contractIds = (contractTemplates ?? []).map((t: any) => t.id).filter(Boolean);
+  const contractPages = await loadLatestPublishedPagesForTemplateIds(contractIds);
+  if (contractPages) return contractPages;
+
+  const { data: serviceTemplates } = await supabase
+    .from('pdf_templates')
+    .select('id')
+    .eq('target_view', 'services');
+
+  const serviceIds = (serviceTemplates ?? []).map((t: any) => t.id).filter(Boolean);
+  return loadLatestPublishedPagesForTemplateIds(serviceIds);
 }
 
 export async function generateAndUploadServiceContractPdf(params: {
@@ -95,17 +114,17 @@ export async function generateAndUploadServiceContractPdf(params: {
     freshProposal = (sp as unknown as ServiceProposal) ?? null;
   }
 
-  // 3. Resolve the template
+  // 3. Resolve the template. Contract generation must prioritize the dedicated
+  // "Contrat Cadre Services" template, because the proposal export template can
+  // be a devis-only snapshot and would otherwise regenerate the wrong document.
   const templateId =
     (freshProposal ? null : snapshot?.activeTemplateId ?? snapshot?.selectedTemplateId) ||
     (exportRow as any).template_id;
-  if (!templateId) {
-    console.warn('[service-contract-generator] aucun template lié — génération ignorée');
-    return null;
-  }
-  const pages = (await loadLatestServiceTemplatePages()) ?? (await loadTemplatePages(templateId));
-  if (!pages) {
-    console.warn('[service-contract-generator] aucune version publiée trouvée');
+  const contractTemplatePages = await loadLatestServiceContractTemplatePages();
+  const fallbackPages = templateId ? await loadTemplatePages(templateId) : null;
+  const pages = contractTemplatePages ?? (hasContractScopedPages(fallbackPages) ? fallbackPages : null);
+  if (!pages || !hasContractScopedPages(pages)) {
+    console.warn('[service-contract-generator] aucune version contrat publiée trouvée');
     return null;
   }
 
