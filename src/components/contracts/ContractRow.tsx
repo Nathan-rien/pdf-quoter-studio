@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, useContractExternalProviders, Contract, PaymentFrequency } from '@/hooks/useContracts';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { generateServiceContractNumber } from '@/lib/contract-numbering';
@@ -75,6 +75,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [cessionPercent, setCessionPercent] = useState<number | null>(contract.cession_percent ?? null);
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
   const { data: proposalOptions } = useContractProposalOptions(isQuick ? null : contract.proposal_id);
+  const { data: externalProviders } = useContractExternalProviders(isServiceContract && !isQuick ? contract.proposal_id : null);
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
@@ -556,6 +557,29 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               </div>
             );
           })()}
+
+          {isServiceContract && externalProviders && externalProviders.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Prestataires extérieurs (issus de la proposition)</Label>
+              <div className="rounded-md border border-border bg-background/60 p-3 space-y-2">
+                {externalProviders.map((p, idx) => {
+                  const primary = p.name || p.role || `Prestataire ${idx + 1}`;
+                  const meta = [p.role && p.name ? p.role : null, p.contact, p.phone, p.email]
+                    .filter((v) => typeof v === 'string' && v.trim().length > 0);
+                  return (
+                    <div key={idx} className="text-sm">
+                      <div className="font-medium">• {primary}</div>
+                      {meta.length > 0 && (
+                        <div className="text-xs text-muted-foreground ml-3">{meta.join(' · ')}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
