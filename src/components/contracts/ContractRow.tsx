@@ -315,8 +315,12 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
-              title="Visualiser la proposition"
-              onClick={(e) => { e.stopPropagation(); onVisualize?.(contract); }}
+              title={contract.attachment_url ? 'Visualiser le contrat' : 'Visualiser la proposition'}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (contract.attachment_url) handleDownloadAttachment();
+                else onVisualize?.(contract);
+              }}
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -324,9 +328,13 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
-              title="Télécharger la proposition"
+              title={contract.attachment_url ? 'Télécharger le contrat' : 'Télécharger la proposition'}
               disabled={downloadingProposal}
-              onClick={(e) => { e.stopPropagation(); handleDownloadProposal(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (contract.attachment_url) handleDownloadAttachment();
+                else handleDownloadProposal();
+              }}
             >
               {downloadingProposal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             </Button>
