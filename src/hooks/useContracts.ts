@@ -314,4 +314,38 @@ export function useContractProposalOptions(proposalId: string | null | undefined
   });
 }
 
+export interface ContractExternalProvider {
+  name?: string;
+  role?: string;
+  contact?: string;
+  phone?: string;
+  email?: string;
+  [key: string]: any;
+}
+
+export function useContractExternalProviders(proposalId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['contract-external-providers', proposalId],
+    enabled: !!proposalId,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async (): Promise<ContractExternalProvider[]> => {
+      if (!proposalId) return [];
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('proposal_state')
+        .eq('id', proposalId)
+        .maybeSingle();
+      if (error || !data) return [];
+      const state: any = (data as any).proposal_state;
+      const list = Array.isArray(state?.external_providers)
+        ? state.external_providers
+        : Array.isArray(state?.externalProviders)
+          ? state.externalProviders
+          : [];
+      return list.filter((p: any) => p && typeof p === 'object');
+    },
+  });
+}
+
+
 
