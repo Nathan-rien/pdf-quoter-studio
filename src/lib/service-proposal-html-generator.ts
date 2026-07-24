@@ -819,17 +819,18 @@ export async function generateServiceProposalHtml(
       const align = c?.textAlign || 'left';
       const col = c?.bold ? '#1a1a1a' : '#374151';
       return {
-        html: `<div style="font-family:'Inter',sans-serif;font-size:8px;font-weight:${fw};color:${col};line-height:1.55;text-align:${align};margin-bottom:2mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
+        html: `<div style="font-family:'Inter',sans-serif;font-size:10.5px;font-weight:${fw};color:${col};line-height:1.5;text-align:${align};margin-bottom:2mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
         chars: raw.length,
       };
     });
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:3mm;color:#374151;font-size:8px;">${dyn}</div>`
+      ? `<div style="margin-top:3mm;color:#374151;font-size:10.5px;">${dyn}</div>`
       : '';
 
-    // Split across multiple pages if content is too tall (approx 3800 chars/page)
-    const MAX_PARTIES_CHARS = 3200;
+    // Split across multiple pages if content is too tall (approx chars/page tuned to font size)
+    const MAX_PARTIES_CHARS = 1750;
+
     const buckets: string[][] = [];
     let current: string[] = [];
     let currentChars = 0;
