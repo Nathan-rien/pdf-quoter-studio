@@ -24,6 +24,7 @@ import { fr } from 'date-fns/locale';
 import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, Contract, PaymentFrequency } from '@/hooks/useContracts';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
+import { generateServiceContractNumber } from '@/lib/contract-numbering';
 import { calculateLoyerTrimestriel } from '@/lib/rental-calculations';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { supabase } from '@/integrations/supabase/client';
@@ -128,7 +129,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         } as (typeof sortedCommerciaux)[number],
       ];
 
-  function handleSave() {
+  async function handleSave() {
     const selected = commerciaux.find((c) => c.id === commercialId);
     const manualNumber = manualMonthlyRent.trim() === '' ? null : Number(manualMonthlyRent);
     const manualMonthlyValue = manualNumber != null && !Number.isNaN(manualNumber)
@@ -138,17 +139,35 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     const manualQuarterlyValue = manualQNumber != null && !Number.isNaN(manualQNumber)
       ? Math.round(manualQNumber * 100) / 100
       : null;
+    const savedClientName = clientName.trim() || 'Nouveau contrat';
+    const shouldRefreshQuickPlaceholderNumber =
+      isServiceContract &&
+      isQuick &&
+      contract.client_name === 'Nouveau contrat' &&
+      savedClientName !== contract.client_name;
+    let nextContractNumber = contractNumber.trim() || null;
+
+    try {
+      if (isServiceContract && (!nextContractNumber || shouldRefreshQuickPlaceholderNumber)) {
+        nextContractNumber = await generateServiceContractNumber(savedClientName, new Date(), contract.id);
+        if (nextContractNumber) setContractNumber(nextContractNumber);
+      }
+    } catch (err) {
+      toast({ title: 'Numérotation indisponible', description: (err as Error).message, variant: 'destructive' });
+      return;
+    }
+
     updateContract.mutate({
       id: contract.id,
       updates: {
-        client_name: clientName.trim() || 'Nouveau contrat',
+        client_name: savedClientName,
         implementation_month: implementationDate ? format(implementationDate, 'yyyy-MM-dd') : null,
         financial_partner: hideFinancialPartner ? contract.financial_partner ?? null : (financialPartner || null),
         duration_months: durationMonths ? parseInt(durationMonths) : null,
         payment_frequency: paymentFrequency,
         commercial_id: isQuick ? (commercialId || 'quick') : (commercialId || contract.commercial_id),
         commercial_name: selected?.nom ?? (isQuick ? null : contract.commercial_name),
-        contract_number: contractNumber.trim() || null,
+        contract_number: nextContractNumber,
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
         quarterly_rent_ht: hasProposalRent ? contract.quarterly_rent_ht ?? null : manualQuarterlyValue,
         cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
@@ -222,16 +241,37 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     }
   }
 
-  async function handleDownloadAttachment(path = attachmentUrl) {
+  async function handleAttachmentFile(mode: 'preview' | 'download', path = attachmentUrl) {
     if (!path) return;
     const { data, error } = await supabase.storage
       .from('contract-attachments')
-      .createSignedUrl(path, 60);
-    if (error || !data?.signedUrl) {
-      toast({ title: 'Erreur', description: "Impossible de générer le lien de téléchargement.", variant: 'destructive' });
+      .download(path);
+    if (error || !data) {
+      toast({ title: 'Erreur', description: "Impossible de récupérer le PDF.", variant: 'destructive' });
       return;
     }
-    window.open(data.signedUrl, '_blank');
+    const blobUrl = URL.createObjectURL(data);
+    if (mode === 'preview') {
+      const opened = window.open(blobUrl, '_blank');
+      if (!opened) {
+        URL.revokeObjectURL(blobUrl);
+        toast({ title: 'Fenêtre bloquée', description: 'Autorisez les pop-ups pour visualiser le PDF.', variant: 'destructive' });
+        return;
+      }
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = attachmentName ?? path.split('/').pop() ?? 'contrat.pdf';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1_000);
+  }
+
+  async function handleDownloadAttachment(path = attachmentUrl) {
+    await handleAttachmentFile('download', path);
   }
 
   async function handleRemoveAttachment() {
@@ -244,9 +284,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     setAttachmentState({ url: null, name: null });
   }
 
-  async function handleOpenServiceContractPdf() {
+  async function handleOpenServiceContractPdf(mode: 'preview' | 'download') {
     if (canReuseAttachment) {
-      await handleDownloadAttachment(attachmentUrl);
+      await handleAttachmentFile(mode, attachmentUrl);
       return;
     }
     if (!contract.proposal_id) {
@@ -274,7 +314,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       if (attachmentUrl && attachmentUrl !== uploaded.path) {
         await supabase.storage.from('contract-attachments').remove([attachmentUrl]);
       }
-      await handleDownloadAttachment(uploaded.path);
+      await handleAttachmentFile(mode, uploaded.path);
     } catch (err) {
       toast({ title: 'Erreur', description: (err as Error).message || 'Impossible de générer le contrat.', variant: 'destructive' });
     } finally {
@@ -344,7 +384,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0 disabled:opacity-40"
               title={attachmentUrl ? 'Visualiser le PDF joint' : 'Aucune proposition ni PDF joint'}
               disabled={!attachmentUrl}
-              onClick={(e) => { e.stopPropagation(); handleDownloadAttachment(); }}
+              onClick={(e) => { e.stopPropagation(); handleAttachmentFile('preview'); }}
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -369,8 +409,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               disabled={generatingContractPdf}
               onClick={(e) => {
                 e.stopPropagation();
-                if (isServiceContract) handleOpenServiceContractPdf();
-                else if (attachmentUrl) handleDownloadAttachment();
+                if (isServiceContract) handleOpenServiceContractPdf('preview');
+                else if (attachmentUrl) handleAttachmentFile('preview');
                 else onVisualize?.(contract);
               }}
             >
@@ -384,7 +424,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               disabled={downloadingProposal || generatingContractPdf}
               onClick={(e) => {
                 e.stopPropagation();
-                if (isServiceContract) handleOpenServiceContractPdf();
+                if (isServiceContract) handleOpenServiceContractPdf('download');
                 else if (attachmentUrl) handleDownloadAttachment();
                 else handleDownloadProposal();
               }}
