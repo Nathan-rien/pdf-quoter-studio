@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,7 +46,9 @@ export function ValidateProposalButton({
   onValidated,
 }: ValidateProposalButtonProps) {
   const [open, setOpen] = useState(false);
+  const [isFinalizingContract, setIsFinalizingContract] = useState(false);
   const validateProposal = useValidateProposal();
+  const queryClient = useQueryClient();
 
   async function handleConfirm() {
     // For Service proposals, pull duration / start date / periodicity from the
@@ -95,45 +98,52 @@ export function ValidateProposalButton({
       }
     }
 
-    const result = await validateProposal.mutateAsync({
-      proposal_id: proposalId,
-      proposal_type: proposalType,
-      client_name: clientName,
-      commercial_id: commercialId,
-      commercial_name: commercialName,
-      amount_ht: amountHt,
-      monthly_rent_ht: servicePrefill.monthly_rent_ht ?? monthlyRentHt,
-      quarterly_rent_ht: servicePrefill.quarterly_rent_ht,
-      template_name: templateName,
-      financial_partner: financialPartner ?? null,
-      duration_months: servicePrefill.duration_months ?? durationMonths ?? null,
-      implementation_month: servicePrefill.implementation_month ?? null,
-      payment_frequency: servicePrefill.payment_frequency,
-    });
-    setOpen(false);
-    onValidated?.(result.id);
+    setIsFinalizingContract(true);
+    try {
+      const result = await validateProposal.mutateAsync({
+        proposal_id: proposalId,
+        proposal_type: proposalType,
+        client_name: clientName,
+        commercial_id: commercialId,
+        commercial_name: commercialName,
+        amount_ht: amountHt,
+        monthly_rent_ht: servicePrefill.monthly_rent_ht ?? monthlyRentHt,
+        quarterly_rent_ht: servicePrefill.quarterly_rent_ht,
+        template_name: templateName,
+        financial_partner: financialPartner ?? null,
+        duration_months: servicePrefill.duration_months ?? durationMonths ?? null,
+        implementation_month: servicePrefill.implementation_month ?? null,
+        payment_frequency: servicePrefill.payment_frequency,
+      });
 
-    // Background: generate the contract-mode PDF for Service proposals
-    if (proposalType === 'service') {
-      try {
-        const uploaded = await generateAndUploadServiceContractPdf({
-          proposalId,
-          contractId: result.id,
-          clientName,
-        });
-        if (uploaded) {
-          await supabase
-            .from('contracts')
-            .update({ attachment_url: uploaded.path, attachment_name: uploaded.name })
-            .eq('id', result.id);
+      if (proposalType === 'service') {
+        try {
+          const uploaded = await generateAndUploadServiceContractPdf({
+            proposalId,
+            contractId: result.id,
+            clientName,
+          });
+          if (uploaded) {
+            const { error: updateError } = await supabase
+              .from('contracts')
+              .update({ attachment_url: uploaded.path, attachment_name: uploaded.name })
+              .eq('id', result.id);
+            if (updateError) throw updateError;
+          }
+          await seedClientServiceReferences({
+            contractId: result.id,
+            serviceProposalId: servicePropId,
+          });
+          await queryClient.invalidateQueries({ queryKey: ['contracts'] });
+        } catch (err) {
+          console.error('[ValidateProposalButton] génération contrat automatique échouée', err);
         }
-        await seedClientServiceReferences({
-          contractId: result.id,
-          serviceProposalId: servicePropId,
-        });
-      } catch (err) {
-        console.error('[ValidateProposalButton] génération contrat automatique échouée', err);
       }
+
+      setOpen(false);
+      onValidated?.(result.id);
+    } finally {
+      setIsFinalizingContract(false);
     }
   }
 
@@ -168,10 +178,14 @@ export function ValidateProposalButton({
           <AlertDialogCancel>Annuler</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            disabled={validateProposal.isPending}
+            disabled={validateProposal.isPending || isFinalizingContract}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            {validateProposal.isPending ? 'Validation…' : 'Valider'}
+            {validateProposal.isPending
+              ? 'Validation…'
+              : isFinalizingContract
+                ? 'Génération contrat…'
+                : 'Valider'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
