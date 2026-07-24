@@ -8,6 +8,16 @@ import { generateServiceContractNumber } from '@/lib/contract-numbering';
 export type PaymentFrequency = 'mensuel' | 'trimestriel';
 export type ProposalType = 'location' | 'service';
 
+export interface ContractExternalProvider {
+  id?: string;
+  name?: string;
+  role?: string;
+  contact?: string;
+  phone?: string;
+  email?: string;
+  [key: string]: any;
+}
+
 export interface Contract {
   id: string;
   proposal_id: string | null;
@@ -25,6 +35,7 @@ export interface Contract {
   monthly_rent_ht?: number | null;
   quarterly_rent_ht?: number | null;
   cession_percent?: number | null;
+  external_providers?: ContractExternalProvider[] | null;
   is_quick_contract?: boolean;
   attachment_url?: string | null;
   attachment_name?: string | null;
@@ -101,7 +112,7 @@ export function useUpdateContract() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'client_name' | 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'monthly_rent_ht' | 'quarterly_rent_ht' | 'cession_percent' | 'attachment_url' | 'attachment_name'>> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'client_name' | 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'monthly_rent_ht' | 'quarterly_rent_ht' | 'cession_percent' | 'external_providers' | 'attachment_url' | 'attachment_name'>> }) => {
       const { data, error } = await supabase.from('contracts').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as Contract;
@@ -312,15 +323,6 @@ export function useContractProposalOptions(proposalId: string | null | undefined
       });
     },
   });
-}
-
-export interface ContractExternalProvider {
-  name?: string;
-  role?: string;
-  contact?: string;
-  phone?: string;
-  email?: string;
-  [key: string]: any;
 }
 
 export function useContractExternalProviders(proposalId: string | null | undefined) {

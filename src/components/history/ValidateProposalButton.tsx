@@ -59,6 +59,7 @@ export function ValidateProposalButton({
       payment_frequency?: 'mensuel' | 'trimestriel';
       monthly_rent_ht?: number | null;
       quarterly_rent_ht?: number | null;
+      external_providers?: unknown[];
     } = {};
     let servicePropId: string | null = null;
 
@@ -73,7 +74,7 @@ export function ValidateProposalButton({
       if (servicePropId) {
         const { data: sp } = await supabase
           .from('service_proposals')
-          .select('contract_duration, start_date, payment_frequency')
+          .select('contract_duration, start_date, payment_frequency, external_providers')
           .eq('id', servicePropId)
           .maybeSingle();
         if (sp) {
@@ -93,6 +94,7 @@ export function ValidateProposalButton({
               freq === 'trimestriel' ? 'trimestriel' : freq === 'mensuel' ? 'mensuel' : undefined,
             monthly_rent_ht: monthly,
             quarterly_rent_ht: quarterly,
+            external_providers: Array.isArray((sp as any).external_providers) ? (sp as any).external_providers : [],
           };
         }
       }
@@ -114,6 +116,7 @@ export function ValidateProposalButton({
         duration_months: servicePrefill.duration_months ?? durationMonths ?? null,
         implementation_month: servicePrefill.implementation_month ?? null,
         payment_frequency: servicePrefill.payment_frequency,
+        external_providers: servicePrefill.external_providers ?? [],
       });
 
       if (proposalType === 'service') {
