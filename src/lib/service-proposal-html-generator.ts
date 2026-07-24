@@ -777,7 +777,7 @@ export async function generateServiceProposalHtml(
     const isTitle = !!c?.bold && raw.length < 120 && !raw.includes('\n');
     if (isTitle) {
       return {
-        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;min-height:2.4em;line-height:1.2;display:flex;align-items:flex-end;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;height:32px;box-sizing:border-box;line-height:1.2;display:flex;align-items:flex-end;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;overflow:hidden;">${escCg(raw)}</h3>`,
         chars: raw.length,
         isTitle: true,
       };
