@@ -909,14 +909,27 @@ export async function generateServiceProposalHtml(
     const MAX_CHARS_PER_PAGE = 4200;
     // Reserve space on the last page for the signature block appended below the columns.
     const MAX_CHARS_LAST_PAGE = signatureBlockHtml ? MAX_CHARS_PER_PAGE - 1400 : MAX_CHARS_PER_PAGE;
-    const rendered = allArticleElements.map((el: any) => renderArticle(el));
+    const allRendered = allArticleElements.map((el: any) => renderArticle(el));
+
+    // Extract intro: all items before the first title (rendered full-width on page 1).
+    const firstTitleIdx = allRendered.findIndex((r) => r.isTitle);
+    const introItems = firstTitleIdx > 0 ? allRendered.slice(0, firstTitleIdx) : [];
+    const rendered = firstTitleIdx > 0 ? allRendered.slice(firstTitleIdx) : allRendered;
+
+    const introHtml = introItems.length > 0
+      ? `<div style="width:100%;margin-bottom:4mm;">${introItems.map((i) => i.html).join('')}</div>`
+      : '';
+    const introChars = introItems.reduce((s, i) => s + i.chars, 0);
+    // Reduce the first bucket's char budget to leave room for the full-width intro block.
+    const MAX_CHARS_FIRST_PAGE = introHtml ? Math.max(MAX_CHARS_PER_PAGE - introChars - 400, 1500) : MAX_CHARS_PER_PAGE;
 
     const buckets: Array<Array<typeof rendered[number]>> = [];
     let current: Array<typeof rendered[number]> = [];
     let currentChars = 0;
     for (let i = 0; i < rendered.length; i++) {
       const item = rendered[i];
-      const overflow = currentChars + item.chars > MAX_CHARS_PER_PAGE && current.length > 0;
+      const budget = buckets.length === 0 ? MAX_CHARS_FIRST_PAGE : MAX_CHARS_PER_PAGE;
+      const overflow = currentChars + item.chars > budget && current.length > 0;
       if (overflow) {
         if (!item.isTitle && current.length > 0 && current[current.length - 1].isTitle) {
           const orphanTitle = current.pop()!;
@@ -959,16 +972,24 @@ export async function generateServiceProposalHtml(
     buckets.forEach((bucket, idx) => {
       const bodyInner = bucket.map((b) => b.html).join('');
       const isLast = idx === buckets.length - 1;
-      const columnsBlock = `<div style="column-count:2;column-gap:8mm;column-fill:balance;${isLast && signatureBlockHtml ? 'flex:1;min-height:0;' : 'height:100%;'}">${bodyInner}</div>`;
-      const body = isLast && signatureBlockHtml
-        ? `<div style="display:flex;flex-direction:column;height:100%;">${columnsBlock}${signatureBlockHtml}</div>`
-        : columnsBlock;
+      const isFirst = idx === 0;
+      const columnsFlex = (isLast && signatureBlockHtml) || (isFirst && introHtml);
+      const columnsBlock = `<div style="column-count:2;column-gap:8mm;column-fill:balance;${columnsFlex ? 'flex:1;min-height:0;' : 'height:100%;'}">${bodyInner}</div>`;
+      let body: string;
+      if (isFirst && introHtml) {
+        body = `<div style="display:flex;flex-direction:column;height:100%;">${introHtml}${columnsBlock}${isLast && signatureBlockHtml ? signatureBlockHtml : ''}</div>`;
+      } else if (isLast && signatureBlockHtml) {
+        body = `<div style="display:flex;flex-direction:column;height:100%;">${columnsBlock}${signatureBlockHtml}</div>`;
+      } else {
+        body = columnsBlock;
+      }
       const title =
         buckets.length === 1
           ? 'Conditions générales'
           : `Conditions générales (${idx + 1}/${buckets.length})`;
       renderedArticlesHtml.push(renderCgShell(title, body));
     });
+
   } else if (signatureBlockHtml) {
     // Fallback: no article pages, keep signatures as their own page.
     renderedSignaturePagesHtml.push(
