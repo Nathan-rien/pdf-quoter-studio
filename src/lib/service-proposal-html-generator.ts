@@ -829,7 +829,7 @@ export async function generateServiceProposalHtml(
       : '';
 
     // Split across multiple pages if content is too tall (approx chars/page tuned to font size)
-    const MAX_PARTIES_CHARS = 1750;
+    const MAX_PARTIES_CHARS = 3000;
 
     const buckets: string[][] = [];
     let current: string[] = [];
@@ -892,7 +892,7 @@ export async function generateServiceProposalHtml(
         return (a.position?.y ?? 0) - (b.position?.y ?? 0);
       });
 
-    const MAX_CHARS_PER_PAGE = 2300;
+    const MAX_CHARS_PER_PAGE = 4200;
     const rendered = allArticleElements.map((el: any) => renderArticle(el));
 
     const buckets: Array<Array<typeof rendered[number]>> = [];
