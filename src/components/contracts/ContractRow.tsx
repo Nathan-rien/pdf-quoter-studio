@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, useContractExternalProviders, Contract, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { generateServiceContractNumber } from '@/lib/contract-numbering';
@@ -37,6 +37,27 @@ const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
 
 function sanitizeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+}
+
+function uid() {
+  return Math.random().toString(36).substring(2, 9);
+}
+
+function normalizeExternalProviders(value: unknown): ContractExternalProvider[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((provider) => provider && typeof provider === 'object')
+    .map((provider, index) => {
+      const p = provider as ContractExternalProvider;
+      return {
+        id: typeof p.id === 'string' && p.id ? p.id : `provider-${index}-${uid()}`,
+        name: typeof p.name === 'string' ? p.name : '',
+        role: typeof p.role === 'string' ? p.role : '',
+        contact: typeof p.contact === 'string' ? p.contact : '',
+        phone: typeof p.phone === 'string' ? p.phone : '',
+        email: typeof p.email === 'string' ? p.email : '',
+      };
+    });
 }
 
 export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean }) {
@@ -73,9 +94,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
   const [cessionPercent, setCessionPercent] = useState<number | null>(contract.cession_percent ?? null);
+  const [externalProviders, setExternalProviders] = useState<ContractExternalProvider[]>(() => normalizeExternalProviders(contract.external_providers));
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
   const { data: proposalOptions } = useContractProposalOptions(isQuick ? null : contract.proposal_id);
-  const { data: externalProviders } = useContractExternalProviders(isServiceContract && !isQuick ? contract.proposal_id : null);
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
@@ -173,8 +194,23 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
         quarterly_rent_ht: hasProposalRent ? contract.quarterly_rent_ht ?? null : manualQuarterlyValue,
         cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
+        external_providers: isServiceContract ? externalProviders : contract.external_providers ?? [],
       },
     });
+  }
+
+  function addExternalProvider() {
+    setExternalProviders((current) => [...current, { id: uid(), name: '', role: '', contact: '' }]);
+  }
+
+  function updateExternalProvider(id: string | undefined, patch: Partial<ContractExternalProvider>) {
+    if (!id) return;
+    setExternalProviders((current) => current.map((provider) => (provider.id === id ? { ...provider, ...patch } : provider)));
+  }
+
+  function removeExternalProvider(id: string | undefined) {
+    if (!id) return;
+    setExternalProviders((current) => current.filter((provider) => provider.id !== id));
   }
 
   async function handleDownloadProposal() {
@@ -558,23 +594,60 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             );
           })()}
 
-          {isServiceContract && externalProviders && externalProviders.length > 0 && (
+          {isServiceContract && (
             <div className="space-y-1.5">
-              <Label className="text-xs">Prestataires extérieurs (issus de la proposition)</Label>
-              <div className="rounded-md border border-border bg-background/60 p-3 space-y-2">
-                {externalProviders.map((p, idx) => {
-                  const primary = p.name || p.role || `Prestataire ${idx + 1}`;
-                  const meta = [p.role && p.name ? p.role : null, p.contact, p.phone, p.email]
-                    .filter((v) => typeof v === 'string' && v.trim().length > 0);
-                  return (
-                    <div key={idx} className="text-sm">
-                      <div className="font-medium">• {primary}</div>
-                      {meta.length > 0 && (
-                        <div className="text-xs text-muted-foreground ml-3">{meta.join(' · ')}</div>
-                      )}
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs">Prestataires extérieurs</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addExternalProvider} className="h-8 gap-1 text-xs">
+                  <Plus className="h-3.5 w-3.5" /> Ajouter
+                </Button>
+              </div>
+              <div className="rounded-md border border-border bg-background/60 p-3 space-y-3">
+                {externalProviders.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">Aucun prestataire extérieur renseigné.</div>
+                ) : (
+                  externalProviders.map((provider, idx) => (
+                    <div key={provider.id ?? idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Nom</Label>
+                        <Input
+                          value={provider.name ?? ''}
+                          onChange={(e) => updateExternalProvider(provider.id, { name: e.target.value })}
+                          placeholder="Nom du prestataire"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Rôle</Label>
+                        <Input
+                          value={provider.role ?? ''}
+                          onChange={(e) => updateExternalProvider(provider.id, { role: e.target.value })}
+                          placeholder="Ex : maintenance"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Contact</Label>
+                        <Input
+                          value={provider.contact ?? ''}
+                          onChange={(e) => updateExternalProvider(provider.id, { contact: e.target.value })}
+                          placeholder="Nom / téléphone / email"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeExternalProvider(provider.id)}
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        title="Supprimer le prestataire"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  );
-                })}
+                  ))
+                )}
               </div>
             </div>
           )}
