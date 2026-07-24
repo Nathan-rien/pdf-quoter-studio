@@ -131,6 +131,10 @@ const SECTION_WRAPPER_STYLE =
 const SECTION_BANNER_STYLE =
   "background:#4b5563;color:#ffffff;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:0.75px;text-transform:uppercase;padding:3mm 5mm;";
 const SECTION_BODY_STYLE = "padding:6mm 7mm;";
+const CONTRACT_ARTICLE_TITLE_STYLE =
+  "font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;";
+const CONTRACT_BODY_TEXT_STYLE =
+  "font-family:'Inter',sans-serif;font-size:12.5px;line-height:1.5;color:#4b5563;";
 
 type PositionedDynamicZone = DynamicZone & {
   layoutTop?: number;
@@ -772,7 +776,7 @@ export async function generateServiceProposalHtml(
     const isTitle = !!c?.bold && raw.length < 120 && !raw.includes('\n');
     if (isTitle) {
       return {
-        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:9px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin:4mm 0 1.5mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+        html: `<h3 style="${CONTRACT_ARTICLE_TITLE_STYLE}">${escCg(raw)}</h3>`,
         chars: raw.length,
         isTitle: true,
       };
@@ -781,7 +785,7 @@ export async function generateServiceProposalHtml(
     const body = paragraphs
       .map(
         (p) =>
-          `<p style="font-family:'Inter',sans-serif;font-size:7.5px;line-height:1.55;color:#374151;margin:0 0 2mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
+          `<p style="${CONTRACT_BODY_TEXT_STYLE}margin:0 0 3mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
       )
       .join('');
     return { html: body, chars: raw.length, isTitle: false };
@@ -818,17 +822,17 @@ export async function generateServiceProposalHtml(
       const align = c?.textAlign || 'left';
       const col = c?.bold ? '#1a1a1a' : '#374151';
       return {
-        html: `<div style="font-family:'Inter',sans-serif;font-size:8px;font-weight:${fw};color:${col};line-height:1.55;text-align:${align};margin-bottom:2mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
+        html: `<div style="${CONTRACT_BODY_TEXT_STYLE}font-weight:${fw};color:${col};text-align:${align};margin-bottom:3mm;white-space:pre-wrap;">${escCg(raw)}</div>`,
         chars: raw.length,
       };
     });
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:3mm;color:#374151;font-size:8px;">${dyn}</div>`
+      ? `<div style="margin-top:3mm;color:#4b5563;font-size:12.5px;">${dyn}</div>`
       : '';
 
-    // Split across multiple pages if content is too tall (approx 3800 chars/page)
-    const MAX_PARTIES_CHARS = 3200;
+    // Split earlier because contract text now uses the same typographic scale as devis pages.
+    const MAX_PARTIES_CHARS = 1300;
     const buckets: string[][] = [];
     let current: string[] = [];
     let currentChars = 0;
@@ -864,12 +868,12 @@ export async function generateServiceProposalHtml(
       .map((el: any) => {
         const c = el.content as any;
         const raw = String(c?.text ?? '');
-        return `<div style="font-family:'Inter',sans-serif;font-size:9px;color:#1a1a1a;line-height:1.55;margin-bottom:2mm;">${escCg(raw)}</div>`;
+        return `<div style="${CONTRACT_BODY_TEXT_STYLE}color:#111111;margin-bottom:3mm;">${escCg(raw)}</div>`;
       })
       .join('');
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:6mm;color:#1a1a1a;font-size:9px;">${dyn}</div>`
+      ? `<div style="margin-top:6mm;color:#111111;font-size:12.5px;">${dyn}</div>`
       : '';
     renderedSignaturePagesHtml.push(
       renderCgShell('Signatures', `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`),
@@ -889,7 +893,7 @@ export async function generateServiceProposalHtml(
         return (a.position?.y ?? 0) - (b.position?.y ?? 0);
       });
 
-    const MAX_CHARS_PER_PAGE = 4200;
+    const MAX_CHARS_PER_PAGE = 1700;
     const rendered = allArticleElements.map((el: any) => renderArticle(el));
 
     const buckets: Array<Array<typeof rendered[number]>> = [];
@@ -920,7 +924,7 @@ export async function generateServiceProposalHtml(
 
     buckets.forEach((bucket, idx) => {
       const bodyInner = bucket.map((b) => b.html).join('');
-      const body = `<div style="column-count:2;column-gap:8mm;column-fill:balance;height:100%;">${bodyInner}</div>`;
+      const body = `<div style="column-count:2;column-gap:8mm;column-fill:balance;height:100%;font-size:12.5px;line-height:1.5;">${bodyInner}</div>`;
       const title =
         buckets.length === 1
           ? 'Conditions générales'
