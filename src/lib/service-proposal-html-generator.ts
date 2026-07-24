@@ -976,7 +976,10 @@ export async function generateServiceProposalHtml(
       const extras = extraPagesAfter[page.pageNumber];
       if (extras && extras.length > 0) {
         for (const extra of extras) {
-          allPagesHtml.push(renderShellPage(title, extra));
+          // Extras coming from the Matériel page are service options
+          // continuations ("Détail des services"): use "Services" as banner.
+          const extraTitle = extra.includes('Détail des services') ? 'Services' : title;
+          allPagesHtml.push(renderShellPage(extraTitle, extra));
         }
       }
       continue;
