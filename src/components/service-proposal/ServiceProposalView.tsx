@@ -47,6 +47,7 @@ const DEFAULT_CLIENT: ClientData = {
   client_phone: '',
   client_address: '',
   client_siret: '',
+  client_capital_social: '',
   entity: '',
   commercial_id: '',
   commercial_name: '',
