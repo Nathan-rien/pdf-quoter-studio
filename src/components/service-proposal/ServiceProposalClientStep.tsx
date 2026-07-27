@@ -14,6 +14,7 @@ export interface ClientData {
   client_phone: string;
   client_address: string;
   client_siret: string;
+  client_capital_social: string;
   entity: CommercialEntity | '';
   commercial_id: string;
   commercial_name: string;
