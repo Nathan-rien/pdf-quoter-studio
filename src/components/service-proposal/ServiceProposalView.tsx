@@ -495,6 +495,7 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
     client_phone: proposal.client_phone ?? '',
     client_address: proposal.client_address ?? '',
     client_siret: proposal.client_siret ?? '',
+    client_capital_social: (proposal as unknown as { client_capital_social?: string | null }).client_capital_social ?? '',
     entity: '',
     commercial_id: proposal.commercial_id ?? '',
     commercial_name: proposal.commercial_name ?? '',
