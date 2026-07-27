@@ -204,6 +204,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
               telephone: proposal.client_phone ?? '',
               adresse: proposal.client_address ?? '',
               siret: proposal.client_siret ?? '',
+              capitalSocial: (proposal as unknown as { client_capital_social?: string | null }).client_capital_social ?? '',
             },
             commercialData: {
               entity: null,
