@@ -105,6 +105,7 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
     telephone: clientData.client_phone,
     adresse: clientData.client_address,
     siret: clientData.client_siret,
+    capitalSocial: clientData.client_capital_social,
   });
   store.updateCommercialData({
     entity: clientData.entity || null,
