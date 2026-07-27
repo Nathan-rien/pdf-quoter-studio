@@ -178,6 +178,16 @@ export function ServiceProposalClientStep({ data, onChange }: ServiceProposalCli
             placeholder="000 000 000 00000"
           />
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="client_capital_social">Capital Social</Label>
+          <Input
+            id="client_capital_social"
+            value={data.client_capital_social}
+            onChange={(e) => set('client_capital_social', e.target.value)}
+            placeholder="Ex : 10 000 €"
+          />
+        </div>
       </div>
 
       {/* Sites d'intervention */}
