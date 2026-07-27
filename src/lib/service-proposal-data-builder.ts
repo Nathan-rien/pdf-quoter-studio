@@ -90,6 +90,7 @@ export function buildHtmlDataFromServiceProposal(
     telephone: proposal.client_phone ?? '',
     adresse: proposal.client_address ?? '',
     siret: proposal.client_siret ?? '',
+    capitalSocial: (proposal as unknown as { client_capital_social?: string | null }).client_capital_social ?? '',
   };
   const commercialData = { entity: null, commercialId: proposal.commercial_id ?? null };
   const selectedCommercial = proposal.commercial_id
