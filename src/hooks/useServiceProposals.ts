@@ -46,6 +46,7 @@ export interface ServiceProposal {
   client_phone?: string | null;
   client_address?: string | null;
   client_siret?: string | null;
+  client_capital_social?: string | null;
   commercial_id: string;
   commercial_name?: string | null;
   selected_services: ServiceLine[];
