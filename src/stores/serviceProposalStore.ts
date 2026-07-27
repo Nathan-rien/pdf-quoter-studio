@@ -69,6 +69,7 @@ const initialState: ServiceProposalStoreState = {
     telephone: '',
     adresse: '',
     siret: '',
+    capitalSocial: '',
   },
   commercialData: {
     entity: null,
