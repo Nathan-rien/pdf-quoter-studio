@@ -425,6 +425,7 @@ function buildPayload(
     client_phone: clientData.client_phone || null,
     client_address: clientData.client_address || null,
     client_siret: clientData.client_siret || null,
+    client_capital_social: clientData.client_capital_social || null,
     commercial_id: clientData.commercial_id || '',
     commercial_name: clientData.commercial_name || null,
     selected_services: derivedSelected,
