@@ -369,7 +369,7 @@ export async function generateServiceProposalHtml(
         <div style="flex: 1;">
           <div style="min-height: 18mm;">
             La Société Groupe Cybertek SAS<br />
-            Représentée par ${escapeText(selectedCommercial?.nom || commercialData?.commercialId || '—')}<br />
+            Représentée par Grégory Moinet<br />
             Directeur Services et Solutions
           </div>
           Signature : _______________
