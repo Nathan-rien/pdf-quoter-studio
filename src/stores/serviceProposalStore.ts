@@ -13,6 +13,7 @@ export interface ClientData {
   telephone: string;
   adresse: string;
   siret: string;
+  capitalSocial: string;
 }
 
 export interface CommercialData {
