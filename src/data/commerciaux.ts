@@ -92,7 +92,7 @@ export const COMMERCIAUX: Commercial[] = [
   { 
     id: 'jb-grosbill', 
     entity: 'grosbill-pro', 
-    nom: 'Grégory Moinet', 
+    nom: 'Jonathan Breton', 
     telephone: '01 84 25 92 72', 
     email: 'j.breton@grosbill-pro.com', 
     adresse: '60 Boulevard de l\'hôpital, 75013 Paris' 
