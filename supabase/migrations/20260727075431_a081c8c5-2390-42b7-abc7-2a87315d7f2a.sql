@@ -1,0 +1,1 @@
+ALTER TABLE public.service_proposals ADD COLUMN IF NOT EXISTS client_capital_social text;
