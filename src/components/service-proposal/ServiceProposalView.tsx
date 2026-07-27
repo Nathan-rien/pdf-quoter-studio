@@ -47,6 +47,7 @@ const DEFAULT_CLIENT: ClientData = {
   client_phone: '',
   client_address: '',
   client_siret: '',
+  client_capital_social: '',
   entity: '',
   commercial_id: '',
   commercial_name: '',
@@ -104,6 +105,7 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
     telephone: clientData.client_phone,
     adresse: clientData.client_address,
     siret: clientData.client_siret,
+    capitalSocial: clientData.client_capital_social,
   });
   store.updateCommercialData({
     entity: clientData.entity || null,
@@ -423,6 +425,7 @@ function buildPayload(
     client_phone: clientData.client_phone || null,
     client_address: clientData.client_address || null,
     client_siret: clientData.client_siret || null,
+    client_capital_social: clientData.client_capital_social || null,
     commercial_id: clientData.commercial_id || '',
     commercial_name: clientData.commercial_name || null,
     selected_services: derivedSelected,
@@ -494,6 +497,7 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
     client_phone: proposal.client_phone ?? '',
     client_address: proposal.client_address ?? '',
     client_siret: proposal.client_siret ?? '',
+    client_capital_social: (proposal as unknown as { client_capital_social?: string | null }).client_capital_social ?? '',
     entity: '',
     commercial_id: proposal.commercial_id ?? '',
     commercial_name: proposal.commercial_name ?? '',

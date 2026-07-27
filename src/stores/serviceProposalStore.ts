@@ -13,6 +13,7 @@ export interface ClientData {
   telephone: string;
   adresse: string;
   siret: string;
+  capitalSocial: string;
 }
 
 export interface CommercialData {
@@ -68,6 +69,7 @@ const initialState: ServiceProposalStoreState = {
     telephone: '',
     adresse: '',
     siret: '',
+    capitalSocial: '',
   },
   commercialData: {
     entity: null,
@@ -202,6 +204,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
               telephone: proposal.client_phone ?? '',
               adresse: proposal.client_address ?? '',
               siret: proposal.client_siret ?? '',
+              capitalSocial: (proposal as unknown as { client_capital_social?: string | null }).client_capital_social ?? '',
             },
             commercialData: {
               entity: null,

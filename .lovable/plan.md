@@ -1,19 +1,25 @@
-## Objectif
-Sur le bloc **Signatures** de la page 7 du contrat (la seule page qui rend `service_signature`), forcer le nom du représentant Cybertek à **Grégory Moinet**, indépendamment du commercial sélectionné pour la proposition.
+## Ajout du champ Capital Social
 
-## Changement
-Fichier : `src/lib/service-proposal-html-generator.ts`, fonction `renderSignatureZone` (~ligne 372).
+### Objectif
+Ajouter un champ "Capital Social" dans la fiche Client des Propositions Services, et le reporter dans l'encart "Coordonnées Bénéficiaire" du devis/contrat.
 
-Remplacer :
-```
-Représentée par ${escapeText(selectedCommercial?.nom || commercialData?.commercialId || '—')}
-```
-par :
-```
-Représentée par Grégory Moinet
-```
+### Modifications
 
-## Portée
-- Uniquement le bloc `renderSignatureZone`, utilisé exclusivement sur la dernière page CG (page 7) via `signatureBlockHtml`.
-- Aucun autre emplacement (interlocuteurs, entête, bloc commercial du devis, autres pages) n'est modifié — `selectedCommercial` reste utilisé partout ailleurs.
-- Le côté droit (client) reste inchangé.
+1. **Store** (`src/stores/serviceProposalStore.ts`)
+   - Ajouter `capitalSocial: string` dans `clientData` (init `''`, persistance existante conservée).
+
+2. **UI Client** (`src/components/service-proposal/ServiceProposalClientStep.tsx`)
+   - Ajouter un champ texte "Capital Social" dans le bloc Client (à côté du SIRET).
+
+3. **Persistance DB** (`service_proposals`)
+   - Ajouter colonne `client_capital_social text` via migration.
+   - Sauvegarder/charger la valeur dans `useServiceProposals` (et data-builder).
+
+4. **Data builder** (`src/lib/service-proposal-data-builder.ts`)
+   - Propager `capitalSocial` dans `clientData` (store + DB row).
+
+5. **Rendu PDF** (`src/lib/service-proposal-html-generator.ts`)
+   - Dans l'encart "Coordonnées Bénéficiaire" (page 1), afficher "Capital social : {valeur}" si renseigné, sans modifier la mise en page globale.
+
+### Hors périmètre
+Aucun autre écran, aucune autre logique modifiée.

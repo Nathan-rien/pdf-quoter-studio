@@ -14,6 +14,7 @@ export interface ClientData {
   client_phone: string;
   client_address: string;
   client_siret: string;
+  client_capital_social: string;
   entity: CommercialEntity | '';
   commercial_id: string;
   commercial_name: string;
@@ -175,6 +176,16 @@ export function ServiceProposalClientStep({ data, onChange }: ServiceProposalCli
             value={data.client_siret}
             onChange={(e) => set('client_siret', e.target.value)}
             placeholder="000 000 000 00000"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="client_capital_social">Capital Social</Label>
+          <Input
+            id="client_capital_social"
+            value={data.client_capital_social}
+            onChange={(e) => set('client_capital_social', e.target.value)}
+            placeholder="Ex : 10 000 €"
           />
         </div>
       </div>

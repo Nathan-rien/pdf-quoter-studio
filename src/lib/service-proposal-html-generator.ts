@@ -262,6 +262,8 @@ export async function generateServiceProposalHtml(
               ${clientData.adresse ? `<p style="margin:0.5mm 0;">${escapeText(clientData.adresse)}</p>` : ''}
               ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
               ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
+              ${clientData.siret ? `<p style="margin:0.5mm 0;">SIRET : ${escapeText(clientData.siret)}</p>` : ''}
+              ${clientData.capitalSocial ? `<p style="margin:0.5mm 0;">Capital social : ${escapeText(clientData.capitalSocial)}</p>` : ''}
             </div>
           </div>
           <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
