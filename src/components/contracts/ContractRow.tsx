@@ -688,7 +688,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                     className="h-9 text-sm"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Requise pour que le contrat apparaisse dans le Planning Services.
+                    Optionnelle : peut être renseignée après la planification.
                   </p>
                 </>
               )}
