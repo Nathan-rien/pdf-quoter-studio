@@ -32,6 +32,7 @@ export interface Contract {
   duration_months?: number | null;
   payment_frequency?: PaymentFrequency;
   contract_number?: string | null;
+  erp_reference?: string | null;
   monthly_rent_ht?: number | null;
   quarterly_rent_ht?: number | null;
   cession_percent?: number | null;
