@@ -45,6 +45,7 @@ interface ContractRow {
   client_name: string;
   contract_number: string | null;
   proposal_id: string | null;
+  erp_reference: string | null;
 }
 
 
@@ -138,9 +139,10 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contracts')
-        .select('id, client_name, contract_number, proposal_id')
-
+        .select('id, client_name, contract_number, proposal_id, erp_reference')
         .eq('proposal_type', 'service')
+        .not('erp_reference', 'is', null)
+        .neq('erp_reference', '')
         .order('client_name');
       if (error) throw error;
       return (data ?? []) as ContractRow[];
@@ -533,7 +535,9 @@ function InterventionDialog({
               <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
               <SelectContent>
                 {contracts.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.client_name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
