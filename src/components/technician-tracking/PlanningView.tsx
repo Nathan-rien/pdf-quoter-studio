@@ -535,7 +535,9 @@ function InterventionDialog({
               <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
               <SelectContent>
                 {contracts.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.client_name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
