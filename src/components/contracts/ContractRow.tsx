@@ -93,6 +93,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
+  const [erpReference, setErpReference] = useState(contract.erp_reference ?? '');
   const [cessionPercent, setCessionPercent] = useState<number | null>(contract.cession_percent ?? null);
   const [externalProviders, setExternalProviders] = useState<ContractExternalProvider[]>(() => normalizeExternalProviders(contract.external_providers));
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
