@@ -139,9 +139,10 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contracts')
-        .select('id, client_name, contract_number, proposal_id')
-
+        .select('id, client_name, contract_number, proposal_id, erp_reference')
         .eq('proposal_type', 'service')
+        .not('erp_reference', 'is', null)
+        .neq('erp_reference', '')
         .order('client_name');
       if (error) throw error;
       return (data ?? []) as ContractRow[];
