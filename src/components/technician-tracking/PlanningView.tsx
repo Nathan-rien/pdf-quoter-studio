@@ -45,6 +45,7 @@ interface ContractRow {
   client_name: string;
   contract_number: string | null;
   proposal_id: string | null;
+  erp_reference: string | null;
 }
 
 
