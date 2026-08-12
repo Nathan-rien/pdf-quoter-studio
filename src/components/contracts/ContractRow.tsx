@@ -192,6 +192,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         commercial_id: isQuick ? (commercialId || 'quick') : (commercialId || contract.commercial_id),
         commercial_name: selected?.nom ?? (isQuick ? null : contract.commercial_name),
         contract_number: nextContractNumber,
+        erp_reference: isServiceContract ? (erpReference.trim() || null) : contract.erp_reference ?? null,
         monthly_rent_ht: hasProposalRent ? contract.monthly_rent_ht ?? null : manualMonthlyValue,
         quarterly_rent_ht: hasProposalRent ? contract.quarterly_rent_ht ?? null : manualQuarterlyValue,
         cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
