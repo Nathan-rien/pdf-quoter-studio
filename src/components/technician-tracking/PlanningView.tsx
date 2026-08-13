@@ -597,7 +597,7 @@ function InterventionDialog({
             <label className="text-xs font-medium mb-1 block">Réf. Jaja</label>
             <Input
               value={erpRef}
-              onChange={(e) => setErpRef(e.target.value)}
+              onChange={(e) => { setErpTouched(true); setErpRef(e.target.value); }}
               placeholder="Ex : JAJA-12345"
               disabled={!canEditAll}
             />
