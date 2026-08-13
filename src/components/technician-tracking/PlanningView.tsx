@@ -467,6 +467,15 @@ function InterventionDialog({
     [contracts, contractId]
   );
 
+  // Réf. Jaja : reprise auto depuis le service puis le contrat, tant que non modifiée manuellement
+  useEffect(() => {
+    if (erpTouched) return;
+    const fromRef = refs.find((r) => r.id === referenceId)?.erp_reference;
+    setErpRef(fromRef || selectedContract?.erp_reference || '');
+  }, [referenceId, selectedContract, refs, erpTouched]);
+
+
+
   const clientInfoQ = useQuery({
     queryKey: ['pl-client-info', selectedContract?.proposal_id],
     enabled: !!selectedContract?.proposal_id,
