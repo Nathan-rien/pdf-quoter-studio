@@ -34,12 +34,15 @@ function CommercialGroup({
   contracts,
   onVisualize,
   autoExpandId,
+  onPlanIntervention,
 }: {
   commercialName: string;
   contracts: Contract[];
   onVisualize?: (contract: Contract) => void;
   autoExpandId?: string | null;
+  onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void;
 }) {
+
   const [open, setOpen] = useState(true);
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
 
