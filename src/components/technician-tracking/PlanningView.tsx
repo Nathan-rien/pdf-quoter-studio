@@ -498,8 +498,10 @@ function InterventionDialog({
   });
 
 
+  const qc = useQueryClient();
   const isOwner = iv?.created_by === currentUser?.id;
   const canEditAll = !isEdit || isAdmin || isOwner;
+
 
   async function persistErp() {
     if (!canEditAll || !referenceId) return;
