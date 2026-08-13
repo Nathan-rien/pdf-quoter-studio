@@ -453,6 +453,9 @@ function InterventionDialog({
   );
   const [commentaire, setCommentaire] = useState<string>(iv?.commentaire ?? '');
   const [statut, setStatut] = useState<Intervention['statut']>(iv?.statut ?? 'prevue');
+  const [erpRef, setErpRef] = useState<string>('');
+  const [erpTouched, setErpTouched] = useState(false);
+
 
   const refsForContract = useMemo(
     () => refs.filter((r) => r.contract_id === contractId),
