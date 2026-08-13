@@ -453,6 +453,9 @@ function InterventionDialog({
   );
   const [commentaire, setCommentaire] = useState<string>(iv?.commentaire ?? '');
   const [statut, setStatut] = useState<Intervention['statut']>(iv?.statut ?? 'prevue');
+  const [erpRef, setErpRef] = useState<string>('');
+  const [erpTouched, setErpTouched] = useState(false);
+
 
   const refsForContract = useMemo(
     () => refs.filter((r) => r.contract_id === contractId),
@@ -463,6 +466,15 @@ function InterventionDialog({
     () => contracts.find((c) => c.id === contractId) ?? null,
     [contracts, contractId]
   );
+
+  // Réf. Jaja : reprise auto depuis le service puis le contrat, tant que non modifiée manuellement
+  useEffect(() => {
+    if (erpTouched) return;
+    const fromRef = refs.find((r) => r.id === referenceId)?.erp_reference;
+    setErpRef(fromRef || selectedContract?.erp_reference || '');
+  }, [referenceId, selectedContract, refs, erpTouched]);
+
+
 
   const clientInfoQ = useQuery({
     queryKey: ['pl-client-info', selectedContract?.proposal_id],
@@ -486,13 +498,29 @@ function InterventionDialog({
   });
 
 
+  const qc = useQueryClient();
   const isOwner = iv?.created_by === currentUser?.id;
   const canEditAll = !isEdit || isAdmin || isOwner;
 
+
+  async function persistErp() {
+    if (!canEditAll || !referenceId) return;
+    const current = refs.find((r) => r.id === referenceId)?.erp_reference ?? '';
+    const next = erpRef.trim();
+    if (next === (current ?? '')) return;
+    await supabase
+      .from('client_service_references')
+      .update({ erp_reference: next || null })
+      .eq('id', referenceId);
+    qc.invalidateQueries({ queryKey: ['pl-refs'] });
+  }
+
   function submit() {
     if (!referenceId) return;
+    void persistErp();
     const totalMinutes =
       (Number(durationHours) || 0) * 60 + (Number(durationMinutes) || 0);
+
     const dureeVal = totalMinutes > 0 ? totalMinutes : null;
     const payload: Partial<Intervention> & { id?: string } = isEdit
       ? {
@@ -563,25 +591,21 @@ function InterventionDialog({
                 ))}
               </SelectContent>
             </Select>
-            {referenceId && (() => {
-              const sel = refsForContract.find((r) => r.id === referenceId);
-              if (!sel) return null;
-              return (
-                <div className="mt-1.5">
-                  <span
-                    className={
-                      'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium border ' +
-                      (sel.erp_reference
-                        ? 'bg-blue-100 text-blue-900 border-transparent'
-                        : 'bg-muted text-muted-foreground border-transparent')
-                    }
-                  >
-                    Réf JAJA : {sel.erp_reference || 'non renseigné'}
-                  </span>
-                </div>
-              );
-            })()}
           </div>
+
+          <div>
+            <label className="text-xs font-medium mb-1 block">Réf. Jaja</label>
+            <Input
+              value={erpRef}
+              onChange={(e) => { setErpTouched(true); setErpRef(e.target.value); }}
+              placeholder="Ex : JAJA-12345"
+              disabled={!canEditAll}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Reprise automatiquement du service ou du contrat si renseignée.
+            </p>
+          </div>
+
 
           <div className="grid grid-cols-3 gap-3">
             <div>
