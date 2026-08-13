@@ -127,7 +127,12 @@ export default function Index() {
               setServiceAutoOpenCreate(true);
               setCurrentView('service-proposal');
             }}
+            onPlanIntervention={(p) => {
+              setPlanningPrefill(p);
+              setCurrentView('service-planning');
+            }}
           />
+
         ) : null;
 
       case 'technician-tracking':

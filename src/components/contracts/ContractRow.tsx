@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,9 @@ import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { ServiceReferencesPanel, useServiceReferences } from '@/components/technician-tracking/ServiceReferencesPanel';
+
 
 const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Crédit Bail 1', 'Realease 2'];
 const DURATIONS = [12, 24, 36, 48, 60];
@@ -60,14 +63,21 @@ function normalizeExternalProviders(value: unknown): ContractExternalProvider[] 
     });
 }
 
-export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean }) {
+export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false, onPlanIntervention }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean; onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
   const queryClient = useQueryClient();
   const { commerciaux } = useCommerciaux();
+  const { isAdmin } = useAuth();
+  const { data: allServiceRefs } = useServiceReferences();
+  const serviceRefs = useMemo(
+    () => (allServiceRefs ?? []).filter((r) => r.contract_id === contract.id),
+    [allServiceRefs, contract.id],
+  );
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const isQuick = !!contract.is_quick_contract;
   const isServiceContract = contract.proposal_type === 'service';
@@ -536,10 +546,11 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               className="h-9 text-sm"
             />
           </div>
-          {proposalOptions && proposalOptions.length > 0 && (() => {
+          {(() => {
+            const options = proposalOptions ?? [];
             const dur = parseInt(durationMonths) || 0;
             let totalHt = 0;
-            for (const opt of proposalOptions) {
+            for (const opt of options) {
               if (typeof opt.priceTotal === 'number') {
                 totalHt += opt.priceTotal;
               } else if (typeof opt.price === 'number' && dur > 0) {
@@ -548,17 +559,71 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             }
             const monthlyHt = dur > 0 ? totalHt / dur : 0;
             const fmt = (n: number) => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const priceLabelOf = (opt: typeof options[number]) =>
+              opt.showPrice === false
+                ? null
+                : getOptionPriceLabel({
+                    price: opt.price ?? null,
+                    priceTotal: opt.priceTotal ?? null,
+                    showPriceMode: opt.showPriceMode ?? 'mensuel',
+                    pricingScope: 'par_machine',
+                  }) ?? null;
+
+            const totalBlock = totalHt > 0 ? (
+              <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
+                <span className="font-semibold">Total Service HT</span>
+                <span className="font-semibold text-primary">
+                  {fmt(totalHt)} € HT
+                  {dur > 0 && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      (soit {fmt(monthlyHt)} €/mois sur {dur} mois)
+                    </span>
+                  )}
+                </span>
+              </div>
+            ) : null;
+
+            if (isServiceContract) {
+              const norm = (s: string) => s.trim().toLowerCase();
+              const matchedLabels = new Set(serviceRefs.map((r) => norm(r.service_label)));
+              const extraRows = options
+                .filter((opt) => !matchedLabels.has(norm(String(opt.name ?? ''))))
+                .map((opt) => ({
+                  name: String(opt.name ?? '—'),
+                  erpReference: opt.erpReference ?? null,
+                  priceLabel: priceLabelOf(opt),
+                }));
+              return (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Services & interventions</Label>
+                  <div className="rounded-md border border-border bg-background/60 p-3">
+                    <ServiceReferencesPanel
+                      contractId={contract.id}
+                      clientName={contract.client_name}
+                      isAdmin={isAdmin}
+                      refs={serviceRefs}
+                      onPlanIntervention={onPlanIntervention}
+                      priceLabelFor={(label) => {
+                        const opt = options.find((o) => norm(String(o.name ?? '')) === norm(label));
+                        return opt ? priceLabelOf(opt) : null;
+                      }}
+                      extraRows={extraRows}
+                      allowAdd
+                      footer={totalBlock}
+                      emptyMessage="Aucun service rattaché à ce contrat pour l'instant."
+                    />
+                  </div>
+                </div>
+              );
+            }
+
+            if (options.length === 0) return null;
             return (
               <div className="space-y-1.5">
                 <Label className="text-xs">Services & options de la proposition</Label>
                 <div className="rounded-md border border-border bg-background/60 p-3 space-y-1.5">
-                  {proposalOptions.map((opt, idx) => {
-                    const label = opt.showPrice === false ? '' : (getOptionPriceLabel({
-                      price: opt.price ?? null,
-                      priceTotal: opt.priceTotal ?? null,
-                      showPriceMode: opt.showPriceMode ?? 'mensuel',
-                      pricingScope: 'par_machine',
-                    }) ?? '');
+                  {options.map((opt, idx) => {
+                    const label = priceLabelOf(opt) ?? '';
                     return (
                       <div key={idx} className="flex items-center justify-between gap-3 text-sm">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -578,23 +643,12 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                       </div>
                     );
                   })}
-                  {totalHt > 0 && (
-                    <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
-                      <span className="font-semibold">Total Service HT</span>
-                      <span className="font-semibold text-primary">
-                        {fmt(totalHt)} € HT
-                        {dur > 0 && (
-                          <span className="ml-2 text-xs font-normal text-muted-foreground">
-                            (soit {fmt(monthlyHt)} €/mois sur {dur} mois)
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
+                  {totalBlock}
                 </div>
               </div>
             );
           })()}
+
 
           {isServiceContract && (
             <div className="space-y-1.5">

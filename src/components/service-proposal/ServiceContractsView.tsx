@@ -34,12 +34,15 @@ function CommercialGroup({
   contracts,
   onVisualize,
   autoExpandId,
+  onPlanIntervention,
 }: {
   commercialName: string;
   contracts: Contract[];
   onVisualize?: (contract: Contract) => void;
   autoExpandId?: string | null;
+  onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void;
 }) {
+
   const [open, setOpen] = useState(true);
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
 
@@ -72,6 +75,7 @@ function CommercialGroup({
               onVisualize={onVisualize}
               defaultExpanded={autoExpandId === c.id}
               hideFinancialPartner
+              onPlanIntervention={onPlanIntervention}
             />
           ))}
         </div>
@@ -80,7 +84,7 @@ function CommercialGroup({
   );
 }
 
-export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () => void } = {}) {
+export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { onCreateManual?: () => void; onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void } = {}) {
   const { data: contracts = [], isLoading, error } = useContracts('service');
   const { toast } = useToast();
   const { getCommercialById } = useCommerciaux();
@@ -309,6 +313,7 @@ export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () =
                 onVisualize={handleVisualize}
                 defaultExpanded={autoExpandId === c.id}
                 hideFinancialPartner
+                onPlanIntervention={onPlanIntervention}
               />
             ))
           : groups.map((g) => (
@@ -318,6 +323,7 @@ export function ServiceContractsView({ onCreateManual }: { onCreateManual?: () =
                 contracts={g.contracts}
                 onVisualize={handleVisualize}
                 autoExpandId={autoExpandId}
+                onPlanIntervention={onPlanIntervention}
               />
             ))}
       </div>
