@@ -501,10 +501,24 @@ function InterventionDialog({
   const isOwner = iv?.created_by === currentUser?.id;
   const canEditAll = !isEdit || isAdmin || isOwner;
 
+  async function persistErp() {
+    if (!canEditAll || !referenceId) return;
+    const current = refs.find((r) => r.id === referenceId)?.erp_reference ?? '';
+    const next = erpRef.trim();
+    if (next === (current ?? '')) return;
+    await supabase
+      .from('client_service_references')
+      .update({ erp_reference: next || null })
+      .eq('id', referenceId);
+    qc.invalidateQueries({ queryKey: ['pl-refs'] });
+  }
+
   function submit() {
     if (!referenceId) return;
+    void persistErp();
     const totalMinutes =
       (Number(durationHours) || 0) * 60 + (Number(durationMinutes) || 0);
+
     const dureeVal = totalMinutes > 0 ? totalMinutes : null;
     const payload: Partial<Intervention> & { id?: string } = isEdit
       ? {
