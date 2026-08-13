@@ -744,7 +744,7 @@ export async function generateServiceProposalHtml(
   const renderCgHeader = (title: string, hPad: string = '10mm') => `
     <div style="position:relative;background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;height:17mm;padding:0 220px 0 ${hPad};display:flex;align-items:center;box-sizing:border-box;overflow:hidden;">
       <div style="flex:1;min-width:0;font-size:11px;white-space:nowrap;overflow:visible;">${escCg(title)}</div>
-      <img src="${cbproWhiteLogo}" alt="Cybertek Pro" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:210px;height:60px;object-fit:contain;object-position:right center;" />
+      <div role="img" aria-label="Cybertek Pro" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:210px;height:60px;background-image:url('${cbproWhiteLogo}');background-size:contain;background-repeat:no-repeat;background-position:right center;"></div>
     </div>
   `;
 
