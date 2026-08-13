@@ -563,25 +563,21 @@ function InterventionDialog({
                 ))}
               </SelectContent>
             </Select>
-            {referenceId && (() => {
-              const sel = refsForContract.find((r) => r.id === referenceId);
-              if (!sel) return null;
-              return (
-                <div className="mt-1.5">
-                  <span
-                    className={
-                      'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium border ' +
-                      (sel.erp_reference
-                        ? 'bg-blue-100 text-blue-900 border-transparent'
-                        : 'bg-muted text-muted-foreground border-transparent')
-                    }
-                  >
-                    Réf JAJA : {sel.erp_reference || 'non renseigné'}
-                  </span>
-                </div>
-              );
-            })()}
           </div>
+
+          <div>
+            <label className="text-xs font-medium mb-1 block">Réf. Jaja</label>
+            <Input
+              value={erpRef}
+              onChange={(e) => setErpRef(e.target.value)}
+              placeholder="Ex : JAJA-12345"
+              disabled={!canEditAll}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Reprise automatiquement du service ou du contrat si renseignée.
+            </p>
+          </div>
+
 
           <div className="grid grid-cols-3 gap-3">
             <div>
