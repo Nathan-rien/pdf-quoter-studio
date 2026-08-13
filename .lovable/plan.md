@@ -1,25 +1,14 @@
-## Ajout du champ Capital Social
+# Correction du logo étiré dans le PDF
 
-### Objectif
-Ajouter un champ "Capital Social" dans la fiche Client des Propositions Services, et le reporter dans l'encart "Coordonnées Bénéficiaire" du devis/contrat.
+## Problème
+Le logo Cybertek Pro en haut à droite des pages s'affiche correctement dans l'aperçu, mais apparaît étiré dans le PDF téléchargé.
 
-### Modifications
+Cause : le logo est rendu via une balise `<img>` avec une taille forcée (210x60 px) corrigée par `object-fit: contain`. Le moteur de capture utilisé pour le PDF (html2canvas) ne respecte pas `object-fit` sur les images : il étire l'image aux dimensions du cadre.
 
-1. **Store** (`src/stores/serviceProposalStore.ts`)
-   - Ajouter `capitalSocial: string` dans `clientData` (init `''`, persistance existante conservée).
+## Correction
+Dans le générateur HTML des pages (`src/lib/service-proposal-html-generator.ts`, en-tête de page) :
+- Remplacer l'`<img>` du logo par un conteneur avec `background-image`, `background-size: contain`, `background-repeat: no-repeat`, `background-position: right center` — rendu identique en aperçu et fidèlement respecté à la conversion PDF.
+- Conserver exactement la même position, la même largeur et la même hauteur du bloc, pour ne rien changer visuellement dans l'aperçu.
 
-2. **UI Client** (`src/components/service-proposal/ServiceProposalClientStep.tsx`)
-   - Ajouter un champ texte "Capital Social" dans le bloc Client (à côté du SIRET).
-
-3. **Persistance DB** (`service_proposals`)
-   - Ajouter colonne `client_capital_social text` via migration.
-   - Sauvegarder/charger la valeur dans `useServiceProposals` (et data-builder).
-
-4. **Data builder** (`src/lib/service-proposal-data-builder.ts`)
-   - Propager `capitalSocial` dans `clientData` (store + DB row).
-
-5. **Rendu PDF** (`src/lib/service-proposal-html-generator.ts`)
-   - Dans l'encart "Coordonnées Bénéficiaire" (page 1), afficher "Capital social : {valeur}" si renseigné, sans modifier la mise en page globale.
-
-### Hors périmètre
-Aucun autre écran, aucune autre logique modifiée.
+## Vérification
+Générer l'aperçu et le PDF d'une proposition Services et comparer le logo sur les pages devis et contrat : proportions identiques, aucune autre modification de mise en page.
