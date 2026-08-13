@@ -60,14 +60,21 @@ function normalizeExternalProviders(value: unknown): ContractExternalProvider[] 
     });
 }
 
-export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean }) {
+export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false, onPlanIntervention }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean; onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
   const queryClient = useQueryClient();
   const { commerciaux } = useCommerciaux();
+  const { isAdmin } = useAuth();
+  const { data: allServiceRefs } = useServiceReferences();
+  const serviceRefs = useMemo(
+    () => (allServiceRefs ?? []).filter((r) => r.contract_id === contract.id),
+    [allServiceRefs, contract.id],
+  );
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const isQuick = !!contract.is_quick_contract;
   const isServiceContract = contract.proposal_type === 'service';
