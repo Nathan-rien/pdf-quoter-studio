@@ -38,6 +38,7 @@ export interface Contract {
   cession_percent?: number | null;
   external_providers?: ContractExternalProvider[] | null;
   is_quick_contract?: boolean;
+  closed_at?: string | null;
   attachment_url?: string | null;
   attachment_name?: string | null;
   validated_at: string;
