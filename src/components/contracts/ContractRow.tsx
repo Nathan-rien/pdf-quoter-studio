@@ -500,6 +500,51 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             </Button>
           </>
         )}
+        {canEditContract && !isServiceContract && (
+          isClosed ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
+              title="Rouvrir le contrat"
+              disabled={updateContract.isPending}
+              onClick={(e) => { e.stopPropagation(); updateContract.mutate({ id: contract.id, updates: { closed_at: null } }); }}
+            >
+              <ArchiveRestore className="w-4 h-4" />
+            </Button>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
+                  title="Clôturer le contrat"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Archive className="w-4 h-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clôturer le contrat ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Le contrat de <strong>{contract.client_name}</strong> sera déplacé dans « Contrats archivés » (accessible via le tri). Vous pourrez le rouvrir à tout moment.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => updateContract.mutate({ id: contract.id, updates: { closed_at: new Date().toISOString() } })}
+                    disabled={updateContract.isPending}
+                  >
+                    Clôturer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )
+        )}
         {canEditContract && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
