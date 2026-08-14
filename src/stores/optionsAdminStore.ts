@@ -104,6 +104,9 @@ export const useOptionsAdminStore = create<OptionsAdminStateExtended>()(
         const updated = get().options.find((o) => o.id === id);
         const idx = get().options.findIndex((o) => o.id === id);
         if (updated) saveOptionToDB(updated, idx, get().setSyncStatus);
+        if (updated && Object.prototype.hasOwnProperty.call(updates, 'requiresIntervention')) {
+          propagateInterventionFlag(updated);
+        }
       },
 
       deleteOption: (id) => {
