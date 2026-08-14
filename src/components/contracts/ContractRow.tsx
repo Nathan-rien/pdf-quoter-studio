@@ -625,12 +625,13 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             const priceLabelOf = (opt: typeof options[number]) =>
               opt.showPrice === false
                 ? null
-                : getOptionPriceLabel({
+                : (getOptionPriceLabel({
                     price: opt.price ?? null,
                     priceTotal: opt.priceTotal ?? null,
                     showPriceMode: opt.showPriceMode ?? 'mensuel',
                     pricingScope: 'par_machine',
-                  }) ?? null;
+                  }) ?? '').replace(/\s*\/machine/g, '').trim() || null;
+
 
             const totalBlock = totalHt > 0 ? (
               <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
