@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -19,6 +20,7 @@ export interface ServiceRef {
   erp_reference: string | null;
   tickets_initial: number | null;
   tickets_remaining: number | null;
+  requires_intervention?: boolean | null;
 }
 
 export function useServiceReferences() {
@@ -71,11 +73,17 @@ export function ServiceReferencesPanel({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newLabel, setNewLabel] = useState('');
+  const [newRequiresIntervention, setNewRequiresIntervention] = useState(true);
 
   const refs = useMemo(() => {
     if (refsProp) return refsProp;
     return (fetched.data ?? []).filter((r) => r.contract_id === contractId);
   }, [refsProp, fetched.data, contractId]);
+
+  const plannableRefs = useMemo(
+    () => refs.filter((r) => r.requires_intervention !== false),
+    [refs],
+  );
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['tt-refs'] });
@@ -88,6 +96,7 @@ export function ServiceReferencesPanel({
       erp_reference: string | null;
       tickets_initial: number | null;
       tickets_remaining: number | null;
+      requires_intervention?: boolean;
     }) => {
       const { id, ...rest } = payload;
       const { error } = await supabase.from('client_service_references').update(rest).eq('id', id);
@@ -126,6 +135,7 @@ export function ServiceReferencesPanel({
         option_service_id: null,
         service_label: label,
         erp_reference: null,
+        requires_intervention: newRequiresIntervention,
         tickets_initial: null,
         tickets_remaining: null,
       });
@@ -134,6 +144,7 @@ export function ServiceReferencesPanel({
     onSuccess: () => {
       invalidate();
       setNewLabel('');
+      setNewRequiresIntervention(true);
       setAdding(false);
       toast({ title: 'Service ajouté' });
     },
@@ -149,7 +160,7 @@ export function ServiceReferencesPanel({
               <Plus className="h-3.5 w-3.5 mr-1" /> Ajouter un service
             </Button>
           )}
-          {showBulkPlan && refs.length > 0 && (
+          {showBulkPlan && plannableRefs.length > 0 && (
             <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
               <CalendarPlus className="h-3.5 w-3.5 mr-1" /> Tout planifier
             </Button>
@@ -165,6 +176,13 @@ export function ServiceReferencesPanel({
             placeholder="Libellé du service"
             className="h-8"
           />
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+            <Checkbox
+              checked={newRequiresIntervention}
+              onCheckedChange={(c) => setNewRequiresIntervention(c === true)}
+            />
+            Avec intervention
+          </label>
           <Button size="sm" disabled={!newLabel.trim() || addRef.isPending} onClick={() => addRef.mutate(newLabel.trim())}>
             <Check className="h-4 w-4" />
           </Button>
@@ -187,7 +205,11 @@ export function ServiceReferencesPanel({
               onSave={(payload) => updateRef.mutate({ id: r.id, ...payload })}
               onConsume={() => consume.mutate(r.id)}
               onOpenHistory={() => setHistoryRefId(r.id)}
-              onPlan={onPlanIntervention ? () => onPlanIntervention({ reference_id: r.id, contract_id: contractId }) : undefined}
+              onPlan={
+                onPlanIntervention && r.requires_intervention !== false
+                  ? () => onPlanIntervention({ reference_id: r.id, contract_id: contractId })
+                  : undefined
+              }
             />
           ))}
           {(extraRows ?? []).map((row, idx) => (
@@ -219,7 +241,7 @@ export function ServiceReferencesPanel({
           open
           onOpenChange={(o) => !o && setBulkOpen(false)}
           clientName={clientName}
-          refs={refs}
+          refs={plannableRefs}
         />
       )}
     </div>
@@ -232,7 +254,7 @@ function ReferenceRow({
   r: ServiceRef;
   isAdmin: boolean;
   priceLabel?: string | null;
-  onSave: (p: { erp_reference: string | null; tickets_initial: number | null; tickets_remaining: number | null }) => void;
+  onSave: (p: { erp_reference: string | null; tickets_initial: number | null; tickets_remaining: number | null; requires_intervention: boolean }) => void;
   onConsume: () => void;
   onOpenHistory: () => void;
   onPlan?: () => void;
@@ -241,6 +263,7 @@ function ReferenceRow({
   const [erp, setErp] = useState(r.erp_reference ?? '');
   const [initial, setInitial] = useState<string>(r.tickets_initial?.toString() ?? '');
   const [remaining, setRemaining] = useState<string>(r.tickets_remaining?.toString() ?? '');
+  const [requiresIntervention, setRequiresIntervention] = useState(r.requires_intervention !== false);
 
   const hasTickets = r.tickets_initial !== null && r.tickets_remaining !== null;
   const exhausted = hasTickets && (r.tickets_remaining ?? 0) <= 0;
@@ -276,6 +299,13 @@ function ReferenceRow({
               placeholder="Restants"
               className="h-8 w-28"
             />
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+              <Checkbox
+                checked={requiresIntervention}
+                onCheckedChange={(c) => setRequiresIntervention(c === true)}
+              />
+              Avec intervention
+            </label>
             <Button
               size="sm"
               onClick={() => {
@@ -287,6 +317,7 @@ function ReferenceRow({
                   erp_reference: erp.trim() || null,
                   tickets_initial: ini,
                   tickets_remaining: rem,
+                  requires_intervention: requiresIntervention,
                 });
                 setEditing(false);
               }}
@@ -311,6 +342,12 @@ function ReferenceRow({
           >
             JAJA : {r.erp_reference || 'non renseigné'}
           </Badge>
+
+          {r.requires_intervention === false && (
+            <Badge variant="outline" className="text-muted-foreground">
+              Sans intervention
+            </Badge>
+          )}
 
           {hasTickets && (
             <button

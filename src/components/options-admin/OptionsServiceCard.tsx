@@ -206,6 +206,18 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
 
               <div className="flex items-center gap-2">
                 <Switch
+                  checked={option.requiresIntervention ?? true}
+                  onCheckedChange={(checked) =>
+                    updateOption(option.id, { requiresIntervention: checked })
+                  }
+                />
+                <Label className="text-xs text-muted-foreground">
+                  {(option.requiresIntervention ?? true) ? "Avec intervention" : "Sans intervention"}
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={option.isActive}
                   onCheckedChange={() => toggleOptionActive(option.id)}
                 />
@@ -213,6 +225,7 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
                   {option.isActive ? "Actif" : "Inactif"}
                 </Label>
               </div>
+
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>

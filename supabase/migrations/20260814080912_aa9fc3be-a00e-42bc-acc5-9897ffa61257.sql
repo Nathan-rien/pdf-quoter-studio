@@ -1,0 +1,2 @@
+ALTER TABLE public.options_services ADD COLUMN IF NOT EXISTS requires_intervention boolean NOT NULL DEFAULT true;
+ALTER TABLE public.client_service_references ADD COLUMN IF NOT EXISTS requires_intervention boolean NOT NULL DEFAULT true;
