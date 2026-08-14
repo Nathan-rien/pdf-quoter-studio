@@ -330,8 +330,8 @@ export function RemoteSupportView({ canEdit }: Props) {
         </Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-12rem)]">
-            <Table>
+          <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-12rem)] min-h-[600px] w-full">
+            <Table className="min-w-full">
               <TableHeader className="sticky top-0 z-10 bg-background">
               <TableRow>
                 <TableHead className="whitespace-nowrap">BU</TableHead>
