@@ -444,6 +444,7 @@ export function RemoteSupportView({ canEdit }: Props) {
               ))}
             </TableBody>
           </Table>
+          </div>
         </Card>
       )}
 
