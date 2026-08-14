@@ -394,7 +394,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     <div className="border border-border rounded-lg bg-card overflow-hidden">
       <div
         onClick={() => setExpanded(!expanded)}
-        className="w-full grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left items-center cursor-pointer"
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left cursor-pointer"
         role="button"
         tabIndex={0}
       >
