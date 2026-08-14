@@ -89,6 +89,7 @@ export type Database = {
           erp_reference: string | null
           id: string
           option_service_id: string | null
+          requires_intervention: boolean
           service_label: string
           tickets_initial: number | null
           tickets_remaining: number | null
@@ -100,6 +101,7 @@ export type Database = {
           erp_reference?: string | null
           id?: string
           option_service_id?: string | null
+          requires_intervention?: boolean
           service_label: string
           tickets_initial?: number | null
           tickets_remaining?: number | null
@@ -111,6 +113,7 @@ export type Database = {
           erp_reference?: string | null
           id?: string
           option_service_id?: string | null
+          requires_intervention?: boolean
           service_label?: string
           tickets_initial?: number | null
           tickets_remaining?: number | null
@@ -530,6 +533,7 @@ export type Database = {
           kind: string
           pack_service_ids: string[]
           price: Json | null
+          requires_intervention: boolean
           services: Json
           sort_order: number
           subtitle: string | null
@@ -544,6 +548,7 @@ export type Database = {
           kind?: string
           pack_service_ids?: string[]
           price?: Json | null
+          requires_intervention?: boolean
           services?: Json
           sort_order?: number
           subtitle?: string | null
@@ -558,6 +563,7 @@ export type Database = {
           kind?: string
           pack_service_ids?: string[]
           price?: Json | null
+          requires_intervention?: boolean
           services?: Json
           sort_order?: number
           subtitle?: string | null
@@ -934,6 +940,7 @@ export type Database = {
           erp_reference: string | null
           id: string
           option_service_id: string | null
+          requires_intervention: boolean
           service_label: string
           tickets_initial: number | null
           tickets_remaining: number | null
