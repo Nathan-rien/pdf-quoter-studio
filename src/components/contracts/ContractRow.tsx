@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus, Archive, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,6 +82,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
   const isQuick = !!contract.is_quick_contract;
   const isServiceContract = contract.proposal_type === 'service';
+  const isClosed = !!contract.closed_at;
   const [attachmentState, setAttachmentState] = useState<{ url: string | null; name: string | null } | null>(null);
   const attachmentUrl = attachmentState ? attachmentState.url : contract.attachment_url ?? null;
   const attachmentName = attachmentState ? attachmentState.name : contract.attachment_name ?? null;
@@ -406,7 +407,13 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {isQuick && (
               <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Contrat rapide</Badge>
             )}
-            {renewing && (
+            {isClosed && (
+              <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700">
+                <Archive className="h-3 w-3" />
+                Clôturé le {format(parseISO(contract.closed_at as string), 'dd/MM/yyyy', { locale: fr })}
+              </Badge>
+            )}
+            {!isClosed && renewing && (
               <Badge variant="warning" className="gap-1">
                 <Bell className="h-3 w-3" />
                 Renouvellement dans {monthsLeft}m
@@ -499,6 +506,51 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               {downloadingProposal || generatingContractPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             </Button>
           </>
+        )}
+        {canEditContract && !isServiceContract && (
+          isClosed ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
+              title="Rouvrir le contrat"
+              disabled={updateContract.isPending}
+              onClick={(e) => { e.stopPropagation(); updateContract.mutate({ id: contract.id, updates: { closed_at: null } }); }}
+            >
+              <ArchiveRestore className="w-4 h-4" />
+            </Button>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
+                  title="Clôturer le contrat"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Archive className="w-4 h-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clôturer le contrat ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Le contrat de <strong>{contract.client_name}</strong> sera déplacé dans « Contrats archivés » (accessible via le tri). Vous pourrez le rouvrir à tout moment.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => updateContract.mutate({ id: contract.id, updates: { closed_at: new Date().toISOString() } })}
+                    disabled={updateContract.isPending}
+                  >
+                    Clôturer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )
         )}
         {canEditContract && (
         <AlertDialog>

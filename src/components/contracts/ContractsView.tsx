@@ -126,9 +126,13 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
     catch { return null; }
   };
 
+  const isArchivedMode = sortMode === 'archived';
+
   const filteredContracts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const arr = contracts.filter((c) => {
+      const closed = !!c.closed_at;
+      if (isArchivedMode ? !closed : closed) return false;
       if (partnerFilter !== 'all' && c.financial_partner !== partnerFilter) return false;
       if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
       if (entityFilter !== 'all') {
@@ -151,6 +155,8 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
         if (eb == null) return -1;
         return (ea - eb) * dir;
       });
+    } else if (sortMode === 'archived') {
+      arr.sort((a, b) => new Date(b.closed_at ?? 0).getTime() - new Date(a.closed_at ?? 0).getTime());
     } else if (sortMode === 'recent') {
       arr.sort((a, b) => {
         const ta = new Date(a.validated_at ?? a.created_at ?? 0).getTime();
@@ -159,12 +165,13 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
       });
     }
     return arr;
-  }, [contracts, entityFilter, partnerFilter, commercialFilter, searchQuery, sortMode, getCommercialById]);
+  }, [contracts, entityFilter, partnerFilter, commercialFilter, searchQuery, sortMode, isArchivedMode, getCommercialById]);
 
+  const activeContractsCount = useMemo(() => contracts.filter((c) => !c.closed_at).length, [contracts]);
   const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
-  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc';
+  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc' || isArchivedMode;
   const groups = isFlatList ? [] : groupByCommercial(filteredContracts);
-  const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
+  const totalRenewing = isArchivedMode ? 0 : filteredContracts.filter(isContractRenewingSoon).length;
 
 
   const [previewContract, setPreviewContract] = useState<Contract | null>(null);
@@ -211,7 +218,8 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold">Contrats</h1>
-            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{filteredContracts.length !== contracts.length ? ` / ${contracts.length}` : ''}</Badge>}
+            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{!isArchivedMode && filteredContracts.length !== activeContractsCount ? ` / ${activeContractsCount}` : ''}</Badge>}
+            {isArchivedMode && <Badge variant="outline" className="text-[10px] uppercase">Archivés</Badge>}
 
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -260,6 +268,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
                   <SelectItem value="recent">Plus récents</SelectItem>
                   <SelectItem value="echeance-asc">Échéance (croissante)</SelectItem>
                   <SelectItem value="echeance-desc">Échéance (décroissante)</SelectItem>
+                  <SelectItem value="archived">Contrats archivés</SelectItem>
                 </SelectContent>
               </Select>
             </div>
