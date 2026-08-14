@@ -82,6 +82,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
   const isQuick = !!contract.is_quick_contract;
   const isServiceContract = contract.proposal_type === 'service';
+  const isClosed = !!contract.closed_at;
   const [attachmentState, setAttachmentState] = useState<{ url: string | null; name: string | null } | null>(null);
   const attachmentUrl = attachmentState ? attachmentState.url : contract.attachment_url ?? null;
   const attachmentName = attachmentState ? attachmentState.name : contract.attachment_name ?? null;
