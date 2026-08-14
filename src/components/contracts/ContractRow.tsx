@@ -69,7 +69,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const deleteContract = useDeleteContract();
   const queryClient = useQueryClient();
   const { commerciaux } = useCommerciaux();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isTechnicien } = useAuth();
+  const canEditContract = isAdmin || !isTechnicien;
   const { data: allServiceRefs } = useServiceReferences();
   const serviceRefs = useMemo(
     () => (allServiceRefs ?? []).filter((r) => r.contract_id === contract.id),
@@ -499,6 +500,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             </Button>
           </>
         )}
+        {canEditContract && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -530,6 +532,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        )}
         <div className="text-muted-foreground col-start-4 md:col-start-auto">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </div>
@@ -539,12 +542,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         <div className="border-t border-border bg-muted/20 p-4 space-y-4">
           <div className="space-y-1.5">
             <Label className="text-xs">Client</Label>
-            <Input
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="Nom du client"
-              className="h-9 text-sm"
-            />
+            {canEditContract ? (
+              <Input
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Nom du client"
+                className="h-9 text-sm"
+              />
+            ) : (
+              <div className="min-h-9 px-3 py-2 text-sm border border-border rounded-md bg-muted/40">
+                {contract.client_name || '—'}
+              </div>
+            )}
           </div>
           {(() => {
             const options = proposalOptions ?? [];
@@ -600,7 +609,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                     <ServiceReferencesPanel
                       contractId={contract.id}
                       clientName={contract.client_name}
-                      isAdmin={isAdmin}
+                      isAdmin={isAdmin || isTechnicien}
                       refs={serviceRefs}
                       onPlanIntervention={onPlanIntervention}
                       priceLabelFor={(label) => {
@@ -650,6 +659,40 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
           })()}
 
 
+          {!canEditContract && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="space-y-0.5">
+                <Label className="text-xs">Numéro de contrat</Label>
+                <div className="text-sm">{contract.contract_number || '—'}</div>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Réf. Jaja du contrat</Label>
+                <div className="text-sm">{contract.erp_reference || '—'}</div>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Durée</Label>
+                <div className="text-sm">{contract.duration_months ? `${contract.duration_months} mois` : '—'}</div>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Date de mise en place</Label>
+                <div className="text-sm">
+                  {contract.implementation_month
+                    ? format(parseISO(contract.implementation_month), 'dd/MM/yyyy', { locale: fr })
+                    : '—'}
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Commercial en charge</Label>
+                <div className="text-sm">{contract.commercial_name || contract.commercial_id || '—'}</div>
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Périodicité</Label>
+                <div className="text-sm capitalize">{contract.payment_frequency ?? 'mensuel'}</div>
+              </div>
+            </div>
+          )}
+
+          {canEditContract && (<>
           {isServiceContract && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
@@ -960,6 +1003,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               {updateContract.isPending ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
           </div>
+          </>)}
         </div>
       )}
     </div>

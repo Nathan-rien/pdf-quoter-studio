@@ -121,12 +121,12 @@ export default function Index() {
           />
         ) : null;
       case 'service-contracts':
-        return isAdmin ? (
+        return (isAdmin || isTechnicien) ? (
           <ServiceContractsView
-            onCreateManual={() => {
+            onCreateManual={isAdmin ? () => {
               setServiceAutoOpenCreate(true);
               setCurrentView('service-proposal');
-            }}
+            } : undefined}
             onPlanIntervention={(p) => {
               setPlanningPrefill(p);
               setCurrentView('service-planning');
@@ -138,7 +138,7 @@ export default function Index() {
       case 'technician-tracking':
         return (isAdmin || isTechnicien) ? (
           <TechnicianTrackingView
-            isAdmin={isAdmin}
+            isAdmin={isAdmin || isTechnicien}
             onPlanIntervention={(p) => {
               setPlanningPrefill(p);
               setCurrentView('service-planning');

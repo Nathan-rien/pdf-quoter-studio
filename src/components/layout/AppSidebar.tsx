@@ -143,15 +143,6 @@ export function AppSidebar({
                 </Button>
 
                 <Button
-                  variant={currentView === 'service-contracts' ? 'secondary' : 'ghost'}
-                  className="w-full justify-start gap-2 h-8 text-sm"
-                  onClick={() => onNavigate('service-contracts')}
-                >
-                  <FileCheck className="h-3.5 w-3.5" />
-                  Contrats Services
-                </Button>
-
-                <Button
                   variant={currentView === 'service-history' ? 'secondary' : 'ghost'}
                   className="w-full justify-start gap-2 h-8 text-sm"
                   onClick={() => onNavigate('service-history')}
@@ -161,6 +152,15 @@ export function AppSidebar({
                 </Button>
               </>
             )}
+
+            <Button
+              variant={currentView === 'service-contracts' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('service-contracts')}
+            >
+              <FileCheck className="h-3.5 w-3.5" />
+              Contrats Services
+            </Button>
 
             <Button
               variant={currentView === 'technician-tracking' ? 'secondary' : 'ghost'}
