@@ -830,20 +830,6 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 placeholder="Ex : 2026-00123"
                 className="h-9 text-sm"
               />
-              {isServiceContract && (
-                <>
-                  <Label className="text-xs pt-1 block">Réf. Jaja</Label>
-                  <Input
-                    value={erpReference}
-                    onChange={(e) => setErpReference(e.target.value)}
-                    placeholder="Référence Jaja"
-                    className="h-9 text-sm"
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    Optionnelle : peut être renseignée après la planification.
-                  </p>
-                </>
-              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">{hasProposalRent ? 'Loyers HT (issus de la proposition)' : 'Loyers HT'}</Label>
