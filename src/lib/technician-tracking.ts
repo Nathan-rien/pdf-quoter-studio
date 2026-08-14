@@ -51,15 +51,33 @@ export async function seedClientServiceReferences(params: {
     });
   }
 
+  // Fallback: rattachement par libellé quand l'id catalogue est absent
+  const labels = Array.from(new Set(selected.map((s) => s.label).filter((v): v is string => !!v)));
+  const byLabel: Record<string, { id: string; erp_reference: string | null; requires_intervention: boolean }> = {};
+  if (labels.length) {
+    const { data: optsByLabel } = await supabase
+      .from('options_services')
+      .select('id, title, erp_reference, requires_intervention')
+      .in('title', labels);
+    (optsByLabel ?? []).forEach((o: any) => {
+      byLabel[o.title] = {
+        id: o.id,
+        erp_reference: o.erp_reference ?? null,
+        requires_intervention: o.requires_intervention ?? true,
+      };
+    });
+  }
+
   const rows = selected.map((s) => {
     const validId = s.service_id && UUID_RE.test(s.service_id) ? s.service_id : null;
     const cat = validId ? catalog[validId] : undefined;
+    const fallback = !cat && s.label ? byLabel[s.label] : undefined;
     return {
       contract_id: contractId,
-      option_service_id: validId,
+      option_service_id: validId ?? fallback?.id ?? null,
       service_label: s.label || cat?.title || 'Service',
-      erp_reference: cat?.erp_reference ?? null,
-      requires_intervention: cat?.requires_intervention ?? true,
+      erp_reference: cat?.erp_reference ?? fallback?.erp_reference ?? null,
+      requires_intervention: cat?.requires_intervention ?? fallback?.requires_intervention ?? true,
       tickets_initial: null,
       tickets_remaining: null,
     };

@@ -104,6 +104,9 @@ export const useOptionsAdminStore = create<OptionsAdminStateExtended>()(
         const updated = get().options.find((o) => o.id === id);
         const idx = get().options.findIndex((o) => o.id === id);
         if (updated) saveOptionToDB(updated, idx, get().setSyncStatus);
+        if (updated && Object.prototype.hasOwnProperty.call(updates, 'requiresIntervention')) {
+          propagateInterventionFlag(updated);
+        }
       },
 
       deleteOption: (id) => {
@@ -263,6 +266,27 @@ export const useOptionsAdminStore = create<OptionsAdminStateExtended>()(
 );
 
 // ─── Helpers de synchronisation DB ──────────────────────────────────────────
+
+/**
+ * Répercute le flag "Avec intervention" sur les lignes de service déjà
+ * présentes dans les contrats (liées par id catalogue, ou à défaut par libellé).
+ */
+async function propagateInterventionFlag(option: ServiceOptionDefinition) {
+  const value = option.requiresIntervention ?? true;
+  try {
+    await db
+      .from('client_service_references')
+      .update({ requires_intervention: value })
+      .eq('option_service_id', option.id);
+    await db
+      .from('client_service_references')
+      .update({ requires_intervention: value })
+      .is('option_service_id', null)
+      .eq('service_label', option.title);
+  } catch (err) {
+    console.error('[OptionsAdminStore] Propagation intervention échouée:', err);
+  }
+}
 
 function syncAfterMutation(
   optionId: string,

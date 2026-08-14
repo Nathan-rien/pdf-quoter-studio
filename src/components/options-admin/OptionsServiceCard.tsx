@@ -204,25 +204,31 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
                 <span className="text-xs text-muted-foreground">(sans prix)</span>
               )}
 
-              <div className="flex items-center gap-2">
-                <Switch
+              <label
+                className={`flex items-center gap-2 text-xs cursor-pointer rounded-md border px-2 py-1 ${
+                  (option.requiresIntervention ?? true)
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5"
                   checked={option.requiresIntervention ?? true}
-                  onCheckedChange={(checked) =>
-                    updateOption(option.id, { requiresIntervention: checked })
+                  onChange={(e) =>
+                    updateOption(option.id, { requiresIntervention: e.target.checked })
                   }
                 />
-                <Label className="text-xs text-muted-foreground">
-                  {(option.requiresIntervention ?? true) ? "Avec intervention" : "Sans intervention"}
-                </Label>
-              </div>
+                {(option.requiresIntervention ?? true) ? "Avec intervention" : "Sans intervention"}
+              </label>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pl-2 border-l border-border">
                 <Switch
                   checked={option.isActive}
                   onCheckedChange={() => toggleOptionActive(option.id)}
                 />
                 <Label className="text-xs text-muted-foreground">
-                  {option.isActive ? "Actif" : "Inactif"}
+                  {option.isActive ? "Actif (visible dans les propositions)" : "Inactif (masqué)"}
                 </Label>
               </div>
 
