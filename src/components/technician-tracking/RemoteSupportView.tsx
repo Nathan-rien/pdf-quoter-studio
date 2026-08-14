@@ -329,9 +329,10 @@ export function RemoteSupportView({ canEdit }: Props) {
           Aucune ligne à afficher.
         </Card>
       ) : (
-        <Card className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-12rem)]">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-background">
               <TableRow>
                 <TableHead className="whitespace-nowrap">BU</TableHead>
                 <TableHead className="whitespace-nowrap">Commercial(e)</TableHead>
