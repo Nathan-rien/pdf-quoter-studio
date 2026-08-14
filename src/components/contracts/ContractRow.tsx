@@ -508,7 +508,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               </Button>
             </>
           )}
-          {canEditContract && !isServiceContract && (
+          {canEditContract && (
             isClosed ? (
               <Button
                 variant="ghost"
