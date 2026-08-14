@@ -450,143 +450,145 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             <div className="text-[11px] text-muted-foreground">{contract.template_name ?? 'Contrat rapide'}</div>
           )}
         </div>
-        {isQuick ? (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0 disabled:opacity-40"
-              title={attachmentUrl ? 'Visualiser le PDF joint' : 'Aucune proposition ni PDF joint'}
-              disabled={!attachmentUrl}
-              onClick={(e) => { e.stopPropagation(); isServiceContract ? handleAttachmentFile('preview') : handleSignedAttachment(); }}
-            >
-              <Eye className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0 disabled:opacity-40"
-              title={attachmentUrl ? 'Télécharger le PDF joint' : 'Aucune proposition ni PDF joint'}
-              disabled={!attachmentUrl}
-              onClick={(e) => { e.stopPropagation(); handleDownloadAttachment(); }}
-            >
-              <Download className="w-4 h-4" />
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
-              title={isServiceContract ? 'Visualiser le contrat' : attachmentUrl ? 'Visualiser le contrat' : 'Visualiser la proposition'}
-              disabled={generatingContractPdf}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isServiceContract) handleOpenServiceContractPdf('preview');
-                else if (attachmentUrl) handleSignedAttachment();
-                else onVisualize?.(contract);
-              }}
-            >
-              {generatingContractPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
-              title={isServiceContract ? 'Télécharger le contrat' : attachmentUrl ? 'Télécharger le contrat' : 'Télécharger la proposition'}
-              disabled={downloadingProposal || generatingContractPdf}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isServiceContract) handleOpenServiceContractPdf('download');
-                else if (attachmentUrl) handleDownloadAttachment();
-                else handleDownloadProposal();
-              }}
-            >
-              {downloadingProposal || generatingContractPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            </Button>
-          </>
-        )}
-        {canEditContract && !isServiceContract && (
-          isClosed ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
-              title="Rouvrir le contrat"
-              disabled={updateContract.isPending}
-              onClick={(e) => { e.stopPropagation(); updateContract.mutate({ id: contract.id, updates: { closed_at: null } }); }}
-            >
-              <ArchiveRestore className="w-4 h-4" />
-            </Button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {isQuick ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0 disabled:opacity-40"
+                title={attachmentUrl ? 'Visualiser le PDF joint' : 'Aucune proposition ni PDF joint'}
+                disabled={!attachmentUrl}
+                onClick={(e) => { e.stopPropagation(); isServiceContract ? handleAttachmentFile('preview') : handleSignedAttachment(); }}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0 disabled:opacity-40"
+                title={attachmentUrl ? 'Télécharger le PDF joint' : 'Aucune proposition ni PDF joint'}
+                disabled={!attachmentUrl}
+                onClick={(e) => { e.stopPropagation(); handleDownloadAttachment(); }}
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+            </>
           ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
+                title={isServiceContract ? 'Visualiser le contrat' : attachmentUrl ? 'Visualiser le contrat' : 'Visualiser la proposition'}
+                disabled={generatingContractPdf}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isServiceContract) handleOpenServiceContractPdf('preview');
+                  else if (attachmentUrl) handleSignedAttachment();
+                  else onVisualize?.(contract);
+                }}
+              >
+                {generatingContractPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
+                title={isServiceContract ? 'Télécharger le contrat' : attachmentUrl ? 'Télécharger le contrat' : 'Télécharger la proposition'}
+                disabled={downloadingProposal || generatingContractPdf}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isServiceContract) handleOpenServiceContractPdf('download');
+                  else if (attachmentUrl) handleDownloadAttachment();
+                  else handleDownloadProposal();
+                }}
+              >
+                {downloadingProposal || generatingContractPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              </Button>
+            </>
+          )}
+          {canEditContract && !isServiceContract && (
+            isClosed ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
+                title="Rouvrir le contrat"
+                disabled={updateContract.isPending}
+                onClick={(e) => { e.stopPropagation(); updateContract.mutate({ id: contract.id, updates: { closed_at: null } }); }}
+              >
+                <ArchiveRestore className="w-4 h-4" />
+              </Button>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
+                    title="Clôturer le contrat"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Archive className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clôturer le contrat ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Le contrat de <strong>{contract.client_name}</strong> sera déplacé dans « Contrats archivés » (accessible via le tri). Vous pourrez le rouvrir à tout moment.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => updateContract.mutate({ id: contract.id, updates: { closed_at: new Date().toISOString() } })}
+                      disabled={updateContract.isPending}
+                    >
+                      Clôturer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )
+          )}
+          {canEditContract && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-shrink-0"
-                  title="Clôturer le contrat"
+                  className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
+                  title="Supprimer le contrat"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Archive className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Clôturer le contrat ?</AlertDialogTitle>
+                  <AlertDialogTitle>Supprimer le contrat ?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Le contrat de <strong>{contract.client_name}</strong> sera déplacé dans « Contrats archivés » (accessible via le tri). Vous pourrez le rouvrir à tout moment.
+                    Le contrat de <strong>{contract.client_name}</strong> sera définitivement supprimé. Cette action est irréversible.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => updateContract.mutate({ id: contract.id, updates: { closed_at: new Date().toISOString() } })}
-                    disabled={updateContract.isPending}
+                    onClick={() => deleteContract.mutate(contract.id)}
+                    disabled={deleteContract.isPending}
+                    className="bg-red-600 hover:bg-red-700 text-white"
                   >
-                    Clôturer
+                    {deleteContract.isPending ? 'Suppression…' : 'Supprimer'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          )
-        )}
-        {canEditContract && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
-              title="Supprimer le contrat"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Supprimer le contrat ?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Le contrat de <strong>{contract.client_name}</strong> sera définitivement supprimé. Cette action est irréversible.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => deleteContract.mutate(contract.id)}
-                disabled={deleteContract.isPending}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {deleteContract.isPending ? 'Suppression…' : 'Supprimer'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        )}
-        <div className="text-muted-foreground col-start-4 md:col-start-auto">
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          )}
+          <div className="text-muted-foreground">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
         </div>
       </div>
 
