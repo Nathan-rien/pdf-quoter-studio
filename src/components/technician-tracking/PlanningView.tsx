@@ -38,6 +38,7 @@ interface Ref {
   contract_id: string;
   service_label: string;
   erp_reference: string | null;
+  requires_intervention?: boolean | null;
 }
 
 interface ContractRow {
@@ -152,7 +153,7 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('client_service_references')
-        .select('id, contract_id, service_label, erp_reference');
+        .select('id, contract_id, service_label, erp_reference, requires_intervention');
       if (error) throw error;
       return (data ?? []) as Ref[];
     },
@@ -458,7 +459,7 @@ function InterventionDialog({
 
 
   const refsForContract = useMemo(
-    () => refs.filter((r) => r.contract_id === contractId),
+    () => refs.filter((r) => r.contract_id === contractId && r.requires_intervention !== false),
     [refs, contractId]
   );
 

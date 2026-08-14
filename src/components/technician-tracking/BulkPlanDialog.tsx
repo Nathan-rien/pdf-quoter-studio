@@ -17,6 +17,7 @@ interface Ref {
   id: string;
   service_label: string;
   erp_reference: string | null;
+  requires_intervention?: boolean | null;
 }
 
 interface Props {
