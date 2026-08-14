@@ -138,7 +138,7 @@ export default function Index() {
       case 'technician-tracking':
         return (isAdmin || isTechnicien) ? (
           <TechnicianTrackingView
-            isAdmin={isAdmin}
+            isAdmin={isAdmin || isTechnicien}
             onPlanIntervention={(p) => {
               setPlanningPrefill(p);
               setCurrentView('service-planning');
