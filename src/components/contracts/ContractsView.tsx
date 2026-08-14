@@ -268,6 +268,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
                   <SelectItem value="recent">Plus récents</SelectItem>
                   <SelectItem value="echeance-asc">Échéance (croissante)</SelectItem>
                   <SelectItem value="echeance-desc">Échéance (décroissante)</SelectItem>
+                  <SelectItem value="archived">Contrats archivés</SelectItem>
                 </SelectContent>
               </Select>
             </div>
