@@ -171,7 +171,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
   const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
   const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc' || isArchivedMode;
   const groups = isFlatList ? [] : groupByCommercial(filteredContracts);
-  const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
+  const totalRenewing = isArchivedMode ? 0 : filteredContracts.filter(isContractRenewingSoon).length;
 
 
   const [previewContract, setPreviewContract] = useState<Contract | null>(null);
