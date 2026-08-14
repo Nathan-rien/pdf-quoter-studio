@@ -45,6 +45,8 @@ const optionToDbRow = (option: ServiceOptionDefinition, sortOrder: number) => ({
   kind: option.kind ?? 'option',
   pack_service_ids: option.packServiceIds ?? [],
   erp_reference: option.erpReference ?? null,
+  requires_intervention: option.requiresIntervention ?? true,
+
 });
 
 // ─── Types pour le sync status ──────────────────────────────────────────────

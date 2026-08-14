@@ -36,14 +36,18 @@ export async function seedClientServiceReferences(params: {
         .filter((v): v is string => !!v && UUID_RE.test(v)),
     ),
   );
-  const catalog: Record<string, { erp_reference: string | null; title: string }> = {};
+  const catalog: Record<string, { erp_reference: string | null; title: string; requires_intervention: boolean }> = {};
   if (ids.length) {
     const { data: opts } = await supabase
       .from('options_services')
-      .select('id, title, erp_reference')
+      .select('id, title, erp_reference, requires_intervention')
       .in('id', ids);
     (opts ?? []).forEach((o: any) => {
-      catalog[o.id] = { erp_reference: o.erp_reference ?? null, title: o.title };
+      catalog[o.id] = {
+        erp_reference: o.erp_reference ?? null,
+        title: o.title,
+        requires_intervention: o.requires_intervention ?? true,
+      };
     });
   }
 
@@ -55,10 +59,12 @@ export async function seedClientServiceReferences(params: {
       option_service_id: validId,
       service_label: s.label || cat?.title || 'Service',
       erp_reference: cat?.erp_reference ?? null,
+      requires_intervention: cat?.requires_intervention ?? true,
       tickets_initial: null,
       tickets_remaining: null,
     };
   });
+
 
 
   const { error } = await supabase.from('client_service_references').insert(rows);
