@@ -173,8 +173,8 @@ export function buildPages() {
           40,
           615,
           570,
-          120,
-          "Les prestations rendues par le PRESTATAIRE regroupent l'ensemble des offres de services, décrites dans l'annexe : Contrat d'Application et consistant en la supervision du parc informatique du BENEFICIAIRE.\n\nLors de la signature du contrat cadre le BENEFICIAIRE choisira les services auxquels il souhaite souscrire. A ce titre, les Parties signeront le contrat d'application annexé aux présentes."
+          260,
+          "1.1 Les prestations rendues par le PRESTATAIRE regroupent l'ensemble des offres de services, décrites dans l'annexe : Contrat d'Application et consistant en la supervision du parc informatique du BENEFICIAIRE.\n\nLors de la signature du contrat cadre le BENEFICIAIRE choisira les services auxquels il souhaite souscrire. A ce titre, les Parties signeront le contrat d'application annexé aux présentes.\n\n1.2 Le service support prévoit le diagnostic et la résolution des problèmes signalés. Il est expressément limité aux systèmes et applications prévus dans le contrat d'application. Ce service est assuré du lundi au vendredi de 9h à 12h30 et de 13h30 à 17h. Dans le cas où les moyens mis en œuvre ne permettraient pas de remédier au dysfonctionnement signalé, un technicien se rendra sur site. Cette prestation fera l'objet d'une facturation spécifique après accord entre le BENEFICIAIRE et le PRESTATAIRE.\n\n1.3 Maintien en condition opérationnelle (MCO). La société PRESTATAIRE assure la surveillance à distance du réseau du BENEFICIAIRE. Pour assurer ce service la société PRESTATAIRE utilise différents outils permettant la remontée des informations nécessaires à la réalisation de cette prestation, ce que le BENEFICIAIRE autorise d'ores et déjà expressément et auquel il s'engage à ne pas faire obstacle.\n\n1.3.1 Nature des données collectées. Les Outils permettent notamment l'inventaire matériel et logiciel des postes et serveurs, la remontée d'alertes techniques, de journaux d'événements et de métriques de fonctionnement, ainsi que, le cas échéant, l'exécution à distance de scripts de maintenance, de mises à jour et de correctifs. Le BENEFICIAIRE reconnaît que ces opérations nécessitent l'installation d'un agent logiciel sur les équipements concernés, et autorise expressément cette installation."
         ),
       ],
       dynamicZones: [],
@@ -192,26 +192,26 @@ export function buildPages() {
           40,
           75,
           570,
-          230,
-          "2.1 La Société PRESTATAIRE s'engage à mettre en œuvre, pour l'exécution de l'ensemble des prestations à sa charge en vertu des présentes, toute la diligence requise et à faire tout ce qui est en son pouvoir pour que les conseils et recommandations donnés à la Société BENEFICIAIRE et les services qui sont rendus, donnent toute satisfaction à celle-ci.\n\n2.2 La Société PRESTATAIRE s'engage à affecter à l'exécution des présentes un interlocuteur compétent et spécialisé. Elle pourra également faire appel à des consultants extérieurs ou sous-traiter, sans toutefois qu'il en résulte une quelconque atténuation de sa responsabilité.\n\n2.3 La Société PRESTATAIRE décidera seule du choix du personnel salarié ou non devant être affecté aux missions dont elle a la charge."
+          320,
+          "1.1 La Société PRESTATAIRE s'engage à mettre en œuvre, pour l'exécution de l'ensemble des prestations à sa charge en vertu des présentes, toute la diligence requise et à faire tout ce qui est en son pouvoir pour que les conseils et recommandations donnés à la Société BENEFICIAIRE et les services qui sont rendus, donnent toute satisfaction à celle-ci.\n\nIl est toutefois expressément reconnu que les obligations souscrites par la Société PRESTATAIRE en vertu des présentes n'ont que le caractère d'obligation de moyens, étant en outre entendu que la Société PRESTATAIRE ne pourra en aucun cas être tenue pour responsable de la mauvaise utilisation ou de la non-utilisation par la Société BENEFICIAIRE des conseils et recommandations qu'elle sera amenée à donner en vertu des présentes ou des services qu'elle sera amenée à rendre.\n\n1.2 Les délais de réalisation des prestations indiqués par le PRESTATAIRE sont donnés à titre indicatif. Les dépassements de ces délais ne peuvent être sanctionnés par des dommages et intérêts, indemnités, retenues ou annulation de commande. De plus, ces délais sont subordonnés à la réception en temps utile par la Société PRESTATAIRE de tous les renseignements à fournir par le Client.\n\n1.3 La Société PRESTATAIRE s'engage à affecter à l'exécution des présentes un interlocuteur compétent et spécialisé. Elle pourra également faire appel à des consultants extérieurs ou sous-traiter, sans toutefois qu'il en résulte une quelconque atténuation de sa responsabilité à l'égard de la Société BENEFICIAIRE.\n\n1.4 La Société PRESTATAIRE décidera seule du choix du personnel salarié ou non devant être affecté aux missions dont elle a la charge. Ledit personnel ne pourra recevoir aucune directive de la part de la Société BENEFICIAIRE et restera, en toute hypothèse, sous la responsabilité hiérarchique entière et exclusive de la Société PRESTATAIRE."
         ),
-        textEl("p3-art4", 40, 320, 570, 15, "IV - OBLIGATIONS DU BENEFICIAIRE", { bold: true }),
+        textEl("p3-art4", 40, 420, 570, 15, "IV - OBLIGATIONS DU BENEFICIAIRE", { bold: true }),
         textEl(
           "p3-art4-body",
           40,
-          345,
+          445,
           570,
           90,
-          "La Société BENEFICIAIRE s'engage expressément à fournir, pendant toute la durée du présent contrat, au PRESTATAIRE, toutes les informations, tous les renseignements, tous les documents et toute l'assistance raisonnablement nécessaires pour lui permettre de réaliser l'objet du contrat."
+          "1.1 La Société BENEFICIAIRE s'engage expressément à fournir, pendant toute la durée du présent contrat, au PRESTATAIRE, toutes les informations, tous les renseignements, tous les documents et toute l'assistance raisonnablement nécessaires pour lui permettre de réaliser l'objet du contrat et d'assurer, dans de bonnes conditions, la fourniture desdites prestations."
         ),
-        textEl("p3-art5", 40, 450, 570, 15, "V - RESPONSABILITE PRESTATAIRE", { bold: true }),
+        textEl("p3-art5", 40, 550, 570, 15, "V - RESPONSABILITE PRESTATAIRE", { bold: true }),
         textEl(
           "p3-art5-body",
           40,
-          475,
+          575,
           570,
           300,
-          "1.1 La Société PRESTATAIRE sera responsable que des dommages directs qu'elle pourrait causer au BENEFICIAIRE dans l'exécution des prestations de services. Elle ne pourra être tenue responsable des préjudices Indirects — tels que préjudice commercial, perte de clientèle, perte de commande, perte de chiffre d'affaires, perte de bénéfice ou encore manque à gagner — subis par le BENEFICIAIRE. En tout état de cause, l'Indemnité totale due par le PRESTATAIRE au BENEFICIAIRE en réparation de son préjudice au titre de la réalisation de la prestation de service ne pourra jamais excéder le montant total qui sera payé au PRESTATAIRE par le BENEFICIAIRE dans le cadre de la réalisation de la prestation de service.\n\n1.2 La société BENEFICIAIRE doit s'assurer avant toute intervention du PRESTATAIRE qu'une sauvegarde complète des applications et des données a été préalablement réalisée. En aucun cas le PRESTATAIRE ne pourra être tenu responsable de la perte de données et ce sans que ne puisse être remis en cause les termes du présent contrat."
+          "1.1 La Société PRESTATAIRE ne sera responsable que des dommages directs qu'elle pourrait causer au BENEFICIAIRE dans l'exécution des prestations de services. Elle ne pourra être tenue responsable des préjudices indirects — tels que préjudice commercial, perte de clientèle, perte de commande, perte de chiffre d'affaires, perte de bénéfice ou encore manque à gagner — subis par le BENEFICIAIRE. En tout état de cause, l'indemnité totale due par le PRESTATAIRE au BENEFICIAIRE en réparation de son préjudice au titre de la réalisation de la prestation de service ne pourra jamais excéder le montant total qui sera payé au PRESTATAIRE par le BENEFICIAIRE dans le cadre de la réalisation de la prestation de service.\n\n1.2 La société BENEFICIAIRE doit s'assurer avant toute intervention du PRESTATAIRE qu'une sauvegarde complète des applications et des données a été préalablement réalisée. En aucun cas le PRESTATAIRE ne pourra être tenu responsable de la perte de données, et ce sans que ne puissent être remis en cause les termes du présent contrat."
         ),
       ],
       dynamicZones: [],
@@ -229,35 +229,35 @@ export function buildPages() {
           40,
           75,
           570,
-          180,
-          "La rémunération des prestations définies dans le contrat d'application fera l'objet d'une redevance dont le montant et la périodicité sont précisés dans le contrat d'application annexé aux présentes.\n\nLes Prestations seront facturées dès la signature du contrat d'application par le client. A défaut de paiement de la somme due, LE PRESTATAIRE se réserve le droit de suspendre l'exécution des prestations, 10 jours après mise en demeure de règlement demeurée infructueuse.\n\nLe BENEFICIAIRE accepte toute information par voie électronique ainsi que la fourniture de toute pièce de facturation sous format électronique."
+          320,
+          "1.1 La rémunération des prestations définies dans le contrat d'application fera l'objet d'une redevance dont le montant et la périodicité sont précisés dans le contrat d'application annexé aux présentes. Les prestations ponctuelles hors abonnement seront facturées à l'acte ou selon un relevé périodique.\n\nLes Prestations seront facturées dès la signature du contrat d'application par le client. A défaut de paiement de la somme due, LE PRESTATAIRE se réserve le droit de suspendre l'exécution des prestations, 10 jours après mise en demeure de règlement demeurée infructueuse.\n\nLe BENEFICIAIRE accepte toute information par voie électronique, toute notification écrite sous forme simple ou recommandée, ainsi que la fourniture (expédition ou mise à disposition) de toute pièce de facturation sous format électronique.\n\n1.2 En cas de retard de paiement des sommes dues par le Client au-delà du délai ci-dessus fixé, des pénalités de retard seront calculées en appliquant un taux de un et demi (1,5) fois le taux d'intérêt légal en vigueur en France au montant TTC du prix mentionné sur la facture. En outre, tout montant non réglé à l'échéance donnera lieu au paiement par le Client d'une indemnité forfaitaire pour frais de recouvrement d'un montant de quarante (40) Euros. Si les frais de recouvrement engagés par LE PRESTATAIRE sont supérieurs à ce montant forfaitaire, une indemnisation complémentaire sur justification pourra être demandée.\n\nLe retard de paiement entraînera également l'exigibilité immédiate de l'intégralité des sommes dues par le BENEFICIAIRE, sans préjudice de toute autre action que LE PRESTATAIRE serait en droit d'intenter, à ce titre, à l'encontre du BENEFICIAIRE."
         ),
-        textEl("p4-art6", 40, 270, 570, 15, "VII - DUREE", { bold: true }),
+        textEl("p4-art6", 40, 420, 570, 15, "VII - DUREE", { bold: true }),
         textEl(
           "p4-art6-body",
           40,
-          295,
+          445,
           570,
-          130,
-          "Le présent contrat cadre est conclu pour une durée indéterminée. Il pourra être rompu par l'une ou l'autre des Parties, à sa date anniversaire par l'envoi d'une lettre recommandée avec avis de réception à l'autre Partie en respectant un préavis de 3 mois.\n\nEn revanche, le contrat d'application est conclu pour une durée ferme, déterminée par décision du BÉNÉFICIAIRE. À son terme, il pourra être renouvelé au moyen de la signature d'un nouveau contrat d'application."
+          180,
+          "Le présent contrat cadre est conclu pour une durée indéterminée.\n\nIl pourra être rompu par l'une ou l'autre des Parties, à sa date anniversaire, par l'envoi d'une lettre recommandée avec avis de réception à l'autre Partie en respectant un préavis de 3 mois.\n\nEn revanche, le contrat d'application est conclu pour une durée ferme, déterminée par décision du BÉNÉFICIAIRE et conformément à l'offre associée. À son terme, il pourra être renouvelé au moyen de la signature d'un nouveau contrat d'application. A défaut de signature, le contrat d'application sera prorogé jusqu'à signature d'un nouveau contrat d'application ou notification par le Bénéficiaire, par courrier recommandé, de son désir de résilier le contrat d'application après son terme."
         ),
-        textEl("p4-art7", 40, 440, 570, 15, "VIII - RESOLUTION DU CONTRAT", { bold: true }),
+        textEl("p4-art7", 40, 640, 570, 15, "VIII - RESOLUTION DU CONTRAT", { bold: true }),
         textEl(
           "p4-art7-body",
           40,
-          465,
+          665,
           570,
-          110,
-          "En cas de non-respect par l'une ou l'autre des parties des obligations suivantes :\n- Défaut de paiement de la facturation par le BENEFICIAIRE,\n- Défaillance d'une des Parties dans le respect des obligations visées aux articles du présent contrat, celui-ci pourra être résolu au gré de la partie lésée, TRENTE (30) jours après mise en demeure restée sans effet."
+          170,
+          "En cas de non-respect par l'une ou l'autre des parties des obligations suivantes :\n- Défaut de paiement de la facturation par le BENEFICIAIRE,\n- Défaillance d'une des Parties dans le respect des obligations visées aux articles du présent contrat,\ncelui-ci pourra être résolu au gré de la partie lésée.\n\nIl est expressément entendu que cette résolution pour manquement d'une partie à ses obligations aura lieu de plein droit TRENTE (30) jours après envoi d'une mise en demeure de s'exécuter, restée, en tout ou partie, sans effet. La mise en demeure pourra être notifiée par lettre recommandée avec demande d'avis de réception ou tout acte extrajudiciaire.\n\nCette mise en demeure devra mentionner l'intention d'appliquer la présente clause."
         ),
-        textEl("p4-art8", 40, 590, 570, 15, "IX - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
+        textEl("p4-art8", 40, 850, 570, 15, "IX - OBLIGATIONS DE DISCRETION - CONFIDENTIALITE", { bold: true }),
         textEl(
           "p4-art8-body",
           40,
-          615,
+          875,
           570,
-          80,
-          "Les parties s'engagent à considérer comme strictement confidentiels l'ensemble des documents, informations et données communiqués dans le cadre du présent contrat, pendant toute sa durée et sans limitation après son expiration."
+          260,
+          "Les parties ci-dessus désignées s'engagent à considérer comme strictement confidentiels l'ensemble des documents, informations, résultats ou données, d'ordre technique, scientifique, commercial, financier ou autre, qui leur ont été et/ou qui leur seront communiqués dans le cadre du présent contrat, ou dont elles pourraient avoir connaissance à l'occasion de l'exécution des présentes.\n\nLes parties s'engagent pendant toute la durée du présent contrat et sans limitation de durée après l'expiration de celui-ci, pour quelque cause que ce soit, à la confidentialité la plus totale, en s'interdisant de divulguer, directement ou indirectement, quelques informations, connaissances ou savoir-faire que ce soient concernant son co-contractant et ses modalités de fonctionnement, auxquels il aurait pu avoir accès dans le cadre de l'exécution du présent contrat, à moins que lesdites informations, connaissances ou savoir-faire ne soient tombés dans le domaine public.\n\nLes parties soussignées s'engagent, en conséquence, tant pour leur compte que pour celui de leurs salariés, préposés et conseils, dont elles se portent fort, à ne pas divulguer lesdits documents et informations, à quelque personne et sous quelque forme que ce soit, et à ne pas les exploiter à des fins personnelles et en dehors de l'exécution du présent accord, sauf avec l'autorisation expresse, préalable et écrite de l'autre partie ou sur injonction de justice ou d'une autorité administrative ou de contrôle.\n\nElles s'engagent à ne communiquer et révéler ces informations qu'aux seuls membres de leurs équipes qui ont besoin de les utiliser dans le cadre de l'exécution du présent accord et à assurer la sécurité physique de ces informations confidentielles, par tous moyens appropriés."
         ),
       ],
       dynamicZones: [],
@@ -276,7 +276,7 @@ export function buildPages() {
           75,
           570,
           60,
-          "Les parties conviennent expressément qu'aucune des clauses du contrat ne pourra être réputée comminatoire ou de style, mais qu'elles doivent toutes recevoir leur pleine et entière exécution."
+          "Les parties conviennent expressément qu'aucune des clauses du contrat ne pourra être réputée comminatoire ou de style, mais qu'elles doivent toutes recevoir leur pleine et entière exécution, sans quoi le présent Contrat n'eût pas été conclu."
         ),
         textEl("p5-art10", 40, 150, 570, 15, "XI - INDEPENDANCE DES CLAUSES", { bold: true }),
         textEl(
@@ -284,26 +284,26 @@ export function buildPages() {
           40,
           175,
           570,
-          70,
-          "Toute disposition du présent contrat qui serait ou deviendrait illégale sera entièrement indépendante ; les autres dispositions n'en seront pas affectées et produiront leurs effets."
+          140,
+          "Toute disposition du présent contrat qui serait ou deviendrait illégale ou qui ne pourrait être exécutée aux termes du droit applicable sera entièrement indépendante ; les autres dispositions du présent Contrat n'en seront pas affectées et produiront leurs effets.\n\nLadite disposition sera automatiquement remplacée par une nouvelle disposition légale, valable, pouvant être exécutée et dont les termes et effets pour les parties sont aussi semblables que possible.\n\nSi ladite disposition n'est pas automatiquement remplacée, les parties négocieront de bonne foi pour convenir d'une disposition de remplacement."
         ),
-        textEl("p5-art11", 40, 260, 570, 15, "XII - INDEPENDANCE DES PARTIES", { bold: true }),
+        textEl("p5-art11", 40, 340, 570, 15, "XII - INDEPENDANCE DES PARTIES", { bold: true }),
         textEl(
           "p5-art11-body",
           40,
-          285,
+          365,
           570,
-          110,
-          "Les parties déclarent expressément qu'elles sont et demeureront des partenaires commerciaux et professionnels indépendants, assumant chacun les risques et conséquences de leur propre exploitation. Aucun lien de subordination ne saurait être recherché dans le présent Contrat de services."
+          320,
+          "Les parties déclarent expressément qu'elles sont et demeureront, pendant toute la durée du présent contrat, des partenaires commerciaux et professionnels indépendants, assumant chacun les risques et conséquences de leur propre exploitation.\n\nChacune des parties conserve à tout moment la responsabilité et la maîtrise de ses fonctions de gestion commerciale, gestion financière, gestion de la production et gestion des ressources humaines, la Société PRESTATAIRE n'intervenant que pour effectuer des recommandations sur le choix et la manière de mettre en œuvre les méthodes et techniques de direction et de gestion les plus adaptées.\n\nEn conséquence, aucun lien de subordination ne saurait être recherché dans le présent Contrat de services.\n\nDe même, chacun des co-contractants dirigera seul son personnel et conservera la garde pleine et entière de son propre matériel. Assurant de manière totalement indépendante les tâches qui lui sont confiées, la Société PRESTATAIRE sera seule responsable de ses préposés et de son matériel.\n\nA cet égard, la Société PRESTATAIRE garantit à la Société BENEFICIAIRE qu'elle est à jour du règlement de l'assurance qui couvre sa responsabilité civile et tout accident qui surviendrait du fait de ses préposés ou de son matériel et qu'elle le demeurera à tout moment de l'exécution des présentes. La Société PRESTATAIRE s'engage à justifier desdites assurances à première demande de la Société BENEFICIAIRE.\n\nLa Société PRESTATAIRE déclare en outre que son personnel est régulièrement inscrit comme salarié auprès des organismes de sécurité sociale compétents et que ce personnel bénéficie en conséquence d'une protection sociale complète et conforme à l'ensemble des dispositions contractuelles applicables."
         ),
-        textEl("p5-art12", 40, 410, 570, 15, "XIII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
+        textEl("p5-art12", 40, 710, 570, 15, "XIII - ELECTION DE DOMICILE - ATTRIBUTION DE JURIDICTION - CONVENTION DE PREUVE", { bold: true }),
         textEl(
           "p5-art12-body",
           40,
-          445,
+          745,
           570,
-          160,
-          "Pour l'exécution des présentes, les parties font élection de domicile en leur siège respectif. Pour tous litiges relatifs à l'exécution ou à l'interprétation du présent Contrat, les parties attribuent expressément compétence aux juridictions de BORDEAUX.\n\nLe BENEFICIAIRE accepte que les signatures électroniques et documents électroniques aient même valeur juridique que leurs équivalents manuscrits."
+          220,
+          "Pour l'exécution des présentes, les parties font élection de domicile en leur siège respectif, tel que sus-indiqué. Pour tous litiges et contestations relatifs à l'exécution ou à l'interprétation du présent Contrat, les parties attribuent expressément compétence aux juridictions de BORDEAUX.\n\nEn outre, le BENEFICIAIRE accepte qu'en cas de litige :\n1. Les éléments d'identification, les certificats de signature électronique et les signatures électroniques soient admissibles devant les tribunaux et fassent preuve des données, des consentements et des faits qu'ils contiennent ainsi que des signatures qu'ils expriment ;\n2. Les marques de temps soient admissibles devant les tribunaux et fassent preuve des données et des faits qu'elles contiennent ;\n3. Les documents échangés sous forme électronique soient admissibles devant les tribunaux et fassent preuve des données et des faits qu'ils contiennent ;\n4. La signature électronique apposée sur un document ait même effet juridique qu'une signature manuscrite."
         ),
       ],
       dynamicZones: [],
