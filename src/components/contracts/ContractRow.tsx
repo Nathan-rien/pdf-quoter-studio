@@ -721,10 +721,6 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 <div className="text-sm">{contract.contract_number || '—'}</div>
               </div>
               <div className="space-y-0.5">
-                <Label className="text-xs">Réf. Jaja du contrat</Label>
-                <div className="text-sm">{contract.erp_reference || '—'}</div>
-              </div>
-              <div className="space-y-0.5">
                 <Label className="text-xs">Durée</Label>
                 <div className="text-sm">{contract.duration_months ? `${contract.duration_months} mois` : '—'}</div>
               </div>
