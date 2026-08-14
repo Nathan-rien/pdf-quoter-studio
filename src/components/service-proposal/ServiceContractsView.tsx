@@ -119,9 +119,13 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
     catch { return null; }
   };
 
+  const isArchivedMode = sortMode === 'archived';
+
   const filteredContracts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const arr = contracts.filter((c) => {
+      const closed = !!c.closed_at;
+      if (isArchivedMode ? !closed : closed) return false;
       if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
       if (entityFilter !== 'all') {
         const entity = getCommercialById(c.commercial_id)?.entity;
@@ -143,6 +147,8 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
         if (eb == null) return -1;
         return (ea - eb) * dir;
       });
+    } else if (sortMode === 'archived') {
+      arr.sort((a, b) => new Date(b.closed_at ?? 0).getTime() - new Date(a.closed_at ?? 0).getTime());
     } else if (sortMode === 'recent') {
       arr.sort((a, b) => {
         const ta = new Date(a.validated_at ?? a.created_at ?? 0).getTime();
@@ -151,12 +157,13 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
       });
     }
     return arr;
-  }, [contracts, entityFilter, commercialFilter, searchQuery, sortMode, getCommercialById]);
+  }, [contracts, entityFilter, commercialFilter, searchQuery, sortMode, isArchivedMode, getCommercialById]);
 
+  const activeContractsCount = useMemo(() => contracts.filter((c) => !c.closed_at).length, [contracts]);
   const hasActiveFilter = entityFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
-  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc';
+  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc' || isArchivedMode;
   const groups = isFlatList ? [] : groupByCommercial(filteredContracts);
-  const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
+  const totalRenewing = isArchivedMode ? 0 : filteredContracts.filter(isContractRenewingSoon).length;
 
   const [previewContract, setPreviewContract] = useState<Contract | null>(null);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
