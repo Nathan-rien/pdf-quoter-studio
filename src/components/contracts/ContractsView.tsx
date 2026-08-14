@@ -218,7 +218,8 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold">Contrats</h1>
-            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{filteredContracts.length !== contracts.length ? ` / ${contracts.length}` : ''}</Badge>}
+            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{!isArchivedMode && filteredContracts.length !== activeContractsCount ? ` / ${activeContractsCount}` : ''}</Badge>}
+            {isArchivedMode && <Badge variant="outline" className="text-[10px] uppercase">Archivés</Badge>}
 
           </div>
           <p className="text-sm text-muted-foreground mt-1">
