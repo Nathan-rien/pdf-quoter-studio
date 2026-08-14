@@ -609,7 +609,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                     <ServiceReferencesPanel
                       contractId={contract.id}
                       clientName={contract.client_name}
-                      isAdmin={isAdmin}
+                      isAdmin={isAdmin || isTechnicien}
                       refs={serviceRefs}
                       onPlanIntervention={onPlanIntervention}
                       priceLabelFor={(label) => {
