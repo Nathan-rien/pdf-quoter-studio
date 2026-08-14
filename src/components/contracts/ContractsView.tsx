@@ -126,9 +126,13 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
     catch { return null; }
   };
 
+  const isArchivedMode = sortMode === 'archived';
+
   const filteredContracts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const arr = contracts.filter((c) => {
+      const closed = !!c.closed_at;
+      if (isArchivedMode ? !closed : closed) return false;
       if (partnerFilter !== 'all' && c.financial_partner !== partnerFilter) return false;
       if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
       if (entityFilter !== 'all') {
