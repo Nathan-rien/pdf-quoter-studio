@@ -155,6 +155,8 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
         if (eb == null) return -1;
         return (ea - eb) * dir;
       });
+    } else if (sortMode === 'archived') {
+      arr.sort((a, b) => new Date(b.closed_at ?? 0).getTime() - new Date(a.closed_at ?? 0).getTime());
     } else if (sortMode === 'recent') {
       arr.sort((a, b) => {
         const ta = new Date(a.validated_at ?? a.created_at ?? 0).getTime();
@@ -163,10 +165,11 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
       });
     }
     return arr;
-  }, [contracts, entityFilter, partnerFilter, commercialFilter, searchQuery, sortMode, getCommercialById]);
+  }, [contracts, entityFilter, partnerFilter, commercialFilter, searchQuery, sortMode, isArchivedMode, getCommercialById]);
 
+  const activeContractsCount = useMemo(() => contracts.filter((c) => !c.closed_at).length, [contracts]);
   const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
-  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc';
+  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc' || isArchivedMode;
   const groups = isFlatList ? [] : groupByCommercial(filteredContracts);
   const totalRenewing = filteredContracts.filter(isContractRenewingSoon).length;
 
