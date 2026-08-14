@@ -743,6 +743,107 @@ export type Database = {
           },
         ]
       }
+      remote_support_clients: {
+        Row: {
+          attribution: string | null
+          bu: string | null
+          client_number: string | null
+          commercial_name: string | null
+          created_at: string
+          end_date: string | null
+          entity: string
+          forfait: string | null
+          id: string
+          invoice_number: string | null
+          is_paid: boolean
+          machines_count: number | null
+          order_number: string | null
+          products_sn: string | null
+          start_date: string | null
+          tickets_initial: number | null
+          tickets_label: string | null
+          tickets_remaining: number | null
+          updated_at: string
+        }
+        Insert: {
+          attribution?: string | null
+          bu?: string | null
+          client_number?: string | null
+          commercial_name?: string | null
+          created_at?: string
+          end_date?: string | null
+          entity: string
+          forfait?: string | null
+          id?: string
+          invoice_number?: string | null
+          is_paid?: boolean
+          machines_count?: number | null
+          order_number?: string | null
+          products_sn?: string | null
+          start_date?: string | null
+          tickets_initial?: number | null
+          tickets_label?: string | null
+          tickets_remaining?: number | null
+          updated_at?: string
+        }
+        Update: {
+          attribution?: string | null
+          bu?: string | null
+          client_number?: string | null
+          commercial_name?: string | null
+          created_at?: string
+          end_date?: string | null
+          entity?: string
+          forfait?: string | null
+          id?: string
+          invoice_number?: string | null
+          is_paid?: boolean
+          machines_count?: number | null
+          order_number?: string | null
+          products_sn?: string | null
+          start_date?: string | null
+          tickets_initial?: number | null
+          tickets_label?: string | null
+          tickets_remaining?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      remote_support_ticket_log: {
+        Row: {
+          client_id: string
+          id: string
+          note: string | null
+          used_at: string
+          used_by: string | null
+          used_by_name: string | null
+        }
+        Insert: {
+          client_id: string
+          id?: string
+          note?: string | null
+          used_at?: string
+          used_by?: string | null
+          used_by_name?: string | null
+        }
+        Update: {
+          client_id?: string
+          id?: string
+          note?: string | null
+          used_at?: string
+          used_by?: string | null
+          used_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remote_support_ticket_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "remote_support_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_proposals: {
         Row: {
           client_address: string | null
@@ -932,6 +1033,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_remote_support_ticket: {
+        Args: { _client_id: string; _note?: string }
+        Returns: {
+          attribution: string | null
+          bu: string | null
+          client_number: string | null
+          commercial_name: string | null
+          created_at: string
+          end_date: string | null
+          entity: string
+          forfait: string | null
+          id: string
+          invoice_number: string | null
+          is_paid: boolean
+          machines_count: number | null
+          order_number: string | null
+          products_sn: string | null
+          start_date: string | null
+          tickets_initial: number | null
+          tickets_label: string | null
+          tickets_remaining: number | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "remote_support_clients"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       consume_ticket: {
         Args: { _note?: string; _reference_id: string }
         Returns: {
