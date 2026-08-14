@@ -27,6 +27,8 @@ const dbRowToOption = (row: Record<string, unknown>): ServiceOptionDefinition =>
   kind: ((row.kind as string) === 'pack' ? 'pack' : 'option'),
   packServiceIds: Array.isArray(row.pack_service_ids) ? (row.pack_service_ids as string[]) : [],
   erpReference: (row.erp_reference as string | null) ?? undefined,
+  requiresIntervention: (row.requires_intervention as boolean | null) ?? true,
+
   createdAt: new Date(row.created_at as string),
   updatedAt: new Date(row.updated_at as string),
 });

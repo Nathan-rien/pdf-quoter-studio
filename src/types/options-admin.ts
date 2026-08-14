@@ -19,6 +19,8 @@ export interface ServiceOptionDefinition {
   kind?: 'option' | 'pack';
   packServiceIds?: string[]; // Pour un pack : ids d'options regroupées
   erpReference?: string;     // Référence ERP (JAJA), admin uniquement
+  requiresIntervention?: boolean; // true = planifiable dans le Planning Services
+
   createdAt: Date;
   updatedAt: Date;
 }
