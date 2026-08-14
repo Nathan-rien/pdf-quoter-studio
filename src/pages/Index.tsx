@@ -218,7 +218,7 @@ export default function Index() {
         </div>
         <div className={cn(
           "mx-auto",
-          (currentView === 'template-editor' || currentView === 'gantt') ? "max-w-full" : "max-w-7xl"
+          (currentView === 'template-editor' || currentView === 'gantt' || currentView === 'technician-tracking' || currentView === 'service-planning') ? "max-w-full" : "max-w-7xl"
         )}>
           {renderContent()}
         </div>
