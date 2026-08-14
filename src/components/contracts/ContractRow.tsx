@@ -407,7 +407,13 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {isQuick && (
               <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Contrat rapide</Badge>
             )}
-            {renewing && (
+            {isClosed && (
+              <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700">
+                <Archive className="h-3 w-3" />
+                Clôturé le {format(parseISO(contract.closed_at as string), 'dd/MM/yyyy', { locale: fr })}
+              </Badge>
+            )}
+            {!isClosed && renewing && (
               <Badge variant="warning" className="gap-1">
                 <Bell className="h-3 w-3" />
                 Renouvellement dans {monthsLeft}m
