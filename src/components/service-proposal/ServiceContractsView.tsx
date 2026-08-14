@@ -209,7 +209,8 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold">Contrats Services</h1>
-            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{filteredContracts.length !== contracts.length ? ` / ${contracts.length}` : ''}</Badge>}
+            {filteredContracts.length > 0 && <Badge variant="secondary">{filteredContracts.length}{!isArchivedMode && filteredContracts.length !== activeContractsCount ? ` / ${activeContractsCount}` : ''}</Badge>}
+            {isArchivedMode && <Badge variant="outline" className="text-[10px] uppercase">Archivés</Badge>}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Propositions services validées. Renseignez le mois de mise en place et la durée pour chaque contrat.
@@ -255,6 +256,7 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
                   <SelectItem value="recent">Plus récents</SelectItem>
                   <SelectItem value="echeance-asc">Échéance (croissante)</SelectItem>
                   <SelectItem value="echeance-desc">Échéance (décroissante)</SelectItem>
+                  <SelectItem value="archived">Contrats archivés</SelectItem>
                 </SelectContent>
               </Select>
             </div>
