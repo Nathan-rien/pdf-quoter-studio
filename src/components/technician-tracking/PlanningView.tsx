@@ -500,6 +500,26 @@ function InterventionDialog({
 
 
 
+  const interventionOptionsQ = useQuery({
+    queryKey: ['pl-intervention-options'],
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('options_services')
+        .select('id, title, is_active, requires_intervention')
+        .eq('is_active', true)
+        .eq('requires_intervention', true)
+        .order('sort_order');
+      return (data ?? []) as Array<{ id: string; title: string }>;
+    },
+  });
+
+  function addPrestation(label: string) {
+    const v = label.trim();
+    if (!v) return;
+    setPrestations((prev) => (prev.includes(v) ? prev : [...prev, v]));
+  }
+
   const clientInfoQ = useQuery({
     queryKey: ['pl-client-info', selectedContract?.proposal_id],
     enabled: !!selectedContract?.proposal_id,
