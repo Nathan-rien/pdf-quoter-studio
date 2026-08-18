@@ -467,6 +467,17 @@ function InterventionDialog({
   const [erpTouched, setErpTouched] = useState(false);
 
 
+  const filteredContracts = useMemo(() => {
+    const q = clientSearch.trim().toLowerCase();
+    if (!q) return contracts;
+    return contracts.filter(
+      (c) =>
+        c.client_name.toLowerCase().includes(q) ||
+        (c.contract_number ?? '').toLowerCase().includes(q) ||
+        (c.erp_reference ?? '').toLowerCase().includes(q)
+    );
+  }, [contracts, clientSearch]);
+
   const refsForContract = useMemo(
     () => refs.filter((r) => r.contract_id === contractId && r.requires_intervention !== false),
     [refs, contractId]
