@@ -24,6 +24,7 @@ export interface ClientData {
 }
 
 export const DEFAULT_OPERATIONAL_CONTACT: OperationalContact = {
+  firstName: '',
   name: '',
   role: '',
   email: '',

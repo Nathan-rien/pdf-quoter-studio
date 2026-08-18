@@ -25,6 +25,7 @@ export interface SiteAddress {
 }
 
 export interface OperationalContact {
+  firstName?: string;
   name: string;
   role: string;
   email: string;
