@@ -575,7 +575,8 @@ function InterventionDialog({
         : {
             reference_id: null,
             client_name: freeClientName.trim(),
-            service_label: freeServiceLabel.trim() || null,
+            service_label:
+              [...prestations, freeServiceLabel.trim()].filter(Boolean).join(' + ') || null,
           };
 
     const payload: Partial<Intervention> & { id?: string } = isEdit
