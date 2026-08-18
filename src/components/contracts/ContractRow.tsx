@@ -110,6 +110,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [externalProviders, setExternalProviders] = useState<ContractExternalProvider[]>(() => normalizeExternalProviders(contract.external_providers));
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
   const { data: proposalOptions } = useContractProposalOptions(isQuick ? null : contract.proposal_id);
+  const { data: proposalOpContact } = useContractProposalOperationalContact(
+    isQuick || !isServiceContract ? null : contract.proposal_id,
+  );
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
