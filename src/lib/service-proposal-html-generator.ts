@@ -503,8 +503,9 @@ export async function generateServiceProposalHtml(
   };
 
   const renderOperationalContactZone = (zone: PositionedDynamicZone) => {
-    const op = operationalContact ?? { name: '', role: '', email: '', phone: '' };
-    const hasData = op.name || op.role || op.email || op.phone;
+    const op = operationalContact ?? { firstName: '', name: '', role: '', email: '', phone: '' };
+    const fullName = [op.firstName, op.name].filter(Boolean).join(' ').trim();
+    const hasData = fullName || op.role || op.email || op.phone;
     return `
       <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Contact opérationnel</div>
@@ -512,7 +513,7 @@ export async function generateServiceProposalHtml(
           ${!hasData
             ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>`
             : `<div>
-                ${op.name ? `<p style="${VALUE_STYLE}">${escapeText(op.name)}</p>` : ''}
+                ${fullName ? `<p style="${VALUE_STYLE}">${escapeText(fullName)}</p>` : ''}
                 <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
                   ${op.role ? `<p style="margin:0.5mm 0;">${escapeText(op.role)}</p>` : ''}
                   ${op.email ? `<p style="margin:0.5mm 0;">${escapeText(op.email)}</p>` : ''}
