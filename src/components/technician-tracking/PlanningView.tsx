@@ -761,7 +761,7 @@ function InterventionDialog({
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button onClick={submit} disabled={saving || !referenceId}>Enregistrer</Button>
+            <Button onClick={submit} disabled={saving || !canSubmit}>Enregistrer</Button>
           </div>
         </DialogFooter>
       </DialogContent>
