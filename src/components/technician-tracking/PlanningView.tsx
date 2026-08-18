@@ -536,19 +536,31 @@ function InterventionDialog({
     qc.invalidateQueries({ queryKey: ['pl-refs'] });
   }
 
+  const horsValid = freeClientName.trim().length > 0;
+  const canSubmit = kind === 'contrat' ? !!referenceId : horsValid;
+
   function submit() {
-    if (!referenceId) return;
-    void persistErp();
+    if (!canSubmit) return;
+    if (kind === 'contrat') void persistErp();
     const totalMinutes =
       (Number(durationHours) || 0) * 60 + (Number(durationMinutes) || 0);
 
     const dureeVal = totalMinutes > 0 ? totalMinutes : null;
+    const target =
+      kind === 'contrat'
+        ? { reference_id: referenceId, client_name: null, service_label: null }
+        : {
+            reference_id: null,
+            client_name: freeClientName.trim(),
+            service_label: freeServiceLabel.trim() || null,
+          };
+
     const payload: Partial<Intervention> & { id?: string } = isEdit
       ? {
           id: iv!.id,
           statut,
           ...(canEditAll ? {
-            reference_id: referenceId,
+            ...target,
             date_intervention: new Date(dateLocal).toISOString(),
             duree_estimee_minutes: dureeVal,
             technician_name: technicianName.trim() || 'Technicien',
@@ -557,7 +569,7 @@ function InterventionDialog({
           } : {}),
         }
       : {
-          reference_id: referenceId,
+          ...target,
           date_intervention: new Date(dateLocal).toISOString(),
           duree_estimee_minutes: dureeVal,
           technician_name: technicianName.trim() || 'Technicien',
