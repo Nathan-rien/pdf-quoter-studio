@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, useContractProposalOperationalContact, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { generateServiceContractNumber } from '@/lib/contract-numbering';
@@ -110,6 +110,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [externalProviders, setExternalProviders] = useState<ContractExternalProvider[]>(() => normalizeExternalProviders(contract.external_providers));
   const { data: proposalRent } = useContractProposalRent(isQuick ? null : contract.proposal_id);
   const { data: proposalOptions } = useContractProposalOptions(isQuick ? null : contract.proposal_id);
+  const { data: proposalOpContact } = useContractProposalOperationalContact(
+    isQuick || !isServiceContract ? null : contract.proposal_id,
+  );
 
   // Fallback saisi manuellement (uniquement quand la proposition ne fournit pas de loyer)
   const [manualMonthlyRent, setManualMonthlyRent] = useState<string>(
@@ -741,7 +744,25 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 <div className="text-sm capitalize">{contract.payment_frequency ?? 'mensuel'}</div>
               </div>
             </div>
+           )}
+
+          {isServiceContract && proposalOpContact && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Contact opérationnel</Label>
+              <div className="rounded-md border border-border bg-background/60 p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <Label className="text-[11px] text-muted-foreground">Prénom</Label>
+                  <div className="text-sm">{proposalOpContact.firstName || '—'}</div>
+                </div>
+                <div className="space-y-0.5">
+                  <Label className="text-[11px] text-muted-foreground">Nom</Label>
+                  <div className="text-sm">{proposalOpContact.name || '—'}</div>
+                </div>
+              </div>
+            </div>
           )}
+
+
 
           {canEditContract && (<>
           {isServiceContract && (
