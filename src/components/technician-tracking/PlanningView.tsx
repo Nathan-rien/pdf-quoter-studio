@@ -23,7 +23,9 @@ import {
 
 interface Intervention {
   id: string;
-  reference_id: string;
+  reference_id: string | null;
+  client_name?: string | null;
+  service_label?: string | null;
   technician_user_id: string | null;
   technician_name: string;
   date_intervention: string; // iso
