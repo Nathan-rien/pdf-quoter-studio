@@ -588,56 +588,121 @@ function InterventionDialog({
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto pr-1">
-          <div>
-            <label className="text-xs font-medium mb-1 block">Client</label>
-            <Select value={contractId} onValueChange={(v) => { setContractId(v); setReferenceId(''); }} disabled={!canEditAll}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
-              <SelectContent>
-                {contracts.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Tabs value={kind} onValueChange={(v) => canEditAll && setKind(v as 'contrat' | 'hors')}>
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="contrat" disabled={!canEditAll}>Intervention sur contrat</TabsTrigger>
+              <TabsTrigger value="hors" disabled={!canEditAll}>Intervention hors contrat</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {contractId && (
-            <ClientInfoBlock
-              loading={clientInfoQ.isLoading}
-              info={clientInfoQ.data}
-              hasProposal={!!selectedContract?.proposal_id}
-            />
+          {kind === 'contrat' ? (
+            <>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Client</label>
+                <Input
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  placeholder="Rechercher un client…"
+                  className="mb-2 h-8"
+                  disabled={!canEditAll}
+                />
+                <Select value={contractId} onValueChange={(v) => { setContractId(v); setReferenceId(''); }} disabled={!canEditAll}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredContracts.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucun client trouvé</div>
+                    ) : filteredContracts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {contractId && (
+                <ClientInfoBlock
+                  loading={clientInfoQ.isLoading}
+                  info={clientInfoQ.data}
+                  hasProposal={!!selectedContract?.proposal_id}
+                />
+              )}
+
+              <div>
+                <label className="text-xs font-medium mb-1 block">Service / référence</label>
+                <Select value={referenceId} onValueChange={setReferenceId} disabled={!contractId || !canEditAll}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
+                  <SelectContent>
+                    {refsForContract.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.service_label}{r.erp_reference ? ` — JAJA ${r.erp_reference}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium mb-1 block">Réf. Jaja</label>
+                <Input
+                  value={erpRef}
+                  onChange={(e) => { setErpTouched(true); setErpRef(e.target.value); }}
+                  placeholder="Ex : JAJA-12345"
+                  disabled={!canEditAll}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Reprise automatiquement du service ou du contrat si renseignée.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Client (optionnel)</label>
+                <Input
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  placeholder="Rechercher un client existant…"
+                  className="mb-2 h-8"
+                  disabled={!canEditAll}
+                />
+                {clientSearch.trim() && (
+                  <div className="mb-2 max-h-32 overflow-auto rounded-md border divide-y divide-border">
+                    {filteredContracts.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucun client trouvé</div>
+                    ) : filteredContracts.slice(0, 20).map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted"
+                        onClick={() => { setFreeClientName(c.client_name); setClientSearch(''); }}
+                      >
+                        {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <label className="text-xs font-medium mb-1 block">Nom du client</label>
+                <Input
+                  value={freeClientName}
+                  onChange={(e) => setFreeClientName(e.target.value)}
+                  placeholder="Nom du client"
+                  disabled={!canEditAll}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium mb-1 block">Prestation (optionnel)</label>
+                <Input
+                  value={freeServiceLabel}
+                  onChange={(e) => setFreeServiceLabel(e.target.value)}
+                  placeholder="Ex : Dépannage ponctuel"
+                  disabled={!canEditAll}
+                />
+              </div>
+            </>
           )}
 
-
-
-          <div>
-            <label className="text-xs font-medium mb-1 block">Service / référence</label>
-            <Select value={referenceId} onValueChange={setReferenceId} disabled={!contractId || !canEditAll}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
-              <SelectContent>
-                {refsForContract.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.service_label}{r.erp_reference ? ` — JAJA ${r.erp_reference}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium mb-1 block">Réf. Jaja</label>
-            <Input
-              value={erpRef}
-              onChange={(e) => { setErpTouched(true); setErpRef(e.target.value); }}
-              placeholder="Ex : JAJA-12345"
-              disabled={!canEditAll}
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Reprise automatiquement du service ou du contrat si renseignée.
-            </p>
-          </div>
 
 
           <div className="grid grid-cols-3 gap-3">
