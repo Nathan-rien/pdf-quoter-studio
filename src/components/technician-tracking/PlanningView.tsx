@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Trash2,
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Trash2, X,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -441,7 +441,10 @@ function InterventionDialog({
   );
   const [clientSearch, setClientSearch] = useState('');
   const [freeClientName, setFreeClientName] = useState<string>(iv?.client_name ?? '');
-  const [freeServiceLabel, setFreeServiceLabel] = useState<string>(iv?.service_label ?? '');
+  const [prestations, setPrestations] = useState<string[]>(
+    iv?.service_label ? iv.service_label.split(' + ').map((s) => s.trim()).filter(Boolean) : []
+  );
+  const [freeServiceLabel, setFreeServiceLabel] = useState<string>('');
 
   const [contractId, setContractId] = useState<string>(
     iv ? (refs.find((r) => r.id === iv.reference_id)?.contract_id ?? '') : (initial.mode === 'create' ? initial.prefill?.contract_id ?? '' : '')
@@ -496,6 +499,26 @@ function InterventionDialog({
   }, [referenceId, selectedContract, refs, erpTouched]);
 
 
+
+  const interventionOptionsQ = useQuery({
+    queryKey: ['pl-intervention-options'],
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('options_services')
+        .select('id, title, is_active, requires_intervention')
+        .eq('is_active', true)
+        .eq('requires_intervention', true)
+        .order('sort_order');
+      return (data ?? []) as Array<{ id: string; title: string }>;
+    },
+  });
+
+  function addPrestation(label: string) {
+    const v = label.trim();
+    if (!v) return;
+    setPrestations((prev) => (prev.includes(v) ? prev : [...prev, v]));
+  }
 
   const clientInfoQ = useQuery({
     queryKey: ['pl-client-info', selectedContract?.proposal_id],
@@ -552,7 +575,8 @@ function InterventionDialog({
         : {
             reference_id: null,
             client_name: freeClientName.trim(),
-            service_label: freeServiceLabel.trim() || null,
+            service_label:
+              [...prestations, freeServiceLabel.trim()].filter(Boolean).join(' + ') || null,
           };
 
     const payload: Partial<Intervention> & { id?: string } = isEdit
@@ -692,13 +716,66 @@ function InterventionDialog({
               </div>
 
               <div>
-                <label className="text-xs font-medium mb-1 block">Prestation (optionnel)</label>
-                <Input
-                  value={freeServiceLabel}
-                  onChange={(e) => setFreeServiceLabel(e.target.value)}
-                  placeholder="Ex : Dépannage ponctuel"
-                  disabled={!canEditAll}
-                />
+                <label className="text-xs font-medium mb-1 block">Prestations (optionnel)</label>
+                <Select value="" onValueChange={(v) => addPrestation(v)} disabled={!canEditAll}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ajouter une prestation du catalogue…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(interventionOptionsQ.data ?? []).filter((o) => !prestations.includes(o.title)).length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucune option disponible</div>
+                    ) : (interventionOptionsQ.data ?? [])
+                        .filter((o) => !prestations.includes(o.title))
+                        .map((o) => (
+                          <SelectItem key={o.id} value={o.title}>{o.title}</SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+
+                {prestations.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {prestations.map((p) => (
+                      <Badge key={p} variant="secondary" className="gap-1">
+                        {p}
+                        {canEditAll && (
+                          <button
+                            type="button"
+                            onClick={() => setPrestations((prev) => prev.filter((x) => x !== p))}
+                            className="hover:text-destructive"
+                            aria-label={`Retirer ${p}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={freeServiceLabel}
+                    onChange={(e) => setFreeServiceLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addPrestation(freeServiceLabel);
+                        setFreeServiceLabel('');
+                      }
+                    }}
+                    placeholder="Autre prestation (ex : Dépannage ponctuel)"
+                    disabled={!canEditAll}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={!canEditAll || !freeServiceLabel.trim()}
+                    onClick={() => { addPrestation(freeServiceLabel); setFreeServiceLabel(''); }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </>
           )}
