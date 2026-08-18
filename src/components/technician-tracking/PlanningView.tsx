@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Trash2,
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Trash2, X,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
