@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, useContractProposalOperationalContact, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { generateServiceContractNumber } from '@/lib/contract-numbering';
