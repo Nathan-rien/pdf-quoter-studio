@@ -436,6 +436,13 @@ function InterventionDialog({
   const isEdit = initial.mode === 'edit';
   const iv = isEdit ? initial.intervention : null;
 
+  const [kind, setKind] = useState<'contrat' | 'hors'>(
+    iv ? (iv.reference_id ? 'contrat' : 'hors') : 'contrat'
+  );
+  const [clientSearch, setClientSearch] = useState('');
+  const [freeClientName, setFreeClientName] = useState<string>(iv?.client_name ?? '');
+  const [freeServiceLabel, setFreeServiceLabel] = useState<string>(iv?.service_label ?? '');
+
   const [contractId, setContractId] = useState<string>(
     iv ? (refs.find((r) => r.id === iv.reference_id)?.contract_id ?? '') : (initial.mode === 'create' ? initial.prefill?.contract_id ?? '' : '')
   );
