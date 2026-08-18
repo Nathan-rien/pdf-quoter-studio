@@ -744,7 +744,25 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 <div className="text-sm capitalize">{contract.payment_frequency ?? 'mensuel'}</div>
               </div>
             </div>
+           )}
+
+          {isServiceContract && proposalOpContact && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Contact opérationnel</Label>
+              <div className="rounded-md border border-border bg-background/60 p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <Label className="text-[11px] text-muted-foreground">Prénom</Label>
+                  <div className="text-sm">{proposalOpContact.firstName || '—'}</div>
+                </div>
+                <div className="space-y-0.5">
+                  <Label className="text-[11px] text-muted-foreground">Nom</Label>
+                  <div className="text-sm">{proposalOpContact.name || '—'}</div>
+                </div>
+              </div>
+            </div>
           )}
+
+
 
           {canEditContract && (<>
           {isServiceContract && (
