@@ -550,12 +550,12 @@ function InterventionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{isEdit ? 'Modifier l\'intervention' : 'Nouvelle intervention'}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto pr-1">
           <div>
             <label className="text-xs font-medium mb-1 block">Client</label>
             <Select value={contractId} onValueChange={(v) => { setContractId(v); setReferenceId(''); }} disabled={!canEditAll}>
@@ -654,7 +654,7 @@ function InterventionDialog({
           )}
         </div>
 
-        <DialogFooter className="flex items-center justify-between sm:justify-between">
+        <DialogFooter className="shrink-0 flex items-center justify-between sm:justify-between">
           <div>
             {isEdit && (isAdmin || isOwner) && (
               <Button variant="ghost" size="sm" onClick={() => onDelete(iv!.id)} className="text-destructive">
