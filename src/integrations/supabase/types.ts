@@ -479,39 +479,45 @@ export type Database = {
       }
       intervention_planning: {
         Row: {
+          client_name: string | null
           commentaire: string | null
           created_at: string
           created_by: string | null
           date_intervention: string
           duree_estimee_minutes: number | null
           id: string
-          reference_id: string
+          reference_id: string | null
+          service_label: string | null
           statut: Database["public"]["Enums"]["intervention_status"]
           technician_name: string
           technician_user_id: string | null
           updated_at: string
         }
         Insert: {
+          client_name?: string | null
           commentaire?: string | null
           created_at?: string
           created_by?: string | null
           date_intervention: string
           duree_estimee_minutes?: number | null
           id?: string
-          reference_id: string
+          reference_id?: string | null
+          service_label?: string | null
           statut?: Database["public"]["Enums"]["intervention_status"]
           technician_name: string
           technician_user_id?: string | null
           updated_at?: string
         }
         Update: {
+          client_name?: string | null
           commentaire?: string | null
           created_at?: string
           created_by?: string | null
           date_intervention?: string
           duree_estimee_minutes?: number | null
           id?: string
-          reference_id?: string
+          reference_id?: string | null
+          service_label?: string | null
           statut?: Database["public"]["Enums"]["intervention_status"]
           technician_name?: string
           technician_user_id?: string | null

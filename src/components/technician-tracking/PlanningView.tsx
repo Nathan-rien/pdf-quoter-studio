@@ -23,7 +23,9 @@ import {
 
 interface Intervention {
   id: string;
-  reference_id: string;
+  reference_id: string | null;
+  client_name?: string | null;
+  service_label?: string | null;
   technician_user_id: string | null;
   technician_name: string;
   date_intervention: string; // iso
@@ -247,11 +249,11 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
   }, [refsQ.data]);
 
   function labelForIntervention(i: Intervention) {
-    const ref = refById.get(i.reference_id);
+    const ref = i.reference_id ? refById.get(i.reference_id) : undefined;
     const contract = ref ? contractById.get(ref.contract_id) : undefined;
     return {
-      client: contract?.client_name ?? 'Client ?',
-      service: ref?.service_label ?? 'Service ?',
+      client: contract?.client_name ?? i.client_name ?? 'Client ?',
+      service: ref?.service_label ?? i.service_label ?? (i.reference_id ? 'Service ?' : 'Hors contrat'),
     };
   }
 
@@ -434,6 +436,13 @@ function InterventionDialog({
   const isEdit = initial.mode === 'edit';
   const iv = isEdit ? initial.intervention : null;
 
+  const [kind, setKind] = useState<'contrat' | 'hors'>(
+    iv ? (iv.reference_id ? 'contrat' : 'hors') : 'contrat'
+  );
+  const [clientSearch, setClientSearch] = useState('');
+  const [freeClientName, setFreeClientName] = useState<string>(iv?.client_name ?? '');
+  const [freeServiceLabel, setFreeServiceLabel] = useState<string>(iv?.service_label ?? '');
+
   const [contractId, setContractId] = useState<string>(
     iv ? (refs.find((r) => r.id === iv.reference_id)?.contract_id ?? '') : (initial.mode === 'create' ? initial.prefill?.contract_id ?? '' : '')
   );
@@ -457,6 +466,17 @@ function InterventionDialog({
   const [erpRef, setErpRef] = useState<string>('');
   const [erpTouched, setErpTouched] = useState(false);
 
+
+  const filteredContracts = useMemo(() => {
+    const q = clientSearch.trim().toLowerCase();
+    if (!q) return contracts;
+    return contracts.filter(
+      (c) =>
+        c.client_name.toLowerCase().includes(q) ||
+        (c.contract_number ?? '').toLowerCase().includes(q) ||
+        (c.erp_reference ?? '').toLowerCase().includes(q)
+    );
+  }, [contracts, clientSearch]);
 
   const refsForContract = useMemo(
     () => refs.filter((r) => r.contract_id === contractId && r.requires_intervention !== false),
@@ -516,19 +536,31 @@ function InterventionDialog({
     qc.invalidateQueries({ queryKey: ['pl-refs'] });
   }
 
+  const horsValid = freeClientName.trim().length > 0;
+  const canSubmit = kind === 'contrat' ? !!referenceId : horsValid;
+
   function submit() {
-    if (!referenceId) return;
-    void persistErp();
+    if (!canSubmit) return;
+    if (kind === 'contrat') void persistErp();
     const totalMinutes =
       (Number(durationHours) || 0) * 60 + (Number(durationMinutes) || 0);
 
     const dureeVal = totalMinutes > 0 ? totalMinutes : null;
+    const target =
+      kind === 'contrat'
+        ? { reference_id: referenceId, client_name: null, service_label: null }
+        : {
+            reference_id: null,
+            client_name: freeClientName.trim(),
+            service_label: freeServiceLabel.trim() || null,
+          };
+
     const payload: Partial<Intervention> & { id?: string } = isEdit
       ? {
           id: iv!.id,
           statut,
           ...(canEditAll ? {
-            reference_id: referenceId,
+            ...target,
             date_intervention: new Date(dateLocal).toISOString(),
             duree_estimee_minutes: dureeVal,
             technician_name: technicianName.trim() || 'Technicien',
@@ -537,7 +569,7 @@ function InterventionDialog({
           } : {}),
         }
       : {
-          reference_id: referenceId,
+          ...target,
           date_intervention: new Date(dateLocal).toISOString(),
           duree_estimee_minutes: dureeVal,
           technician_name: technicianName.trim() || 'Technicien',
@@ -556,56 +588,121 @@ function InterventionDialog({
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto pr-1">
-          <div>
-            <label className="text-xs font-medium mb-1 block">Client</label>
-            <Select value={contractId} onValueChange={(v) => { setContractId(v); setReferenceId(''); }} disabled={!canEditAll}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
-              <SelectContent>
-                {contracts.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Tabs value={kind} onValueChange={(v) => canEditAll && setKind(v as 'contrat' | 'hors')}>
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="contrat" disabled={!canEditAll}>Intervention sur contrat</TabsTrigger>
+              <TabsTrigger value="hors" disabled={!canEditAll}>Intervention hors contrat</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {contractId && (
-            <ClientInfoBlock
-              loading={clientInfoQ.isLoading}
-              info={clientInfoQ.data}
-              hasProposal={!!selectedContract?.proposal_id}
-            />
+          {kind === 'contrat' ? (
+            <>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Client</label>
+                <Input
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  placeholder="Rechercher un client…"
+                  className="mb-2 h-8"
+                  disabled={!canEditAll}
+                />
+                <Select value={contractId} onValueChange={(v) => { setContractId(v); setReferenceId(''); }} disabled={!canEditAll}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredContracts.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucun client trouvé</div>
+                    ) : filteredContracts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {contractId && (
+                <ClientInfoBlock
+                  loading={clientInfoQ.isLoading}
+                  info={clientInfoQ.data}
+                  hasProposal={!!selectedContract?.proposal_id}
+                />
+              )}
+
+              <div>
+                <label className="text-xs font-medium mb-1 block">Service / référence</label>
+                <Select value={referenceId} onValueChange={setReferenceId} disabled={!contractId || !canEditAll}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
+                  <SelectContent>
+                    {refsForContract.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.service_label}{r.erp_reference ? ` — JAJA ${r.erp_reference}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium mb-1 block">Réf. Jaja</label>
+                <Input
+                  value={erpRef}
+                  onChange={(e) => { setErpTouched(true); setErpRef(e.target.value); }}
+                  placeholder="Ex : JAJA-12345"
+                  disabled={!canEditAll}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Reprise automatiquement du service ou du contrat si renseignée.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Client (optionnel)</label>
+                <Input
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  placeholder="Rechercher un client existant…"
+                  className="mb-2 h-8"
+                  disabled={!canEditAll}
+                />
+                {clientSearch.trim() && (
+                  <div className="mb-2 max-h-32 overflow-auto rounded-md border divide-y divide-border">
+                    {filteredContracts.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucun client trouvé</div>
+                    ) : filteredContracts.slice(0, 20).map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted"
+                        onClick={() => { setFreeClientName(c.client_name); setClientSearch(''); }}
+                      >
+                        {c.client_name}{c.erp_reference ? ` — Réf. Jaja ${c.erp_reference}` : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <label className="text-xs font-medium mb-1 block">Nom du client</label>
+                <Input
+                  value={freeClientName}
+                  onChange={(e) => setFreeClientName(e.target.value)}
+                  placeholder="Nom du client"
+                  disabled={!canEditAll}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium mb-1 block">Prestation (optionnel)</label>
+                <Input
+                  value={freeServiceLabel}
+                  onChange={(e) => setFreeServiceLabel(e.target.value)}
+                  placeholder="Ex : Dépannage ponctuel"
+                  disabled={!canEditAll}
+                />
+              </div>
+            </>
           )}
 
-
-
-          <div>
-            <label className="text-xs font-medium mb-1 block">Service / référence</label>
-            <Select value={referenceId} onValueChange={setReferenceId} disabled={!contractId || !canEditAll}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
-              <SelectContent>
-                {refsForContract.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.service_label}{r.erp_reference ? ` — JAJA ${r.erp_reference}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium mb-1 block">Réf. Jaja</label>
-            <Input
-              value={erpRef}
-              onChange={(e) => { setErpTouched(true); setErpRef(e.target.value); }}
-              placeholder="Ex : JAJA-12345"
-              disabled={!canEditAll}
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Reprise automatiquement du service ou du contrat si renseignée.
-            </p>
-          </div>
 
 
           <div className="grid grid-cols-3 gap-3">
@@ -664,7 +761,7 @@ function InterventionDialog({
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button onClick={submit} disabled={saving || !referenceId}>Enregistrer</Button>
+            <Button onClick={submit} disabled={saving || !canSubmit}>Enregistrer</Button>
           </div>
         </DialogFooter>
       </DialogContent>
