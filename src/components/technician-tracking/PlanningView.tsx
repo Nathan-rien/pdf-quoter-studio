@@ -716,13 +716,66 @@ function InterventionDialog({
               </div>
 
               <div>
-                <label className="text-xs font-medium mb-1 block">Prestation (optionnel)</label>
-                <Input
-                  value={freeServiceLabel}
-                  onChange={(e) => setFreeServiceLabel(e.target.value)}
-                  placeholder="Ex : Dépannage ponctuel"
-                  disabled={!canEditAll}
-                />
+                <label className="text-xs font-medium mb-1 block">Prestations (optionnel)</label>
+                <Select value="" onValueChange={(v) => addPrestation(v)} disabled={!canEditAll}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ajouter une prestation du catalogue…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(interventionOptionsQ.data ?? []).filter((o) => !prestations.includes(o.title)).length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Aucune option disponible</div>
+                    ) : (interventionOptionsQ.data ?? [])
+                        .filter((o) => !prestations.includes(o.title))
+                        .map((o) => (
+                          <SelectItem key={o.id} value={o.title}>{o.title}</SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+
+                {prestations.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {prestations.map((p) => (
+                      <Badge key={p} variant="secondary" className="gap-1">
+                        {p}
+                        {canEditAll && (
+                          <button
+                            type="button"
+                            onClick={() => setPrestations((prev) => prev.filter((x) => x !== p))}
+                            className="hover:text-destructive"
+                            aria-label={`Retirer ${p}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={freeServiceLabel}
+                    onChange={(e) => setFreeServiceLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addPrestation(freeServiceLabel);
+                        setFreeServiceLabel('');
+                      }
+                    }}
+                    placeholder="Autre prestation (ex : Dépannage ponctuel)"
+                    disabled={!canEditAll}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={!canEditAll || !freeServiceLabel.trim()}
+                    onClick={() => { addPrestation(freeServiceLabel); setFreeServiceLabel(''); }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </>
           )}
