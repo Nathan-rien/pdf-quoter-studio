@@ -353,3 +353,37 @@ export function useContractExternalProviders(proposalId: string | null | undefin
 
 
 
+
+export interface ContractProposalOperationalContact {
+  firstName: string;
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+}
+
+export function useContractProposalOperationalContact(proposalId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['contract-proposal-operational-contact', proposalId],
+    enabled: !!proposalId,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async (): Promise<ContractProposalOperationalContact | null> => {
+      if (!proposalId) return null;
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('proposal_state')
+        .eq('id', proposalId)
+        .maybeSingle();
+      if (error || !data) return null;
+      const op = (data as any).proposal_state?.operationalContact;
+      if (!op || typeof op !== 'object') return null;
+      return {
+        firstName: typeof op.firstName === 'string' ? op.firstName : '',
+        name: typeof op.name === 'string' ? op.name : '',
+        role: typeof op.role === 'string' ? op.role : '',
+        email: typeof op.email === 'string' ? op.email : '',
+        phone: typeof op.phone === 'string' ? op.phone : '',
+      };
+    },
+  });
+}
