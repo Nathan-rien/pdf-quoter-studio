@@ -249,11 +249,11 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
   }, [refsQ.data]);
 
   function labelForIntervention(i: Intervention) {
-    const ref = refById.get(i.reference_id);
+    const ref = i.reference_id ? refById.get(i.reference_id) : undefined;
     const contract = ref ? contractById.get(ref.contract_id) : undefined;
     return {
-      client: contract?.client_name ?? 'Client ?',
-      service: ref?.service_label ?? 'Service ?',
+      client: contract?.client_name ?? i.client_name ?? 'Client ?',
+      service: ref?.service_label ?? i.service_label ?? (i.reference_id ? 'Service ?' : 'Hors contrat'),
     };
   }
 
