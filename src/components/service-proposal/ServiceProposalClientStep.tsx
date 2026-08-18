@@ -250,11 +250,20 @@ export function ServiceProposalClientStep({ data, onChange }: ServiceProposalCli
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
+              <Label className="text-xs">Prénom</Label>
+              <Input
+                value={op.firstName ?? ''}
+                onChange={(e) => setOpContact('firstName', e.target.value)}
+                placeholder="Prénom"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">Nom</Label>
               <Input
                 value={op.name}
                 onChange={(e) => setOpContact('name', e.target.value)}
-                placeholder="Prénom Nom"
+                placeholder="Nom"
                 className="h-8 text-sm"
               />
             </div>
