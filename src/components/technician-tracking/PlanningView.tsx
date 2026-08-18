@@ -441,7 +441,10 @@ function InterventionDialog({
   );
   const [clientSearch, setClientSearch] = useState('');
   const [freeClientName, setFreeClientName] = useState<string>(iv?.client_name ?? '');
-  const [freeServiceLabel, setFreeServiceLabel] = useState<string>(iv?.service_label ?? '');
+  const [prestations, setPrestations] = useState<string[]>(
+    iv?.service_label ? iv.service_label.split(' + ').map((s) => s.trim()).filter(Boolean) : []
+  );
+  const [freeServiceLabel, setFreeServiceLabel] = useState<string>('');
 
   const [contractId, setContractId] = useState<string>(
     iv ? (refs.find((r) => r.id === iv.reference_id)?.contract_id ?? '') : (initial.mode === 'create' ? initial.prefill?.contract_id ?? '' : '')
