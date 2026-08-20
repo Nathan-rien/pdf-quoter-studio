@@ -70,7 +70,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const queryClient = useQueryClient();
   const { commerciaux } = useCommerciaux();
   const { isAdmin, isTechnicien } = useAuth();
-  const canEditContract = isAdmin || !isTechnicien;
+  const canEditContract = isAdmin;
   const { data: allServiceRefs } = useServiceReferences();
   const serviceRefs = useMemo(
     () => (allServiceRefs ?? []).filter((r) => r.contract_id === contract.id),
