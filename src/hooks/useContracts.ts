@@ -281,13 +281,24 @@ export function useContractProposalOptions(proposalId: string | null | undefined
       if (error || !data) return [];
       const state: any = (data as any).proposal_state;
       if (!state) return [];
-      // Service proposal → nosOptions ; Location → optionsServices
-      const source = Array.isArray(state.nosOptions)
-        ? state.nosOptions
-        : Array.isArray(state.optionsServices)
-          ? state.optionsServices
-          : [];
-      const items = source.filter((o: any) => o?.selected);
+      // On agrège les deux listes en gardant l'origine :
+      // - optionsServices = "Services inclus" (à afficher dans les contrats)
+      // - nosOptions = "Nos Options" (options financières, masquées côté contrat location)
+      const included = (Array.isArray(state.optionsServices) ? state.optionsServices : [])
+        .filter((o: any) => o?.selected)
+        .map((o: any) => ({ ...o, __source: 'optionsServices' as const }));
+      const nos = (Array.isArray(state.nosOptions) ? state.nosOptions : [])
+        .filter((o: any) => o?.selected)
+        .map((o: any) => ({ ...o, __source: 'nosOptions' as const }));
+      const seen = new Set<string>();
+      const items = [...included, ...nos].filter((o: any) => {
+        const key = String(o?.name ?? o?.title ?? '').trim().toLowerCase();
+        if (!key) return true;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
 
       // Collect option/service ids to look up erp_reference and requires_intervention from the catalog.
       // For nosOptions the client-generated ids won't match the DB, so also lookup by name/title.
