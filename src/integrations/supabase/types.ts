@@ -1042,6 +1042,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_contract: {
+        Args: {
+          _commercial_id: string
+          _commercial_name: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       consume_remote_support_ticket: {
         Args: { _client_id: string; _note?: string }
         Returns: {
@@ -1094,6 +1102,7 @@ export type Database = {
         }
       }
       get_user_commercial_id: { Args: { _user_id: string }; Returns: string }
+      get_user_commercial_name: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
