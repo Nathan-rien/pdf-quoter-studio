@@ -124,6 +124,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
   const [uploading, setUploading] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
+  const [previewingProposal, setPreviewingProposal] = useState(false);
   const [generatingContractPdf, setGeneratingContractPdf] = useState(false);
 
   const endDate = implementationDate && durationMonths
