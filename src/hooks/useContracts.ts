@@ -262,7 +262,9 @@ export interface ContractProposalOption {
   showPriceMode?: 'mensuel' | 'total';
   showPrice?: boolean;
   erpReference?: string | null;
+  requiresIntervention?: boolean;
 }
+
 
 export function useContractProposalOptions(proposalId: string | null | undefined) {
   return useQuery({
@@ -287,7 +289,8 @@ export function useContractProposalOptions(proposalId: string | null | undefined
           : [];
       const items = source.filter((o: any) => o?.selected);
 
-      // Collect option/service ids to look up erp_reference from the catalog.
+      // Collect option/service ids to look up erp_reference and requires_intervention from the catalog.
+      // For nosOptions the client-generated ids won't match the DB, so also lookup by name/title.
       const ids = Array.from(
         new Set(
           items
@@ -295,17 +298,49 @@ export function useContractProposalOptions(proposalId: string | null | undefined
             .filter((v: any) => typeof v === 'string' && v.length > 0),
         ),
       ) as string[];
+      const names = Array.from(
+        new Set(
+          items
+            .map((o: any) => o?.name ?? o?.title ?? '')
+            .filter((v: any) => typeof v === 'string' && v.trim().length > 0),
+        ),
+      ) as string[];
 
-      const catalog: Record<string, string | null> = {};
-      if (ids.length) {
-        const { data: opts } = await supabase
-          .from('options_services')
-          .select('id, erp_reference')
-          .in('id', ids);
+      const catalog: Record<string, { erpReference: string | null; requiresIntervention: boolean }> = {};
+      if (ids.length || names.length) {
+        const fetchById = async () => {
+          if (!ids.length) return [];
+          const { data } = await supabase
+            .from('options_services')
+            .select('id, title, erp_reference, requires_intervention')
+            .in('id', ids);
+          return (data ?? []) as any[];
+        };
+        const fetchByName = async () => {
+          if (!names.length) return [];
+          const { data } = await supabase
+            .from('options_services')
+            .select('id, title, erp_reference, requires_intervention')
+            .in('title', names);
+          return (data ?? []) as any[];
+        };
+        const [byId, byName] = await Promise.all([fetchById(), fetchByName()]);
+        const opts = [...byId, ...byName];
         (opts ?? []).forEach((o: any) => {
-          catalog[o.id] = o.erp_reference ?? null;
+          catalog[o.id] = {
+            erpReference: o.erp_reference ?? null,
+            requiresIntervention: o.requires_intervention ?? true,
+          };
+          if (o.title) {
+            catalog[o.title] = {
+              erpReference: o.erp_reference ?? null,
+              requiresIntervention: o.requires_intervention ?? true,
+            };
+          }
         });
       }
+
+
 
       return items.map((o: any) => {
         const rawErp =
@@ -313,16 +348,22 @@ export function useContractProposalOptions(proposalId: string | null | undefined
           (typeof o.erpReference === 'string' && o.erpReference) ||
           null;
         const id = o?.id ?? o?.option_id ?? o?.service_id;
-        const erpReference = rawErp ?? (id ? catalog[id] ?? null : null);
+        const name = o?.name ?? o?.title ?? '';
+        const catalogInfo = id ? catalog[id] ?? null : null;
+        const catalogInfoByName = name ? catalog[name] ?? null : null;
+        const erpReference = rawErp ?? catalogInfo?.erpReference ?? catalogInfoByName?.erpReference ?? null;
         return {
-          name: String(o.name ?? o.title ?? '—'),
+          name: String(name || '—'),
           price: typeof o.price === 'number' ? o.price : null,
           priceTotal: typeof o.priceTotal === 'number' ? o.priceTotal : null,
           showPriceMode: o.showPriceMode ?? 'mensuel',
           showPrice: o.showPrice !== false,
           erpReference,
+          requiresIntervention: catalogInfo?.requiresIntervention ?? catalogInfoByName?.requiresIntervention ?? true,
         };
       });
+
+
     },
   });
 }
