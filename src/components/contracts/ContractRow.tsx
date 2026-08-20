@@ -648,7 +648,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
           </div>
           {(() => {
             const allOptions = proposalOptions ?? [];
-            const serviceOptions = allOptions.filter((o) => o.requiresIntervention !== false);
+            // On masque uniquement les éléments issus de "Nos Options" ; les "Services inclus" restent visibles
+            const serviceOptions = allOptions.filter((o) => o.isNosOption !== true);
 
             const dur = parseInt(durationMonths) || 0;
             const computeTotalHt = (opts: typeof allOptions) => {
