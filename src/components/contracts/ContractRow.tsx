@@ -355,25 +355,16 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1_000);
   }
 
+  // Le téléchargement passe systématiquement par un blob local : les URLs signées
+  // pointent vers un domaine tiers souvent bloqué par les extensions (ERR_BLOCKED_BY_CLIENT).
   async function handleSignedAttachment(path = attachmentUrl) {
-    if (!path) return;
-    const { data, error } = await supabase.storage
-      .from('contract-attachments')
-      .createSignedUrl(path, 60);
-    if (error || !data?.signedUrl) {
-      toast({ title: 'Erreur', description: "Impossible de générer le lien de téléchargement.", variant: 'destructive' });
-      return;
-    }
-    window.open(data.signedUrl, '_blank');
+    await handleAttachmentFile('preview', path);
   }
 
   async function handleDownloadAttachment(path = attachmentUrl) {
-    if (isServiceContract) {
-      await handleAttachmentFile('download', path);
-      return;
-    }
-    await handleSignedAttachment(path);
+    await handleAttachmentFile('download', path);
   }
+
 
   async function handleRemoveAttachment() {
     if (!attachmentUrl) return;
