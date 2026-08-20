@@ -263,6 +263,7 @@ export interface ContractProposalOption {
   showPrice?: boolean;
   erpReference?: string | null;
   requiresIntervention?: boolean;
+  isNosOption?: boolean;
 }
 
 
