@@ -372,8 +372,9 @@ export function useContractProposalOptions(proposalId: string | null | undefined
           erpReference,
           requiresIntervention: catalogInfo?.requiresIntervention ?? catalogInfoByName?.requiresIntervention ?? true,
           isNosOption: o.__source === 'nosOptions',
-
+        };
       });
+
 
 
     },
