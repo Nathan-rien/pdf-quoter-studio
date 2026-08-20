@@ -541,7 +541,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
-                title={isServiceContract ? 'Télécharger le contrat' : attachmentUrl ? 'Télécharger le contrat' : 'Télécharger la proposition'}
+                title={isServiceContract ? 'Télécharger le contrat' : attachmentUrl ? 'Télécharger le contrat signé' : 'Télécharger la proposition'}
                 disabled={downloadingProposal || generatingContractPdf}
                 onClick={(e) => {
                   e.stopPropagation();
