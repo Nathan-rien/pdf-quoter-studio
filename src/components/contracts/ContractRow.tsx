@@ -647,20 +647,23 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             )}
           </div>
           {(() => {
-            const options = (proposalOptions ?? []).filter((o) => o.requiresIntervention !== false);
+            const allOptions = proposalOptions ?? [];
+            const serviceOptions = allOptions.filter((o) => o.requiresIntervention !== false);
 
             const dur = parseInt(durationMonths) || 0;
-            let totalHt = 0;
-            for (const opt of options) {
-              if (typeof opt.priceTotal === 'number') {
-                totalHt += opt.priceTotal;
-              } else if (typeof opt.price === 'number' && dur > 0) {
-                totalHt += opt.price * dur;
+            const computeTotalHt = (opts: typeof allOptions) => {
+              let totalHt = 0;
+              for (const opt of opts) {
+                if (typeof opt.priceTotal === 'number') {
+                  totalHt += opt.priceTotal;
+                } else if (typeof opt.price === 'number' && dur > 0) {
+                  totalHt += opt.price * dur;
+                }
               }
-            }
-            const monthlyHt = dur > 0 ? totalHt / dur : 0;
+              return totalHt;
+            };
             const fmt = (n: number) => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const priceLabelOf = (opt: typeof options[number]) =>
+            const priceLabelOf = (opt: typeof allOptions[number]) =>
               opt.showPrice === false
                 ? null
                 : (getOptionPriceLabel({
@@ -670,25 +673,28 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                     pricingScope: 'par_machine',
                   }) ?? '').replace(/\s*\/machine/g, '').trim() || null;
 
-
-            const totalBlock = totalHt > 0 ? (
-              <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
-                <span className="font-semibold">Total Service HT</span>
-                <span className="font-semibold text-primary">
-                  {fmt(totalHt)} € HT
-                  {dur > 0 && (
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      (soit {fmt(monthlyHt)} €/mois sur {dur} mois)
-                    </span>
-                  )}
-                </span>
-              </div>
-            ) : null;
+            const totalBlockFor = (opts: typeof allOptions) => {
+              const totalHt = computeTotalHt(opts);
+              const monthlyHt = dur > 0 ? totalHt / dur : 0;
+              return totalHt > 0 ? (
+                <div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between text-sm">
+                  <span className="font-semibold">Total Service HT</span>
+                  <span className="font-semibold text-primary">
+                    {fmt(totalHt)} € HT
+                    {dur > 0 && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        (soit {fmt(monthlyHt)} €/mois sur {dur} mois)
+                      </span>
+                    )}
+                  </span>
+                </div>
+              ) : null;
+            };
 
             if (isServiceContract) {
               const norm = (s: string) => s.trim().toLowerCase();
               const matchedLabels = new Set(serviceRefs.map((r) => norm(r.service_label)));
-              const extraRows = options
+              const extraRows = allOptions
                 .filter((opt) => !matchedLabels.has(norm(String(opt.name ?? ''))))
                 .map((opt) => ({
                   name: String(opt.name ?? '—'),
@@ -706,12 +712,12 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                       refs={serviceRefs}
                       onPlanIntervention={onPlanIntervention}
                       priceLabelFor={(label) => {
-                        const opt = options.find((o) => norm(String(o.name ?? '')) === norm(label));
+                        const opt = allOptions.find((o) => norm(String(o.name ?? '')) === norm(label));
                         return opt ? priceLabelOf(opt) : null;
                       }}
                       extraRows={extraRows}
                       allowAdd
-                      footer={totalBlock}
+                      footer={totalBlockFor(allOptions)}
                       emptyMessage="Aucun service rattaché à ce contrat pour l'instant."
                     />
                   </div>
@@ -719,12 +725,12 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
               );
             }
 
-            if (options.length === 0) return null;
+            if (serviceOptions.length === 0) return null;
             return (
               <div className="space-y-1.5">
                 <Label className="text-xs">Services & options de la proposition</Label>
                 <div className="rounded-md border border-border bg-background/60 p-3 space-y-1.5">
-                  {options.map((opt, idx) => {
+                  {serviceOptions.map((opt, idx) => {
                     const label = priceLabelOf(opt) ?? '';
                     return (
                       <div key={idx} className="flex items-center justify-between gap-3 text-sm">
@@ -745,11 +751,12 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                       </div>
                     );
                   })}
-                  {totalBlock}
+                  {totalBlockFor(serviceOptions)}
                 </div>
               </div>
             );
           })()}
+
 
 
           {!canEditContract && (
