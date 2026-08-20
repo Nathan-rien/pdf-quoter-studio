@@ -647,7 +647,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             )}
           </div>
           {(() => {
-            const options = proposalOptions ?? [];
+            const options = (proposalOptions ?? []).filter((o) => o.requiresIntervention !== false);
+
             const dur = parseInt(durationMonths) || 0;
             let totalHt = 0;
             for (const opt of options) {
