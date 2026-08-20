@@ -308,15 +308,24 @@ export function useContractProposalOptions(proposalId: string | null | undefined
 
       const catalog: Record<string, { erpReference: string | null; requiresIntervention: boolean }> = {};
       if (ids.length || names.length) {
-        const idFilter = ids.length ? `id.in.(${ids.join(',')})` : '';
-        const nameFilter = names.length
-          ? `title.in.(${names.map((n) => `"${n.replace(/"/g, '\\"')}"`).join(',')})`
-          : '';
-        const orFilter = [idFilter, nameFilter].filter(Boolean).join(',');
-        const { data: opts } = await supabase
-          .from('options_services')
-          .select('id, title, erp_reference, requires_intervention')
-          .or(orFilter);
+        const fetchById = async () => {
+          if (!ids.length) return [];
+          const { data } = await supabase
+            .from('options_services')
+            .select('id, title, erp_reference, requires_intervention')
+            .in('id', ids);
+          return (data ?? []) as any[];
+        };
+        const fetchByName = async () => {
+          if (!names.length) return [];
+          const { data } = await supabase
+            .from('options_services')
+            .select('id, title, erp_reference, requires_intervention')
+            .in('title', names);
+          return (data ?? []) as any[];
+        };
+        const [byId, byName] = await Promise.all([fetchById(), fetchByName()]);
+        const opts = [...byId, ...byName];
         (opts ?? []).forEach((o: any) => {
           catalog[o.id] = {
             erpReference: o.erp_reference ?? null,
@@ -330,6 +339,7 @@ export function useContractProposalOptions(proposalId: string | null | undefined
           }
         });
       }
+
 
 
       return items.map((o: any) => {
