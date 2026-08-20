@@ -124,6 +124,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
   const [uploading, setUploading] = useState(false);
   const [downloadingProposal, setDownloadingProposal] = useState(false);
+  const [previewingProposal, setPreviewingProposal] = useState(false);
   const [generatingContractPdf, setGeneratingContractPdf] = useState(false);
 
   const endDate = implementationDate && durationMonths
@@ -230,7 +231,36 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     setExternalProviders((current) => current.filter((provider) => provider.id !== id));
   }
 
+  async function handlePreviewProposal() {
+    if (!contract.proposal_id) return;
+    setPreviewingProposal(true);
+    try {
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('pdf_html_content')
+        .eq('id', contract.proposal_id)
+        .single();
+      if (error || !data?.pdf_html_content) {
+        toast({ title: 'Proposition indisponible', description: "Le contenu de la proposition n'est plus disponible.", variant: 'destructive' });
+        return;
+      }
+      const previewWindow = window.open('', '_blank');
+      if (!previewWindow) {
+        toast({ title: 'Fenêtre bloquée', description: 'Autorisez les pop-ups pour visualiser la proposition.', variant: 'destructive' });
+        return;
+      }
+      previewWindow.document.open();
+      previewWindow.document.write(data.pdf_html_content);
+      previewWindow.document.close();
+    } catch {
+      toast({ title: 'Erreur', description: "Impossible de récupérer la proposition.", variant: 'destructive' });
+    } finally {
+      setPreviewingProposal(false);
+    }
+  }
+
   async function handleDownloadProposal() {
+
     if (!contract.proposal_id) return;
     setDownloadingProposal(true);
     try {
@@ -479,11 +509,24 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             </>
           ) : (
             <>
+              {!isServiceContract && contract.proposal_id && attachmentUrl && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 flex-shrink-0"
+                  title="Visualiser la proposition générée"
+                  disabled={previewingProposal}
+                  onClick={(e) => { e.stopPropagation(); handlePreviewProposal(); }}
+                >
+                  {previewingProposal ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                </Button>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
-                title={isServiceContract ? 'Visualiser le contrat' : attachmentUrl ? 'Visualiser le contrat' : 'Visualiser la proposition'}
+                title={isServiceContract ? 'Visualiser le contrat' : attachmentUrl ? 'Visualiser le contrat signé' : 'Visualiser la proposition'}
                 disabled={generatingContractPdf}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -498,7 +541,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
-                title={isServiceContract ? 'Télécharger le contrat' : attachmentUrl ? 'Télécharger le contrat' : 'Télécharger la proposition'}
+                title={isServiceContract ? 'Télécharger le contrat' : attachmentUrl ? 'Télécharger le contrat signé' : 'Télécharger la proposition'}
                 disabled={downloadingProposal || generatingContractPdf}
                 onClick={(e) => {
                   e.stopPropagation();
