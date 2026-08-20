@@ -308,10 +308,15 @@ export function useContractProposalOptions(proposalId: string | null | undefined
 
       const catalog: Record<string, { erpReference: string | null; requiresIntervention: boolean }> = {};
       if (ids.length || names.length) {
+        const idFilter = ids.length ? `id.in.(${ids.join(',')})` : '';
+        const nameFilter = names.length
+          ? `title.in.(${names.map((n) => `"${n.replace(/"/g, '\\"')}"`).join(',')})`
+          : '';
+        const orFilter = [idFilter, nameFilter].filter(Boolean).join(',');
         const { data: opts } = await supabase
           .from('options_services')
           .select('id, title, erp_reference, requires_intervention')
-          .or(ids.length ? `id.in.(${ids.map(id => `'${id}'`).join(',')})` : 'false', names.length ? `title.in.(${names.map(n => `'${n}'`).join(',')})` : 'false');
+          .or(orFilter);
         (opts ?? []).forEach((o: any) => {
           catalog[o.id] = {
             erpReference: o.erp_reference ?? null,
@@ -325,6 +330,7 @@ export function useContractProposalOptions(proposalId: string | null | undefined
           }
         });
       }
+
 
       return items.map((o: any) => {
         const rawErp =
