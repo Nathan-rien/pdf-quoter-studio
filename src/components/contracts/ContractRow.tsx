@@ -231,7 +231,36 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
     setExternalProviders((current) => current.filter((provider) => provider.id !== id));
   }
 
+  async function handlePreviewProposal() {
+    if (!contract.proposal_id) return;
+    setPreviewingProposal(true);
+    try {
+      const { data, error } = await supabase
+        .from('proposal_exports')
+        .select('pdf_html_content')
+        .eq('id', contract.proposal_id)
+        .single();
+      if (error || !data?.pdf_html_content) {
+        toast({ title: 'Proposition indisponible', description: "Le contenu de la proposition n'est plus disponible.", variant: 'destructive' });
+        return;
+      }
+      const previewWindow = window.open('', '_blank');
+      if (!previewWindow) {
+        toast({ title: 'Fenêtre bloquée', description: 'Autorisez les pop-ups pour visualiser la proposition.', variant: 'destructive' });
+        return;
+      }
+      previewWindow.document.open();
+      previewWindow.document.write(data.pdf_html_content);
+      previewWindow.document.close();
+    } catch {
+      toast({ title: 'Erreur', description: "Impossible de récupérer la proposition.", variant: 'destructive' });
+    } finally {
+      setPreviewingProposal(false);
+    }
+  }
+
   async function handleDownloadProposal() {
+
     if (!contract.proposal_id) return;
     setDownloadingProposal(true);
     try {
