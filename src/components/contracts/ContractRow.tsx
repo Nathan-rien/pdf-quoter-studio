@@ -509,6 +509,19 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             </>
           ) : (
             <>
+              {!isServiceContract && contract.proposal_id && attachmentUrl && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 flex-shrink-0"
+                  title="Visualiser la proposition générée"
+                  disabled={previewingProposal}
+                  onClick={(e) => { e.stopPropagation(); handlePreviewProposal(); }}
+                >
+                  {previewingProposal ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                </Button>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
