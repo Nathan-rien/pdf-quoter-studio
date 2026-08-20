@@ -526,7 +526,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 flex-shrink-0"
-                title={isServiceContract ? 'Visualiser le contrat' : attachmentUrl ? 'Visualiser le contrat' : 'Visualiser la proposition'}
+                title={isServiceContract ? 'Visualiser le contrat' : attachmentUrl ? 'Visualiser le contrat signé' : 'Visualiser la proposition'}
                 disabled={generatingContractPdf}
                 onClick={(e) => {
                   e.stopPropagation();
