@@ -15,15 +15,15 @@ const formatNum = (value: number): string =>
 
 /**
  * Retourne le libellé prix complet d'une option, avec fallback.
- * - mode mensuel → "xx,xx € / mois /machine|/parc"
- * - mode total   → "xx,xx € /machine|/parc"
+ * - mode mensuel → "xx,xx € / mois" (suffixe "/parc" uniquement si portée parc)
+ * - mode total   → "xx,xx €"
  * - Si la valeur du mode choisi est vide, utilise l'autre valeur disponible.
  * - Retourne null si aucune valeur disponible.
  */
 export function getOptionPriceLabel(opt: OptionPriceInput): string | null {
   const mode = opt.showPriceMode ?? 'mensuel';
   const scope = opt.pricingScope ?? 'par_machine';
-  const scopeSuffix = scope === 'pour_le_parc' ? ' /parc' : ' /machine';
+  const scopeSuffix = scope === 'pour_le_parc' ? ' /parc' : '';
 
   const hasMensuel = opt.price !== null && opt.price !== undefined;
   const hasTotal = opt.priceTotal !== null && opt.priceTotal !== undefined;
