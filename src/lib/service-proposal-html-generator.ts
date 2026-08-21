@@ -397,16 +397,24 @@ export async function generateServiceProposalHtml(
       !zone.hidePrice && nosOptions.filter((o) => o.selected).some((o) => o.showPrice !== false);
     const rows = chunk
       .map(
-        (opt, i) => `
+        (opt, i) => {
+          const priceLabel = opt.showPrice !== false ? getOptionPriceLabel({
+            price: opt.price ?? null,
+            priceTotal: (opt as any).priceTotal ?? null,
+            showPriceMode: (opt as any).showPriceMode ?? 'mensuel',
+            pricingScope: (opt as any).pricingScope ?? 'par_machine',
+          }) : null;
+          return `
             <tr style="background:${(startIdx + i) % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
               <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(opt.name || '—')}</td>
               <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
               ${
                 showPriceCol
-                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${opt.showPrice !== false && opt.price != null ? `${formatNumber(opt.price)} € HT` : '—'}</td>`
+                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${priceLabel ?? '—'}</td>`
                   : ''
               }
-            </tr>`,
+            </tr>`;
+        },
       )
       .join('');
     return `
