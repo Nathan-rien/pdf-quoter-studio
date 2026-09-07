@@ -101,13 +101,18 @@ export function RentalProposalPreview() {
   // État pour l'édition inline des éléments en flux relatif
   const [flowInlineEditingId, setFlowInlineEditingId] = useState<string | null>(null);
   
-  // Utiliser le template sélectionné dans le workflow, ou fallback sur le template actif
+  // Utiliser le template sélectionné dans le workflow (périmètre Location uniquement),
+  // ou fallback sur un template Location actif. Jamais un template Services.
   const activeTemplate = React.useMemo(() => {
-    if (selectedTemplateId) {
-      return allTemplates.find(t => t.id === selectedTemplateId) || getActiveTemplate();
-    }
-    return getActiveTemplate();
+    const isLocation = (t?: { targetView?: 'location' | 'services' | null } | null) =>
+      !!t && t.targetView !== 'services';
+    const selected = selectedTemplateId ? allTemplates.find(t => t.id === selectedTemplateId) : null;
+    if (isLocation(selected)) return selected!;
+    const active = getActiveTemplate();
+    if (isLocation(active)) return active!;
+    return allTemplates.find(t => t.targetView === 'location') ?? null;
   }, [selectedTemplateId, allTemplates, getActiveTemplate]);
+
   
   // Helper pour obtenir la version courante du template
   const getCurrentVersion = React.useCallback((): TemplateVersion | null => {
