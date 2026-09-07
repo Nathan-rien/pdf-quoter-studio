@@ -56,6 +56,7 @@ export interface ServiceProposal {
   start_date?: string | null;
   contract_duration?: number | null;
   invest_lines: InvestLine[];
+  invoice_number?: string | null;
   show_invest_price: boolean;
   show_offer_amount: boolean;
   total_services_ht: number;

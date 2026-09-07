@@ -9,6 +9,7 @@ export interface InvestFormValues {
   invest_lines: InvestLine[];
   show_invest_price: boolean;
   show_offer_amount: boolean;
+  invoice_number: string;
 }
 
 function uid() {
