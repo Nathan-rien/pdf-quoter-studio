@@ -2,6 +2,7 @@ import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { InvestLine } from '@/hooks/useServiceProposals';
 
@@ -138,6 +139,20 @@ export function ServiceProposalInvestStep({ data, onChange }: ServiceProposalInv
             </Droppable>
           </DragDropContext>
         )}
+      </div>
+
+      <div className="space-y-2 max-w-sm">
+        <Label htmlFor="invoice-number">Numéro de facture</Label>
+        <Input
+          id="invoice-number"
+          value={data.invoice_number}
+          onChange={(e) => onChange({ ...data, invoice_number: e.target.value })}
+          placeholder="Ex : FA-2026-0042"
+          className="h-9 text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          Affiché sous le tableau « Matériel concerné » du contrat/devis.
+        </p>
       </div>
     </div>
   );
