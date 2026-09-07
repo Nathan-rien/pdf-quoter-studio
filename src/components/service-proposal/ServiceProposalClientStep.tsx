@@ -337,6 +337,72 @@ export function ServiceProposalClientStep({ data, onChange }: ServiceProposalCli
               />
             </div>
           </div>
+
+          {(op.additional ?? []).map((c, idx) => (
+            <div key={c.id} className="border-t pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Contact supplémentaire {idx + 1}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => removeOpContact(c.id)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                  aria-label="Supprimer le contact"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Prénom</Label>
+                  <Input
+                    value={c.firstName ?? ''}
+                    onChange={(e) => updateOpContact(c.id, 'firstName', e.target.value)}
+                    placeholder="Prénom"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Nom</Label>
+                  <Input
+                    value={c.name}
+                    onChange={(e) => updateOpContact(c.id, 'name', e.target.value)}
+                    placeholder="Nom"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Fonction</Label>
+                  <Input
+                    value={c.role}
+                    onChange={(e) => updateOpContact(c.id, 'role', e.target.value)}
+                    placeholder="Ex: Responsable technique"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Email</Label>
+                  <Input
+                    type="email"
+                    value={c.email}
+                    onChange={(e) => updateOpContact(c.id, 'email', e.target.value)}
+                    placeholder="contact@societe.fr"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Téléphone</Label>
+                  <Input
+                    value={c.phone}
+                    onChange={(e) => updateOpContact(c.id, 'phone', e.target.value)}
+                    placeholder="06 00 00 00 00"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
