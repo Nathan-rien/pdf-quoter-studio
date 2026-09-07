@@ -30,6 +30,15 @@ export interface OperationalContact {
   role: string;
   email: string;
   phone: string;
+  /** Contacts opérationnels supplémentaires */
+  additional?: Array<{
+    id: string;
+    firstName?: string;
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+  }>;
 }
 
 export interface ExternalProvider {
