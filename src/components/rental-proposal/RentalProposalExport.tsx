@@ -348,6 +348,7 @@ export function RentalProposalExport() {
               <p style="font-weight: 600; margin: 0;">${clientData.nom || 'Nom du client'}</p>
               <p style="color: #6b7280; margin: 2px 0;">${clientData.adresse || ''}</p>
               <p style="color: #6b7280; margin: 2px 0;">${clientData.codePostal} ${clientData.ville}</p>
+              ${clientData.telephone ? `<p style="color: #6b7280; margin: 2px 0;">${clientData.telephone}</p>` : ''}
               ${clientData.email ? `<p style="color: #6b7280; margin: 2px 0;">${clientData.email}</p>` : ''}
             </div>
           </div>
