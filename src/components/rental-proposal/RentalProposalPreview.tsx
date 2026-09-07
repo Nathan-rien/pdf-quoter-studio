@@ -739,6 +739,9 @@ export function RentalProposalPreview() {
                 <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
                 <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
                 <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+                {clientData.telephone && (
+                  <p className="text-muted-foreground">{clientData.telephone}</p>
+                )}
                 {clientData.email && (
                   <p className="text-muted-foreground">{clientData.email}</p>
                 )}
@@ -790,7 +793,9 @@ export function RentalProposalPreview() {
               {clientData.raisonSociale && <p className="font-bold">{clientData.raisonSociale}</p>}
               <p className="font-semibold">{clientData.nom || 'Nom du client'}</p>
               <p className="text-muted-foreground">{clientData.adresse || 'Adresse'}</p>
-              <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+                <p className="text-muted-foreground">{clientData.codePostal} {clientData.ville}</p>
+              {clientData.telephone && <p className="text-muted-foreground">{clientData.telephone}</p>}
+              {clientData.email && <p className="text-muted-foreground">{clientData.email}</p>}
             </div>
           </div>
         </div>
