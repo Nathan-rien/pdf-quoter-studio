@@ -456,6 +456,11 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const [investForm, setInvestForm] = useState<InvestFormValues>(DEFAULT_INVEST);
   const createProposal = useCreateServiceProposal();
 
+  // Nouvelle proposition : repartir d'une liste d'options vide
+  useEffect(() => {
+    useServiceProposalStore.setState({ nosOptions: [], currentServiceProposalId: null });
+  }, []);
+
   async function handleSave() {
     syncToServiceStore(clientData, investForm, dataForm);
     await createProposal.mutateAsync(buildPayload(clientData, dataForm, investForm));

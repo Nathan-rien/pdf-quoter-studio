@@ -107,8 +107,13 @@ export function buildHtmlDataFromServiceProposal(
     totalHT: l.vtn,
   }));
 
-  // Rebuild nosOptions from the selected_services stored on the proposal
-  const nosOptions: OptionService[] = (proposal.selected_services ?? []).map((s) => {
+  // Prefer the full options snapshot saved on the proposal (descriptions, hidden prices, packs)
+  const storedNos = Array.isArray((proposal as { nos_options?: unknown[] }).nos_options)
+    ? ((proposal as { nos_options?: unknown[] }).nos_options as OptionService[])
+    : [];
+
+  // Fallback: rebuild nosOptions from the selected_services stored on the proposal
+  const rebuiltNos: OptionService[] = (proposal.selected_services ?? []).map((s) => {
     const mode: 'mensuel' | 'total' =
       (s as { show_price_mode?: string }).show_price_mode === 'total' ? 'total' : 'mensuel';
     const amount = Number(s.amount_ht) || 0;
