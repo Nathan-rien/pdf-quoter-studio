@@ -117,6 +117,7 @@ function syncToServiceStore(clientData: ClientData, investForm: InvestFormValues
     operationalContact: clientData.operational_contact ?? { name: '', role: '', email: '', phone: '' },
     externalProviders: clientData.external_providers ?? [],
   });
+  store.setInvoiceNumber(investForm.invoice_number ?? '');
   store.setLignesData(
     investForm.invest_lines.map((l) => ({
       id: l.id,
