@@ -148,6 +148,7 @@ export interface ServiceProposalHtmlData {
   clientData: ClientData;
   commercialData: CommercialData;
   lignesData: LigneData[];
+  invoiceNumber?: string | null;
   proposalName: string;
   totalInvest: number;
   selectedServices: SelectedService[];
@@ -183,6 +184,7 @@ export async function generateServiceProposalHtml(
     clientData,
     commercialData,
     lignesData,
+    invoiceNumber,
     selectedServices,
     paymentFrequency,
     paymentMode,
@@ -361,6 +363,11 @@ export async function generateServiceProposalHtml(
             }
           </tbody>
         </table>
+        ${
+          invoiceNumber
+            ? `<p style="margin:4mm 0 0;font-family:'Inter',sans-serif;font-size:11.5px;color:#111111;"><span style="font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">N° de facture :</span> ${escapeText(invoiceNumber)}</p>`
+            : ''
+        }
       </div>
     </div>
   `;

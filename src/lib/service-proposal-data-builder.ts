@@ -21,6 +21,7 @@ export function buildHtmlDataFromStore(
     | 'clientData'
     | 'commercialData'
     | 'lignesData'
+    | 'invoiceNumber'
     | 'proposalName'
     | 'totalInvest'
     | 'selectedServices'
@@ -47,6 +48,7 @@ export function buildHtmlDataFromStore(
     clientData: store.clientData,
     commercialData: store.commercialData,
     lignesData: store.lignesData ?? [],
+    invoiceNumber: store.invoiceNumber ?? '',
     proposalName: store.proposalName ?? '',
     totalInvest: store.totalInvest ?? 0,
     selectedServices: store.selectedServices ?? [],
@@ -136,6 +138,7 @@ export function buildHtmlDataFromServiceProposal(
     clientData,
     commercialData,
     lignesData,
+    invoiceNumber: proposal.invoice_number ?? '',
     proposalName: proposal.client_company || proposal.client_name || 'Proposition Services',
     totalInvest:
       Math.round((proposal.invest_lines ?? []).reduce((s, l) => s + l.vtn, 0) * 100) / 100,
