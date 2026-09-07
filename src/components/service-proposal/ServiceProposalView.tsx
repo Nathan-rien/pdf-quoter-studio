@@ -431,6 +431,7 @@ function buildPayload(
     commercial_id: clientData.commercial_id || '',
     commercial_name: clientData.commercial_name || null,
     selected_services: derivedSelected,
+    nos_options: nosOptions,
     payment_frequency: (dataForm.payment_frequency || null) as 'mensuel' | 'trimestriel' | null,
     payment_mode: (dataForm.payment_mode || null) as 'prelevement' | 'virement' | 'allin' | null,
     start_date: dataForm.start_date || null,

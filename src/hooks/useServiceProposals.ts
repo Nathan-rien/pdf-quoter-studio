@@ -60,6 +60,8 @@ export interface ServiceProposal {
   commercial_id: string;
   commercial_name?: string | null;
   selected_services: ServiceLine[];
+  /** Options complètes (description, prix affiché/masqué, pack d'origine) */
+  nos_options?: unknown[];
   payment_frequency?: 'mensuel' | 'trimestriel' | null;
   payment_mode?: 'prelevement' | 'virement' | 'allin' | null;
   start_date?: string | null;
