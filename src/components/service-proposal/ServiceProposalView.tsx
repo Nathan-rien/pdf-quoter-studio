@@ -69,6 +69,7 @@ const DEFAULT_INVEST: InvestFormValues = {
   invest_lines: [],
   show_invest_price: true,
   show_offer_amount: true,
+  invoice_number: '',
 };
 
 const STATUS_COLORS: Record<ServiceProposal['status'], string> = {
@@ -434,6 +435,7 @@ function buildPayload(
     start_date: dataForm.start_date || null,
     contract_duration: dataForm.contract_duration ? Number(dataForm.contract_duration) : null,
     invest_lines: investForm.invest_lines,
+    invoice_number: investForm.invoice_number || null,
     show_invest_price: investForm.show_invest_price,
     show_offer_amount: investForm.show_offer_amount,
     total_services_ht: totalServices,
@@ -517,6 +519,7 @@ function EditForm({ proposal, onClose }: { proposal: ServiceProposal; onClose: (
     invest_lines: proposal.invest_lines ?? [],
     show_invest_price: proposal.show_invest_price ?? true,
     show_offer_amount: proposal.show_offer_amount ?? true,
+    invoice_number: proposal.invoice_number ?? '',
   });
   const updateProposal = useUpdateServiceProposal();
 
