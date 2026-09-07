@@ -431,6 +431,7 @@ function buildPayload(
     commercial_id: clientData.commercial_id || '',
     commercial_name: clientData.commercial_name || null,
     selected_services: derivedSelected,
+    nos_options: nosOptions,
     payment_frequency: (dataForm.payment_frequency || null) as 'mensuel' | 'trimestriel' | null,
     payment_mode: (dataForm.payment_mode || null) as 'prelevement' | 'virement' | 'allin' | null,
     start_date: dataForm.start_date || null,
@@ -454,6 +455,11 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   const [dataForm, setDataForm] = useState<ServiceDataFormValues>(DEFAULT_DATA);
   const [investForm, setInvestForm] = useState<InvestFormValues>(DEFAULT_INVEST);
   const createProposal = useCreateServiceProposal();
+
+  // Nouvelle proposition : repartir d'une liste d'options vide
+  useEffect(() => {
+    useServiceProposalStore.setState({ nosOptions: [], currentServiceProposalId: null });
+  }, []);
 
   async function handleSave() {
     syncToServiceStore(clientData, investForm, dataForm);
