@@ -154,6 +154,11 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           servicesInclus: { description },
         })),
 
+      setInvoiceNumber: (value) =>
+        set(() => ({
+          invoiceNumber: value,
+        })),
+
       selectTemplate: (id) =>
         set(() => ({
           selectedTemplateId: id,
@@ -200,6 +205,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
                 });
           return {
             currentServiceProposalId: proposal.id,
+            invoiceNumber: proposal.invoice_number ?? '',
             clientData: {
               nom: proposal.client_name ?? '',
               raisonSociale: proposal.client_company ?? '',
@@ -256,6 +262,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
           selectedTemplateId: snapshot.selectedTemplateId ?? null,
           proposalName: snapshot.proposalName ?? '',
           totalInvest: typeof snapshot.totalInvest === 'number' ? snapshot.totalInvest : 0,
+          invoiceNumber: typeof snapshot.invoiceNumber === 'string' ? snapshot.invoiceNumber : '',
           selectedServices: Array.isArray(snapshot.selectedServices) ? snapshot.selectedServices : [],
           paymentFrequency: snapshot.paymentFrequency ?? '',
           paymentMode: snapshot.paymentMode ?? '',
@@ -316,6 +323,7 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
         selectedTemplateId: state.selectedTemplateId,
         proposalName: state.proposalName,
         totalInvest: state.totalInvest,
+        invoiceNumber: state.invoiceNumber,
         selectedServices: state.selectedServices,
         paymentFrequency: state.paymentFrequency,
         paymentMode: state.paymentMode,
