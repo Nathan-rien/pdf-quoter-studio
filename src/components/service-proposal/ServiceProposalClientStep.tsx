@@ -79,6 +79,42 @@ export function ServiceProposalClientStep({ data, onChange }: ServiceProposalCli
     });
   }
 
+  function addOpContact() {
+    const base = data.operational_contact ?? DEFAULT_OPERATIONAL_CONTACT;
+    onChange({
+      ...data,
+      operational_contact: {
+        ...base,
+        additional: [
+          ...(base.additional ?? []),
+          { id: uid(), firstName: '', name: '', role: '', email: '', phone: '' },
+        ],
+      },
+    });
+  }
+
+  function updateOpContact(id: string, key: string, value: string) {
+    const base = data.operational_contact ?? DEFAULT_OPERATIONAL_CONTACT;
+    onChange({
+      ...data,
+      operational_contact: {
+        ...base,
+        additional: (base.additional ?? []).map((c) => (c.id === id ? { ...c, [key]: value } : c)),
+      },
+    });
+  }
+
+  function removeOpContact(id: string) {
+    const base = data.operational_contact ?? DEFAULT_OPERATIONAL_CONTACT;
+    onChange({
+      ...data,
+      operational_contact: {
+        ...base,
+        additional: (base.additional ?? []).filter((c) => c.id !== id),
+      },
+    });
+  }
+
   // Providers
   function addProvider() {
     onChange({
