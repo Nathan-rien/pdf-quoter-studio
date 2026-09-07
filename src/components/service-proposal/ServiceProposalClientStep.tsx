@@ -278,11 +278,16 @@ export function ServiceProposalClientStep({ data, onChange }: ServiceProposalCli
       {/* Contact opérationnel */}
       <Card>
         <CardContent className="pt-6 space-y-3">
-          <div>
-            <h4 className="text-sm font-medium">Contact opérationnel</h4>
-            <p className="text-xs text-muted-foreground">
-              Personne à contacter pour la coordination des interventions.
-            </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h4 className="text-sm font-medium">Contact opérationnel</h4>
+              <p className="text-xs text-muted-foreground">
+                Personne à contacter pour la coordination des interventions.
+              </p>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={addOpContact} className="gap-1">
+              <Plus className="h-4 w-4" />Ajouter un contact
+            </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
