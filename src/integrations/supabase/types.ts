@@ -869,6 +869,7 @@ export type Database = {
           external_providers: Json
           id: string
           invest_lines: Json | null
+          invoice_number: string | null
           operational_contact: Json
           payment_frequency: string | null
           payment_mode: string | null
@@ -897,6 +898,7 @@ export type Database = {
           external_providers?: Json
           id?: string
           invest_lines?: Json | null
+          invoice_number?: string | null
           operational_contact?: Json
           payment_frequency?: string | null
           payment_mode?: string | null
@@ -925,6 +927,7 @@ export type Database = {
           external_providers?: Json
           id?: string
           invest_lines?: Json | null
+          invoice_number?: string | null
           operational_contact?: Json
           payment_frequency?: string | null
           payment_mode?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.service_proposals ADD COLUMN IF NOT EXISTS invoice_number text;
