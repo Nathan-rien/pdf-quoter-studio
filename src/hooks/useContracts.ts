@@ -446,6 +446,7 @@ export function useContractProposalOperationalContact(proposalId: string | null 
         role: typeof op.role === 'string' ? op.role : '',
         email: typeof op.email === 'string' ? op.email : '',
         phone: typeof op.phone === 'string' ? op.phone : '',
+        additional: Array.isArray(op.additional) ? op.additional : [],
       };
     },
   });
