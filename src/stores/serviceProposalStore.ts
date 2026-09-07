@@ -181,11 +181,15 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
       resetAll: () => set(() => ({ ...initialState })),
 
       loadFromServiceProposal: (proposal) =>
-        set((state) => {
-          const existingNos = state.nosOptions ?? [];
+        set(() => {
+          // Toujours reconstruire les options depuis la proposition ouverte :
+          // conserver celles du navigateur écraserait les services d'une autre proposition.
+          const storedNos = Array.isArray((proposal as { nos_options?: unknown[] }).nos_options)
+            ? ((proposal as { nos_options?: unknown[] }).nos_options as OptionService[])
+            : [];
           const seededNos: OptionService[] =
-            existingNos.length > 0
-              ? existingNos
+            storedNos.length > 0
+              ? storedNos
               : (proposal.selected_services ?? []).map((s) => {
                   const mode = ((s as { show_price_mode?: string }).show_price_mode === 'total'
                     ? 'total'
