@@ -415,6 +415,14 @@ export interface ContractProposalOperationalContact {
   role: string;
   email: string;
   phone: string;
+  additional?: Array<{
+    id?: string;
+    firstName?: string;
+    name?: string;
+    role?: string;
+    email?: string;
+    phone?: string;
+  }>;
 }
 
 export function useContractProposalOperationalContact(proposalId: string | null | undefined) {
@@ -438,6 +446,7 @@ export function useContractProposalOperationalContact(proposalId: string | null 
         role: typeof op.role === 'string' ? op.role : '',
         email: typeof op.email === 'string' ? op.email : '',
         phone: typeof op.phone === 'string' ? op.phone : '',
+        additional: Array.isArray(op.additional) ? op.additional : [],
       };
     },
   });

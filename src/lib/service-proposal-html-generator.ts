@@ -519,22 +519,25 @@ export async function generateServiceProposalHtml(
 
   const renderOperationalContactZone = (zone: PositionedDynamicZone) => {
     const op = operationalContact ?? { firstName: '', name: '', role: '', email: '', phone: '' };
-    const fullName = [op.firstName, op.name].filter(Boolean).join(' ').trim();
-    const hasData = fullName || op.role || op.email || op.phone;
+    const contacts = [op, ...((op.additional ?? []) as typeof op[])];
+    const renderOne = (c: typeof op, i: number) => {
+      const fullName = [c.firstName, c.name].filter(Boolean).join(' ').trim();
+      if (!fullName && !c.role && !c.email && !c.phone) return '';
+      return `<div style="${i > 0 ? 'margin-top:2.5mm;' : ''}">
+                ${fullName ? `<p style="${VALUE_STYLE}">${escapeText(fullName)}</p>` : ''}
+                <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                  ${c.role ? `<p style="margin:0.5mm 0;">${escapeText(c.role)}</p>` : ''}
+                  ${c.email ? `<p style="margin:0.5mm 0;">${escapeText(c.email)}</p>` : ''}
+                  ${c.phone ? `<p style="margin:0.5mm 0;">${escapeText(c.phone)}</p>` : ''}
+                </div>
+              </div>`;
+    };
+    const body = contacts.map(renderOne).filter(Boolean).join('');
     return `
       <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Contact opérationnel</div>
         <div style="${SECTION_BODY_STYLE}">
-          ${!hasData
-            ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>`
-            : `<div>
-                ${fullName ? `<p style="${VALUE_STYLE}">${escapeText(fullName)}</p>` : ''}
-                <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                  ${op.role ? `<p style="margin:0.5mm 0;">${escapeText(op.role)}</p>` : ''}
-                  ${op.email ? `<p style="margin:0.5mm 0;">${escapeText(op.email)}</p>` : ''}
-                  ${op.phone ? `<p style="margin:0.5mm 0;">${escapeText(op.phone)}</p>` : ''}
-                </div>
-              </div>`}
+          ${!body ? `<p style="${EMPTY_HINT_STYLE}">Non renseigné</p>` : body}
         </div>
       </div>`;
   };

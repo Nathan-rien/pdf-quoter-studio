@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus, Archive, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -801,6 +801,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   <Label className="text-[11px] text-muted-foreground">Nom</Label>
                   <div className="text-sm">{proposalOpContact.name || '—'}</div>
                 </div>
+                {(proposalOpContact.additional ?? []).map((c, i) => (
+                  <React.Fragment key={c.id ?? i}>
+                    <div className="space-y-0.5">
+                      <Label className="text-[11px] text-muted-foreground">Prénom</Label>
+                      <div className="text-sm">{c.firstName || '—'}</div>
+                    </div>
+                    <div className="space-y-0.5">
+                      <Label className="text-[11px] text-muted-foreground">Nom</Label>
+                      <div className="text-sm">{c.name || '—'}</div>
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
             </div>
           )}
