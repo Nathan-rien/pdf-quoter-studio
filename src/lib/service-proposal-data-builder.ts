@@ -130,6 +130,8 @@ export function buildHtmlDataFromServiceProposal(
     } as OptionService;
   });
 
+  const nosOptions: OptionService[] = storedNos.length > 0 ? storedNos : rebuiltNos;
+
   const dur = proposal.contract_duration ?? null;
   const totalServicesHt = Math.round(
     (proposal.selected_services ?? []).reduce((s, l) => {
