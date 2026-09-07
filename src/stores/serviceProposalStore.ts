@@ -45,6 +45,7 @@ export interface ServiceProposalStoreState {
   selectedTemplateId: string | null;
   proposalName: string;
   totalInvest: number;
+  invoiceNumber: string;
   selectedServices: SelectedService[];
   paymentFrequency: string;
   paymentMode: string;
@@ -82,6 +83,7 @@ const initialState: ServiceProposalStoreState = {
   selectedTemplateId: null,
   proposalName: '',
   totalInvest: 0,
+  invoiceNumber: '',
   selectedServices: [],
   paymentFrequency: '',
   paymentMode: '',
@@ -99,6 +101,7 @@ interface ServiceProposalStoreActions {
   updateCommercialData: (data: Partial<CommercialData>) => void;
   setLignesData: (lines: LigneData[]) => void;
   updateServicesInclus: (description: string) => void;
+  setInvoiceNumber: (value: string) => void;
   selectTemplate: (id: string | null) => void;
   updateProposalName: (name: string) => void;
   setStructuredClientData: (data: {
