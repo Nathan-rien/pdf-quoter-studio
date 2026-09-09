@@ -1191,6 +1191,55 @@ export async function generateServiceProposalHtml(
     }
   }
 
+  // Devis : page finale de signatures (rappel des coordonnées + encarts)
+  if (mode !== 'contrat') {
+    const signatureRecapHtml = `
+      <div style="${BLOCK_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
+        <div style="${SECTION_BODY_STYLE}">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
+            <div>
+              <p style="${LABEL_STYLE}">Bénéficiaire</p>
+              ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
+              <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                ${clientData.nom ? `<p style="margin:0.5mm 0;">${escapeText(clientData.nom)}</p>` : ''}
+                ${clientData.adresse ? `<p style="margin:0.5mm 0;">${escapeText(clientData.adresse)}</p>` : ''}
+                ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
+                ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
+              </div>
+            </div>
+            <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
+              <p style="${LABEL_STYLE}">Votre interlocuteur</p>
+              ${
+                selectedCommercial
+                  ? `<p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
+                     <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                       ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
+                       ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
+                       ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
+                     </div>`
+                  : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="${BLOCK_WRAPPER_STYLE}">
+        <div style="${SECTION_BANNER_STYLE}">Signatures</div>
+        <div style="${SECTION_BODY_STYLE}">
+          <div style="${BODY_TEXT_STYLE}">
+            <p style="margin:0 0 4mm 0;">Fait à ___________________</p>
+            <p style="margin:0 0 8mm 0;">Le ___________________</p>
+          </div>
+          ${renderSignatureZone({} as PositionedDynamicZone)}
+        </div>
+      </div>
+    `;
+    allPagesHtml.push(renderShellPage('Signatures', signatureRecapHtml));
+  }
+
+
+
   return `<!DOCTYPE html>
 <html>
 <head>
