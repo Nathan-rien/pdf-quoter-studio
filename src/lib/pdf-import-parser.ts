@@ -1035,13 +1035,33 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     total: l.totalHT,
   })));
 
-  // Totals extraction - Strategy 1: Look for amounts after "Loyer mensuel" marker
-  // Cybertek PDFs show totals (HT, TVA, TTC) as 3 consecutive amounts without labels
+  // Totals extraction - Strategy 1: read the labeled totals table.
+  // Some Cybertek layouts put the labels on one line and their EUR values on the next.
+  const totalsHeaderIdx = lines.findIndex(
+    (line) => /TOTAL\s+HT/i.test(line) && /TVA\s*20\s*%/i.test(line) && /TOTAL\s+TTC/i.test(line)
+  );
+  if (totalsHeaderIdx !== -1) {
+    const totalsWindow = lines.slice(totalsHeaderIdx + 1, totalsHeaderIdx + 4).join(' ');
+    const values = [...totalsWindow.matchAll(new RegExp(`${money}\\s*${currency}`, 'gi'))]
+      .map((match) => parseNumber(match[1]))
+      .filter((value): value is number => value !== null);
+
+    if (values.length >= 3) {
+      const [totalHT, tva, totalTTC] = values.slice(-3);
+      if (Math.abs(totalTTC - (totalHT + tva)) <= 0.02) {
+        result.totaux!.totalHT = totalHT;
+        result.totaux!.tva = tva;
+        result.totaux!.totalTTC = totalTTC;
+      }
+    }
+  }
+
+  // Strategy 2: Look for amounts after "Loyer mensuel" marker
   const loyerIdx = lines.findIndex((l) => /Loyer\s+mensuel/i.test(l));
   
-  if (loyerIdx !== -1) {
+  if (result.totaux!.totalHT === null && loyerIdx !== -1) {
     const afterLoyer = lines.slice(loyerIdx + 1);
-    const moneyPattern = new RegExp(`${money}\\s*€`, 'gi');
+    const moneyPattern = new RegExp(`${money}\\s*${currency}`, 'gi');
     const amounts: number[] = [];
     
     for (const line of afterLoyer) {
@@ -1068,7 +1088,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Strategy 2: Fallback - look in the tail section after table
+  // Strategy 3: Fallback - look in the tail section after table
   if (result.totaux!.totalHT === null) {
     const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
     const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines.slice(-60);
@@ -1107,10 +1127,10 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Strategy 3: Fallback - try explicit label patterns
+  // Strategy 4: Fallback - try explicit label patterns
   if (result.totaux!.totalHT === null) {
     const totalHTMatch = [...text.matchAll(
-      new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+      new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi')
     )].at(-1);
     if (totalHTMatch) {
       const v = parseNumber(totalHTMatch[1]);
@@ -1120,7 +1140,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
 
   if (result.totaux!.tva === null) {
     const tvaMatch = [...text.matchAll(
-      new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gi')
+      new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*${currency}`, 'gi')
     )].at(-1);
     if (tvaMatch) {
       const v = parseNumber(tvaMatch[1]);
@@ -1130,7 +1150,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
 
   if (result.totaux!.totalTTC === null) {
     const totalTTCMatch = [...text.matchAll(
-      new RegExp(`Total(?:\\s+de\\s+vente)?\\s*TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+      new RegExp(`Total(?:\\s+de\\s+vente)?\\s*TTC[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi')
     )].at(-1);
     if (totalTTCMatch) {
       const v = parseNumber(totalTTCMatch[1]);
@@ -1138,7 +1158,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Strategy 4: Calculate totals from line items if still not found
+  // Strategy 5: Calculate totals from line items if still not found
   // Per constraint: only use this as last resort when extraction fails
   if (result.totaux!.totalHT === null && result.lignes!.length > 0) {
     const calculatedTotalHT = result.lignes!.reduce(
@@ -1302,19 +1322,19 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
 
   // Fallback: explicit label → amount patterns (older layouts / different line breaks)
   if (!totalsFound) {
-    const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi'))];
     if (totalHTMatches.length) {
       const v = parseNumber(totalHTMatches.at(-1)![1]);
       if (v !== null && Math.abs(v) >= 100) result.totaux!.totalHT = v;
     }
 
-    const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi'))];
     if (tvaMatches.length) {
       const v = parseNumber(tvaMatches.at(-1)![1]);
       if (v !== null && Math.abs(v) >= 100) result.totaux!.tva = v;
     }
 
-    const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi'))];
     if (totalTTCMatches.length) {
       const v = parseNumber(totalTTCMatches.at(-1)![1]);
       if (v !== null && Math.abs(v) >= 100) result.totaux!.totalTTC = v;
