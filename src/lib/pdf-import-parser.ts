@@ -317,7 +317,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   }
 
   // Extract monthly rent
-  const loyerMatch = text.match(/Loyer\s+mensuel\s*[:\s]*([\d\s,]+)\s*€/i);
+  const loyerMatch = text.match(/Loyer\s+mensuel\s*[:\s]*([\d\s,]+)\s*(?:€|EUR)/i);
   if (loyerMatch) {
     result.location!.loyerMensuel = parseNumber(loyerMatch[1]);
   }
@@ -329,6 +329,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   // Last line of product: ends with QTE and Total HT (e.g. "... 4 2 176,00 €")
 
   const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
+  const currency = '(?:€|EUR)';
 
   const tableStartIdx = lines.findIndex(
     (l) =>
@@ -353,7 +354,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
   // Pattern for the end of a product row: QTE followed by Total HT amount
   // FIXED: Remove end-of-line anchor to allow matching amounts anywhere in the line
   // Use matchAll to find the LAST occurrence in case of multiple amounts
-  const rowEndRegex = new RegExp(`(\\d+)\\s+${money}\\s*€`, 'gi');
+  const rowEndRegex = new RegExp(`(\\d+)\\s+${money}\\s*${currency}`, 'gi');
   
   // Pattern for SY- prefix refs (start of a new product block)
   const syRefPattern = /^SY-[A-Z0-9-]+$/i;
@@ -386,7 +387,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       if (stopRe.test(v) || softStopRe.test(v)) break;
       // Stop if we hit another product's end line (QTE+amount pattern, not just any €)
       // Use a stricter pattern to avoid stopping on partial lines
-      if (j < fromIdx && /\b\d{1,3}\s+[\d\s,.]+\s*€/.test(v)) break;
+      if (j < fromIdx && /\b\d{1,3}\s+[\d\s,.]+\s*(?:€|EUR)/i.test(v)) break;
     }
     return -1;
   };
@@ -446,7 +447,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
       
       // Pattern to extract "QTE (1-2 digits) + Amount + €" at end of a SINGLE line
       // More restrictive: we check EACH line individually, not an accumulated buffer
-      const lineEndPattern = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*€\s*$/;
+      const lineEndPattern = /(?:^|\s)(\d{1,2})\s+([\d\s,.]+)\s*(?:€|EUR)\s*$/i;
       
       // Pattern to detect another special ref or product start (stop conditions)
       const isNewBlockStart = (line: string) =>
@@ -481,7 +482,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         }
         
         // Also try to detect just an amount (fallback: qty=1)
-        const amountOnlyMatch = currentLine.match(/([\d\s,.]+)\s*€\s*$/);
+        const amountOnlyMatch = currentLine.match(/([\d\s,.]+)\s*(?:€|EUR)\s*$/i);
         if (amountOnlyMatch && !lineMatch) {
           const total = parseNumber(amountOnlyMatch[1]) || 0;
           if (total > 0 && total < 10000) {
@@ -690,7 +691,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         }
         if (stopRe.test(rowsSource[j]) || softStopRe.test(rowsSource[j])) break;
         // Stop if we hit another product's amount line
-        if (j < i && /\b\d{1,3}\s+[\d\s,.]+\s*€/.test(rowsSource[j])) break;
+        if (j < i && /\b\d{1,3}\s+[\d\s,.]+\s*(?:€|EUR)/i.test(rowsSource[j])) break;
       }
       
       if (codeIdx !== -1) {
@@ -724,9 +725,9 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
         let designation = designationParts.join(' ').replace(/\s+/g, ' ').trim();
         // Strip unit price pattern "NNN,NN € [QTE]" left anywhere in designation (Commande format)
         // e.g. "Carte graphique MSI ... 408,32 € 3" → "Carte graphique MSI ..."
-        designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€(?:\s+\d{1,3})?/g, '').trim();
+        designation = designation.replace(/\s+\d+(?:[\s.]\d{3})*[,.]\d{2}\s*(?:€|EUR)(?:\s+\d{1,3})?/gi, '').trim();
         // Also strip a trailing standalone amount without leading space (safety net)
-        designation = designation.replace(/\d+(?:[\s.]\d{3})*[,.]\d{2}\s*€\s*$/, '').trim();
+        designation = designation.replace(/\d+(?:[\s.]\d{3})*[,.]\d{2}\s*(?:€|EUR)\s*$/i, '').trim();
         
         // Skip "Produit inclus dans l'extension de garantie" and eco-taxe lines
         if (/Produit\s+inclus/i.test(designation) || /eco-?taxe/i.test(designation)) {
@@ -1034,13 +1035,33 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     total: l.totalHT,
   })));
 
-  // Totals extraction - Strategy 1: Look for amounts after "Loyer mensuel" marker
-  // Cybertek PDFs show totals (HT, TVA, TTC) as 3 consecutive amounts without labels
+  // Totals extraction - Strategy 1: read the labeled totals table.
+  // Some Cybertek layouts put the labels on one line and their EUR values on the next.
+  const totalsHeaderIdx = lines.findIndex(
+    (line) => /TOTAL\s+HT/i.test(line) && /TVA\s*20\s*%/i.test(line) && /TOTAL\s+TTC/i.test(line)
+  );
+  if (totalsHeaderIdx !== -1) {
+    const totalsWindow = lines.slice(totalsHeaderIdx + 1, totalsHeaderIdx + 4).join(' ');
+    const values = [...totalsWindow.matchAll(new RegExp(`${money}\\s*${currency}`, 'gi'))]
+      .map((match) => parseNumber(match[1]))
+      .filter((value): value is number => value !== null);
+
+    if (values.length >= 3) {
+      const [totalHT, tva, totalTTC] = values.slice(-3);
+      if (Math.abs(totalTTC - (totalHT + tva)) <= 0.02) {
+        result.totaux!.totalHT = totalHT;
+        result.totaux!.tva = tva;
+        result.totaux!.totalTTC = totalTTC;
+      }
+    }
+  }
+
+  // Strategy 2: Look for amounts after "Loyer mensuel" marker
   const loyerIdx = lines.findIndex((l) => /Loyer\s+mensuel/i.test(l));
   
-  if (loyerIdx !== -1) {
+  if (result.totaux!.totalHT === null && loyerIdx !== -1) {
     const afterLoyer = lines.slice(loyerIdx + 1);
-    const moneyPattern = new RegExp(`${money}\\s*€`, 'gi');
+    const moneyPattern = new RegExp(`${money}\\s*${currency}`, 'gi');
     const amounts: number[] = [];
     
     for (const line of afterLoyer) {
@@ -1067,7 +1088,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Strategy 2: Fallback - look in the tail section after table
+  // Strategy 3: Fallback - look in the tail section after table
   if (result.totaux!.totalHT === null) {
     const tailStartIdx = lines.findIndex((l) => stopRe.test(l));
     const tail = tailStartIdx !== -1 ? lines.slice(tailStartIdx) : lines.slice(-60);
@@ -1106,10 +1127,10 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Strategy 3: Fallback - try explicit label patterns
+  // Strategy 4: Fallback - try explicit label patterns
   if (result.totaux!.totalHT === null) {
     const totalHTMatch = [...text.matchAll(
-      new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+      new RegExp(`(?:Prix\\s+)?Total(?:\\s+de\\s+vente)?\\s*HT[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi')
     )].at(-1);
     if (totalHTMatch) {
       const v = parseNumber(totalHTMatch[1]);
@@ -1119,7 +1140,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
 
   if (result.totaux!.tva === null) {
     const tvaMatch = [...text.matchAll(
-      new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*€`, 'gi')
+      new RegExp(`TVA\\s*(?:20\\s*%|20,?00\\s*%)?\\s*:?\\s*${money}\\s*${currency}`, 'gi')
     )].at(-1);
     if (tvaMatch) {
       const v = parseNumber(tvaMatch[1]);
@@ -1129,7 +1150,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
 
   if (result.totaux!.totalTTC === null) {
     const totalTTCMatch = [...text.matchAll(
-      new RegExp(`Total(?:\\s+de\\s+vente)?\\s*TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi')
+      new RegExp(`Total(?:\\s+de\\s+vente)?\\s*TTC[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi')
     )].at(-1);
     if (totalTTCMatch) {
       const v = parseNumber(totalTTCMatch[1]);
@@ -1137,7 +1158,7 @@ function parseCybertekText(text: string): Partial<PDFParseResult> {
     }
   }
 
-  // Strategy 4: Calculate totals from line items if still not found
+  // Strategy 5: Calculate totals from line items if still not found
   // Per constraint: only use this as last resort when extraction fails
   if (result.totaux!.totalHT === null && result.lignes!.length > 0) {
     const calculatedTotalHT = result.lignes!.reduce(
@@ -1270,6 +1291,7 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
   // Totals - Grosbill often renders the labels on one line and the values on the next.
   // We avoid any calculation: values must come from the PDF.
   const money = '(\\d+(?:[\\s\\.]\\d{3})*(?:[,.]\\d{2})?)';
+  const currency = '(?:€|EUR)';
 
   let totalsFound = false;
 
@@ -1300,19 +1322,19 @@ function parseGrosbillText(text: string): Partial<PDFParseResult> {
 
   // Fallback: explicit label → amount patterns (older layouts / different line breaks)
   if (!totalsFound) {
-    const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    const totalHTMatches = [...text.matchAll(new RegExp(`TOTAL\\s+HT[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi'))];
     if (totalHTMatches.length) {
       const v = parseNumber(totalHTMatches.at(-1)![1]);
       if (v !== null && Math.abs(v) >= 100) result.totaux!.totalHT = v;
     }
 
-    const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    const tvaMatches = [...text.matchAll(new RegExp(`TVA\\s*20\\s*%[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi'))];
     if (tvaMatches.length) {
       const v = parseNumber(tvaMatches.at(-1)![1]);
       if (v !== null && Math.abs(v) >= 100) result.totaux!.tva = v;
     }
 
-    const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\S]{0,80}?${money}\\s*€`, 'gi'))];
+    const totalTTCMatches = [...text.matchAll(new RegExp(`TOTAL\\s+TTC[\\s\\S]{0,80}?${money}\\s*${currency}`, 'gi'))];
     if (totalTTCMatches.length) {
       const v = parseNumber(totalTTCMatches.at(-1)![1]);
       if (v !== null && Math.abs(v) >= 100) result.totaux!.totalTTC = v;
@@ -1990,16 +2012,13 @@ async function extractTextWithPdfJs(file: File): Promise<ExtractedTextResult> {
 }
 
 export async function parsePDF(file: File): Promise<PDFParseResult> {
-  // Detect source from filename first
-  let source = detectSourceFromFilename(file.name);
-  
   // Extract text and raw items using pdfjs-dist
   const { text: rawText, items } = await extractTextWithPdfJs(file);
-  
-  // If source unknown from filename, try from text content
-  if (source === 'unknown' && rawText.length > 20) {
-    source = detectSourceFromText(rawText);
-  }
+
+  // The document content is authoritative. Generic filenames such as Devis_123_date.pdf
+  // are used by multiple suppliers and must only be a fallback.
+  const contentSource = rawText.length > 20 ? detectSourceFromText(rawText) : 'unknown';
+  const source = contentSource !== 'unknown' ? contentSource : detectSourceFromFilename(file.name);
   
   // Create base result
   const baseResult: PDFParseResult = {
