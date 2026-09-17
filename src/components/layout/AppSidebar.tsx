@@ -123,15 +123,15 @@ export function AppSidebar({
           </>
         )}
 
-        {/* SECTION 2 — Services (admin + technicien) */}
-        {(isAdmin || isTechnicien) && (
+        {/* SECTION 2 — Services (admin + technicien + commercial) */}
+        {(isAdmin || isTechnicien || isCommercial) && (
           <>
             {!isTechnicienOnly && <div className="border-t border-border my-2" />}
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
               Services
             </p>
 
-            {isAdmin && (
+            {!isTechnicienOnly && (
               <>
                 <Button
                   variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}

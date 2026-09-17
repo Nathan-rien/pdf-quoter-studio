@@ -105,14 +105,14 @@ export default function Index() {
           />
         );
       case 'service-proposal':
-        return isAdmin ? (
+        return (isAdmin || isCommercial) ? (
           <ServiceProposalView
             autoOpenCreate={serviceAutoOpenCreate}
             onAutoOpenHandled={() => setServiceAutoOpenCreate(false)}
           />
         ) : null;
       case 'service-history':
-        return isAdmin ? (
+        return (isAdmin || isCommercial) ? (
           <ServiceHistoryView
             onLoadProposal={(snapshot) => {
               useServiceProposalStore.getState().loadFromExport(snapshot);
