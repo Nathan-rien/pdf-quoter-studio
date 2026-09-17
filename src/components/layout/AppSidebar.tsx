@@ -123,15 +123,15 @@ export function AppSidebar({
           </>
         )}
 
-        {/* SECTION 2 — Services (admin + technicien) */}
-        {(isAdmin || isTechnicien) && (
+        {/* SECTION 2 — Services (admin + technicien + commercial) */}
+        {(isAdmin || isTechnicien || isCommercial) && (
           <>
             {!isTechnicienOnly && <div className="border-t border-border my-2" />}
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
               Services
             </p>
 
-            {isAdmin && (
+            {!isTechnicienOnly && (
               <>
                 <Button
                   variant={currentView === 'service-proposal' ? 'secondary' : 'ghost'}
@@ -162,23 +162,27 @@ export function AppSidebar({
               Contrats Services
             </Button>
 
-            <Button
-              variant={currentView === 'technician-tracking' ? 'secondary' : 'ghost'}
-              className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('technician-tracking')}
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Suivi Techniciens
-            </Button>
+            {(isAdmin || isTechnicien) && (
+              <>
+                <Button
+                  variant={currentView === 'technician-tracking' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('technician-tracking')}
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Suivi Techniciens
+                </Button>
 
-            <Button
-              variant={currentView === 'service-planning' ? 'secondary' : 'ghost'}
-              className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('service-planning')}
-            >
-              <CalendarDays className="h-3.5 w-3.5" />
-              Planning Services
-            </Button>
+                <Button
+                  variant={currentView === 'service-planning' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('service-planning')}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Planning Services
+                </Button>
+              </>
+            )}
           </>
         )}
 

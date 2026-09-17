@@ -105,14 +105,14 @@ export default function Index() {
           />
         );
       case 'service-proposal':
-        return isAdmin ? (
+        return (isAdmin || isCommercial) ? (
           <ServiceProposalView
             autoOpenCreate={serviceAutoOpenCreate}
             onAutoOpenHandled={() => setServiceAutoOpenCreate(false)}
           />
         ) : null;
       case 'service-history':
-        return isAdmin ? (
+        return (isAdmin || isCommercial) ? (
           <ServiceHistoryView
             onLoadProposal={(snapshot) => {
               useServiceProposalStore.getState().loadFromExport(snapshot);
@@ -121,16 +121,16 @@ export default function Index() {
           />
         ) : null;
       case 'service-contracts':
-        return (isAdmin || isTechnicien) ? (
+        return (isAdmin || isTechnicien || isCommercial) ? (
           <ServiceContractsView
             onCreateManual={isAdmin ? () => {
               setServiceAutoOpenCreate(true);
               setCurrentView('service-proposal');
             } : undefined}
-            onPlanIntervention={(p) => {
+            onPlanIntervention={(isAdmin || isTechnicien) ? (p) => {
               setPlanningPrefill(p);
               setCurrentView('service-planning');
-            }}
+            } : undefined}
           />
 
         ) : null;
