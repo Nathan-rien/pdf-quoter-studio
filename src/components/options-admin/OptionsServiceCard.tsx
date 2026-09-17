@@ -108,10 +108,15 @@ export function OptionsServiceCard({ option }: OptionsServiceCardProps) {
   };
 
   const handlePriceSave = () => {
-    const amount = parseFloat(priceAmount);
-    if (!isNaN(amount) && amount > 0 && priceUnit.trim()) {
-      setOptionPrice(option.id, amount, priceUnit.trim());
+    const raw = priceAmount.trim();
+    if (raw === "") {
+      // Champ vidé => l'option repasse "sans prix" (l'éditeur reste ouvert)
+      if (option.price) removeOptionPrice(option.id);
+      return;
     }
+    const amount = parseFloat(raw.replace(",", "."));
+    if (isNaN(amount) || amount < 0) return;
+    setOptionPrice(option.id, amount, priceUnit.trim() || "€ HT / mois");
   };
 
   const handleRemovePrice = () => {
