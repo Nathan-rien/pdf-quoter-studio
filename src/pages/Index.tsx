@@ -121,7 +121,7 @@ export default function Index() {
           />
         ) : null;
       case 'service-contracts':
-        return (isAdmin || isTechnicien) ? (
+        return (isAdmin || isTechnicien || isCommercial) ? (
           <ServiceContractsView
             onCreateManual={isAdmin ? () => {
               setServiceAutoOpenCreate(true);

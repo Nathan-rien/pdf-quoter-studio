@@ -162,23 +162,27 @@ export function AppSidebar({
               Contrats Services
             </Button>
 
-            <Button
-              variant={currentView === 'technician-tracking' ? 'secondary' : 'ghost'}
-              className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('technician-tracking')}
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Suivi Techniciens
-            </Button>
+            {(isAdmin || isTechnicien) && (
+              <>
+                <Button
+                  variant={currentView === 'technician-tracking' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('technician-tracking')}
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Suivi Techniciens
+                </Button>
 
-            <Button
-              variant={currentView === 'service-planning' ? 'secondary' : 'ghost'}
-              className="w-full justify-start gap-2 h-8 text-sm"
-              onClick={() => onNavigate('service-planning')}
-            >
-              <CalendarDays className="h-3.5 w-3.5" />
-              Planning Services
-            </Button>
+                <Button
+                  variant={currentView === 'service-planning' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('service-planning')}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Planning Services
+                </Button>
+              </>
+            )}
           </>
         )}
 
