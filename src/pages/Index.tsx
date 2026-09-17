@@ -127,10 +127,10 @@ export default function Index() {
               setServiceAutoOpenCreate(true);
               setCurrentView('service-proposal');
             } : undefined}
-            onPlanIntervention={(p) => {
+            onPlanIntervention={(isAdmin || isTechnicien) ? (p) => {
               setPlanningPrefill(p);
               setCurrentView('service-planning');
-            }}
+            } : undefined}
           />
 
         ) : null;
