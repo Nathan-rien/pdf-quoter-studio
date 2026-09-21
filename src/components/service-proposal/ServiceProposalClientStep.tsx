@@ -42,6 +42,8 @@ interface ServiceProposalClientStepProps {
 }
 
 export function ServiceProposalClientStep({ data, onChange }: ServiceProposalClientStepProps) {
+  const { getCommerciauxByEntity, getCommercialById } = useCommerciaux();
+
   function set(key: keyof ClientData, value: string) {
     onChange({ ...data, [key]: value });
   }
