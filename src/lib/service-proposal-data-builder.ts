@@ -4,7 +4,8 @@
  * feed generateServiceProposalHtml() with identical input shapes.
  */
 import type { ServiceProposalHtmlData } from './service-proposal-html-generator';
-import { ENTITIES, getCommercialById } from '@/data/commerciaux';
+import { ENTITIES } from '@/data/commerciaux';
+import { getCommercialByIdRuntime as getCommercialById } from '@/lib/commercials-runtime';
 import type { ServiceProposalStoreState } from '@/stores/serviceProposalStore';
 import type { ServiceProposal } from '@/hooks/useServiceProposals';
 import type { OptionService } from '@/stores/rentalProposalStore';

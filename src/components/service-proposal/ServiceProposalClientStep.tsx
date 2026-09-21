@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { ENTITIES, CommercialEntity, getCommerciauxByEntity, getCommercialById } from '@/data/commerciaux';
+import { ENTITIES, CommercialEntity } from '@/data/commerciaux';
+import { useCommerciaux } from '@/hooks/useCommerciaux';
 import type { SiteAddress, OperationalContact, ExternalProvider } from '@/hooks/useServiceProposals';
 
 export interface ClientData {
@@ -41,6 +42,8 @@ interface ServiceProposalClientStepProps {
 }
 
 export function ServiceProposalClientStep({ data, onChange }: ServiceProposalClientStepProps) {
+  const { getCommerciauxByEntity, getCommercialById } = useCommerciaux();
+
   function set(key: keyof ClientData, value: string) {
     onChange({ ...data, [key]: value });
   }
