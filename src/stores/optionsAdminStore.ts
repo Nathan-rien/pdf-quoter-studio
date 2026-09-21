@@ -75,7 +75,8 @@ export const useOptionsAdminStore = create<OptionsAdminStateExtended>()(
       setOptions: (options) => set({ options }),
 
       ensureLoaded: async () => {
-        if (get().isLoaded) return;
+        // Toujours rafraîchir depuis le cloud : le cache local peut être obsolète
+        // (nouvelles options créées par un autre utilisateur).
         const dbOptions = await loadOptionsFromDB();
         if (dbOptions && dbOptions.length > 0) {
           set({ options: dbOptions, isLoaded: true });
@@ -261,6 +262,7 @@ export const useOptionsAdminStore = create<OptionsAdminStateExtended>()(
     }),
     {
       name: 'options-admin-storage',
+      partialize: (state) => ({ options: state.options }) as OptionsAdminStateExtended,
     }
   )
 );
