@@ -124,6 +124,7 @@ interface ServiceProposalStoreActions {
   updateNosOption: (id: string, updates: Partial<Omit<OptionService, 'id'>>) => void;
   deleteNosOption: (id: string) => void;
   toggleNosOption: (id: string) => void;
+  reorderNosOptions: (fromIndex: number, toIndex: number) => void;
 }
 
 export type ServiceProposalStore = ServiceProposalStoreState & ServiceProposalStoreActions;
@@ -316,6 +317,23 @@ export const useServiceProposalStore = create<ServiceProposalStore>()(
             opt.id === id ? { ...opt, selected: !opt.selected } : opt,
           ),
         })),
+
+      reorderNosOptions: (fromIndex, toIndex) =>
+        set((state) => {
+          const list = [...state.nosOptions];
+          if (
+            fromIndex < 0 ||
+            toIndex < 0 ||
+            fromIndex >= list.length ||
+            toIndex >= list.length ||
+            fromIndex === toIndex
+          ) {
+            return {};
+          }
+          const [moved] = list.splice(fromIndex, 1);
+          list.splice(toIndex, 0, moved);
+          return { nosOptions: list };
+        }),
     }),
     {
       name: 'service-proposal-storage',
