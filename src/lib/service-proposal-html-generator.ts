@@ -579,29 +579,35 @@ export async function generateServiceProposalHtml(
       });
       return label ?? '';
     };
+    const summaryRows: Array<[string, string]> = [];
+    selected.forEach((o) => {
+      summaryRows.push([o.name || '—', priceLabel(o)]);
+      if ((o as any).fasEnabled) {
+        summaryRows.push([
+          "Frais d'accès au service",
+          `${(Number((o as any).fasAmount) || 0).toFixed(2).replace('.', ',')} €`,
+        ]);
+      }
+    });
     return `
       <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Services &amp; packs souscrits</div>
         <div style="${SECTION_BODY_STYLE}">
-          ${selected.length === 0
+          ${summaryRows.length === 0
             ? `<p style="${EMPTY_HINT_STYLE}">Aucun élément sélectionné</p>`
-            : `<div>
-                <div style="${BODY_TEXT_STYLE}">
-                  ${selected.map((o) => {
-                    const price = priceLabel(o);
-                    const fas = (o as any).fasEnabled
-                      ? `${(Number((o as any).fasAmount) || 0).toFixed(2).replace('.', ',')} € HT`
-                      : '';
-                    return `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0.5mm 0;color:#1a1a1a;">
-                      <span style="font-weight:500;">• ${escapeText(o.name || '—')}</span>
-                      ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
-                    </div>${fas ? `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0 0 0.5mm 3mm;color:#1a1a1a;">
-                      <span>Frais d'accès au service</span>
-                      <span style="font-weight:600;white-space:nowrap;">${escapeText(fas)}</span>
-                    </div>` : ''}`;
-                  }).join('')}
-                </div>
-              </div>`}
+            : `<table style="${DATA_TABLE_STYLE}">
+                <tbody>
+                  ${summaryRows
+                    .map(
+                      ([label, value], idx) => `
+                    <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                      <td style="padding:3mm 4mm;border:none;border-bottom:1px solid #f0f1f3;font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;width:62%;vertical-align:top;">${escapeText(label)}</td>
+                      <td style="${TD_STYLE} font-weight:700;color:#111111;text-align:right;white-space:nowrap;">${escapeText(value)}</td>
+                    </tr>`,
+                    )
+                    .join('')}
+                </tbody>
+              </table>`}
         </div>
       </div>`;
   };
