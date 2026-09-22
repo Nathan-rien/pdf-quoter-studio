@@ -304,7 +304,7 @@ export async function generateServiceProposalHtml(
     ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
     ['Démarrage', startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'],
     ...(mode !== 'contrat'
-      ? ([['Total HT services', `${formatNumber(totalServicesHt)} €`, true]] as Array<[string, string, boolean?]>)
+      ? ([['Total HT frais accès au service', `${formatNumber(totalServicesHt)} €`, true]] as Array<[string, string, boolean?]>)
       : []),
     ...(periodicRent !== null
       ? ([[
@@ -591,10 +591,6 @@ export async function generateServiceProposalHtml(
                       ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
                     </div>`;
                   }).join('')}
-                  <div style="display:flex;justify-content:space-between;gap:4mm;margin-top:2mm;padding-top:2mm;border-top:1px solid #e5e7eb;color:#1a1a1a;">
-                    <span style="font-weight:600;">Total Service HT</span>
-                    <span style="font-weight:700;">${formatNumber(totalServicesHt)} €</span>
-                  </div>
                 </div>
               </div>`}
         </div>
@@ -685,8 +681,24 @@ export async function generateServiceProposalHtml(
   // Preserve source order of zones on each page (as declared in the template).
   // Wrap each rendered zone in a `.shell-block` div so the fit helper can target
   // the last block on a page for auto-shrink if it overflows the reserved area.
-  Object.entries(serviceZonesByPage).forEach(([pageNumber, zones]) => {
+  Object.entries(serviceZonesByPage).forEach(([pageNumber, rawZones]) => {
     const page = Number(pageNumber);
+    // Si une page contient à la fois les conditions et les tarifs d'intervention,
+    // les conditions doivent être rendues avant les tarifs.
+    const hasConditions = rawZones.some((z) => z.type === 'service_conditions');
+    const hasTarifs = rawZones.some((z) => (z.type as string) === 'service_tarifs_interventions');
+    const zones =
+      hasConditions && hasTarifs
+        ? [
+            ...rawZones.filter((z) => z.type === 'service_conditions'),
+            ...rawZones.filter(
+              (z) =>
+                z.type !== 'service_conditions' &&
+                (z.type as string) !== 'service_tarifs_interventions',
+            ),
+            ...rawZones.filter((z) => (z.type as string) === 'service_tarifs_interventions'),
+          ]
+        : rawZones;
     const onlyOptions =
       zones.length === 1 && zones[0].type === 'service_options';
     zones.forEach((zone) => {
