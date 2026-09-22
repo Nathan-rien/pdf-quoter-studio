@@ -160,8 +160,39 @@ export function ServiceProposalNosOptionsStep() {
           {nosOptions.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Aucune option</p>
           ) : (
-            nosOptions.map((opt) => (
-              <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">
+            nosOptions.map((opt, index) => (
+              <div
+                key={opt.id}
+                onDragOver={(e) => {
+                  if (dragIndex === null) return;
+                  e.preventDefault();
+                  setDragOverIndex(index);
+                }}
+                onDrop={(e) => {
+                  if (dragIndex === null) return;
+                  e.preventDefault();
+                  reorderNosOptions(dragIndex, index);
+                  setDragIndex(null);
+                  setDragOverIndex(null);
+                }}
+                className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                  dragOverIndex === index && dragIndex !== null && dragIndex !== index
+                    ? 'border-primary bg-muted/50'
+                    : ''
+                } ${dragIndex === index ? 'opacity-60' : ''}`}
+              >
+                <div
+                  draggable
+                  onDragStart={() => setDragIndex(index)}
+                  onDragEnd={() => {
+                    setDragIndex(null);
+                    setDragOverIndex(null);
+                  }}
+                  title="Glisser pour réordonner"
+                  className="mt-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </div>
                 <Switch
                   checked={opt.selected}
                   onCheckedChange={() => toggleNosOption(opt.id)}
