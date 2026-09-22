@@ -579,34 +579,31 @@ export async function generateServiceProposalHtml(
       });
       return label ?? '';
     };
-    const summaryRows: Array<[string, string]> = [];
-    selected.forEach((o) => {
-      summaryRows.push([o.name || '—', priceLabel(o)]);
-      if ((o as any).fasEnabled) {
-        summaryRows.push([
-          "Frais d'accès au service",
-          `${(Number((o as any).fasAmount) || 0).toFixed(2).replace('.', ',')} €`,
-        ]);
-      }
-    });
+    const rowsHtml = selected
+      .map((o, idx) => {
+        const fasEnabled = Boolean((o as any).fasEnabled);
+        const fasValue = `${(Number((o as any).fasAmount) || 0).toFixed(2).replace('.', ',')} €`;
+        const subLabel = fasEnabled
+          ? `<div style="margin-top:1.2mm;padding-left:4mm;font-family:'Inter',sans-serif;font-size:10px;font-weight:400;color:#555555;text-transform:none;letter-spacing:0;">Frais d'accès au service</div>`
+          : '';
+        const subValue = fasEnabled
+          ? `<div style="margin-top:1.2mm;font-family:'Inter',sans-serif;font-size:10px;font-weight:400;color:#555555;text-align:right;white-space:nowrap;">${escapeText(fasValue)}</div>`
+          : '';
+        return `
+                    <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
+                      <td style="padding:3mm 4mm;border:none;border-bottom:1px solid #f0f1f3;font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;width:62%;vertical-align:top;">${escapeText(o.name || '—')}${subLabel}</td>
+                      <td style="${TD_STYLE} font-weight:700;color:#111111;text-align:right;white-space:nowrap;vertical-align:top;">${escapeText(priceLabel(o))}${subValue}</td>
+                    </tr>`;
+      })
+      .join('');
     return `
       <div style="${BLOCK_WRAPPER_STYLE}">
         <div style="${SECTION_BANNER_STYLE}">Services &amp; packs souscrits</div>
         <div style="${SECTION_BODY_STYLE}">
-          ${summaryRows.length === 0
+          ${selected.length === 0
             ? `<p style="${EMPTY_HINT_STYLE}">Aucun élément sélectionné</p>`
             : `<table style="${DATA_TABLE_STYLE}">
-                <tbody>
-                  ${summaryRows
-                    .map(
-                      ([label, value], idx) => `
-                    <tr style="background:${idx % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
-                      <td style="padding:3mm 4mm;border:none;border-bottom:1px solid #f0f1f3;font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;width:62%;vertical-align:top;">${escapeText(label)}</td>
-                      <td style="${TD_STYLE} font-weight:700;color:#111111;text-align:right;white-space:nowrap;">${escapeText(value)}</td>
-                    </tr>`,
-                    )
-                    .join('')}
-                </tbody>
+                <tbody>${rowsHtml}</tbody>
               </table>`}
         </div>
       </div>`;
