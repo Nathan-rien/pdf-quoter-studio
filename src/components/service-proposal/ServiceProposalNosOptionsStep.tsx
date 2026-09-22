@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Trash2, Download, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Download, Loader2, GripVertical } from 'lucide-react';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { buildPackDescription } from '@/lib/pack-description';
@@ -18,6 +18,9 @@ export function ServiceProposalNosOptionsStep() {
   const updateNosOption = useServiceProposalStore((s) => s.updateNosOption);
   const deleteNosOption = useServiceProposalStore((s) => s.deleteNosOption);
   const toggleNosOption = useServiceProposalStore((s) => s.toggleNosOption);
+  const reorderNosOptions = useServiceProposalStore((s) => s.reorderNosOptions);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const { options: adminOptions, ensureLoaded } = useOptionsAdminStore();
   const activeAdminOptions = adminOptions.filter((opt) => opt.isActive);
