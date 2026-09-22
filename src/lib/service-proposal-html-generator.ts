@@ -687,7 +687,7 @@ export async function generateServiceProposalHtml(
     // les conditions doivent être rendues avant les tarifs.
     const hasConditions = rawZones.some((z) => z.type === 'service_conditions');
     const hasTarifs = rawZones.some((z) => (z.type as string) === 'service_tarifs_interventions');
-    const zones =
+    let zones =
       hasConditions && hasTarifs
         ? [
             ...rawZones.filter((z) => z.type === 'service_conditions'),
@@ -699,6 +699,18 @@ export async function generateServiceProposalHtml(
             ...rawZones.filter((z) => (z.type as string) === 'service_tarifs_interventions'),
           ]
         : rawZones;
+    // Si une page contient à la fois les conditions de règlement et le récapitulatif
+    // "Services & packs souscrits", le récapitulatif passe avant les conditions.
+    const hasSummary = zones.some((z) => z.type === 'service_options_summary');
+    if (hasConditions && hasSummary) {
+      zones = [
+        ...zones.filter((z) => z.type === 'service_options_summary'),
+        ...zones.filter(
+          (z) => z.type !== 'service_options_summary' && z.type !== 'service_conditions',
+        ),
+        ...zones.filter((z) => z.type === 'service_conditions'),
+      ];
+    }
     const onlyOptions =
       zones.length === 1 && zones[0].type === 'service_options';
     zones.forEach((zone) => {
