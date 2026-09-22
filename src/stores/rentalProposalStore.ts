@@ -126,6 +126,8 @@ export interface OptionService {
   showPriceMode: 'mensuel' | 'total'; // quel montant afficher
   pricingScope: 'par_machine' | 'pour_le_parc'; // scope de tarification
   showPrice: boolean;             // afficher le montant sur le template/PDF
+  fasEnabled?: boolean;           // frais d'accès au service activés pour cette option
+  fasAmount?: number | null;      // montant total HT du FAS
   selected: boolean;
   sourcePackId?: string | null;   // id de l'admin pack d'origine (si importée depuis un pack)
 }
