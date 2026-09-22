@@ -411,13 +411,16 @@ export async function generateServiceProposalHtml(
             showPriceMode: (opt as any).showPriceMode ?? 'mensuel',
             pricingScope: (opt as any).pricingScope ?? 'par_machine',
           }) : null;
+          const fasLabel = (opt as any).fasEnabled
+            ? `FAS : ${(Number((opt as any).fasAmount) || 0).toFixed(2).replace('.', ',')} € HT`
+            : '';
           return `
             <tr style="background:${(startIdx + i) % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
               <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(opt.name || '—')}</td>
               <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
               ${
                 showPriceCol
-                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${priceLabel ?? '—'}</td>`
+                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${priceLabel ?? '—'}${fasLabel ? `<div style="font-weight:600;font-size:0.9em;">${escapeText(fasLabel)}</div>` : ''}</td>`
                   : ''
               }
             </tr>`;
