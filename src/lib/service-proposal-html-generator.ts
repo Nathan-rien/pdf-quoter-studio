@@ -586,10 +586,16 @@ export async function generateServiceProposalHtml(
                 <div style="${BODY_TEXT_STYLE}">
                   ${selected.map((o) => {
                     const price = priceLabel(o);
+                    const fas = (o as any).fasEnabled
+                      ? `${(Number((o as any).fasAmount) || 0).toFixed(2).replace('.', ',')} € HT`
+                      : '';
                     return `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0.5mm 0;color:#1a1a1a;">
                       <span style="font-weight:500;">• ${escapeText(o.name || '—')}</span>
                       ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
-                    </div>`;
+                    </div>${fas ? `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0 0 0.5mm 3mm;color:#1a1a1a;">
+                      <span>FAS</span>
+                      <span style="font-weight:600;white-space:nowrap;">${escapeText(fas)}</span>
+                    </div>` : ''}`;
                   }).join('')}
                 </div>
               </div>`}
