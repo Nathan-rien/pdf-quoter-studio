@@ -412,7 +412,7 @@ export async function generateServiceProposalHtml(
             pricingScope: (opt as any).pricingScope ?? 'par_machine',
           }) : null;
           const fasLabel = (opt as any).fasEnabled
-            ? `FAS : ${(Number((opt as any).fasAmount) || 0).toFixed(2).replace('.', ',')} € HT`
+            ? `Frais d'accès au service : ${(Number((opt as any).fasAmount) || 0).toFixed(2).replace('.', ',')} € HT`
             : '';
           return `
             <tr style="background:${(startIdx + i) % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
@@ -596,7 +596,7 @@ export async function generateServiceProposalHtml(
                       <span style="font-weight:500;">• ${escapeText(o.name || '—')}</span>
                       ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
                     </div>${fas ? `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0 0 0.5mm 3mm;color:#1a1a1a;">
-                      <span>FAS</span>
+                      <span>Frais d'accès au service</span>
                       <span style="font-weight:600;white-space:nowrap;">${escapeText(fas)}</span>
                     </div>` : ''}`;
                   }).join('')}
