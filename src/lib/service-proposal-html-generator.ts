@@ -393,22 +393,24 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderSignatureZone = (zone: PositionedDynamicZone) => `
-    <div style="${BODY_TEXT_STYLE}">
+    <div style="${BODY_TEXT_STYLE} margin-top:6mm;">
       <div style="display: flex; justify-content: space-between; gap: 8mm;">
         <div style="flex: 1;">
-          <div style="min-height: 18mm;">
+          <div style="min-height: 14mm;">
             La Société Groupe Cybertek SAS<br />
             Représentée par Grégory Moinet<br />
             Directeur Services et Solutions
           </div>
-          Signature : _______________
+          <div style="margin-top:4mm;">Signature : _______________</div>
+          <div style="min-height: 26mm;"></div>
         </div>
         <div style="flex: 1;">
-          <div style="min-height: 18mm;">
+          <div style="min-height: 14mm;">
             La Société ${escapeText(clientData.raisonSociale || clientData.nom)}<br />
             Représentée par ${escapeText(clientData.nom)}
           </div>
-          Signature : _______________
+          <div style="margin-top:4mm;">Signature : _______________</div>
+          <div style="min-height: 26mm;"></div>
         </div>
       </div>
     </div>
@@ -1281,7 +1283,8 @@ export async function generateServiceProposalHtml(
           </div>
         </div>
       </div>
-      <div style="${BLOCK_WRAPPER_STYLE}">
+      <div style="${BLOCK_WRAPPER_STYLE} margin-top:8mm;">
+
         <div style="${SECTION_BANNER_STYLE}">Signatures</div>
         <div style="${SECTION_BODY_STYLE}">
           <div style="${BODY_TEXT_STYLE}">
