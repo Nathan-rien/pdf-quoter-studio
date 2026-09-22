@@ -240,6 +240,33 @@ export function ServiceProposalNosOptionsStep() {
                           className="scale-75 origin-left"
                         />
                       </div>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-muted-foreground">FAS :</span>
+                        <Switch
+                          checked={opt.fasEnabled ?? false}
+                          onCheckedChange={(checked) =>
+                            updateNosOption(opt.id, { fasEnabled: checked })
+                          }
+                          className="scale-75 origin-left"
+                        />
+                        {(opt.fasEnabled ?? false) && (
+                          <>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Montant"
+                              value={opt.fasAmount ?? ''}
+                              onChange={(e) =>
+                                updateNosOption(opt.id, {
+                                  fasAmount: e.target.value ? parseFloat(e.target.value) : null,
+                                })
+                              }
+                              className="w-24 text-sm h-7"
+                            />
+                            <span className="text-[10px] text-muted-foreground">€ HT total</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
