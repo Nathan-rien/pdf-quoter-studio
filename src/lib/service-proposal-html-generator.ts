@@ -70,7 +70,7 @@ export function fitPageContentBlocks(root: HTMLElement | Document): void {
   // every page ends up rendered at the same typographic size. CSS transforms
   // do not change scrollHeight/clientHeight, so the fit check must be based on
   // the scaled visual height instead of re-reading overflow after transform.
-  const paliers = [1, 0.95, 0.9, 0.85, 0.8, 0.75];
+  const paliers = [1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55];
   let uniformFactor = 1;
   for (const { content, wrapper } of entries) {
     const availableHeight = content.clientHeight;
@@ -712,15 +712,16 @@ export async function generateServiceProposalHtml(
           ]
         : rawZones;
     // Si une page contient à la fois les conditions de règlement et le récapitulatif
-    // "Services & packs souscrits", le récapitulatif passe avant les conditions.
+    // "Services & packs souscrits", l'ordre est : récapitulatif, puis conditions
+    // de règlement, puis le reste (dont les tarifs d'intervention).
     const hasSummary = zones.some((z) => z.type === 'service_options_summary');
     if (hasConditions && hasSummary) {
       zones = [
         ...zones.filter((z) => z.type === 'service_options_summary'),
+        ...zones.filter((z) => z.type === 'service_conditions'),
         ...zones.filter(
           (z) => z.type !== 'service_options_summary' && z.type !== 'service_conditions',
         ),
-        ...zones.filter((z) => z.type === 'service_conditions'),
       ];
     }
     const onlyOptions =
