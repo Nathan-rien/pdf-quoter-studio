@@ -411,13 +411,16 @@ export async function generateServiceProposalHtml(
             showPriceMode: (opt as any).showPriceMode ?? 'mensuel',
             pricingScope: (opt as any).pricingScope ?? 'par_machine',
           }) : null;
+          const fasLabel = (opt as any).fasEnabled
+            ? `FAS : ${(Number((opt as any).fasAmount) || 0).toFixed(2).replace('.', ',')} € HT`
+            : '';
           return `
             <tr style="background:${(startIdx + i) % 2 === 1 ? ROW_ALT_BG : '#ffffff'};">
               <td style="${TD_STYLE} width:30%;font-weight:700;color:#111111;">${escapeText(opt.name || '—')}</td>
               <td style="${TD_STYLE} white-space:pre-wrap;">${escapeText(resolvePackDescription(opt, adminOptions))}</td>
               ${
                 showPriceCol
-                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${priceLabel ?? '—'}</td>`
+                  ? `<td style="${TD_STYLE} width:22%;text-align:right;font-weight:700;color:#111111;">${priceLabel ?? '—'}${fasLabel ? `<div style="font-weight:600;font-size:0.9em;">${escapeText(fasLabel)}</div>` : ''}</td>`
                   : ''
               }
             </tr>`;
@@ -586,10 +589,16 @@ export async function generateServiceProposalHtml(
                 <div style="${BODY_TEXT_STYLE}">
                   ${selected.map((o) => {
                     const price = priceLabel(o);
+                    const fas = (o as any).fasEnabled
+                      ? `${(Number((o as any).fasAmount) || 0).toFixed(2).replace('.', ',')} € HT`
+                      : '';
                     return `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0.5mm 0;color:#1a1a1a;">
                       <span style="font-weight:500;">• ${escapeText(o.name || '—')}</span>
                       ${price ? `<span style="font-weight:600;white-space:nowrap;">${escapeText(price)}</span>` : ''}
-                    </div>`;
+                    </div>${fas ? `<div style="display:flex;justify-content:space-between;gap:4mm;margin:0 0 0.5mm 3mm;color:#1a1a1a;">
+                      <span>FAS</span>
+                      <span style="font-weight:600;white-space:nowrap;">${escapeText(fas)}</span>
+                    </div>` : ''}`;
                   }).join('')}
                 </div>
               </div>`}
