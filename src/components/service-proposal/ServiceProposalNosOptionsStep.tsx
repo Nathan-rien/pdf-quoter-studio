@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Trash2, Download, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Download, Loader2, GripVertical } from 'lucide-react';
 import { useServiceProposalStore } from '@/stores/serviceProposalStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { buildPackDescription } from '@/lib/pack-description';
@@ -18,6 +18,9 @@ export function ServiceProposalNosOptionsStep() {
   const updateNosOption = useServiceProposalStore((s) => s.updateNosOption);
   const deleteNosOption = useServiceProposalStore((s) => s.deleteNosOption);
   const toggleNosOption = useServiceProposalStore((s) => s.toggleNosOption);
+  const reorderNosOptions = useServiceProposalStore((s) => s.reorderNosOptions);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const { options: adminOptions, ensureLoaded } = useOptionsAdminStore();
   const activeAdminOptions = adminOptions.filter((opt) => opt.isActive);
@@ -157,8 +160,39 @@ export function ServiceProposalNosOptionsStep() {
           {nosOptions.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Aucune option</p>
           ) : (
-            nosOptions.map((opt) => (
-              <div key={opt.id} className="flex items-start gap-3 p-3 border rounded-lg">
+            nosOptions.map((opt, index) => (
+              <div
+                key={opt.id}
+                onDragOver={(e) => {
+                  if (dragIndex === null) return;
+                  e.preventDefault();
+                  setDragOverIndex(index);
+                }}
+                onDrop={(e) => {
+                  if (dragIndex === null) return;
+                  e.preventDefault();
+                  reorderNosOptions(dragIndex, index);
+                  setDragIndex(null);
+                  setDragOverIndex(null);
+                }}
+                className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                  dragOverIndex === index && dragIndex !== null && dragIndex !== index
+                    ? 'border-primary bg-muted/50'
+                    : ''
+                } ${dragIndex === index ? 'opacity-60' : ''}`}
+              >
+                <div
+                  draggable
+                  onDragStart={() => setDragIndex(index)}
+                  onDragEnd={() => {
+                    setDragIndex(null);
+                    setDragOverIndex(null);
+                  }}
+                  title="Glisser pour réordonner"
+                  className="mt-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </div>
                 <Switch
                   checked={opt.selected}
                   onCheckedChange={() => toggleNosOption(opt.id)}
