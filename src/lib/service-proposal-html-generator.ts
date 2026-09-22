@@ -293,9 +293,29 @@ export async function generateServiceProposalHtml(
       ? paymentFrequency
       : null;
   const monthsPerPeriod = freq === 'trimestriel' ? 3 : 1;
+  const totalFasHt =
+    Math.round(
+      nosOptions.reduce(
+        (sum, o) =>
+          sum +
+          (o.selected && (o as any).fasEnabled ? Number((o as any).fasAmount) || 0 : 0),
+        0,
+      ) * 100,
+    ) / 100;
+  const recurringMonthlyHt =
+    Math.round(
+      nosOptions.reduce(
+        (sum, o) =>
+          sum +
+          (o.selected && ((o as any).showPriceMode ?? 'mensuel') !== 'total'
+            ? Number(o.price) || 0
+            : 0),
+        0,
+      ) * 100,
+    ) / 100;
   const periodicRent =
     freq && contractDuration && contractDuration > 0
-      ? Math.round((totalServicesHt / (contractDuration / monthsPerPeriod)) * 100) / 100
+      ? Math.round(recurringMonthlyHt * monthsPerPeriod * 100) / 100
       : null;
 
   const conditionsRows: Array<[string, string, boolean?]> = [
@@ -304,7 +324,7 @@ export async function generateServiceProposalHtml(
     ['Durée', contractDuration ? `${contractDuration} mois` : '—'],
     ['Démarrage', startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '—'],
     ...(mode !== 'contrat'
-      ? ([['Total HT frais accès au service', `${formatNumber(totalServicesHt)} €`, true]] as Array<[string, string, boolean?]>)
+      ? ([['Total HT frais accès au service', `${formatNumber(totalFasHt)} €`, true]] as Array<[string, string, boolean?]>)
       : []),
     ...(periodicRent !== null
       ? ([[
