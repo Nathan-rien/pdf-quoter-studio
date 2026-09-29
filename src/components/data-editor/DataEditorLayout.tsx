@@ -8,7 +8,6 @@ import { StepHeader } from "@/components/ui/step-header";
 import { ExcelImportZone } from "./ExcelImportZone";
 import { InvestEditor } from "./sheets/InvestEditor";
 import { DevisEditor } from "./sheets/DevisEditor";
-import { BaseTauxEditor } from "./sheets/BaseTauxEditor";
 import { OptionsServicesEditor } from "./sheets/OptionsServicesEditor";
 import { FicheContratEditor } from "./sheets/FicheContratEditor";
 import { MatriceEditor } from "./sheets/MatriceEditor";
@@ -23,7 +22,6 @@ import {
   FileText,
   Calculator,
   Settings,
-  Percent,
   LayoutGrid
 } from "lucide-react";
 import { toast } from "sonner";
@@ -35,7 +33,6 @@ const sheetConfig: { id: SheetName; label: string; icon: React.ComponentType<{ c
   { id: 'invest', label: 'invest ', icon: Calculator, excelName: 'invest ' },
   { id: 'devis', label: 'Devis', icon: Table2, excelName: 'Devis' },
   { id: 'optionsServices', label: 'Options services ', icon: Settings, excelName: 'Options services ' },
-  { id: 'baseTaux', label: 'Base Taux', icon: Percent, excelName: 'Base Taux' },
 ];
 
 export function DataEditorLayout() {
@@ -171,8 +168,6 @@ export function DataEditorLayout() {
         return <InvestEditor />;
       case 'devis':
         return <DevisEditor />;
-      case 'baseTaux':
-        return <BaseTauxEditor />;
       case 'optionsServices':
         return <OptionsServicesEditor />;
       default:

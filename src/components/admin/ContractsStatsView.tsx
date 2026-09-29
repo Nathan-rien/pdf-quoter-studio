@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useContracts, Contract, ProposalType } from '@/hooks/useContracts';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
+import { useFinancialPartners } from '@/hooks/useFinancialPartners';
+import { canonicalPartnerName } from '@/lib/partners';
 import { useAggregatedContractRents } from '@/lib/contract-rent-aggregation';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -77,6 +79,7 @@ const KpiCard = ({ title, value, icon: Icon, sub }: { title: string; value: stri
 export function ContractsStatsView({ proposalType, hideFinancialPartner = false }: Props) {
   const { data: contracts = [], isLoading } = useContracts(proposalType);
   const { getCommercialById } = useCommerciaux();
+  const { data: allPartners = [] } = useFinancialPartners({ includeInactive: true });
   const { data: aggRents, isLoading: rentsLoading } = useAggregatedContractRents(contracts);
 
   const stats = useMemo(() => {
@@ -115,7 +118,7 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
     // by partner
     const byPartner: Record<string, number> = {};
     contracts.forEach((c) => {
-      const key = c.financial_partner || 'Non renseigné';
+      const key = c.financial_partner ? canonicalPartnerName(allPartners, c.financial_partner) : 'Non renseigné';
       byPartner[key] = (byPartner[key] || 0) + 1;
     });
     const partnerData = Object.entries(byPartner).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
@@ -144,7 +147,7 @@ export function ContractsStatsView({ proposalType, hideFinancialPartner = false 
       .slice(0, 5);
 
     return { total, monthlySum, quarterlySum, avgDuration, monthlyData, commercialData, enseigneData, partnerData, freqData, topClients };
-  }, [contracts, getCommercialById, aggRents]);
+  }, [contracts, getCommercialById, aggRents, allPartners]);
 
   if (isLoading || rentsLoading) {
     return (

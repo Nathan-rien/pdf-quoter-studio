@@ -141,7 +141,7 @@ export function FicheContratEditor() {
               id="fc-refi"
               value={ficheContratData.partenaire || ''}
               onChange={(e) => updateFicheContratField('partenaire', e.target.value || null)}
-              placeholder="Lixxbail 1"
+              placeholder="Refinanceur"
             />
           </div>
 

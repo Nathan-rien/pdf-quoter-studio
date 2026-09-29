@@ -40,6 +40,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useFinancialPartners } from "@/hooks/useFinancialPartners";
+import { canonicalPartnerName } from "@/lib/partners";
 
 // Interface pour les données de liste (sans HTML volumineux)
 interface ProposalExportSummary {
@@ -74,6 +76,8 @@ const MONTHS_FR = [
 ];
 
 export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, highlightedIds = [] }: HistoryViewProps) {
+  // Résolution nom/alias à la lecture uniquement : proposal_state n'est jamais réécrit.
+  const { data: allPartners = [] } = useFinancialPartners({ includeInactive: true });
   const [exports, setExports] = useState<ProposalExportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -405,7 +409,7 @@ export function HistoryView({ onSelectEntry, onLoadProposal, isAdmin = false, hi
                     amountHt={entry.montant_investissement || undefined}
                     monthlyRentHt={entry.loyer_mensuel_ht ?? undefined}
                     templateName={entry.template_name}
-                    financialPartner={entry.financial_partner || undefined}
+                    financialPartner={entry.financial_partner ? canonicalPartnerName(allPartners, entry.financial_partner) : undefined}
                     durationMonths={entry.duration_months || undefined}
                   />
                 </>

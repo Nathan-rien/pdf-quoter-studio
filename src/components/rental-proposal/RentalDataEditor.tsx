@@ -14,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useRentalProposalStore, PARTENAIRES } from '@/stores/rentalProposalStore';
+import { useRentalProposalStore } from '@/stores/rentalProposalStore';
+import { toast } from 'sonner';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
-import { useBaseTauxStore } from '@/stores/baseTauxStore';
+import { useReferenceData } from '@/hooks/useFinancialPartners';
 import { getConditionFinContrat } from '@/data/frais-dossier';
 import { ENTITIES, CommercialEntity } from '@/data/commerciaux';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
@@ -26,7 +27,8 @@ import { useCommercialIdentity } from '@/hooks/useCommercialIdentity';
 import { ReadOnlyBadge } from '@/components/ui/read-only-badge';
 
 export function RentalDataEditor() {
-  const baseTauxEntries = useBaseTauxStore((s) => s.entries);
+  const { partners: allPartners, baseTaux: baseTauxEntries } = useReferenceData();
+  const partnerName = (id: string) => allPartners.find((p) => p.id === id)?.name ?? '—';
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedAdminOptions, setSelectedAdminOptions] = useState<string[]>([]);
   const [isNosOptionsPopoverOpen, setIsNosOptionsPopoverOpen] = useState(false);
@@ -461,7 +463,12 @@ export function RentalDataEditor() {
               showCoutLocatifAnnuel={matriceData.showCoutLocatifAnnuel}
               onToggleCoutLocatif={(checked) => updateMatriceField('showCoutLocatifAnnuel', checked)}
               onUpdate={(updates) => updateProposal(proposal.id, updates)}
-              onDuplicate={() => duplicateProposal(proposal.id)}
+              onDuplicate={() => {
+                const { clearedInactivePartner } = duplicateProposal(proposal.id);
+                if (clearedInactivePartner) {
+                  toast.warning('Le partenaire de cette proposition est désactivé : choisissez un partenaire actif pour la copie.');
+                }
+              }}
               onDelete={() => deleteProposal(proposal.id)}
             />
           ))}
@@ -1126,7 +1133,7 @@ export function RentalDataEditor() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Base Taux</CardTitle>
-              <CardDescription>Données fixes (lecture seule)</CardDescription>
+              <CardDescription>Lecture seule — administrée par les admins (menu Base Taux)</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border max-h-96 overflow-auto">
@@ -1141,9 +1148,9 @@ export function RentalDataEditor() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {baseTauxEntries.map((row, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{row.partenaire}</TableCell>
+                    {baseTauxEntries.map((row) => (
+                      <TableRow key={row.id} className={row.isActive ? undefined : 'opacity-50'}>
+                        <TableCell>{partnerName(row.partnerId)}</TableCell>
                         <TableCell className="text-right">{row.montantMin.toLocaleString()} €</TableCell>
                         <TableCell className="text-right">{row.montantMax.toLocaleString()} €</TableCell>
                         <TableCell className="text-right">{row.dureeMois} mois</TableCell>

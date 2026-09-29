@@ -31,10 +31,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { PartnerSelect } from '@/components/partners/PartnerSelect';
 import { ServiceReferencesPanel, useServiceReferences } from '@/components/technician-tracking/ServiceReferencesPanel';
 
 
-const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Crédit Bail 1', 'Realease 2'];
 const DURATIONS = [12, 24, 36, 48, 60];
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
 
@@ -150,11 +150,6 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const hasProposalRent = !isQuick && (proposalRent?.monthly != null || proposalRent?.quarterly != null);
 
   const sortedCommerciaux = [...commerciaux].sort((a, b) => a.nom.localeCompare(b.nom));
-
-  // Tolérer les valeurs héritées : ajouter la valeur stockée si absente de la liste canonique
-  const partnerOptions = financialPartner && !FINANCIAL_PARTNERS.includes(financialPartner)
-    ? [...FINANCIAL_PARTNERS, financialPartner]
-    : FINANCIAL_PARTNERS;
 
   const commercialOptions = !commercialId || sortedCommerciaux.some((c) => c.id === commercialId)
     ? sortedCommerciaux
@@ -986,14 +981,12 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
             {!hideFinancialPartner && (
             <div className="space-y-1.5">
               <Label className="text-xs">Partenaire financier</Label>
-              <Select value={financialPartner} onValueChange={setFinancialPartner}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Sélectionner" />
-                </SelectTrigger>
-                <SelectContent>
-                  {partnerOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <PartnerSelect
+                value={financialPartner}
+                onChange={setFinancialPartner}
+                placeholder="Sélectionner"
+                triggerClassName="h-9 text-sm"
+              />
             </div>
             )}
             <div className="space-y-1.5">

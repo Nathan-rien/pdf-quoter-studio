@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRentalProposalStore } from "@/stores/rentalProposalStore";
 import { useServiceProposalStore } from "@/stores/serviceProposalStore";
 import { useAuth } from "@/hooks/useAuth";
+import { useReferenceData } from "@/hooks/useFinancialPartners";
 import { AppSidebar, ViewType } from "@/components/layout/AppSidebar";
 import { RentalProposalDashboard } from "@/components/dashboard/RentalProposalDashboard";
 import { HistoryView } from "@/components/history/HistoryView";
@@ -33,6 +34,10 @@ export default function Index() {
   const [planningPrefill, setPlanningPrefill] = useState<PlanningPrefill | null>(null);
   const { isAdmin, isCommercial, isTechnicien, userRole, signOut } = useAuth();
   const canAccessAdmin = userRole === 'admin';
+
+  // Charge partenaires + base taux (Supabase) dès l'entrée dans l'app : alimente le cache
+  // synchrone lu par les calculs (coefficient, frais de dossier, condition de fin de contrat).
+  useReferenceData();
 
   // Technicien-only users land directly on their tracking view.
   useEffect(() => {
@@ -167,7 +172,8 @@ export default function Index() {
       case 'options-admin':
         return <OptionsServicesAdmin />;
       case 'base-taux-admin':
-        return <BaseTauxAdmin />;
+        // Réservé aux admins (la RLS Supabase interdit de toute façon l'écriture aux autres).
+        return isAdmin ? <BaseTauxAdmin /> : null;
       case 'access-management':
         return <AccessManagement />;
       case 'statistics':

@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PARTENAIRES, Partenaire } from '@/data/base-taux';
+import { PartnerSelect } from '@/components/partners/PartnerSelect';
 import { useProposalCalculations } from '@/hooks/useProposalCalculations';
 import type { MatriceProposal } from '@/stores/rentalProposalStore';
 
@@ -111,19 +110,11 @@ export function ProposalCard({
             </div>
             <div className="space-y-2">
               <Label htmlFor={`refinanceur-${proposal.id}`} className="text-xs">Refinancement</Label>
-              <Select
-                value={proposal.refinanceur ?? ''}
-                onValueChange={(value) => onUpdate({ refinanceur: value as Partenaire })}
-              >
-                <SelectTrigger id={`refinanceur-${proposal.id}`}>
-                  <SelectValue placeholder="Sélectionner..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {PARTENAIRES.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PartnerSelect
+                id={`refinanceur-${proposal.id}`}
+                value={proposal.refinanceur}
+                onChange={(value) => onUpdate({ refinanceur: value })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor={`marge-${proposal.id}`} className="text-xs">Marge appliquée (%)</Label>

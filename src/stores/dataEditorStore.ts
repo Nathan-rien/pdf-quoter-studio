@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { 
   InvestRow, 
   DevisRow, 
-  BaseTauxRow, 
   OptionsServiceRow,
   ValidationError 
 } from '@/types/quote';
@@ -40,7 +39,7 @@ export interface FicheContratData {
   facturationLoyerIntermediaire: number | null;
 }
 
-export type SheetName = 'matrice' | 'ficheContrat' | 'invest' | 'devis' | 'optionsServices' | 'baseTaux';
+export type SheetName = 'matrice' | 'ficheContrat' | 'invest' | 'devis' | 'optionsServices';
 
 // === Import Status ===
 export interface ImportStatus {
@@ -58,7 +57,6 @@ interface DataEditorState {
   investData: InvestRow[];
   devisData: DevisRow[];
   optionsServicesData: OptionsServiceRow[];
-  baseTauxData: BaseTauxRow[];
   
   // Editor state
   activeSheet: SheetName;
@@ -79,7 +77,6 @@ interface DataEditorActions {
   // Cell updates
   updateInvestCell: (rowIndex: number, column: keyof InvestRow, value: unknown) => void;
   updateDevisCell: (rowIndex: number, column: keyof DevisRow, value: unknown) => void;
-  updateBaseTauxCell: (rowIndex: number, column: keyof BaseTauxRow, value: unknown) => void;
   updateOptionsServiceCell: (rowIndex: number, column: keyof OptionsServiceRow, value: unknown) => void;
   updateFicheContratField: (field: keyof FicheContratData, value: unknown) => void;
   
@@ -88,8 +85,6 @@ interface DataEditorActions {
   deleteInvestRow: (rowIndex: number) => void;
   addDevisRow: () => void;
   deleteDevisRow: (rowIndex: number) => void;
-  addBaseTauxRow: () => void;
-  deleteBaseTauxRow: (rowIndex: number) => void;
   addOptionsServiceRow: () => void;
   deleteOptionsServiceRow: (rowIndex: number) => void;
   addOptionsServiceFromAdmin: (title: string, services: string[], price?: number) => void;
@@ -150,7 +145,6 @@ const initialState: DataEditorState = {
   investData: [],
   devisData: [],
   optionsServicesData: [],
-  baseTauxData: [],
   activeSheet: 'invest',
   hasUnsavedChanges: false,
   validationErrors: {
@@ -159,7 +153,6 @@ const initialState: DataEditorState = {
     invest: [],
     devis: [],
     optionsServices: [],
-    baseTaux: [],
   },
   modifiedSheets: new Set(),
   importStatus: initialImportStatus,
@@ -266,46 +259,6 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
     });
   },
 
-  // === BASE TAUX SHEET OPERATIONS ===
-  updateBaseTauxCell: (rowIndex, column, value) => {
-    const { baseTauxData, modifiedSheets } = get();
-    const newData = [...baseTauxData];
-    
-    if (newData[rowIndex]) {
-      newData[rowIndex] = { ...newData[rowIndex], [column]: value };
-      modifiedSheets.add('baseTaux');
-      set({ baseTauxData: newData, hasUnsavedChanges: true, modifiedSheets: new Set(modifiedSheets) });
-    }
-  },
-
-  addBaseTauxRow: () => {
-    const { baseTauxData, modifiedSheets } = get();
-    const newRow: BaseTauxRow = {
-      partenaire: '',
-      montantMin: 0,
-      montantMax: null,
-      dureeLocation: 0,
-      taux: 0,
-    };
-    modifiedSheets.add('baseTaux');
-    set({ 
-      baseTauxData: [...baseTauxData, newRow], 
-      hasUnsavedChanges: true,
-      modifiedSheets: new Set(modifiedSheets)
-    });
-  },
-
-  deleteBaseTauxRow: (rowIndex) => {
-    const { baseTauxData, modifiedSheets } = get();
-    const newData = baseTauxData.filter((_, idx) => idx !== rowIndex);
-    modifiedSheets.add('baseTaux');
-    set({ 
-      baseTauxData: newData, 
-      hasUnsavedChanges: true,
-      modifiedSheets: new Set(modifiedSheets)
-    });
-  },
-
   // === OPTIONS SERVICES SHEET OPERATIONS ===
   updateOptionsServiceCell: (rowIndex, column, value) => {
     const { optionsServicesData, modifiedSheets } = get();
@@ -402,27 +355,6 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
         });
         break;
 
-      case 'baseTaux':
-        state.baseTauxData.forEach((row, idx) => {
-          if (!row.partenaire || row.partenaire.trim() === '') {
-            errors.push({
-              rowIndex: idx,
-              column: 'Partenaire',
-              message: 'Partenaire est obligatoire',
-              severity: 'error',
-            });
-          }
-          if (row.dureeLocation <= 0) {
-            errors.push({
-              rowIndex: idx,
-              column: 'Durée Location',
-              message: 'Durée doit être positive',
-              severity: 'error',
-            });
-          }
-        });
-        break;
-
       case 'ficheContrat':
         if (!state.ficheContratData.client) {
           errors.push({
@@ -446,7 +378,7 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
   },
 
   validateAllSheets: () => {
-    const sheets: SheetName[] = ['matrice', 'ficheContrat', 'invest', 'devis', 'optionsServices', 'baseTaux'];
+    const sheets: SheetName[] = ['matrice', 'ficheContrat', 'invest', 'devis', 'optionsServices'];
     let allValid = true;
 
     sheets.forEach(sheet => {
@@ -475,8 +407,6 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
         return state.investData.length > 0;
       case 'devis':
         return state.devisData.length > 0;
-      case 'baseTaux':
-        return state.baseTauxData.length > 0;
       case 'optionsServices':
         return state.optionsServicesData.length > 0;
       case 'ficheContrat':
@@ -499,9 +429,6 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
         break;
       case 'devis':
         set({ devisData: [] });
-        break;
-      case 'baseTaux':
-        set({ baseTauxData: [] });
         break;
       case 'optionsServices':
         set({ optionsServicesData: [] });
@@ -531,9 +458,8 @@ export const useDataEditorStore = create<DataEditorState & DataEditorActions>((s
       investData: data.invest,
       devisData: data.devis,
       optionsServicesData: data.optionsServices,
-      baseTauxData: data.baseTaux,
       hasUnsavedChanges: true,
-      modifiedSheets: new Set(['matrice', 'ficheContrat', 'invest', 'devis', 'optionsServices', 'baseTaux']),
+      modifiedSheets: new Set(['matrice', 'ficheContrat', 'invest', 'devis', 'optionsServices']),
       importStatus: {
         isImported: true,
         fileName,

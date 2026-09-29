@@ -1,31 +1,22 @@
 // Fonctions de calcul pour le workflow Proposition
 // Basées sur les formules Excel de Matrice_Location
 
-import { getBaseTauxRuntime } from '@/stores/baseTauxStore';
+import { getBaseTauxCache, getPartnersCache } from '@/lib/partners-cache';
+import { lookupCoefficientIn } from '@/lib/partners';
 import { getFraisDossier } from '@/data/frais-dossier';
 
 /**
- * Lookup du coefficient dans la table Base Taux
- * La durée dans Base Taux est maintenant en MOIS (comparaison directe)
+ * Lookup du coefficient dans la base taux (Supabase, via le cache react-query).
+ * Le partenaire est résolu par nom ou alias ; les partenaires inactifs restent résolus
+ * pour que les propositions existantes conservent leur coefficient.
+ * La durée est en MOIS (comparaison directe).
  */
 export function lookupCoefficient(
   partenaire: string | null,
   montant: number | null,
   dureeMois: number | null
 ): number | null {
-  if (!partenaire || montant === null || dureeMois === null) {
-    return null;
-  }
-
-  // Chercher la ligne correspondante dans Base Taux (comparaison directe en mois)
-  const match = getBaseTauxRuntime().find(row =>
-    row.partenaire === partenaire &&
-    row.montantMin <= montant &&
-    row.montantMax >= montant &&
-    row.dureeMois === dureeMois
-  );
-
-  return match?.taux ?? null;
+  return lookupCoefficientIn(getPartnersCache(), getBaseTauxCache(), partenaire, montant, dureeMois);
 }
 
 /**

@@ -11,6 +11,8 @@ import { useContracts, isContractRenewingSoon, Contract, useCreateQuickContract 
 import { ContractRow } from './ContractRow';
 import { ContractRenewalAlert } from './ContractRenewalAlert';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
+import { useFinancialPartners } from '@/hooks/useFinancialPartners';
+import { canonicalPartnerName } from '@/lib/partners';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -106,11 +108,14 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortMode, setSortMode] = useState<string>('recent');
 
+  const { data: allPartners = [] } = useFinancialPartners({ includeInactive: true });
+
   const partnerOptions = useMemo(() => {
+    // Regroupement à l'affichage via les alias (contracts.financial_partner n'est pas modifié)
     const s = new Set<string>();
-    contracts.forEach((c) => { if (c.financial_partner) s.add(c.financial_partner); });
+    contracts.forEach((c) => { if (c.financial_partner) s.add(canonicalPartnerName(allPartners, c.financial_partner)); });
     return Array.from(s).sort();
-  }, [contracts]);
+  }, [contracts, allPartners]);
 
   const commercialOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -133,7 +138,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
     const arr = contracts.filter((c) => {
       const closed = !!c.closed_at;
       if (isArchivedMode ? !closed : closed) return false;
-      if (partnerFilter !== 'all' && c.financial_partner !== partnerFilter) return false;
+      if (partnerFilter !== 'all' && canonicalPartnerName(allPartners, c.financial_partner) !== partnerFilter) return false;
       if (commercialFilter !== 'all' && c.commercial_id !== commercialFilter) return false;
       if (entityFilter !== 'all') {
         const entity = getCommercialById(c.commercial_id)?.entity;
@@ -165,7 +170,7 @@ export function ContractsView({ onCreateManual }: { onCreateManual?: () => void 
       });
     }
     return arr;
-  }, [contracts, entityFilter, partnerFilter, commercialFilter, searchQuery, sortMode, isArchivedMode, getCommercialById]);
+  }, [contracts, entityFilter, partnerFilter, commercialFilter, searchQuery, sortMode, isArchivedMode, getCommercialById, allPartners]);
 
   const activeContractsCount = useMemo(() => contracts.filter((c) => !c.closed_at).length, [contracts]);
   const hasActiveFilter = entityFilter !== 'all' || partnerFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';

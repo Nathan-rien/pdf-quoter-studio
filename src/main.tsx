@@ -70,6 +70,14 @@ const validateCache = () => {
 
 validateCache();
 
+// L'ancienne base taux était dupliquée par utilisateur dans le localStorage (zustand persist).
+// Source unique désormais : Supabase. On purge cette copie obsolète.
+try {
+  localStorage.removeItem("base-taux-runtime");
+} catch {
+  /* localStorage indisponible : rien à purger */
+}
+
 const rootEl = document.getElementById("root")!;
 // Renforce la protection anti-traduction sur le conteneur React lui-même.
 rootEl.setAttribute("translate", "no");
