@@ -45,6 +45,12 @@ export default function Auth() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
+    // Le lien de réinitialisation arrive avec #access_token=...&type=recovery :
+    // l'événement PASSWORD_RECOVERY peut avoir été émis avant le montage du
+    // composant, donc on vérifie aussi le hash de l'URL directement.
+    if (window.location.hash.includes('type=recovery')) {
+      setIsRecovery(true);
+    }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecovery(true);
