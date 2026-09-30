@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceReferencesPanel, useServiceReferences } from '@/components/technician-tracking/ServiceReferencesPanel';
+import { useClients, useLinkContractToClient } from '@/hooks/useClients';
 
 
 const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Crédit Bail 1', 'Realease 2'];
@@ -72,6 +73,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const { isAdmin, isTechnicien } = useAuth();
   const canEditContract = isAdmin;
   const { data: allServiceRefs } = useServiceReferences();
+  const { data: clients = [] } = useClients();
+  const linkContractToClient = useLinkContractToClient();
   const serviceRefs = useMemo(
     () => (allServiceRefs ?? []).filter((r) => r.contract_id === contract.id),
     [allServiceRefs, contract.id],
@@ -937,6 +940,23 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 <SelectContent>
                   {commercialOptions.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Client HubSpot lié</Label>
+              <Select
+                value={contract.client_id ?? 'none'}
+                onValueChange={(value) => linkContractToClient.mutate({ contractId: contract.id, clientId: value === 'none' ? null : value })}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Aucun" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun</SelectItem>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nom || c.societe || c.email || c.id}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
