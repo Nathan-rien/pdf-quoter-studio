@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { differenceInMonths, addMonths, parseISO } from 'date-fns';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
 import { generateServiceContractNumber } from '@/lib/contract-numbering';
+import { getProchaineFacturation, ProchaineFacturation } from '@/lib/billing-schedule';
 
 export type PaymentFrequency = 'mensuel' | 'trimestriel';
 export type ProposalType = 'location' | 'service';
@@ -41,6 +42,9 @@ export interface Contract {
   closed_at?: string | null;
   attachment_url?: string | null;
   attachment_name?: string | null;
+  jour_facturation_override?: number | null;
+  derniere_facturation_le?: string | null;
+  client_id?: string | null;
   validated_at: string;
   created_at: string;
   updated_at: string;
@@ -65,6 +69,28 @@ export function getMonthsUntilRenewal(contract: Contract): number | null {
     const endDate = addMonths(start, contract.duration_months);
     return differenceInMonths(endDate, new Date());
   } catch { return null; }
+}
+
+export function getContractProchaineFacturation(contract: Contract): ProchaineFacturation {
+  if (!contract.implementation_month) return { date: null, enRetard: false };
+  try {
+    const dateMiseEnPlace = parseISO(contract.implementation_month);
+    const dateFin = contract.duration_months
+      ? addMonths(dateMiseEnPlace, contract.duration_months)
+      : null;
+    const derniereFacturationLe = contract.derniere_facturation_le
+      ? parseISO(contract.derniere_facturation_le)
+      : null;
+    return getProchaineFacturation(
+      dateMiseEnPlace,
+      contract.payment_frequency ?? 'mensuel',
+      contract.jour_facturation_override ?? null,
+      dateFin,
+      derniereFacturationLe,
+    );
+  } catch {
+    return { date: null, enRetard: false };
+  }
 }
 
 export function useContracts(proposalType: ProposalType = 'location') {
@@ -114,7 +140,7 @@ export function useUpdateContract() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'client_name' | 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'erp_reference' | 'monthly_rent_ht' | 'quarterly_rent_ht' | 'cession_percent' | 'external_providers' | 'attachment_url' | 'attachment_name' | 'closed_at'>> }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Contract, 'client_name' | 'implementation_month' | 'financial_partner' | 'duration_months' | 'payment_frequency' | 'commercial_id' | 'commercial_name' | 'contract_number' | 'erp_reference' | 'monthly_rent_ht' | 'quarterly_rent_ht' | 'cession_percent' | 'external_providers' | 'attachment_url' | 'attachment_name' | 'closed_at' | 'jour_facturation_override' | 'derniere_facturation_le' | 'client_id'>> }) => {
       const { data, error } = await supabase.from('contracts').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as Contract;

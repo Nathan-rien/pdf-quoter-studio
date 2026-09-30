@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useContracts, isContractRenewingSoon, Contract, useCreateQuickContract } from '@/hooks/useContracts';
+import { useContracts, isContractRenewingSoon, getContractProchaineFacturation, Contract, useCreateQuickContract } from '@/hooks/useContracts';
 import { ContractRow } from '@/components/contracts/ContractRow';
 import { ContractRenewalAlert } from '@/components/contracts/ContractRenewalAlert';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
@@ -147,6 +147,15 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
         if (eb == null) return -1;
         return (ea - eb) * dir;
       });
+    } else if (sortMode === 'prochaine-facture') {
+      arr.sort((a, b) => {
+        const fa = getContractProchaineFacturation(a).date?.getTime() ?? null;
+        const fb = getContractProchaineFacturation(b).date?.getTime() ?? null;
+        if (fa == null && fb == null) return 0;
+        if (fa == null) return 1;
+        if (fb == null) return -1;
+        return fa - fb;
+      });
     } else if (sortMode === 'archived') {
       arr.sort((a, b) => new Date(b.closed_at ?? 0).getTime() - new Date(a.closed_at ?? 0).getTime());
     } else if (sortMode === 'recent') {
@@ -161,7 +170,7 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
 
   const activeContractsCount = useMemo(() => contracts.filter((c) => !c.closed_at).length, [contracts]);
   const hasActiveFilter = entityFilter !== 'all' || commercialFilter !== 'all' || searchQuery.trim() !== '' || sortMode !== 'recent';
-  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc' || isArchivedMode;
+  const isFlatList = sortMode === 'recent' || sortMode === 'echeance-asc' || sortMode === 'echeance-desc' || sortMode === 'prochaine-facture' || isArchivedMode;
   const groups = isFlatList ? [] : groupByCommercial(filteredContracts);
   const totalRenewing = isArchivedMode ? 0 : filteredContracts.filter(isContractRenewingSoon).length;
 
@@ -256,6 +265,7 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
                   <SelectItem value="recent">Plus récents</SelectItem>
                   <SelectItem value="echeance-asc">Échéance (croissante)</SelectItem>
                   <SelectItem value="echeance-desc">Échéance (décroissante)</SelectItem>
+                  <SelectItem value="prochaine-facture">Prochaine facturation</SelectItem>
                   <SelectItem value="archived">Contrats archivés</SelectItem>
                 </SelectContent>
               </Select>
