@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FileText, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,33 @@ export default function Auth() {
   const { user, isLoading: authLoading, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) return;
+    setIsSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setIsSendingReset(false);
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: 'Email envoyé',
+        description: 'Un lien de réinitialisation a été envoyé à cette adresse',
+      });
+      setShowReset(false);
+      setResetEmail('');
+    }
+  };
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -170,6 +198,49 @@ export default function Auth() {
                       'Se connecter'
                     )}
                   </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                      onClick={() => setShowReset(true)}
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  </div>
+                  {showReset && (
+                    <form onSubmit={handleResetPassword} className="space-y-3 rounded-md border border-border p-3">
+                      <p className="text-sm text-muted-foreground">
+                        Saisissez votre email pour recevoir un lien de réinitialisation.
+                      </p>
+                      <Input
+                        type="email"
+                        placeholder="votre@email.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        required
+                      />
+                      <div className="flex gap-2">
+                        <Button type="submit" size="sm" disabled={isSendingReset}>
+                          {isSendingReset ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Envoi...
+                            </>
+                          ) : (
+                            'Envoyer le lien'
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowReset(false)}
+                        >
+                          Annuler
+                        </Button>
+                      </div>
+                    </form>
+                  )}
                 </form>
               </Form>
             </TabsContent>
