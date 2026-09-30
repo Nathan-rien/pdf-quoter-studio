@@ -12,6 +12,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Redirige vers /auth quand un lien de réinitialisation de mot de passe
+// (#...type=recovery) arrive sur une autre page, en conservant le hash.
+const RecoveryRedirect = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.hash.includes('type=recovery') && location.pathname !== '/auth') {
+      navigate({ pathname: '/auth', hash: location.hash }, { replace: true });
+    }
+  }, [location, navigate]);
+
+  return null;
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
