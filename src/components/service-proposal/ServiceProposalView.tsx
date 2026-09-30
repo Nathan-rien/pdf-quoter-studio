@@ -310,6 +310,9 @@ function ProposalFormShell({
   initialTab?: string;
 }) {
   const [activeTab, setActiveTab] = useState(initialTab ?? 'client');
+  // Shared between the aperçu (toggle Devis/Contrat) et l'export : le PDF téléchargé
+  // doit toujours correspondre au document actuellement affiché dans l'aperçu.
+  const [documentMode, setDocumentMode] = useState<'devis' | 'contrat'>('devis');
   const selectedRentalTemplateId = useRentalProposalStore((s) => s.selectedTemplateId);
   const allTemplates = useTemplateEditorStore((s) => s.allTemplates);
   const getTemplatePublishedVersion = useTemplateEditorStore((s) => s.getTemplatePublishedVersion);
@@ -392,10 +395,10 @@ function ProposalFormShell({
           <TemplateSelector viewScope="services" />
         </TabsContent>
         <TabsContent value="preview-export" className="space-y-8">
-          <ServiceProposalPreview />
+          <ServiceProposalPreview mode={documentMode} onModeChange={setDocumentMode} />
 
           <Separator />
-          <ServiceProposalExport />
+          <ServiceProposalExport mode={documentMode} />
         </TabsContent>
       </Tabs>
 

@@ -38,9 +38,15 @@ import { buildHtmlDataFromStore } from '@/lib/service-proposal-data-builder';
 import { htmlToPdfBlob } from '@/lib/html-to-pdf';
 import { resolveServiceTemplate } from '@/lib/service-template-selection';
 
-export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
+export function ServiceProposalExport({ mode }: { mode: 'devis' | 'contrat' }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
+
+  // "Généré avec succès" est spécifique au document (devis ou contrat) : ne pas
+  // laisser croire que l'autre document a déjà été téléchargé après un changement.
+  useEffect(() => {
+    setIsGenerated(false);
+  }, [mode]);
 
   const { isLoadingVersion, loadVersionPages } = useTemplateSync();
 
@@ -111,7 +117,8 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
       .replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '')
       .replace(/\s+/g, '_');
     const date = new Date().toISOString().split('T')[0];
-    return `Proposition_Services_${safe}_${date}.pdf`;
+    const prefix = mode === 'contrat' ? 'Contrat_Services' : 'Devis_Services';
+    return `${prefix}_${safe}_${date}.pdf`;
   };
 
   // --- Sauvegarde dans proposal_exports ---
@@ -131,6 +138,7 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
         status === 'success'
           ? {
               kind: 'service-proposal',
+              documentMode: mode,
               clientData,
               commercialData,
               lignesData,
@@ -221,7 +229,7 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
       await saveToHistory('', 'error');
       toast({
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de la génération du PDF.',
+        description: (error as Error)?.message || 'Une erreur est survenue lors de la génération du PDF.',
         variant: 'destructive',
       });
     } finally {
@@ -306,7 +314,9 @@ export function ServiceProposalExport({ mode = 'devis' }: { mode?: 'devis' | 'co
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                {isGenerated ? 'Télécharger à nouveau' : 'Télécharger le PDF'}
+                {mode === 'contrat'
+                  ? (isGenerated ? 'Télécharger le contrat à nouveau' : 'Télécharger le contrat')
+                  : (isGenerated ? 'Télécharger le devis à nouveau' : 'Télécharger le devis')}
               </>
             )}
           </Button>

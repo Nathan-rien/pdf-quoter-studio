@@ -4,7 +4,7 @@
  * dans un iframe par page pour garantir une parité stricte avec l'export.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -21,11 +21,17 @@ import { resolveServiceTemplate } from '@/lib/service-template-selection';
 import type { TemplateVersion } from '@/types/template-editor';
 import type { DocumentScope } from '@/types/pdf-template';
 
-export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?: 'devis' | 'contrat' } = {}) {
+export function ServiceProposalPreview({
+  mode,
+  onModeChange,
+}: {
+  mode: 'devis' | 'contrat';
+  onModeChange: (mode: 'devis' | 'contrat') => void;
+}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pagesHtml, setPagesHtml] = useState<string[]>([]);
   const [rendering, setRendering] = useState(false);
-  const [mode, setMode] = useState<'devis' | 'contrat'>(initialMode);
+  const [cgOverflow, setCgOverflow] = useState(false);
 
   const store = useServiceProposalStore();
   const { clientData, lignesData, proposalName } = store;
@@ -111,6 +117,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
     const run = async () => {
       if (!pagesLoaded || !currentVersion || currentVersion.pages.length === 0) {
         setPagesHtml([]);
+        setCgOverflow(false);
         return;
       }
       setRendering(true);
@@ -147,7 +154,7 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
         document.body.appendChild(measureRoot);
 
         await waitForPreviewAssets(measureRoot);
-        fitPageContentBlocks(measureRoot);
+        const cgFits = fitPageContentBlocks(measureRoot);
 
         const sheets = Array.from(pagesWrap.querySelectorAll<HTMLElement>('.page-sheet'));
         const perPageDocs = sheets.map(
@@ -155,10 +162,16 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
             `<!DOCTYPE html><html><head>${headHtml}<style>html,body{margin:0;background:#fff;overflow:hidden;}::-webkit-scrollbar{display:none;}</style></head><body>${s.outerHTML}</body></html>`,
         );
         document.body.removeChild(measureRoot);
-        if (!cancelled) setPagesHtml(perPageDocs);
+        if (!cancelled) {
+          setPagesHtml(perPageDocs);
+          setCgOverflow(!cgFits);
+        }
       } catch (err) {
         console.error('[ServiceProposalPreview] generation error', err);
-        if (!cancelled) setPagesHtml([]);
+        if (!cancelled) {
+          setPagesHtml([]);
+          setCgOverflow(false);
+        }
       } finally {
         if (!cancelled) setRendering(false);
       }
@@ -213,14 +226,14 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
           <div className="inline-flex rounded-md border bg-background p-0.5">
             <button
               type="button"
-              onClick={() => { setMode('devis'); setCurrentPage(1); }}
+              onClick={() => { onModeChange('devis'); setCurrentPage(1); }}
               className={`px-2.5 py-1 text-[11px] rounded ${mode === 'devis' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Devis
             </button>
             <button
               type="button"
-              onClick={() => { setMode('contrat'); setCurrentPage(1); }}
+              onClick={() => { onModeChange('contrat'); setCurrentPage(1); }}
               className={`px-2.5 py-1 text-[11px] rounded ${mode === 'contrat' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Contrat
@@ -235,6 +248,16 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
         </div>
 
       </div>
+
+      {cgOverflow && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            Le texte des Conditions générales ne tient pas dans les 3 pages à la taille de police fixe.
+            Raccourcissez les articles — aucune page supplémentaire ne sera ajoutée et la police ne sera pas réduite.
+          </span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-4 py-2 bg-muted/50 rounded-lg">
         <Button
