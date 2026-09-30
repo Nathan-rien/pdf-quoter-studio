@@ -39,6 +39,57 @@ export default function Auth() {
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Mot de passe trop court',
+        description: 'Le mot de passe doit contenir au moins 6 caractères',
+      });
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Les mots de passe ne correspondent pas',
+      });
+      return;
+    }
+    setIsUpdatingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsUpdatingPassword(false);
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: 'Mot de passe modifié',
+        description: 'Votre nouveau mot de passe est enregistré',
+      });
+      setIsRecovery(false);
+      setNewPassword('');
+      setNewPasswordConfirm('');
+    }
+  };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
