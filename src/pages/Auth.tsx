@@ -39,6 +39,57 @@ export default function Auth() {
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Mot de passe trop court',
+        description: 'Le mot de passe doit contenir au moins 6 caractères',
+      });
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: 'Les mots de passe ne correspondent pas',
+      });
+      return;
+    }
+    setIsUpdatingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsUpdatingPassword(false);
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: 'Mot de passe modifié',
+        description: 'Votre nouveau mot de passe est enregistré',
+      });
+      setIsRecovery(false);
+      setNewPassword('');
+      setNewPasswordConfirm('');
+    }
+  };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,10 +134,10 @@ export default function Auth() {
   });
 
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !isRecovery) {
       navigate('/');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, isRecovery, navigate]);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsSubmitting(true);
@@ -153,6 +204,41 @@ export default function Auth() {
           <CardDescription>Générateur de propositions de location</CardDescription>
         </CardHeader>
         <CardContent>
+          {isRecovery ? (
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Choisissez votre nouveau mot de passe
+              </p>
+              <div className="space-y-2">
+                <Input
+                  type="password"
+                  placeholder="Nouveau mot de passe"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirmer le mot de passe"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isUpdatingPassword}>
+                {isUpdatingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  'Enregistrer le nouveau mot de passe'
+                )}
+              </Button>
+            </form>
+          ) : (
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Connexion</TabsTrigger>
@@ -314,6 +400,7 @@ export default function Auth() {
               </Form>
             </TabsContent>
           </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>
