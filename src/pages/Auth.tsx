@@ -36,6 +36,33 @@ export default function Auth() {
   const { user, isLoading: authLoading, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) return;
+    setIsSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setIsSendingReset(false);
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: 'Email envoyé',
+        description: 'Un lien de réinitialisation a été envoyé à cette adresse',
+      });
+      setShowReset(false);
+      setResetEmail('');
+    }
+  };
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
