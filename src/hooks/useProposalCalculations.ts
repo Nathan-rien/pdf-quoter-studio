@@ -1,18 +1,18 @@
 import { useMemo } from 'react';
 import { calculateAllMatriceValues, type CalculatedMatriceValues } from '@/lib/rental-calculations';
-import { useBaseTauxStore } from '@/stores/baseTauxStore';
+import { useReferenceData } from '@/hooks/useFinancialPartners';
 import type { MatriceProposal } from '@/stores/rentalProposalStore';
 
 /**
- * Hook réactif qui recalcule la matrice dès qu'une entrée Base Taux change.
- * Utilise un abonnement explicite à useBaseTauxStore pour forcer la re-render
- * (les fonctions de calcul lisent ensuite via getBaseTauxRuntime()).
+ * Hook réactif qui recalcule la matrice dès que les partenaires / la base taux changent.
+ * L'abonnement à useReferenceData force la re-render une fois les données Supabase chargées
+ * (les fonctions de calcul lisent ensuite le cache synchrone alimenté par ces requêtes).
  */
 export function useProposalCalculations(
   proposal: MatriceProposal,
   optionsPrices: (number | null)[]
 ): CalculatedMatriceValues {
-  const baseTauxEntries = useBaseTauxStore((s) => s.entries);
+  const { partners, baseTaux } = useReferenceData();
 
   return useMemo(
     () =>
@@ -31,7 +31,8 @@ export function useProposalCalculations(
       proposal.margeAppliquee,
       proposal.coefficientOverride,
       optionsPrices,
-      baseTauxEntries,
+      partners,
+      baseTaux,
     ]
   );
 }

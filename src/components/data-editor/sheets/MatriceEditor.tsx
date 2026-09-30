@@ -3,15 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PartnerSelect } from "@/components/partners/PartnerSelect";
 import { Info, Calculator, Euro, Calendar, Building2, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 // Structure exacte de l'onglet "Matrice" du fichier Excel
 export function MatriceEditor() {
-  const { ficheContratData, updateFicheContratField, baseTauxData } = useDataEditorStore();
-
-  // Get unique refinanceurs from Base Taux
-  const refinanceurs = [...new Set(baseTauxData.map(r => r.partenaire))].filter(Boolean);
+  const { ficheContratData, updateFicheContratField } = useDataEditorStore();
 
   // Calculs automatiques (lecture seule - affichés pour vérification)
   const duree = ficheContratData.dureeLocation || 36;
@@ -167,23 +165,12 @@ export function MatriceEditor() {
 
           <div className="space-y-2">
             <Label htmlFor="refi">Refinanceur</Label>
-            <Select
-              value={ficheContratData.partenaire || ''}
-              onValueChange={(value) => updateFicheContratField('partenaire', value || null)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un refinanceur" />
-              </SelectTrigger>
-              <SelectContent>
-                {refinanceurs.length > 0 ? (
-                  refinanceurs.map((refi) => (
-                    <SelectItem key={refi} value={refi}>{refi}</SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="lixxbail">Lixxbail 1</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <PartnerSelect
+              id="refi"
+              value={ficheContratData.partenaire}
+              onChange={(value) => updateFicheContratField('partenaire', value || null)}
+              placeholder="Sélectionner un refinanceur"
+            />
           </div>
 
           <div className="space-y-2">

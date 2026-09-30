@@ -72,15 +72,6 @@ export interface InvestData {
   validationErrors: ValidationError[];
 }
 
-// === Structure "Base Taux" ===
-export interface BaseTauxRow {
-  partenaire: string;             // Non null requis
-  montantMin: number;             // Non null requis
-  montantMax: number | null;      // Nullable (si pas de max)
-  dureeLocation: number;          // Entier, non null
-  taux: number;                   // Décimal, non null
-}
-
 // === Structure "Devis" (ligne 22+) ===
 export interface DevisRow {
   ref: string | null;                    // Colonne B

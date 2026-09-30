@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { PDFParseResult, PDFProductLine } from '@/lib/pdf-import-parser';
 import { calculateAllMatriceValues } from '@/lib/rental-calculations';
-import { PARTENAIRES, Partenaire } from '@/data/base-taux';
+import { resolvePartner } from '@/lib/partners';
+import { getPartnersCache } from '@/lib/partners-cache';
 import { CommercialEntity, Commercial, COMMERCIAUX, getCommercialById } from '@/data/commerciaux';
 import { getCommercialByIdRuntime } from '@/lib/commercials-runtime';
 
@@ -36,7 +37,7 @@ export interface MatriceProposal {
   id: string;
   montantInvestissement: number | null;
   duree: number | null;
-  refinanceur: Partenaire | null;
+  refinanceur: string | null;
   margeAppliquee: number;
   coefficientOverride: number | null; // null = utiliser la valeur auto
 }
@@ -61,7 +62,7 @@ interface MatriceData {
   
   // Legacy fields (kept for backward compatibility, will be migrated to proposals[0])
   duree: number | null;
-  refinanceur: Partenaire | null;
+  refinanceur: string | null;
   margeAppliquee: number;
 }
 
@@ -222,7 +223,7 @@ interface RentalProposalActions {
   
   // NEW: Proposals CRUD
   addProposal: () => void;
-  duplicateProposal: (id: string) => void;
+  duplicateProposal: (id: string) => { clearedInactivePartner: boolean };
   updateProposal: (id: string, updates: Partial<MatriceProposal>) => void;
   deleteProposal: (id: string) => void;
   getProposalCalculations: (id: string) => ReturnType<typeof calculateAllMatriceValues> | null;
@@ -319,7 +320,7 @@ const initialMatriceData: MatriceData = {
   commentaire: '',
   // Legacy fields
   duree: 36,
-  refinanceur: 'Lixxbail 1',
+  refinanceur: null,
   margeAppliquee: 6,
 };
 
@@ -331,7 +332,7 @@ const createDefaultProposal = (): MatriceProposal => ({
   id: generateProposalId(),
   montantInvestissement: null,
   duree: 36,
-  refinanceur: 'Lixxbail 1',
+  refinanceur: null,
   margeAppliquee: 6,
   coefficientOverride: null,
 });
@@ -430,7 +431,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             id: generateProposalId(),
             montantInvestissement,
             duree: result.location.duree ?? 36,
-            refinanceur: 'Lixxbail 1',
+            refinanceur: null,
             margeAppliquee: 6,
             coefficientOverride: null,
           }],
@@ -476,14 +477,21 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
       },
 
       duplicateProposal: (id) => {
+        let clearedInactivePartner = false;
         set(state => {
           if (state.proposals.length >= 4) return state; // Max 4 proposals
           const original = state.proposals.find(p => p.id === id);
           if (!original) return state;
-          
+
+          // Un partenaire désactivé n'est pas proposé pour une nouvelle proposition :
+          // la copie repart sans refinanceur (l'original est inchangé).
+          const partner = resolvePartner(getPartnersCache(), original.refinanceur);
+          clearedInactivePartner = !!partner && !partner.isActive;
+
           const duplicate: MatriceProposal = {
             ...original,
             id: generateProposalId(),
+            refinanceur: clearedInactivePartner ? null : original.refinanceur,
           };
           
           // Insert duplicate right after the original
@@ -496,6 +504,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             hasUnsavedChanges: true,
           };
         });
+        return { clearedInactivePartner };
       },
 
       updateProposal: (id, updates) => {
@@ -1192,7 +1201,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
                 montantInvestissement: state.matriceData?.montantInvestissement ?? null,
                 coefficientOverride: null,
                 duree: state.matriceData?.duree ?? 36,
-                refinanceur: state.matriceData?.refinanceur ?? 'Lixxbail 1',
+                refinanceur: state.matriceData?.refinanceur ?? null,
                 margeAppliquee: state.matriceData?.margeAppliquee ?? 6,
               }];
             } else {
@@ -1243,6 +1252,3 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
   )
 );
 
-// Export partenaires for use in components
-export { PARTENAIRES };
-export type { Partenaire };

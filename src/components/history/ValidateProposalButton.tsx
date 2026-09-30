@@ -17,6 +17,7 @@ import { useValidateProposal, ProposalType, ContractExternalProvider } from '@/h
 import { supabase } from '@/integrations/supabase/client';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { seedClientServiceReferences } from '@/lib/technician-tracking';
+import { useToast } from '@/hooks/use-toast';
 
 interface ValidateProposalButtonProps {
   proposalId: string;
@@ -49,6 +50,7 @@ export function ValidateProposalButton({
   const [isFinalizingContract, setIsFinalizingContract] = useState(false);
   const validateProposal = useValidateProposal();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   async function handleConfirm() {
     // For Service proposals, pull duration / start date / periodicity from the
@@ -140,6 +142,13 @@ export function ValidateProposalButton({
           await queryClient.invalidateQueries({ queryKey: ['contracts'] });
         } catch (err) {
           console.error('[ValidateProposalButton] génération contrat automatique échouée', err);
+          toast({
+            title: 'Contrat créé, mais PDF non généré',
+            description:
+              `${(err as Error)?.message || 'Une erreur est survenue lors de la génération du PDF.'} ` +
+              'Corrigez la proposition puis régénérez le PDF depuis Contrats Services.',
+            variant: 'destructive',
+          });
         }
       }
 

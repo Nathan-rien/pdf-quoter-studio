@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/ui/loading-state';
 import { useRentalProposalStore } from '@/stores/rentalProposalStore';
 import { useTemplateEditorStore } from '@/stores/templateEditorStore';
-import { useBaseTauxStore } from '@/stores/baseTauxStore';
+import { useReferenceData } from '@/hooks/useFinancialPartners';
 import { useCommerciaux } from '@/hooks/useCommerciaux';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { cn } from '@/lib/utils';
@@ -81,9 +81,9 @@ export function RentalProposalPreview() {
     resetClientLogoOverride,
   } = useRentalProposalStore();
 
-  // Abonnement réactif au store Base Taux : toute modification de taux force
+  // Abonnement réactif aux partenaires / base taux (Supabase) : tout changement force
   // une re-render → getCalculatedValues / getAllProposalsCalculations relisent les valeurs à jour.
-  useBaseTauxStore((s) => s.entries);
+  useReferenceData();
 
   // Synchronise les overrides commerciaux (téléphones DB) avec le store
   useCommerciaux();

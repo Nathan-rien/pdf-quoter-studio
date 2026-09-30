@@ -2,7 +2,6 @@ import * as XLSX from 'xlsx';
 import { 
   InvestRow, 
   DevisRow, 
-  BaseTauxRow, 
   OptionsServiceRow,
   REQUIRED_EXCEL_SHEETS,
   RequiredExcelSheet
@@ -16,6 +15,8 @@ const SHEET_NAME_MAP: Record<string, string> = {
   'invest ': 'invest',           // ESPACE FINAL
   'Devis': 'devis',
   'Options services ': 'optionsServices', // ESPACE FINAL
+  // L'onglet 'Base Taux' reste exigé dans le fichier mais n'est plus importé :
+  // la base taux est administrée en base (menu Base Taux, réservé aux admins).
   'Base Taux': 'baseTaux',
 };
 
@@ -26,7 +27,6 @@ export interface ParsedExcelData {
   invest: InvestRow[];
   devis: DevisRow[];
   optionsServices: OptionsServiceRow[];
-  baseTaux: BaseTauxRow[];
 }
 
 export interface ExcelParseError {
@@ -148,46 +148,6 @@ function parseDevisSheet(sheet: XLSX.WorkSheet): { rows: DevisRow[]; errors: Exc
       prixVente: extractNumber(getCell(sheet, 'M', r)),
       marge: extractNumber(getCell(sheet, 'N', r)),
       refFournisseur: extractString(getCell(sheet, 'O', r)),
-    });
-  }
-  
-  return { rows, errors };
-}
-
-function parseBaseTauxSheet(sheet: XLSX.WorkSheet): { rows: BaseTauxRow[]; errors: ExcelParseError[] } {
-  const rows: BaseTauxRow[] = [];
-  const errors: ExcelParseError[] = [];
-  
-  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
-  
-  // Chercher l'en-tête avec "Partenaire"
-  let headerRow = -1;
-  for (let r = range.s.r; r <= Math.min(range.e.r, 10); r++) {
-    const cellValue = extractString(getCell(sheet, 'A', r + 1));
-    if (cellValue && cellValue.toLowerCase().includes('partenaire')) {
-      headerRow = r + 1;
-      break;
-    }
-  }
-  
-  if (headerRow === -1) {
-    // Essayer de parser depuis la ligne 1 si pas d'en-tête
-    headerRow = 1;
-  }
-  
-  // Parser les données
-  for (let r = headerRow + 1; r <= range.e.r + 1; r++) {
-    const partenaire = extractString(getCell(sheet, 'A', r));
-    
-    // Ignorer les lignes sans partenaire
-    if (!partenaire || partenaire.trim() === '') continue;
-    
-    rows.push({
-      partenaire: partenaire.trim(),
-      montantMin: extractNumber(getCell(sheet, 'B', r)) ?? 0,
-      montantMax: extractNumber(getCell(sheet, 'C', r)),
-      dureeLocation: extractNumber(getCell(sheet, 'D', r)) ?? 0,
-      taux: extractNumber(getCell(sheet, 'E', r)) ?? 0,
     });
   }
   
@@ -422,7 +382,6 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
       invest: [],
       devis: [],
       optionsServices: [],
-      baseTaux: [],
     };
     
     // Helper pour trouver l'onglet (avec ou sans espace final)
@@ -476,14 +435,6 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
     if (optionsSheet) {
       const result = parseOptionsServicesSheet(optionsSheet);
       data.optionsServices = result.rows;
-      errors.push(...result.errors);
-    }
-    
-    // Parser Base Taux
-    const baseTauxSheet = findSheet('Base Taux');
-    if (baseTauxSheet) {
-      const result = parseBaseTauxSheet(baseTauxSheet);
-      data.baseTaux = result.rows;
       errors.push(...result.errors);
     }
     

@@ -6,21 +6,15 @@
  */
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { fitPageContentBlocks } from '@/lib/service-proposal-html-generator';
+import { fitPageContentBlocks, waitForPdfFonts } from '@/lib/service-proposal-html-generator';
 
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
 
 async function waitForAssets(root: HTMLElement, timeoutMs = 6000): Promise<void> {
-  try {
-    const fontsReady = (document as any).fonts?.ready;
-    if (fontsReady) {
-      await Promise.race([fontsReady, new Promise((r) => setTimeout(r, timeoutMs))]);
-    }
-  } catch {
-    /* ignore */
-  }
+  // Fonts must be loaded before any measurement (layoutCgPages / fitPageContentBlocks).
+  await waitForPdfFonts(timeoutMs);
   const images = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
   await Promise.all(
     images.map(
@@ -69,7 +63,14 @@ export async function htmlToPdfBlob(htmlContent: string): Promise<Blob> {
 
   try {
     await waitForAssets(container);
-    fitPageContentBlocks(container);
+    const cgFits = fitPageContentBlocks(container);
+    if (!cgFits) {
+      throw new Error(
+        "Le texte des Conditions générales ne tient pas dans les pages prévues à la taille de police fixe (8,5 pt minimum), " +
+          "même après avoir déplacé les signatures sur une page dédiée. Raccourcissez les articles avant d'exporter le PDF " +
+          '(voir la console pour le détail).',
+      );
+    }
 
     const sheets = Array.from(pagesWrap.querySelectorAll<HTMLElement>('.page-sheet'));
 
