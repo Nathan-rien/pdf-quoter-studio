@@ -134,10 +134,10 @@ export default function Auth() {
   });
 
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !isRecovery) {
       navigate('/');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, isRecovery, navigate]);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsSubmitting(true);
