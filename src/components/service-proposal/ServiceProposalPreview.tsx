@@ -14,7 +14,7 @@ import { useTemplateEditorStore } from '@/stores/templateEditorStore';
 import { useOptionsAdminStore } from '@/stores/optionsAdminStore';
 import { useTemplateSync } from '@/hooks/useTemplateSync';
 import { CANVAS_DISPLAY_MAX_WIDTH } from '@/lib/canvas-constants';
-import { generateServiceProposalHtml, fitPageContentBlocks } from '@/lib/service-proposal-html-generator';
+import { generateServiceProposalHtml, fitPageContentBlocks, waitForPdfFonts } from '@/lib/service-proposal-html-generator';
 import { buildHtmlDataFromStore } from '@/lib/service-proposal-data-builder';
 
 import { resolveServiceTemplate } from '@/lib/service-template-selection';
@@ -82,12 +82,8 @@ export function ServiceProposalPreview({ mode: initialMode = 'devis' }: { mode?:
   const totalPages = Math.max(1, pagesHtml.length || visibleTemplatePages.length);
 
   const waitForPreviewAssets = async (root: HTMLElement): Promise<void> => {
-    try {
-      const fontsReady = (document as any).fonts?.ready;
-      if (fontsReady) await Promise.race([fontsReady, new Promise((resolve) => setTimeout(resolve, 1200))]);
-    } catch {
-      /* ignore */
-    }
+    // Same font wait as the PDF export: CG page layout is measured from real glyph metrics.
+    await waitForPdfFonts();
     const images = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
     await Promise.all(
       images.map(

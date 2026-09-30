@@ -50,8 +50,11 @@ import type { ServiceOptionDefinition } from '@/types/options-admin';
  */
 export function fitPageContentBlocks(root: HTMLElement | Document): void {
   const scope: ParentNode = root instanceof Document ? root : root;
+  // "Conditions générales" pages are laid out by layoutCgPages() with a fixed font size:
+  // they must neither be shrunk nor drive the uniform shrink factor of the other pages.
+  layoutCgPages(scope);
   const contents = Array.from(
-    scope.querySelectorAll<HTMLElement>('[data-shell-content]'),
+    scope.querySelectorAll<HTMLElement>('[data-shell-content]:not([data-shell-no-fit])'),
   );
 
   type Entry = { content: HTMLElement; wrapper: HTMLElement };
@@ -97,6 +100,178 @@ export function fitPageContentBlocks(root: HTMLElement | Document): void {
 
 
 
+
+/**
+ * Loads the fonts used by the generated pages and waits for them, so that every height
+ * measured afterwards (layoutCgPages, fitPageContentBlocks) is taken with the final glyph
+ * metrics. `document.fonts.ready` alone can resolve before fonts needed by freshly inserted
+ * nodes have started loading, hence the explicit `fonts.load` calls.
+ */
+export async function waitForPdfFonts(timeoutMs = 6000): Promise<void> {
+  const fonts = (typeof document !== 'undefined' ? (document as any).fonts : null) as FontFaceSet | null;
+  if (!fonts) return;
+  try {
+    await Promise.race([
+      (async () => {
+        await Promise.all(
+          ['400 9px Inter', '700 9px Inter', '400 9px Outfit', '700 9px Outfit'].map((f) => fonts.load(f)),
+        );
+        await fonts.ready;
+      })(),
+      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  } catch {
+    /* fonts unavailable: fall back to system metrics */
+  }
+}
+
+const CG_MAX_PAGES = 6;
+
+/**
+ * Distributes the "Conditions générales" articles over the CG pages from MEASURED heights.
+ *
+ * - One fixed font size for all pages (set by the generator): text is never shrunk here.
+ * - The number of pages starts at the number generated (3) and only grows if the text does
+ *   not fit, so nothing is ever clipped; a console warning is emitted in that case.
+ * - Articles are balanced so that all pages have a similar fill; a title is never left
+ *   alone at the bottom of a page (column-level orphans are handled by break-after:avoid).
+ * - Must run on an attached DOM, after fonts are loaded (see waitForPdfFonts).
+ * Idempotent: safe to call several times on the same root.
+ */
+export function layoutCgPages(scope: ParentNode): void {
+  const sheets = Array.from(scope.querySelectorAll<HTMLElement>('[data-cg-sheet]'));
+  if (sheets.length === 0) return;
+  const bodyOf = (s: HTMLElement) => s.querySelector<HTMLElement>('[data-cg-body]');
+  const colsOf = (s: HTMLElement) => s.querySelector<HTMLElement>('[data-cg-cols]');
+  const firstBody = bodyOf(sheets[0]);
+  const firstCols = colsOf(sheets[0]);
+  if (!firstBody || !firstCols) return;
+
+  const items = sheets.flatMap((s) =>
+    Array.from(colsOf(s)?.querySelectorAll<HTMLElement>(':scope > [data-cg-item]') ?? []),
+  );
+  if (items.length === 0) return;
+  const intro = scope.querySelector<HTMLElement>('[data-cg-intro]');
+  const signature = scope.querySelector<HTMLElement>('[data-cg-signature]');
+  const isTitle = (el: HTMLElement) => el.hasAttribute('data-cg-title');
+  const lastSheetParent = sheets[sheets.length - 1].parentNode;
+  const livePages = [...sheets];
+
+  // Measure every item alone in a single column of the real column width.
+  const colsStyle = getComputedStyle(firstCols);
+  const gap = parseFloat(colsStyle.columnGap) || 0;
+  const colWidth = (firstCols.clientWidth - gap) / 2;
+  if (!(colWidth > 0)) return;
+  const probe = document.createElement('div');
+  probe.style.cssText = `position:absolute;visibility:hidden;left:0;top:0;width:${colWidth}px;`;
+  firstCols.appendChild(probe);
+  const weights = items.map((el) => {
+    const clone = el.cloneNode(true) as HTMLElement;
+    probe.appendChild(clone);
+    const cs = getComputedStyle(clone);
+    const h = clone.getBoundingClientRect().height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+    probe.removeChild(clone);
+    return h;
+  });
+  firstCols.removeChild(probe);
+
+  const buildSheets = (count: number): HTMLElement[] => {
+    const out = livePages;
+    while (out.length < count) {
+      const proto = sheets[Math.min(1, sheets.length - 1)];
+      const clone = proto.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('[data-cg-intro], [data-cg-signature]').forEach((n) => n.remove());
+      colsOf(clone)?.replaceChildren();
+      lastSheetParent?.insertBefore(clone, out[out.length - 1].nextSibling);
+      out.push(clone);
+    }
+    const total = out.length;
+    out.forEach((s, i) => {
+      const titleEl = s.querySelector<HTMLElement>('[data-cg-page-title]');
+      if (titleEl) titleEl.textContent = total === 1 ? 'Conditions générales' : `Conditions générales (${i + 1}/${total})`;
+    });
+    // Roles: intro on the first page, signatures on the last one.
+    if (intro && bodyOf(out[0]) && intro.parentElement !== bodyOf(out[0])) bodyOf(out[0])!.insertBefore(intro, colsOf(out[0]));
+    if (signature) bodyOf(out[total - 1])?.appendChild(signature);
+    return out;
+  };
+
+  // Partition [0, n) into `caps.length` contiguous groups minimising the largest fill ratio.
+  const partition = (caps: number[]): number[] => {
+    const n = items.length;
+    const k = caps.length;
+    const prefix = [0];
+    weights.forEach((w) => prefix.push(prefix[prefix.length - 1] + w));
+    const fill = (from: number, to: number, page: number) => (prefix[to] - prefix[from]) / 2 / Math.max(1, caps[page]);
+    const cost: number[][] = Array.from({ length: k + 1 }, () => Array(n + 1).fill(Infinity));
+    const cut: number[][] = Array.from({ length: k + 1 }, () => Array(n + 1).fill(0));
+    cost[0][0] = 0;
+    for (let g = 1; g <= k; g++) {
+      for (let i = 0; i <= n; i++) {
+        for (let j = 0; j <= i; j++) {
+          if (cost[g - 1][j] === Infinity) continue;
+          // A group may not end on a title (unless it is the last group and empty).
+          if (g < k && i > 0 && i < n && isTitle(items[i - 1])) continue;
+          const c = Math.max(cost[g - 1][j], fill(j, i, g - 1));
+          if (c < cost[g][i]) {
+            cost[g][i] = c;
+            cut[g][i] = j;
+          }
+        }
+      }
+    }
+    const bounds: number[] = [];
+    let i = n;
+    for (let g = k; g >= 1; g--) {
+      bounds.unshift(cut[g][i]);
+      i = cut[g][i];
+    }
+    return bounds; // start index of each group
+  };
+
+  const apply = (pages: HTMLElement[], starts: number[]) => {
+    pages.forEach((s, g) => {
+      const from = starts[g];
+      const to = g + 1 < starts.length ? starts[g + 1] : items.length;
+      colsOf(s)?.replaceChildren(...items.slice(from, to));
+    });
+  };
+  const overflows = (s: HTMLElement) => {
+    const cols = colsOf(s);
+    return !!cols && cols.scrollWidth > cols.clientWidth + 1;
+  };
+
+  let pageCount = sheets.length;
+  for (; pageCount <= CG_MAX_PAGES; pageCount++) {
+    const pages = buildSheets(pageCount);
+    const caps = pages.map((s) => colsOf(s)?.clientHeight ?? 0);
+    const starts = partition(caps);
+    apply(pages, starts);
+
+    // Real-layout check: push trailing items of an overflowing page to the next one.
+    let guard = items.length * 2;
+    let changed = true;
+    while (changed && guard-- > 0) {
+      changed = false;
+      for (let g = 0; g < pages.length - 1; g++) {
+        if (overflows(pages[g]) && starts[g + 1] > starts[g] + 1) {
+          starts[g + 1] -= 1;
+          // Never leave a title at the bottom: move it along with the paragraph.
+          while (starts[g + 1] > starts[g] + 1 && isTitle(items[starts[g + 1] - 1])) starts[g + 1] -= 1;
+          apply(pages, starts);
+          changed = true;
+        }
+      }
+    }
+    if (!pages.some(overflows)) {
+      if (pageCount > sheets.length) {
+        console.warn(`[CG] Conditions générales : ${pageCount} pages nécessaires à la taille de police fixe (au lieu de ${sheets.length}).`);
+      }
+      return;
+    }
+  }
+  console.warn('[CG] Conditions générales : le texte ne tient pas dans le nombre maximal de pages.');
+}
 
 // 10mm rhythm between sections (10 / 297 * 100 ≈ 3.37%)
 const SERVICE_ZONE_GAP_PERCENT = 3.4;
@@ -819,9 +994,9 @@ export async function generateServiceProposalHtml(
     </div>
   `;
 
-  const renderCgHeader = (title: string, hPad: string = '10mm') => `
+  const renderCgHeader = (title: string, hPad: string = '10mm', titleAttr: string = '') => `
     <div style="position:relative;background:#000000;color:#ffffff;font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;height:17mm;padding:0 220px 0 ${hPad};display:flex;align-items:center;box-sizing:border-box;overflow:hidden;">
-      <div style="flex:1;min-width:0;font-size:11px;white-space:nowrap;overflow:visible;">${escCg(title)}</div>
+      <div ${titleAttr} style="flex:1;min-width:0;font-size:11px;white-space:nowrap;overflow:visible;">${escCg(title)}</div>
       <img src="${cbproWhiteLogo}" alt="Cybertek Pro" width="107" height="60" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:107px;height:60px;display:block;" />
     </div>
   `;
@@ -830,12 +1005,20 @@ export async function generateServiceProposalHtml(
   //   header  : top 0, natural height (~17mm)
   //   content : top 16mm → bottom 16mm  (overflow:hidden, clips before footer)
   //   footer  : bottom 0, height 16mm  (never overlapped by content)
-  const renderCgShell = (title: string, bodyHtml: string, bodyStyle: string = '') => `
-    <div class="page-sheet" style="background:#ffffff;">
+  // `articles: true` marks a "Conditions générales" article page: it is laid out by
+  // layoutCgPages() (measured heights, one fixed font size) and is excluded from the
+  // auto-shrink of fitPageContentBlocks(), so CG typography never depends on other pages.
+  const renderCgShell = (
+    title: string,
+    bodyHtml: string,
+    bodyStyle: string = '',
+    opts: { articles?: boolean } = {},
+  ) => `
+    <div class="page-sheet" ${opts.articles ? 'data-cg-sheet' : ''} style="background:#ffffff;">
       <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title)}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:16mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
-          <div data-shell-scale>${bodyHtml}</div>
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title, '10mm', opts.articles ? 'data-cg-page-title' : '')}</div>
+        <div class="shell-content" data-shell-content ${opts.articles ? 'data-shell-no-fit' : ''} style="position:absolute;top:16mm;left:0;right:0;bottom:16mm;padding:2mm 10mm 0 10mm;box-sizing:border-box;overflow:hidden;${bodyStyle}">
+          <div data-shell-scale ${opts.articles ? 'style="height:100%;"' : ''}>${bodyHtml}</div>
         </div>
         ${CG_FOOTER_HTML}
       </div>
@@ -851,6 +1034,23 @@ export async function generateServiceProposalHtml(
     'p1c-title', 'p1c-date',
   ]);
 
+  // CG typography: ONE size for every article page. Values are printed points converted
+  // to layout px (the page is laid out at 580px for 210mm, so 1px ≈ 1.026pt on paper).
+  const CG_PX_PER_PT = 580 / 595.28;
+  const cgPx = (pt: number) => `${(pt * CG_PX_PER_PT).toFixed(2)}px`;
+  const CG_BODY_PT = 8.5;
+  const CG_TITLE_PT = 9.25;
+  const CG_LINE_HEIGHT = 1.45;
+  const CG_PARA_GAP_PT = 6;
+  const CG_TITLE_BEFORE_PT = 10;
+  const CG_TITLE_AFTER_PT = 4;
+  const CG_TARGET_PAGES = 3;
+
+  const cgTitleStyle = (beforePt: number) =>
+    `font-family:'Outfit',sans-serif;font-size:${cgPx(CG_TITLE_PT)};line-height:1.3;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:${cgPx(beforePt)} 0 ${cgPx(CG_TITLE_AFTER_PT)} 0;padding-bottom:${cgPx(2)};border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-after:avoid;page-break-inside:avoid;`;
+  const CG_PARAGRAPH_STYLE = `font-family:'Inter',sans-serif;font-size:${cgPx(CG_BODY_PT)};line-height:${CG_LINE_HEIGHT};color:#374151;margin:0 0 ${cgPx(CG_PARA_GAP_PT)} 0;text-align:justify;orphans:2;widows:2;`;
+
+  // Every rendered block carries data-cg-item: layoutCgPages() moves them between pages.
   const renderArticle = (el: any): { html: string; chars: number; isTitle: boolean } => {
     const c = el.content as any;
     const raw = String(c?.text ?? '');
@@ -859,26 +1059,22 @@ export async function generateServiceProposalHtml(
       const isXIII = /^\s*XIII\s*-/i.test(raw);
       if (isXIII) {
         return {
-          html: `<div style="height:8mm;"></div><h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+          html: `<div data-cg-item data-cg-title style="break-after:avoid;break-inside:avoid;"><div style="height:8mm;"></div><h3 style="${cgTitleStyle(0)}">${escCg(raw)}</h3></div>`,
           chars: raw.length,
           isTitle: true,
         };
       }
       return {
-        html: `<h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:4mm 0 2mm 0;padding-bottom:1mm;border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(raw)}</h3>`,
+        html: `<h3 data-cg-item data-cg-title style="${cgTitleStyle(CG_TITLE_BEFORE_PT)}">${escCg(raw)}</h3>`,
         chars: raw.length,
         isTitle: true,
       };
     }
     const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
     const body = paragraphs
-      .map(
-        (p) =>
-          `<p style="font-family:'Inter',sans-serif;font-size:9.5px;line-height:1.5;color:#374151;margin:0 0 1mm 0;text-align:justify;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;">${escCg(p).replace(/\n/g, '<br/>')}</p>`,
-      )
+      .map((p) => `<p data-cg-item style="${CG_PARAGRAPH_STYLE}">${escCg(p).replace(/\n/g, '<br/>')}</p>`)
       .join('');
     return { html: body, chars: raw.length, isTitle: false };
-
   };
 
   const cgPages = visibleTemplatePages.filter(
@@ -972,7 +1168,7 @@ export async function generateServiceProposalHtml(
   }
 
   const signatureBlockHtml = signatureFooterHtml
-    ? `<div style="flex:0 0 auto;margin-top:6mm;border-top:1px solid #e5e7eb;padding-top:4mm;">
+    ? `<div data-cg-signature style="flex:0 0 auto;margin-top:6mm;border-top:1px solid #e5e7eb;padding-top:4mm;">
          <h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 3mm 0;">Signatures</h3>
          ${signatureFooterHtml}
        </div>`
@@ -991,93 +1187,39 @@ export async function generateServiceProposalHtml(
         return (a.position?.y ?? 0) - (b.position?.y ?? 0);
       });
 
-    const MAX_CHARS_PER_PAGE = 6200;
-    // Reserve space on the last page for the signature block appended below the columns.
-    const MAX_CHARS_LAST_PAGE = signatureBlockHtml ? MAX_CHARS_PER_PAGE - 1100 : MAX_CHARS_PER_PAGE;
     const allRendered = allArticleElements.map((el: any) => renderArticle(el));
 
-    // Extract intro: all items before the first title (rendered full-width on page 1).
+    // Intro: everything before the first title, rendered full-width on the first CG page.
     const firstTitleIdx = allRendered.findIndex((r) => r.isTitle);
     const introItems = firstTitleIdx > 0 ? allRendered.slice(0, firstTitleIdx) : [];
     const rendered = firstTitleIdx > 0 ? allRendered.slice(firstTitleIdx) : allRendered;
-
     const introHtml = introItems.length > 0
-      ? `<div style="width:100%;margin-bottom:4mm;">${introItems.map((i) => i.html).join('')}</div>`
+      ? `<div data-cg-intro style="width:100%;margin-bottom:4mm;">${introItems.map((i) => i.html).join('')}</div>`
       : '';
-    const introChars = introItems.reduce((s, i) => s + i.chars, 0);
-    // Reduce the first bucket's char budget to leave room for the full-width intro block.
-    const MAX_CHARS_FIRST_PAGE = introHtml ? Math.max(MAX_CHARS_PER_PAGE - introChars - 300, 2000) : MAX_CHARS_PER_PAGE;
 
-    const buckets: Array<Array<typeof rendered[number]>> = [];
-    let current: Array<typeof rendered[number]> = [];
-    let currentChars = 0;
-    for (let i = 0; i < rendered.length; i++) {
-      const item = rendered[i];
-      const budget = buckets.length === 0 ? MAX_CHARS_FIRST_PAGE : MAX_CHARS_PER_PAGE;
-      const forceBreak =
-        buckets.length === 0 &&
-        item.isTitle &&
-        /XI\s*-\s*INDEPENDANCE/i.test(item.html);
-      const overflow = (forceBreak || currentChars + item.chars > budget) && current.length > 0;
-      if (overflow) {
-        if (!forceBreak && !item.isTitle && current.length > 0 && current[current.length - 1].isTitle) {
-          const orphanTitle = current.pop()!;
-          currentChars -= orphanTitle.chars;
-          buckets.push(current);
-          current = [orphanTitle];
-          currentChars = orphanTitle.chars;
-        } else {
-          buckets.push(current);
-          current = [];
-          currentChars = 0;
-        }
-      }
-      current.push(item);
-      currentChars += item.chars;
-    }
-
-    if (current.length > 0) buckets.push(current);
-
-    // Ensure the last bucket leaves room for signatures: overflow into an extra page if needed.
-    if (signatureBlockHtml && buckets.length > 0) {
-      let last = buckets[buckets.length - 1];
-      let lastChars = last.reduce((s, it) => s + it.chars, 0);
-      if (lastChars > MAX_CHARS_LAST_PAGE) {
-        const moved: typeof rendered = [];
-        while (lastChars > MAX_CHARS_LAST_PAGE && last.length > 1) {
-          const it = last.pop()!;
-          lastChars -= it.chars;
-          moved.unshift(it);
-        }
-        // Avoid orphan title at end of previous bucket
-        if (last.length > 0 && last[last.length - 1].isTitle) {
-          const orphan = last.pop()!;
-          lastChars -= orphan.chars;
-          moved.unshift(orphan);
-        }
-        if (moved.length > 0) buckets.push(moved);
-      }
+    // Initial split, even by characters over CG_TARGET_PAGES pages. This is only a fallback:
+    // the real distribution is computed on the rendered DOM by layoutCgPages() from measured
+    // heights (called by fitPageContentBlocks, i.e. by the preview and by the PDF export).
+    const pageCount = Math.max(1, Math.min(CG_TARGET_PAGES, rendered.length));
+    const totalChars = Math.max(1, rendered.reduce((s, it) => s + it.chars, 0));
+    const buckets: Array<Array<typeof rendered[number]>> = Array.from({ length: pageCount }, () => []);
+    let seenChars = 0;
+    for (const item of rendered) {
+      const idx = Math.min(pageCount - 1, Math.floor(((seenChars + item.chars / 2) / totalChars) * pageCount));
+      buckets[idx].push(item);
+      seenChars += item.chars;
     }
 
     buckets.forEach((bucket, idx) => {
-      const bodyInner = bucket.map((b) => b.html).join('');
       const isLast = idx === buckets.length - 1;
       const isFirst = idx === 0;
-      const columnsFlex = (isLast && signatureBlockHtml) || (isFirst && introHtml);
-      const columnsBlock = `<div style="column-count:2;column-gap:8mm;column-fill:balance;${columnsFlex ? 'flex:1;min-height:0;' : 'height:100%;'}">${bodyInner}</div>`;
-      let body: string;
-      if (isFirst && introHtml) {
-        body = `<div style="display:flex;flex-direction:column;height:100%;">${introHtml}${columnsBlock}${isLast && signatureBlockHtml ? signatureBlockHtml : ''}</div>`;
-      } else if (isLast && signatureBlockHtml) {
-        body = `<div style="display:flex;flex-direction:column;height:100%;">${columnsBlock}${signatureBlockHtml}</div>`;
-      } else {
-        body = columnsBlock;
-      }
+      const colsBlock = `<div data-cg-cols style="flex:1;min-height:0;column-count:2;column-gap:8mm;column-fill:balance;">${bucket.map((b) => b.html).join('')}</div>`;
+      const body = `<div data-cg-body style="display:flex;flex-direction:column;height:100%;">${isFirst ? introHtml : ''}${colsBlock}${isLast ? signatureBlockHtml : ''}</div>`;
       const title =
         buckets.length === 1
           ? 'Conditions générales'
           : `Conditions générales (${idx + 1}/${buckets.length})`;
-      renderedArticlesHtml.push(renderCgShell(title, body));
+      renderedArticlesHtml.push(renderCgShell(title, body, '', { articles: true }));
     });
 
   } else if (signatureBlockHtml) {
