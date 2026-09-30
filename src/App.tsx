@@ -34,6 +34,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <RecoveryRedirect />
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route
