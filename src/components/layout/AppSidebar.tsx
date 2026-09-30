@@ -19,6 +19,7 @@ import {
   ClipboardList,
   CalendarDays,
   HardDrive,
+  Contact,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ const TRANSPORT_LINKS = [
   { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
 ];
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt' | 'technician-tracking' | 'service-planning' | 'backups';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt' | 'technician-tracking' | 'service-planning' | 'backups' | 'clients-hubspot';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -266,6 +267,14 @@ export function AppSidebar({
                 >
                   <HardDrive className="h-3.5 w-3.5" />
                   Sauvegardes
+                </Button>
+                <Button
+                  variant={currentView === 'clients-hubspot' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start gap-2 h-8 text-sm"
+                  onClick={() => onNavigate('clients-hubspot')}
+                >
+                  <Contact className="h-3.5 w-3.5" />
+                  Clients HubSpot
                 </Button>
               </>
             )}

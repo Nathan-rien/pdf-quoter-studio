@@ -82,6 +82,86 @@ export type Database = {
           },
         ]
       }
+      clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          hubspot_company_id: string | null
+          hubspot_contact_id: string | null
+          id: string
+          nom: string | null
+          societe: string | null
+          telephone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          hubspot_company_id?: string | null
+          hubspot_contact_id?: string | null
+          id?: string
+          nom?: string | null
+          societe?: string | null
+          telephone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          hubspot_company_id?: string | null
+          hubspot_contact_id?: string | null
+          id?: string
+          nom?: string | null
+          societe?: string | null
+          telephone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      clients_historique: {
+        Row: {
+          client_id: string
+          created_at: string
+          date: string
+          hubspot_reference: string
+          id: string
+          montant: number | null
+          raw_payload: Json | null
+          resume: string | null
+          type: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date: string
+          hubspot_reference: string
+          id?: string
+          montant?: number | null
+          raw_payload?: Json | null
+          resume?: string | null
+          type: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date?: string
+          hubspot_reference?: string
+          id?: string
+          montant?: number | null
+          raw_payload?: Json | null
+          resume?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_historique_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_service_references: {
         Row: {
           contract_id: string
@@ -142,12 +222,14 @@ export type Database = {
           attachment_name: string | null
           attachment_url: string | null
           cession_percent: number | null
+          client_id: string | null
           client_name: string
           closed_at: string | null
           commercial_id: string
           commercial_name: string | null
           contract_number: string | null
           created_at: string
+          derniere_facturation_le: string | null
           duration_months: number | null
           erp_reference: string | null
           external_providers: Json
@@ -155,6 +237,7 @@ export type Database = {
           id: string
           implementation_month: string | null
           is_quick_contract: boolean
+          jour_facturation_override: number | null
           monthly_rent_ht: number | null
           payment_frequency: string | null
           proposal_id: string | null
@@ -169,12 +252,14 @@ export type Database = {
           attachment_name?: string | null
           attachment_url?: string | null
           cession_percent?: number | null
+          client_id?: string | null
           client_name: string
           closed_at?: string | null
           commercial_id: string
           commercial_name?: string | null
           contract_number?: string | null
           created_at?: string
+          derniere_facturation_le?: string | null
           duration_months?: number | null
           erp_reference?: string | null
           external_providers?: Json
@@ -182,6 +267,7 @@ export type Database = {
           id?: string
           implementation_month?: string | null
           is_quick_contract?: boolean
+          jour_facturation_override?: number | null
           monthly_rent_ht?: number | null
           payment_frequency?: string | null
           proposal_id?: string | null
@@ -196,12 +282,14 @@ export type Database = {
           attachment_name?: string | null
           attachment_url?: string | null
           cession_percent?: number | null
+          client_id?: string | null
           client_name?: string
           closed_at?: string | null
           commercial_id?: string
           commercial_name?: string | null
           contract_number?: string | null
           created_at?: string
+          derniere_facturation_le?: string | null
           duration_months?: number | null
           erp_reference?: string | null
           external_providers?: Json
@@ -209,6 +297,7 @@ export type Database = {
           id?: string
           implementation_month?: string | null
           is_quick_contract?: boolean
+          jour_facturation_override?: number | null
           monthly_rent_ht?: number | null
           payment_frequency?: string | null
           proposal_id?: string | null
@@ -219,6 +308,13 @@ export type Database = {
           validated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contracts_proposal_id_fkey"
             columns: ["proposal_id"]
@@ -476,6 +572,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hubspot_sync_log: {
+        Row: {
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          records_processed: number
+          started_at: string
+          status: string
+          triggered_by_user: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          records_processed?: number
+          started_at?: string
+          status?: string
+          triggered_by_user?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          records_processed?: number
+          started_at?: string
+          status?: string
+          triggered_by_user?: string | null
+        }
+        Relationships: []
       }
       intervention_planning: {
         Row: {

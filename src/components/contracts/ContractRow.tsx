@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus, Archive, ArchiveRestore } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus, Archive, ArchiveRestore, Receipt } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, useContractProposalOperationalContact, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, getContractProchaineFacturation, useContractProposalRent, useContractProposalOptions, useContractProposalOperationalContact, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { generateServiceContractNumber } from '@/lib/contract-numbering';
@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceReferencesPanel, useServiceReferences } from '@/components/technician-tracking/ServiceReferencesPanel';
+import { useClients, useLinkContractToClient } from '@/hooks/useClients';
 
 
 const FINANCIAL_PARTNERS = ['Lixxbail 1', 'Lixxbail 2', 'Grenke 1', 'Franfinance 1', 'Olinn 1', 'Olinn 2', 'BNP VR 2', 'BNP Crédit Bail 1', 'Realease 2'];
@@ -72,6 +73,8 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const { isAdmin, isTechnicien } = useAuth();
   const canEditContract = isAdmin;
   const { data: allServiceRefs } = useServiceReferences();
+  const { data: clients = [] } = useClients();
+  const linkContractToClient = useLinkContractToClient();
   const serviceRefs = useMemo(
     () => (allServiceRefs ?? []).filter((r) => r.contract_id === contract.id),
     [allServiceRefs, contract.id],
@@ -91,6 +94,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
   const renewing = isContractRenewingSoon(contract);
   const monthsLeft = getMonthsUntilRenewal(contract);
+  const prochaineFacturation = useMemo(() => getContractProchaineFacturation(contract), [contract]);
 
   const [clientName, setClientName] = useState(contract.client_name ?? '');
   const [implementationDate, setImplementationDate] = useState<Date | undefined>(
@@ -102,6 +106,9 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   );
   const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>(
     contract.payment_frequency ?? 'mensuel'
+  );
+  const [jourFacturationOverride, setJourFacturationOverride] = useState<string>(
+    contract.jour_facturation_override != null ? String(contract.jour_facturation_override) : ''
   );
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
@@ -186,6 +193,12 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       savedClientName !== contract.client_name &&
       contractNumber.trim() === (contract.contract_number ?? '');
     let nextContractNumber = contractNumber.trim() || null;
+    const trimmedJourFacturation = jourFacturationOverride.trim();
+    const parsedJourFacturation = trimmedJourFacturation === '' ? null : parseInt(trimmedJourFacturation, 10);
+    const validJourFacturation =
+      parsedJourFacturation != null && !Number.isNaN(parsedJourFacturation) && parsedJourFacturation >= 1 && parsedJourFacturation <= 28
+        ? parsedJourFacturation
+        : null;
 
     try {
       if (isServiceContract && (!nextContractNumber || shouldRefreshQuickPlaceholderNumber)) {
@@ -213,7 +226,15 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         quarterly_rent_ht: hasProposalRent ? contract.quarterly_rent_ht ?? null : manualQuarterlyValue,
         cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
         external_providers: isServiceContract ? externalProviders : contract.external_providers ?? [],
+        jour_facturation_override: validJourFacturation,
       },
+    });
+  }
+
+  function handleMarkFacturationDone() {
+    updateContract.mutate({
+      id: contract.id,
+      updates: { derniere_facturation_le: format(new Date(), 'yyyy-MM-dd') },
     });
   }
 
@@ -443,6 +464,15 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 Renouvellement dans {monthsLeft}m
               </Badge>
             )}
+            {!isClosed && prochaineFacturation.date && (
+              <Badge
+                variant={prochaineFacturation.enRetard ? 'destructive' : 'outline'}
+                className="gap-1 text-[10px]"
+              >
+                <Receipt className="h-3 w-3" />
+                Prochaine facture : {format(prochaineFacturation.date, 'dd/MM/yyyy', { locale: fr })}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -544,6 +574,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 {downloadingProposal || generatingContractPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               </Button>
             </>
+          )}
+          {canEditContract && !isClosed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50 flex-shrink-0"
+              title="Marquer la facturation comme faite (aujourd'hui)"
+              disabled={updateContract.isPending}
+              onClick={(e) => { e.stopPropagation(); handleMarkFacturationDone(); }}
+            >
+              <Receipt className="w-4 h-4" />
+            </Button>
           )}
           {canEditContract && (
             isClosed ? (
@@ -786,6 +828,14 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 <Label className="text-xs">Périodicité</Label>
                 <div className="text-sm capitalize">{contract.payment_frequency ?? 'mensuel'}</div>
               </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Prochaine facture</Label>
+                <div className="text-sm">
+                  {prochaineFacturation.date
+                    ? format(prochaineFacturation.date, 'dd/MM/yyyy', { locale: fr })
+                    : '—'}
+                </div>
+              </div>
             </div>
            )}
 
@@ -890,6 +940,23 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 <SelectContent>
                   {commercialOptions.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Client HubSpot lié</Label>
+              <Select
+                value={contract.client_id ?? 'none'}
+                onValueChange={(value) => linkContractToClient.mutate({ contractId: contract.id, clientId: value === 'none' ? null : value })}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Aucun" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun</SelectItem>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nom || c.societe || c.email || c.id}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1039,6 +1106,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Jour de facturation (1-28)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={28}
+                value={jourFacturationOverride}
+                onChange={(e) => setJourFacturationOverride(e.target.value)}
+                placeholder={`Par défaut : ${implementationDate ? format(implementationDate, 'd') : '—'}`}
+                className="h-9 text-sm"
+              />
             </div>
             {!hideFinancialPartner && (
               <div className="space-y-1.5">
