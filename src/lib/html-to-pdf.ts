@@ -63,7 +63,14 @@ export async function htmlToPdfBlob(htmlContent: string): Promise<Blob> {
 
   try {
     await waitForAssets(container);
-    fitPageContentBlocks(container);
+    const cgFits = fitPageContentBlocks(container);
+    if (!cgFits) {
+      throw new Error(
+        "Le texte des Conditions générales ne tient pas dans les pages prévues à la taille de police fixe (8,5 pt minimum), " +
+          "même après avoir déplacé les signatures sur une page dédiée. Raccourcissez les articles avant d'exporter le PDF " +
+          '(voir la console pour le détail).',
+      );
+    }
 
     const sheets = Array.from(pagesWrap.querySelectorAll<HTMLElement>('.page-sheet'));
 

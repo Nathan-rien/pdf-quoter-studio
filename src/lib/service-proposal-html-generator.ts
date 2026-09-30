@@ -47,12 +47,15 @@ import type { ServiceOptionDefinition } from '@/types/options-admin';
  *
  * Called by both the PDF export (before html2canvas capture) and the
  * preview iframe (on load), so both stay in visual sync.
+ *
+ * @returns false if the "Conditions générales" content did not fit its fixed page count
+ * at the fixed font size (see layoutCgPages) — callers should surface a warning.
  */
-export function fitPageContentBlocks(root: HTMLElement | Document): void {
+export function fitPageContentBlocks(root: HTMLElement | Document): boolean {
   const scope: ParentNode = root instanceof Document ? root : root;
   // "Conditions générales" pages are laid out by layoutCgPages() with a fixed font size:
   // they must neither be shrunk nor drive the uniform shrink factor of the other pages.
-  layoutCgPages(scope);
+  const cgFits = layoutCgPages(scope);
   const contents = Array.from(
     scope.querySelectorAll<HTMLElement>('[data-shell-content]:not([data-shell-no-fit])'),
   );
@@ -96,6 +99,8 @@ export function fitPageContentBlocks(root: HTMLElement | Document): void {
       wrapper.style.transform = `scale(${uniformFactor})`;
     }
   }
+
+  return cgFits;
 }
 
 
@@ -125,43 +130,72 @@ export async function waitForPdfFonts(timeoutMs = 6000): Promise<void> {
   }
 }
 
-const CG_MAX_PAGES = 6;
+// CG ("Conditions générales") typography: ONE fixed size for every article page, shared
+// between the HTML generator (renderArticle) and the pagination (layoutCgPages) so the
+// pagination's overflow check and the generated markup always agree on the same metrics.
+// Values are printed points converted to layout px (page laid out at 580px for 210mm,
+// so 1px ≈ 1.026pt on paper). Target: 8.5–9pt body, 1.45 line-height, ~6pt paragraph gap,
+// ~10pt before an article title. CG_BODY_PT is also the hard floor: layoutCgPages() never
+// shrinks below it and never adds a page beyond CG_TARGET_PAGES.
+const CG_PX_PER_PT = 580 / 595.28;
+const cgPx = (pt: number) => `${(pt * CG_PX_PER_PT).toFixed(2)}px`;
+const CG_BODY_PT = 8.5;
+const CG_TITLE_PT = 9.25;
+const CG_LINE_HEIGHT = 1.45;
+const CG_PARA_GAP_PT = 6;
+const CG_TITLE_BEFORE_PT = 10;
+const CG_TITLE_AFTER_PT = 4;
+const CG_TARGET_PAGES = 3;
+// Slightly above CG body size, compact spacing: the signature block on the last CG
+// page must never compete with article text for space (see renderSignatureZone).
+const CG_SIGNATURE_PT = 9.5;
+
+const cgTitleStyle = (beforePt: number) =>
+  `font-family:'Outfit',sans-serif;font-size:${cgPx(CG_TITLE_PT)};line-height:1.3;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:${cgPx(beforePt)} 0 ${cgPx(CG_TITLE_AFTER_PT)} 0;padding-bottom:${cgPx(2)};border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-after:avoid;page-break-inside:avoid;`;
+const CG_PARAGRAPH_STYLE = `font-family:'Inter',sans-serif;font-size:${cgPx(CG_BODY_PT)};line-height:${CG_LINE_HEIGHT};color:#374151;margin:0 0 ${cgPx(CG_PARA_GAP_PT)} 0;text-align:justify;orphans:2;widows:2;`;
 
 /**
- * Distributes the "Conditions générales" articles over the CG pages from MEASURED heights.
+ * Distributes the "Conditions générales" articles over a FIXED set of CG pages
+ * (whatever the generator produced — 3 by design, see CG_TARGET_PAGES) from
+ * MEASURED heights.
  *
- * - One fixed font size for all pages (set by the generator): text is never shrunk here.
- * - The number of pages starts at the number generated (3) and only grows if the text does
- *   not fit, so nothing is ever clipped; a console warning is emitted in that case.
- * - Articles are balanced so that all pages have a similar fill; a title is never left
- *   alone at the bottom of a page (column-level orphans are handled by break-after:avoid).
+ * - One fixed font size for all pages (set by the generator, see CG_BODY_PT):
+ *   text is never shrunk here, and no page is ever added. If the content does
+ *   not fit at that fixed size, the excess is left clipped (existing
+ *   `overflow:hidden` on the shell) and a console.error is raised so the
+ *   author can shorten the articles — this is a deliberate product decision,
+ *   not a bug: silently growing pages or shrinking below the legal-text floor
+ *   would both change the document without anyone noticing.
+ * - Articles are balanced so that all pages have a similar fill; a title is
+ *   never left alone at the bottom of a page (column-level orphans are
+ *   handled by break-after:avoid).
  * - Must run on an attached DOM, after fonts are loaded (see waitForPdfFonts).
  * Idempotent: safe to call several times on the same root.
+ *
+ * @returns true if every article fit without clipping, false otherwise.
  */
-export function layoutCgPages(scope: ParentNode): void {
+export function layoutCgPages(scope: ParentNode): boolean {
   const sheets = Array.from(scope.querySelectorAll<HTMLElement>('[data-cg-sheet]'));
-  if (sheets.length === 0) return;
+  if (sheets.length === 0) return true;
   const bodyOf = (s: HTMLElement) => s.querySelector<HTMLElement>('[data-cg-body]');
   const colsOf = (s: HTMLElement) => s.querySelector<HTMLElement>('[data-cg-cols]');
   const firstBody = bodyOf(sheets[0]);
   const firstCols = colsOf(sheets[0]);
-  if (!firstBody || !firstCols) return;
+  if (!firstBody || !firstCols) return true;
 
   const items = sheets.flatMap((s) =>
     Array.from(colsOf(s)?.querySelectorAll<HTMLElement>(':scope > [data-cg-item]') ?? []),
   );
-  if (items.length === 0) return;
+  if (items.length === 0) return true;
   const intro = scope.querySelector<HTMLElement>('[data-cg-intro]');
   const signature = scope.querySelector<HTMLElement>('[data-cg-signature]');
   const isTitle = (el: HTMLElement) => el.hasAttribute('data-cg-title');
-  const lastSheetParent = sheets[sheets.length - 1].parentNode;
-  const livePages = [...sheets];
 
   // Measure every item alone in a single column of the real column width.
   const colsStyle = getComputedStyle(firstCols);
   const gap = parseFloat(colsStyle.columnGap) || 0;
   const colWidth = (firstCols.clientWidth - gap) / 2;
-  if (!(colWidth > 0)) return;
+  if (!(colWidth > 0)) return true;
   const probe = document.createElement('div');
   probe.style.cssText = `position:absolute;visibility:hidden;left:0;top:0;width:${colWidth}px;`;
   firstCols.appendChild(probe);
@@ -175,26 +209,15 @@ export function layoutCgPages(scope: ParentNode): void {
   });
   firstCols.removeChild(probe);
 
-  const buildSheets = (count: number): HTMLElement[] => {
-    const out = livePages;
-    while (out.length < count) {
-      const proto = sheets[Math.min(1, sheets.length - 1)];
-      const clone = proto.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll('[data-cg-intro], [data-cg-signature]').forEach((n) => n.remove());
-      colsOf(clone)?.replaceChildren();
-      lastSheetParent?.insertBefore(clone, out[out.length - 1].nextSibling);
-      out.push(clone);
-    }
-    const total = out.length;
-    out.forEach((s, i) => {
-      const titleEl = s.querySelector<HTMLElement>('[data-cg-page-title]');
-      if (titleEl) titleEl.textContent = total === 1 ? 'Conditions générales' : `Conditions générales (${i + 1}/${total})`;
-    });
-    // Roles: intro on the first page, signatures on the last one.
-    if (intro && bodyOf(out[0]) && intro.parentElement !== bodyOf(out[0])) bodyOf(out[0])!.insertBefore(intro, colsOf(out[0]));
-    if (signature) bodyOf(out[total - 1])?.appendChild(signature);
-    return out;
-  };
+  // No page is ever created or removed here: titles/intro/signature placement
+  // on the fixed `sheets` set, idempotent so re-running this is a no-op.
+  const total = sheets.length;
+  sheets.forEach((s, i) => {
+    const titleEl = s.querySelector<HTMLElement>('[data-cg-page-title]');
+    if (titleEl) titleEl.textContent = total === 1 ? 'Conditions générales' : `Conditions générales (${i + 1}/${total})`;
+  });
+  if (intro && bodyOf(sheets[0]) && intro.parentElement !== bodyOf(sheets[0])) bodyOf(sheets[0])!.insertBefore(intro, colsOf(sheets[0]));
+  if (signature) bodyOf(sheets[total - 1])?.appendChild(signature);
 
   // Partition [0, n) into `caps.length` contiguous groups minimising the largest fill ratio.
   const partition = (caps: number[]): number[] => {
@@ -241,36 +264,59 @@ export function layoutCgPages(scope: ParentNode): void {
     return !!cols && cols.scrollWidth > cols.clientWidth + 1;
   };
 
-  let pageCount = sheets.length;
-  for (; pageCount <= CG_MAX_PAGES; pageCount++) {
-    const pages = buildSheets(pageCount);
-    const caps = pages.map((s) => colsOf(s)?.clientHeight ?? 0);
+  // Measures the FIXED `sheets` set live (caps depend on whatever currently shares
+  // the page with the columns, e.g. the signature block), partitions items across
+  // them, and rebalances by pushing trailing items forward until nothing overflows
+  // or no further push is possible. Never adds or removes a page.
+  const attemptFit = (): boolean => {
+    const caps = sheets.map((s) => colsOf(s)?.clientHeight ?? 0);
     const starts = partition(caps);
-    apply(pages, starts);
+    apply(sheets, starts);
 
-    // Real-layout check: push trailing items of an overflowing page to the next one.
     let guard = items.length * 2;
     let changed = true;
     while (changed && guard-- > 0) {
       changed = false;
-      for (let g = 0; g < pages.length - 1; g++) {
-        if (overflows(pages[g]) && starts[g + 1] > starts[g] + 1) {
+      for (let g = 0; g < sheets.length - 1; g++) {
+        if (overflows(sheets[g]) && starts[g + 1] > starts[g] + 1) {
           starts[g + 1] -= 1;
           // Never leave a title at the bottom: move it along with the paragraph.
           while (starts[g + 1] > starts[g] + 1 && isTitle(items[starts[g + 1] - 1])) starts[g + 1] -= 1;
-          apply(pages, starts);
+          apply(sheets, starts);
           changed = true;
         }
       }
     }
-    if (!pages.some(overflows)) {
-      if (pageCount > sheets.length) {
-        console.warn(`[CG] Conditions générales : ${pageCount} pages nécessaires à la taille de police fixe (au lieu de ${sheets.length}).`);
-      }
-      return;
+    return !sheets.some(overflows);
+  };
+
+  let fits = attemptFit();
+
+  // Signatures compete with articles for space on the last CG page. If compacting
+  // them (see CG_SIGNATURE_PT) was not enough, drop the compact inline signature
+  // block entirely and promote the pre-built standby "Signatures" page (same
+  // Coordonnées + Signatures layout as the devis recap, non-compact — see
+  // buildSignatureRecapHtml) into the real page flow, freeing the last CG page
+  // entirely for articles — then measure again. CG stays fixed at 3 pages either way.
+  if (!fits && signature) {
+    const standbyPage = scope.querySelector<HTMLElement>('[data-cg-signature-page]');
+    if (standbyPage) {
+      signature.remove();
+      standbyPage.classList.remove('page-sheet-standby');
+      standbyPage.classList.add('page-sheet');
+      fits = attemptFit();
     }
   }
-  console.warn('[CG] Conditions générales : le texte ne tient pas dans le nombre maximal de pages.');
+
+  if (!fits) {
+    console.error(
+      `[CG] Conditions générales : le contenu ne tient pas dans les ${sheets.length} pages à la taille de police fixe ` +
+        `(${CG_BODY_PT}pt minimum), même après avoir déplacé les signatures sur une page dédiée. ` +
+        "Raccourcissez les articles ou contactez l'équipe technique — aucune page supplémentaire " +
+        'ne sera ajoutée au-delà de celle des signatures et la police ne sera pas réduite.',
+    );
+  }
+  return fits;
 }
 
 // 10mm rhythm between sections (10 / 297 * 100 ≈ 3.37%)
@@ -567,26 +613,88 @@ export async function generateServiceProposalHtml(
     </div>
   `;
 
-  const renderSignatureZone = (zone: PositionedDynamicZone) => `
-    <div style="${BODY_TEXT_STYLE} margin-top:6mm;">
+  // `compact` is used exclusively for the "Conditions générales" (contract) signature
+  // page, where every millimeter matters (see CG_SIGNATURE_PT / layoutCgPages). The
+  // devis-mode recap page (mode !== 'contrat', see renderSignatureZone({}) call below)
+  // keeps its original, more spacious styling.
+  const renderSignatureZone = (zone: PositionedDynamicZone, compact = false) => {
+    const bodyStyle = compact
+      ? `font-family:'Inter',sans-serif;font-size:${cgPx(CG_SIGNATURE_PT)};font-weight:400;color:#374151;line-height:${CG_LINE_HEIGHT};`
+      : BODY_TEXT_STYLE;
+    const blockGap = compact ? '3mm' : '6mm';
+    const partyMinHeight = compact ? '9mm' : '14mm';
+    const beforeLineGap = compact ? '2mm' : '4mm';
+    const signLineHeight = compact ? '10mm' : '26mm';
+    return `
+    <div style="${bodyStyle} margin-top:${blockGap};">
       <div style="display: flex; justify-content: space-between; gap: 8mm;">
         <div style="flex: 1;">
-          <div style="min-height: 14mm;">
+          <div style="min-height: ${partyMinHeight};">
             La Société Groupe Cybertek SAS<br />
             Représentée par Grégory Moinet<br />
             Directeur Services et Solutions
           </div>
-          <div style="margin-top:4mm;">Signature : _______________</div>
-          <div style="min-height: 26mm;"></div>
+          <div style="margin-top:${beforeLineGap};">Signature : _______________</div>
+          <div style="min-height: ${signLineHeight};"></div>
         </div>
         <div style="flex: 1;">
-          <div style="min-height: 14mm;">
+          <div style="min-height: ${partyMinHeight};">
             La Société ${escapeText(clientData.raisonSociale || clientData.nom)}<br />
             Représentée par ${escapeText(clientData.nom)}
           </div>
-          <div style="margin-top:4mm;">Signature : _______________</div>
-          <div style="min-height: 26mm;"></div>
+          <div style="margin-top:${beforeLineGap};">Signature : _______________</div>
+          <div style="min-height: ${signLineHeight};"></div>
         </div>
+      </div>
+    </div>
+  `;
+  };
+
+  // Shared "Coordonnées" + "Signatures" recap block: used by the devis-mode final
+  // page (mode !== 'contrat') AND by the CG contract document's dedicated signature
+  // page (when the compact inline signatures do not fit on the last CG page — see
+  // layoutCgPages), so both stay visually identical. `includeSignatureBanner: false`
+  // drops the inner "Signatures" section title when the page shell already carries
+  // one in its own header banner (the CG page's dark title band).
+  const buildSignatureRecapHtml = (opts: { includeSignatureBanner?: boolean } = {}) => `
+    <div style="${BLOCK_WRAPPER_STYLE}">
+      <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
+      <div style="${SECTION_BODY_STYLE}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
+          <div>
+            <p style="${LABEL_STYLE}">Bénéficiaire</p>
+            ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
+            <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+              ${clientData.nom ? `<p style="margin:0.5mm 0;">${escapeText(clientData.nom)}</p>` : ''}
+              ${clientData.adresse ? `<p style="margin:0.5mm 0;">${escapeText(clientData.adresse)}</p>` : ''}
+              ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
+              ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
+            </div>
+          </div>
+          <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
+            <p style="${LABEL_STYLE}">Votre interlocuteur</p>
+            ${
+              selectedCommercial
+                ? `<p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
+                   <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
+                     ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
+                     ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
+                     ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
+                   </div>`
+                : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="${BLOCK_WRAPPER_STYLE} margin-top:8mm;">
+      ${opts.includeSignatureBanner === false ? '' : `<div style="${SECTION_BANNER_STYLE}">Signatures</div>`}
+      <div style="${SECTION_BODY_STYLE}">
+        <div style="${BODY_TEXT_STYLE}">
+          <p style="margin:0 0 4mm 0;">Fait à ___________________</p>
+          <p style="margin:0 0 8mm 0;">Le ___________________</p>
+        </div>
+        ${renderSignatureZone({} as PositionedDynamicZone)}
       </div>
     </div>
   `;
@@ -842,7 +950,12 @@ export async function generateServiceProposalHtml(
     if (zone.type === 'service_client_info') return renderClientZone(zone);
     if (zone.type === 'service_conditions') return renderConditionsZone(zone);
     if (zone.type === 'service_invest_table') return renderInvestZone(zone);
-    if (zone.type === 'service_signature') return renderSignatureZone(zone);
+    if (zone.type === 'service_signature') {
+      const zonePageNumber = (zone as unknown as { pageNumber?: number }).pageNumber;
+      const zonePage = visibleTemplatePages.find((p: any) => p.pageNumber === zonePageNumber);
+      const isCgSignature = (zonePage?.documentScope ?? 'both') === 'contrat';
+      return renderSignatureZone(zone, isCgSignature);
+    }
     if (zone.type === 'service_options') return renderOptionsZone(zone);
     if (zone.type === 'service_site_addresses') return renderSiteAddressesZone(zone);
     if (zone.type === 'service_operational_contact') return renderOperationalContactZone(zone);
@@ -1025,6 +1138,22 @@ export async function generateServiceProposalHtml(
     </div>
   `;
 
+  // `standby: true` renders a page kept out of the `.page-sheet` flow until
+  // layoutCgPages() promotes it (see the dedicated CG "Signatures" page below) —
+  // same convention as renderCgShell's standby option (kept for symmetry, though
+  // renderCgShell itself no longer uses a standby variant).
+  const renderShellPage = (title: string, blocksHtml: string, opts: { standby?: boolean } = {}) => `
+    <div class="${opts.standby ? 'page-sheet-standby' : 'page-sheet'}" ${opts.standby ? 'data-cg-signature-page' : ''} style="background:#ffffff;">
+      <div style="position:relative;width:100%;height:100%;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title, '6mm')}</div>
+        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 6mm 0 6mm;box-sizing:border-box;overflow:hidden;">
+          <div data-shell-scale>${blocksHtml}</div>
+        </div>
+        ${DEVIS_FOOTER_HTML}
+      </div>
+    </div>
+  `;
+
 
   const CG_BANNER_TEXT_IDS = new Set<string>([
     'p1-title', 'p1-date',
@@ -1033,22 +1162,6 @@ export async function generateServiceProposalHtml(
     'p3m-banner', 'p3m-title',
     'p1c-title', 'p1c-date',
   ]);
-
-  // CG typography: ONE size for every article page. Values are printed points converted
-  // to layout px (the page is laid out at 580px for 210mm, so 1px ≈ 1.026pt on paper).
-  const CG_PX_PER_PT = 580 / 595.28;
-  const cgPx = (pt: number) => `${(pt * CG_PX_PER_PT).toFixed(2)}px`;
-  const CG_BODY_PT = 8.5;
-  const CG_TITLE_PT = 9.25;
-  const CG_LINE_HEIGHT = 1.45;
-  const CG_PARA_GAP_PT = 6;
-  const CG_TITLE_BEFORE_PT = 10;
-  const CG_TITLE_AFTER_PT = 4;
-  const CG_TARGET_PAGES = 3;
-
-  const cgTitleStyle = (beforePt: number) =>
-    `font-family:'Outfit',sans-serif;font-size:${cgPx(CG_TITLE_PT)};line-height:1.3;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:${cgPx(beforePt)} 0 ${cgPx(CG_TITLE_AFTER_PT)} 0;padding-bottom:${cgPx(2)};border-bottom:1px solid #e5e7eb;break-after:avoid;break-inside:avoid;-webkit-column-break-after:avoid;-webkit-column-break-inside:avoid;page-break-after:avoid;page-break-inside:avoid;`;
-  const CG_PARAGRAPH_STYLE = `font-family:'Inter',sans-serif;font-size:${cgPx(CG_BODY_PT)};line-height:${CG_LINE_HEIGHT};color:#374151;margin:0 0 ${cgPx(CG_PARA_GAP_PT)} 0;text-align:justify;orphans:2;widows:2;`;
 
   // Every rendered block carries data-cg-item: layoutCgPages() moves them between pages.
   const renderArticle = (el: any): { html: string; chars: number; isTitle: boolean } => {
@@ -1156,20 +1269,20 @@ export async function generateServiceProposalHtml(
       .map((el: any) => {
         const c = el.content as any;
         const raw = String(c?.text ?? '');
-        return `<div style="font-family:'Inter',sans-serif;font-size:10.5px;color:#111111;line-height:1.5;margin-bottom:2mm;">${escCg(raw)}</div>`;
+        return `<div style="font-family:'Inter',sans-serif;font-size:${cgPx(CG_SIGNATURE_PT)};color:#111111;line-height:${CG_LINE_HEIGHT};margin-bottom:1mm;">${escCg(raw)}</div>`;
       })
       .join('');
     const dyn = dynamicContent[page.pageNumber] || '';
     const dynWrapped = dyn
-      ? `<div style="margin-top:6mm;color:#111111;font-size:10.5px;">${dyn}</div>`
+      ? `<div style="margin-top:3mm;color:#111111;font-size:${cgPx(CG_SIGNATURE_PT)};">${dyn}</div>`
       : '';
 
-    signatureFooterHtml += `<div style="display:flex;flex-direction:column;gap:4mm;">${body}${dynWrapped}</div>`;
+    signatureFooterHtml += `<div style="display:flex;flex-direction:column;gap:2mm;">${body}${dynWrapped}</div>`;
   }
 
   const signatureBlockHtml = signatureFooterHtml
-    ? `<div data-cg-signature style="flex:0 0 auto;margin-top:6mm;border-top:1px solid #e5e7eb;padding-top:4mm;">
-         <h3 style="font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 3mm 0;">Signatures</h3>
+    ? `<div data-cg-signature style="flex:0 0 auto;margin-top:3mm;border-top:1px solid #e5e7eb;padding-top:2mm;">
+         <h3 style="font-family:'Outfit',sans-serif;font-size:${cgPx(CG_SIGNATURE_PT)};font-weight:700;color:#111111;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 1.5mm 0;">Signatures</h3>
          ${signatureFooterHtml}
        </div>`
     : '';
@@ -1213,7 +1326,14 @@ export async function generateServiceProposalHtml(
     buckets.forEach((bucket, idx) => {
       const isLast = idx === buckets.length - 1;
       const isFirst = idx === 0;
-      const colsBlock = `<div data-cg-cols style="flex:1;min-height:0;column-count:2;column-gap:8mm;column-fill:balance;">${bucket.map((b) => b.html).join('')}</div>`;
+      // min-width:0 + overflow:hidden: a flex item's default min-width is `auto`, which lets
+      // multi-column content demand its full unconstrained intrinsic width and escape this
+      // box (a 3rd column rendered outside the page) — this is the actual root cause of a
+      // reported CG page overflowing horizontally. column-fill:auto (not `balance`) fills
+      // column 1 before spilling into column 2 instead of trying to create extra columns to
+      // keep both balanced when height is constrained, so any true excess stays inside column
+      // 2 where overflow:hidden clips it — a column can no longer escape the page horizontally.
+      const colsBlock = `<div data-cg-cols style="flex:1;min-height:0;min-width:0;overflow:hidden;column-count:2;column-gap:8mm;column-fill:auto;">${bucket.map((b) => b.html).join('')}</div>`;
       const body = `<div data-cg-body style="display:flex;flex-direction:column;height:100%;">${isFirst ? introHtml : ''}${colsBlock}${isLast ? signatureBlockHtml : ''}</div>`;
       const title =
         buckets.length === 1
@@ -1221,6 +1341,17 @@ export async function generateServiceProposalHtml(
           : `Conditions générales (${idx + 1}/${buckets.length})`;
       renderedArticlesHtml.push(renderCgShell(title, body, '', { articles: true }));
     });
+
+    // Pre-built, initially inert dedicated "Signatures" page — same layout as the devis
+    // recap page (Coordonnées + Signatures, non-compact: see buildSignatureRecapHtml).
+    // layoutCgPages() promotes it into the real page flow, and removes the compact
+    // [data-cg-signature] block from the last CG page, only if the compact inline
+    // signatures do not fit there even after compacting — see layoutCgPages().
+    if (signatureBlockHtml) {
+      renderedArticlesHtml.push(
+        renderShellPage('Signatures', buildSignatureRecapHtml({ includeSignatureBanner: false }), { standby: true }),
+      );
+    }
 
   } else if (signatureBlockHtml) {
     // Fallback: no article pages, keep signatures as their own page.
@@ -1235,18 +1366,6 @@ export async function generateServiceProposalHtml(
   // Devis pages 1-3 render through a shell that mirrors the CG shell:
   // strict absolute reservation of the bottom 16mm for the slimmer devis
   // footer, content clipped by overflow:hidden above the footer band.
-  const renderShellPage = (title: string, blocksHtml: string) => `
-    <div class="page-sheet" style="background:#ffffff;">
-      <div style="position:relative;width:100%;height:100%;overflow:hidden;">
-        <div style="position:absolute;top:0;left:0;right:0;">${renderCgHeader(title, '6mm')}</div>
-        <div class="shell-content" data-shell-content style="position:absolute;top:22mm;left:0;right:0;bottom:16mm;padding:2mm 6mm 0 6mm;box-sizing:border-box;overflow:hidden;">
-          <div data-shell-scale>${blocksHtml}</div>
-        </div>
-        ${DEVIS_FOOTER_HTML}
-      </div>
-    </div>
-  `;
-
 
 
 
@@ -1394,50 +1513,7 @@ export async function generateServiceProposalHtml(
 
   // Devis : page finale de signatures (rappel des coordonnées + encarts)
   if (mode !== 'contrat') {
-    const signatureRecapHtml = `
-      <div style="${BLOCK_WRAPPER_STYLE}">
-        <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
-        <div style="${SECTION_BODY_STYLE}">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
-            <div>
-              <p style="${LABEL_STYLE}">Bénéficiaire</p>
-              ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
-              <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                ${clientData.nom ? `<p style="margin:0.5mm 0;">${escapeText(clientData.nom)}</p>` : ''}
-                ${clientData.adresse ? `<p style="margin:0.5mm 0;">${escapeText(clientData.adresse)}</p>` : ''}
-                ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
-                ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
-              </div>
-            </div>
-            <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
-              <p style="${LABEL_STYLE}">Votre interlocuteur</p>
-              ${
-                selectedCommercial
-                  ? `<p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
-                     <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                       ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
-                       ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
-                       ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
-                     </div>`
-                  : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-      <div style="${BLOCK_WRAPPER_STYLE} margin-top:8mm;">
-
-        <div style="${SECTION_BANNER_STYLE}">Signatures</div>
-        <div style="${SECTION_BODY_STYLE}">
-          <div style="${BODY_TEXT_STYLE}">
-            <p style="margin:0 0 4mm 0;">Fait à ___________________</p>
-            <p style="margin:0 0 8mm 0;">Le ___________________</p>
-          </div>
-          ${renderSignatureZone({} as PositionedDynamicZone)}
-        </div>
-      </div>
-    `;
-    allPagesHtml.push(renderShellPage('Signatures', signatureRecapHtml));
+    allPagesHtml.push(renderShellPage('Signatures', buildSignatureRecapHtml()));
   }
 
 
