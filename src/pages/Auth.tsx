@@ -198,6 +198,49 @@ export default function Auth() {
                       'Se connecter'
                     )}
                   </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                      onClick={() => setShowReset(true)}
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  </div>
+                  {showReset && (
+                    <form onSubmit={handleResetPassword} className="space-y-3 rounded-md border border-border p-3">
+                      <p className="text-sm text-muted-foreground">
+                        Saisissez votre email pour recevoir un lien de réinitialisation.
+                      </p>
+                      <Input
+                        type="email"
+                        placeholder="votre@email.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        required
+                      />
+                      <div className="flex gap-2">
+                        <Button type="submit" size="sm" disabled={isSendingReset}>
+                          {isSendingReset ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Envoi...
+                            </>
+                          ) : (
+                            'Envoyer le lien'
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowReset(false)}
+                        >
+                          Annuler
+                        </Button>
+                      </div>
+                    </form>
+                  )}
                 </form>
               </Form>
             </TabsContent>
