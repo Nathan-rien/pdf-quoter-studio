@@ -82,53 +82,6 @@ export type Database = {
           },
         ]
       }
-      base_taux: {
-        Row: {
-          created_at: string
-          duree_mois: number
-          id: string
-          is_active: boolean
-          montant_max: number
-          montant_min: number
-          partner_id: string
-          taux: number
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          created_at?: string
-          duree_mois: number
-          id?: string
-          is_active?: boolean
-          montant_max: number
-          montant_min: number
-          partner_id: string
-          taux: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          created_at?: string
-          duree_mois?: number
-          id?: string
-          is_active?: boolean
-          montant_max?: number
-          montant_min?: number
-          partner_id?: string
-          taux?: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "base_taux_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "financial_partners"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       client_service_references: {
         Row: {
           contract_id: string
@@ -308,45 +261,6 @@ export type Database = {
           ref_fseur?: string | null
           source_file?: string | null
           stock?: number | null
-        }
-        Relationships: []
-      }
-      financial_partners: {
-        Row: {
-          aliases: string[]
-          condition_fin_contrat: string | null
-          created_at: string
-          frais_dossier: number | null
-          id: string
-          is_active: boolean
-          name: string
-          sort_order: number | null
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          aliases?: string[]
-          condition_fin_contrat?: string | null
-          created_at?: string
-          frais_dossier?: number | null
-          id?: string
-          is_active?: boolean
-          name: string
-          sort_order?: number | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          aliases?: string[]
-          condition_fin_contrat?: string | null
-          created_at?: string
-          frais_dossier?: number | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          sort_order?: number | null
-          updated_at?: string
-          updated_by?: string | null
         }
         Relationships: []
       }
