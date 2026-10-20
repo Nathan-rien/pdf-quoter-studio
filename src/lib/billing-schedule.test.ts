@@ -62,8 +62,21 @@ describe('getProchaineFacturation', () => {
     expect(r).toEqual({ date: null, enRetard: false });
   });
 
-  it('facture encore possible le jour exact de fin de contrat', () => {
-    expect(iso(next({ dureeMois: 12, derniereFacturationLe: d('2026-12-10') }).date)).toBe('2027-01-10');
+  it('fin de contrat exclusive : mensuel 12 mois du 01/10/2026, dernière facture le 01/09/2027', () => {
+    const cas = { dateMiseEnPlace: d('2026-10-01'), dureeMois: 12 };
+    expect(iso(next({ ...cas, derniereFacturationLe: d('2027-08-01') }).date)).toBe('2027-09-01');
+    expect(next({ ...cas, derniereFacturationLe: d('2027-09-01') })).toEqual({ date: null, enRetard: false });
+  });
+
+  it('fin de contrat exclusive : trimestriel 12 mois = 4 factures', () => {
+    const cas = { dateMiseEnPlace: d('2026-10-01'), dureeMois: 12, periodicite: 'trimestriel' as const };
+    const factures: string[] = [];
+    let last: Date | null = null;
+    for (let r = next({ ...cas }); r.date; r = next({ ...cas, derniereFacturationLe: last })) {
+      factures.push(iso(r.date)!);
+      last = r.date;
+    }
+    expect(factures).toEqual(['2026-10-01', '2027-01-01', '2027-04-01', '2027-07-01']);
   });
 
   it('pas de prochaine facture si le contrat est clos', () => {

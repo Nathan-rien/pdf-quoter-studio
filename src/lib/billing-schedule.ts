@@ -1,4 +1,4 @@
-import { addMonths, getDate, getDaysInMonth, isAfter, isBefore, setDate, startOfDay, startOfMonth } from 'date-fns';
+import { addMonths, getDate, getDaysInMonth, isBefore, setDate, startOfDay, startOfMonth } from 'date-fns';
 
 export interface ProchaineFacturation {
   date: Date | null;
@@ -30,7 +30,7 @@ function withTargetDay(monthRef: Date, day: number): Date {
  * - Aucune facturation enregistrée : la facture tombe à la mise en place, sur le jour cible.
  * - Sinon : dernière facturation + 1 période (1 ou 3 mois), recalée sur le jour cible
  *   (clamp en fin de mois, ex. 31 → 28/29 février).
- * - Aucune échéance après la fin de contrat (mise en place + durée) ni si le contrat est clos.
+ * - Aucune échéance à partir de la fin de contrat (mise en place + durée, borne exclue) ni si le contrat est clos.
  * - En retard : échéance strictement avant aujourd'hui.
  */
 export function getProchaineFacturation({
@@ -51,7 +51,7 @@ export function getProchaineFacturation({
     ? withTargetDay(addMonths(startOfMonth(derniereFacturationLe), step), targetDay)
     : withTargetDay(dateMiseEnPlace, targetDay);
 
-  if (dureeMois != null && isAfter(candidate, addMonths(dateMiseEnPlace, dureeMois))) {
+  if (dureeMois != null && !isBefore(candidate, addMonths(dateMiseEnPlace, dureeMois))) {
     return { date: null, enRetard: false };
   }
 
