@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus, Archive, ArchiveRestore } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar as CalendarIcon, Clock, Bell, Trash2, Eye, Download, Upload, FileText, X, Loader2, Plus, Archive, ArchiveRestore, Receipt } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format, parseISO, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, useContractProposalRent, useContractProposalOptions, useContractProposalOperationalContact, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
+import { useUpdateContract, useDeleteContract, isContractRenewingSoon, getMonthsUntilRenewal, getContractProchaineFacturation, useContractProposalRent, useContractProposalOptions, useContractProposalOperationalContact, Contract, ContractExternalProvider, PaymentFrequency } from '@/hooks/useContracts';
 import { getOptionPriceLabel } from '@/lib/options-price-utils';
 import { generateAndUploadServiceContractPdf } from '@/lib/service-contract-generator';
 import { generateServiceContractNumber } from '@/lib/contract-numbering';
@@ -91,6 +92,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
   const renewing = isContractRenewingSoon(contract);
   const monthsLeft = getMonthsUntilRenewal(contract);
+  const prochaineFacturation = useMemo(() => getContractProchaineFacturation(contract), [contract]);
 
   const [clientName, setClientName] = useState(contract.client_name ?? '');
   const [implementationDate, setImplementationDate] = useState<Date | undefined>(
@@ -103,6 +105,15 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>(
     contract.payment_frequency ?? 'mensuel'
   );
+  const [jourFacturationOverride, setJourFacturationOverride] = useState<string>(
+    contract.jour_facturation_override != null ? String(contract.jour_facturation_override) : ''
+  );
+  const [derniereFacturationInput, setDerniereFacturationInput] = useState<string>(contract.derniere_facturation_le ?? '');
+  useEffect(() => {
+    setDerniereFacturationInput(contract.derniere_facturation_le ?? '');
+  }, [contract.derniere_facturation_le]);
+  const [facturationDialogOpen, setFacturationDialogOpen] = useState(false);
+  const [facturationDate, setFacturationDate] = useState('');
   const [commercialId, setCommercialId] = useState(contract.commercial_id ?? '');
   const [contractNumber, setContractNumber] = useState(contract.contract_number ?? '');
   const [erpReference, setErpReference] = useState(contract.erp_reference ?? '');
@@ -181,6 +192,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
       savedClientName !== contract.client_name &&
       contractNumber.trim() === (contract.contract_number ?? '');
     let nextContractNumber = contractNumber.trim() || null;
+    const trimmedJourFacturation = jourFacturationOverride.trim();
+    const parsedJourFacturation = trimmedJourFacturation === '' ? null : parseInt(trimmedJourFacturation, 10);
+    const validJourFacturation =
+      parsedJourFacturation != null && !Number.isNaN(parsedJourFacturation) && parsedJourFacturation >= 1 && parsedJourFacturation <= 28
+        ? parsedJourFacturation
+        : null;
+    const billingUpdates = isServiceContract
+      ? {
+          jour_facturation_override: validJourFacturation,
+          derniere_facturation_le: derniereFacturationInput || null,
+        }
+      : {};
 
     try {
       if (isServiceContract && (!nextContractNumber || shouldRefreshQuickPlaceholderNumber)) {
@@ -208,8 +231,22 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
         quarterly_rent_ht: hasProposalRent ? contract.quarterly_rent_ht ?? null : manualQuarterlyValue,
         cession_percent: hideFinancialPartner ? contract.cession_percent ?? null : cessionPercent,
         external_providers: isServiceContract ? externalProviders : contract.external_providers ?? [],
+        ...billingUpdates,
       },
     });
+  }
+
+  function openMarkFacturationDialog() {
+    setFacturationDate(prochaineFacturation.date ? format(prochaineFacturation.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+    setFacturationDialogOpen(true);
+  }
+
+  function handleConfirmFacturation() {
+    if (!facturationDate) return;
+    updateContract.mutate(
+      { id: contract.id, updates: { derniere_facturation_le: facturationDate } },
+      { onSuccess: () => setFacturationDialogOpen(false) },
+    );
   }
 
   function addExternalProvider() {
@@ -438,6 +475,15 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 Renouvellement dans {monthsLeft}m
               </Badge>
             )}
+            {isServiceContract && !isClosed && prochaineFacturation.date && (
+              <Badge
+                variant={prochaineFacturation.enRetard ? 'destructive' : 'outline'}
+                className="gap-1 text-[10px]"
+              >
+                <Receipt className="h-3 w-3" />
+                Prochaine facture : {format(prochaineFacturation.date, 'dd/MM/yyyy', { locale: fr })}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -539,6 +585,18 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 {downloadingProposal || generatingContractPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               </Button>
             </>
+          )}
+          {canEditContract && isServiceContract && !isClosed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50 flex-shrink-0"
+              title="Marquer comme facturé"
+              disabled={updateContract.isPending}
+              onClick={(e) => { e.stopPropagation(); openMarkFacturationDialog(); }}
+            >
+              <Receipt className="w-4 h-4" />
+            </Button>
           )}
           {canEditContract && (
             isClosed ? (
@@ -781,6 +839,16 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 <Label className="text-xs">Périodicité</Label>
                 <div className="text-sm capitalize">{contract.payment_frequency ?? 'mensuel'}</div>
               </div>
+              {isServiceContract && (
+                <div className="space-y-0.5">
+                  <Label className="text-xs">Prochaine facture</Label>
+                  <div className="text-sm">
+                    {prochaineFacturation.date
+                      ? format(prochaineFacturation.date, 'dd/MM/yyyy', { locale: fr })
+                      : '—'}
+                  </div>
+                </div>
+              )}
             </div>
            )}
 
@@ -1033,6 +1101,31 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
                 ))}
               </div>
             </div>
+            {isServiceContract && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Jour de facturation (1-28)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={jourFacturationOverride}
+                    onChange={(e) => setJourFacturationOverride(e.target.value)}
+                    placeholder={`Par défaut : ${implementationDate ? format(implementationDate, 'd') : '—'}`}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dernière facturation le</Label>
+                  <Input
+                    type="date"
+                    value={derniereFacturationInput}
+                    onChange={(e) => setDerniereFacturationInput(e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </>
+            )}
             {!hideFinancialPartner && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Cession</Label>
@@ -1111,6 +1204,28 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
           </div>
           </>)}
         </div>
+      )}
+      {canEditContract && isServiceContract && (
+        <Dialog open={facturationDialogOpen} onOpenChange={setFacturationDialogOpen}>
+          <DialogContent onClick={(e) => e.stopPropagation()}>
+            <DialogHeader>
+              <DialogTitle>Marquer comme facturé</DialogTitle>
+              <DialogDescription>
+                Confirmez la date de facturation de {contract.client_name}. Par défaut, c'est l'échéance due ; modifiez-la si la facture a été émise un autre jour.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Date de facturation</Label>
+              <Input type="date" value={facturationDate} onChange={(e) => setFacturationDate(e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setFacturationDialogOpen(false)}>Annuler</Button>
+              <Button onClick={handleConfirmFacturation} disabled={!facturationDate || updateContract.isPending}>
+                {updateContract.isPending ? 'Enregistrement...' : 'Confirmer'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
