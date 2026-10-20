@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -195,7 +195,6 @@ export type Database = {
           commercial_name: string | null
           contract_number: string | null
           created_at: string
-          derniere_facturation_le: string | null
           duration_months: number | null
           erp_reference: string | null
           external_providers: Json
@@ -203,7 +202,6 @@ export type Database = {
           id: string
           implementation_month: string | null
           is_quick_contract: boolean
-          jour_facturation_override: number | null
           monthly_rent_ht: number | null
           payment_frequency: string | null
           proposal_id: string | null
@@ -224,7 +222,6 @@ export type Database = {
           commercial_name?: string | null
           contract_number?: string | null
           created_at?: string
-          derniere_facturation_le?: string | null
           duration_months?: number | null
           erp_reference?: string | null
           external_providers?: Json
@@ -232,7 +229,6 @@ export type Database = {
           id?: string
           implementation_month?: string | null
           is_quick_contract?: boolean
-          jour_facturation_override?: number | null
           monthly_rent_ht?: number | null
           payment_frequency?: string | null
           proposal_id?: string | null
@@ -253,7 +249,6 @@ export type Database = {
           commercial_name?: string | null
           contract_number?: string | null
           created_at?: string
-          derniere_facturation_le?: string | null
           duration_months?: number | null
           erp_reference?: string | null
           external_providers?: Json
@@ -261,7 +256,6 @@ export type Database = {
           id?: string
           implementation_month?: string | null
           is_quick_contract?: boolean
-          jour_facturation_override?: number | null
           monthly_rent_ht?: number | null
           payment_frequency?: string | null
           proposal_id?: string | null
