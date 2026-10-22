@@ -14,6 +14,8 @@ export interface ParsedImportRow {
   montantMax: number;
   dureeMois: number;
   taux: number;
+  /** undefined = colonne absente ; null = cellule vide, utiliser le défaut partenaire. */
+  fraisDossier?: number | null;
 }
 
 const toNumber = (v: unknown): number =>
@@ -45,6 +47,7 @@ export function parseBaseTauxSheetRows(sheet: unknown[][]): { rows: ParsedImport
     max: header.findIndex((h) => h.includes('max')),
     duree: header.findIndex((h) => h.includes('dur') || h.includes('mois')),
     taux: header.findIndex((h) => h.includes('taux') || h.includes('coef')),
+    frais: header.findIndex((h) => h.includes('frais') && h.includes('dossier')),
   };
 
   const rows: ParsedImportRow[] = [];
@@ -57,6 +60,13 @@ export function parseBaseTauxSheetRows(sheet: unknown[][]): { rows: ParsedImport
     const montantMaxRaw = toNumber(r[idx.max]);
     const dureeRaw = toNumber(r[idx.duree]);
     const taux = toNumber(r[idx.taux]);
+    const fraisCell = idx.frais === -1 ? undefined : String(r[idx.frais] ?? '').trim();
+    const fraisDossier = fraisCell === undefined ? undefined : fraisCell === '' ? null
+      : Number(fraisCell.replace(/\s|€|EUR|HT/gi, '').replace(',', '.'));
+    if (fraisDossier != null && (!Number.isFinite(fraisDossier) || fraisDossier < 0)) {
+      errors.push(`Ligne ${i + 1}: frais de dossier invalides`);
+      continue;
+    }
     if ([montantMin, dureeRaw, taux].some(Number.isNaN)) {
       errors.push(`Ligne ${i + 1}: valeurs numériques invalides`);
       continue;
@@ -68,6 +78,7 @@ export function parseBaseTauxSheetRows(sheet: unknown[][]): { rows: ParsedImport
       montantMax: montantMaxRaw || 500000,
       dureeMois: QUARTERS_TO_MONTHS[dureeRaw] ?? dureeRaw,
       taux,
+      ...(fraisDossier === undefined ? {} : { fraisDossier: fraisDossier === null ? null : Math.round(fraisDossier * 100) / 100 }),
     });
   }
   return { rows, errors };
@@ -130,7 +141,8 @@ export function planBaseTauxImport(
   const overlaps: string[] = [];
 
   for (const group of groups.values()) {
-    const current = group.partner ? existing.filter((r) => r.partnerId === group.partner!.id) : [];
+    const partnerId = group.partner?.id;
+    const current = partnerId ? existing.filter((r) => r.partnerId === partnerId) : [];
     const diff: PartnerImportDiff = {
       partnerName: group.name,
       partnerId: group.partner?.id ?? null,
@@ -148,7 +160,8 @@ export function planBaseTauxImport(
         continue;
       }
       matched.add(found.id);
-      if (Math.abs(found.taux - row.taux) < 1e-9) diff.unchanged++;
+      const sameFees = row.fraisDossier === undefined || row.fraisDossier === (found.fraisDossier ?? null);
+      if (Math.abs(found.taux - row.taux) < 1e-9 && sameFees) diff.unchanged++;
       else diff.updates.push({ existing: found, row });
     }
     if (deleteMissing) diff.deletes = current.filter((c) => !matched.has(c.id));

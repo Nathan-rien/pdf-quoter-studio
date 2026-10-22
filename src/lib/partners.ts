@@ -21,6 +21,7 @@ export interface BaseTauxRow {
   montantMax: number;
   dureeMois: number;
   taux: number;
+  fraisDossier?: number | null;
   isActive: boolean;
 }
 
@@ -53,8 +54,12 @@ export function canonicalPartnerName(
 export function getFraisDossierIn(
   partners: readonly FinancialPartner[],
   name: string | null | undefined,
+  rows: readonly BaseTauxRow[] = [],
+  montant: number | null = null,
+  dureeMois: number | null = null,
 ): number | null {
-  return resolvePartner(partners, name)?.fraisDossier ?? null;
+  return lookupBaseTauxRowIn(partners, rows, name, montant, dureeMois)?.fraisDossier
+    ?? resolvePartner(partners, name)?.fraisDossier ?? null;
 }
 
 export function getConditionFinContratIn(
@@ -76,6 +81,17 @@ export function lookupCoefficientIn(
   montant: number | null,
   dureeMois: number | null,
 ): number | null {
+  return lookupBaseTauxRowIn(partners, rows, name, montant, dureeMois)?.taux ?? null;
+}
+
+/** Résolveur partagé : les frais et le coefficient utilisent exactement la même ligne. */
+export function lookupBaseTauxRowIn(
+  partners: readonly FinancialPartner[],
+  rows: readonly BaseTauxRow[],
+  name: string | null | undefined,
+  montant: number | null,
+  dureeMois: number | null,
+): BaseTauxRow | null {
   if (montant === null || dureeMois === null) return null;
   const partner = resolvePartner(partners, name);
   if (!partner) return null;
@@ -86,7 +102,7 @@ export function lookupCoefficientIn(
       r.montantMin <= montant &&
       r.montantMax >= montant,
   );
-  return (matches.find((r) => r.isActive) ?? matches[0])?.taux ?? null;
+  return matches.find((r) => r.isActive) ?? matches[0] ?? null;
 }
 
 // --- Validation base taux ---------------------------------------------------
@@ -98,6 +114,7 @@ export interface BaseTauxDraft {
   montantMax: number;
   dureeMois: number;
   taux: number;
+  fraisDossier?: number | null;
 }
 
 /** Retourne les messages d'erreur (vide si valide). */
@@ -111,6 +128,9 @@ export function validateBaseTauxDraft(d: BaseTauxDraft): string[] {
   }
   if (!Number.isInteger(d.dureeMois) || d.dureeMois <= 0) errors.push('La durée doit être un entier de mois positif');
   if (!Number.isFinite(d.taux) || d.taux <= 0) errors.push('Le taux doit être strictement positif');
+  if (d.fraisDossier != null && (!Number.isFinite(d.fraisDossier) || d.fraisDossier < 0)) {
+    errors.push('Les frais de dossier doivent être un montant positif ou nul');
+  }
   return errors;
 }
 
