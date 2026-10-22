@@ -157,6 +157,8 @@ export interface ClientLogoOverride {
 }
 
 interface RentalProposalState {
+  /** 1 = brouillon créé avec les frais par tranche ; absent = brouillon antérieur. */
+  fraisTrancheVersion?: number;
   // Import status
   pdfImportStatus: PDFImportStatus;
   
@@ -231,8 +233,6 @@ interface RentalProposalActions {
   deleteProposal: (id: string) => void;
   /** Abandonne les frais mémorisés et applique le tarif actuel à toutes les propositions. */
   applyCurrentFraisDossier: () => void;
-  /** 1 = brouillon créé avec les frais par tranche ; absent = brouillon antérieur. */
-  fraisTrancheVersion?: number;
   getProposalCalculations: (id: string) => ReturnType<typeof calculateAllMatriceValues> | null;
   getAllProposalsCalculations: () => Array<{ proposal: MatriceProposal; calculations: ReturnType<typeof calculateAllMatriceValues> }>;
   
