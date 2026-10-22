@@ -71,6 +71,7 @@ export function RentalDataEditor() {
     deleteNosOption,
     toggleNosOption,
     getCalculatedValues,
+    applyCurrentFraisDossier,
     getSelectedOptionsPrices,
     updateCommercialEntity,
     selectCommercial,
@@ -495,6 +496,27 @@ export function RentalDataEditor() {
                   <div className="flex items-center h-10 px-3 bg-muted rounded-md">
                     <span className="font-medium">{calculatedValues.fraisDossier ?? '-'} €</span>
                   </div>
+                  {calculatedValues.fraisDossierDiffere && (() => {
+                    const fmt = (v: number | null) => v === null ? '-' : v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const detail = `Frais enregistrés : ${fmt(calculatedValues.fraisDossier)} € HT — tarif actuel : ${fmt(calculatedValues.fraisDossierActuel)} € HT`;
+                    return (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">{detail}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          title={detail}
+                          onClick={() => {
+                            applyCurrentFraisDossier();
+                            toast.success(`Tarif actuel appliqué : ${fmt(calculatedValues.fraisDossierActuel)} € HT`);
+                          }}
+                        >
+                          Appliquer les frais actuels
+                        </Button>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="space-y-2">
                   {proposals[0]?.refinanceur ? (
