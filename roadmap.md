@@ -5,4 +5,4 @@
 - [x] Ajouter la saisie par ligne dans Base taux.
 - [x] Préserver les frais existants lors d’un import sans colonne dédiée.
 - [x] Tester les règles et vérifier les parcours concernés.
-- [ ] Protection des anciens exports : attendre un accord distinct avant toute modification.
+- [x] Protection des anciennes propositions (montant mémorisé, défaut partenaire pour l’ancien, bouton tarif actuel, copie = tarif actuel).

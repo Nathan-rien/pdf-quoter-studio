@@ -62,6 +62,43 @@ export function getFraisDossierIn(
     ?? resolvePartner(partners, name)?.fraisDossier ?? null;
 }
 
+/**
+ * Frais mémorisés sur une proposition.
+ * - fraisDossierFige défini (y compris null) : montant enregistré à l'export, réutilisé tel quel.
+ * - fraisDossierLegacy : proposition enregistrée avant les frais par tranche → défaut partenaire.
+ * - rien : nouvelle offre → tarif actuel (ligne de base taux, sinon partenaire).
+ */
+export interface SavedFraisDossier {
+  fraisDossierFige?: number | null;
+  fraisDossierLegacy?: boolean;
+}
+
+export interface ResolvedFraisDossier {
+  applied: number | null;
+  current: number | null;
+  /** true si le montant appliqué provient d'un enregistrement et diffère du tarif actuel. */
+  differsFromCurrent: boolean;
+}
+
+export function resolveSavedFraisDossierIn(
+  partners: readonly FinancialPartner[],
+  rows: readonly BaseTauxRow[],
+  name: string | null | undefined,
+  montant: number | null,
+  dureeMois: number | null,
+  saved: SavedFraisDossier | null | undefined,
+): ResolvedFraisDossier {
+  const current = getFraisDossierIn(partners, name, rows, montant, dureeMois);
+  let applied = current;
+  if (saved && saved.fraisDossierFige !== undefined) {
+    applied = saved.fraisDossierFige;
+  } else if (saved?.fraisDossierLegacy) {
+    applied = resolvePartner(partners, name)?.fraisDossier ?? null;
+  }
+  return { applied, current, differsFromCurrent: applied !== current };
+}
+
+
 export function getConditionFinContratIn(
   partners: readonly FinancialPartner[],
   name: string | null | undefined,

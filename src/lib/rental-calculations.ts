@@ -3,7 +3,8 @@
 
 import { getBaseTauxCache, getPartnersCache } from '@/lib/partners-cache';
 import { lookupCoefficientIn } from '@/lib/partners';
-import { getFraisDossier } from '@/data/frais-dossier';
+import { resolveProposalFraisDossier } from '@/data/frais-dossier';
+import type { SavedFraisDossier } from '@/lib/partners';
 
 /**
  * Lookup du coefficient dans la base taux (Supabase, via le cache react-query).
@@ -183,6 +184,8 @@ export interface CalculatedMatriceValues {
   coutLocatifAnnuel: number | null;
   margeLoc: number | null;
   fraisDossier: number | null;
+  fraisDossierActuel: number | null; // tarif actuel (base taux / partenaire)
+  fraisDossierDiffere: boolean; // montant mémorisé ≠ tarif actuel
 }
 
 /**
@@ -194,7 +197,8 @@ export function calculateAllMatriceValues(
   refinanceur: string | null,
   margeAppliquee: number,
   optionsPrices: (number | null)[],
-  coefficientOverride?: number | null
+  coefficientOverride?: number | null,
+  savedFrais?: SavedFraisDossier | null
 ): CalculatedMatriceValues {
   // Lookup coefficient (auto), sauf si override fourni
   const coefficientAuto = lookupCoefficient(refinanceur, montantInvestissement, duree);
@@ -228,7 +232,8 @@ export function calculateAllMatriceValues(
   const margeLoc = calculateMargeLoc(investMarge, montantInvestissement);
   
   // Frais de dossier
-  const fraisDossier = getFraisDossier(refinanceur, montantInvestissement, duree);
+  const frais = resolveProposalFraisDossier(refinanceur, montantInvestissement, duree, savedFrais);
+  const fraisDossier = frais.applied;
   
   return {
     coefficient,
@@ -244,5 +249,7 @@ export function calculateAllMatriceValues(
     coutLocatifAnnuel,
     margeLoc,
     fraisDossier,
+    fraisDossierActuel: frais.current,
+    fraisDossierDiffere: frais.differsFromCurrent,
   };
 }

@@ -22,7 +22,8 @@ export function useProposalCalculations(
         proposal.refinanceur,
         proposal.margeAppliquee,
         optionsPrices,
-        proposal.coefficientOverride
+        proposal.coefficientOverride,
+        proposal
       ),
     [
       proposal.montantInvestissement,
@@ -30,6 +31,8 @@ export function useProposalCalculations(
       proposal.refinanceur,
       proposal.margeAppliquee,
       proposal.coefficientOverride,
+      proposal.fraisDossierFige,
+      proposal.fraisDossierLegacy,
       optionsPrices,
       partners,
       baseTaux,

@@ -40,6 +40,9 @@ export interface MatriceProposal {
   refinanceur: string | null;
   margeAppliquee: number;
   coefficientOverride: number | null; // null = utiliser la valeur auto
+  // Frais de dossier mémorisés (voir SavedFraisDossier) ; absents = tarif actuel
+  fraisDossierFige?: number | null;
+  fraisDossierLegacy?: boolean;
 }
 
 interface MatriceData {
@@ -154,6 +157,8 @@ export interface ClientLogoOverride {
 }
 
 interface RentalProposalState {
+  /** 1 = brouillon créé avec les frais par tranche ; absent = brouillon antérieur. */
+  fraisTrancheVersion?: number;
   // Import status
   pdfImportStatus: PDFImportStatus;
   
@@ -226,6 +231,8 @@ interface RentalProposalActions {
   duplicateProposal: (id: string) => { clearedInactivePartner: boolean };
   updateProposal: (id: string, updates: Partial<MatriceProposal>) => void;
   deleteProposal: (id: string) => void;
+  /** Abandonne les frais mémorisés et applique le tarif actuel à toutes les propositions. */
+  applyCurrentFraisDossier: () => void;
   getProposalCalculations: (id: string) => ReturnType<typeof calculateAllMatriceValues> | null;
   getAllProposalsCalculations: () => Array<{ proposal: MatriceProposal; calculations: ReturnType<typeof calculateAllMatriceValues> }>;
   
@@ -382,6 +389,7 @@ const initialState: RentalProposalState = {
   currentStep: 'import',
   hasUnsavedChanges: false,
   isActive: false,
+  fraisTrancheVersion: 1,
 };
 
 export const useRentalProposalStore = create<RentalProposalState & RentalProposalActions>()(
@@ -492,6 +500,9 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             ...original,
             id: generateProposalId(),
             refinanceur: clearedInactivePartner ? null : original.refinanceur,
+            // Une copie est une nouvelle offre : tarif actuel, pas l'ancien montant.
+            fraisDossierFige: undefined,
+            fraisDossierLegacy: undefined,
           };
           
           // Insert duplicate right after the original
@@ -509,9 +520,23 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
 
       updateProposal: (id, updates) => {
         set(state => ({
-          proposals: state.proposals.map(p =>
-            p.id === id ? { ...p, ...updates } : p
-          ),
+          proposals: state.proposals.map(p => {
+            if (p.id !== id) return p;
+            const next = { ...p, ...updates };
+            // Changer de refinanceur = nouvelle tarification : on abandonne le montant mémorisé.
+            if (updates.refinanceur !== undefined && updates.refinanceur !== p.refinanceur) {
+              next.fraisDossierFige = undefined;
+              next.fraisDossierLegacy = undefined;
+            }
+            return next;
+          }),
+          hasUnsavedChanges: true,
+        }));
+      },
+
+      applyCurrentFraisDossier: () => {
+        set(state => ({
+          proposals: state.proposals.map(p => ({ ...p, fraisDossierFige: undefined, fraisDossierLegacy: undefined })),
           hasUnsavedChanges: true,
         }));
       },
@@ -541,7 +566,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           proposal.refinanceur,
           proposal.margeAppliquee,
           optionsPrices,
-          proposal.coefficientOverride
+          proposal.coefficientOverride,
+          proposal
         );
       },
 
@@ -559,7 +585,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             proposal.refinanceur,
             proposal.margeAppliquee,
             optionsPrices,
-            proposal.coefficientOverride
+            proposal.coefficientOverride,
+            proposal
           ),
         }));
       },
@@ -923,7 +950,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           firstProposal?.refinanceur ?? state.matriceData.refinanceur,
           firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
           optionsPrices,
-          firstProposal?.coefficientOverride
+          firstProposal?.coefficientOverride,
+          firstProposal
         );
       },
 
@@ -1086,8 +1114,11 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           clientData: snapshot.clientData ?? initialClientData,
           commercialData: snapshot.commercialData ?? initialCommercialData,
           matriceData: snapshot.matriceData ?? initialMatriceData,
+          // Un export sans montant mémorisé date d'avant les frais par tranche :
+          // il garde le défaut partenaire (ex. 118 € Franfinance 1).
           proposals: Array.isArray(snapshot.proposals) && snapshot.proposals.length > 0
-            ? snapshot.proposals
+            ? snapshot.proposals.map((p: MatriceProposal) =>
+                p.fraisDossierFige !== undefined ? p : { ...p, fraisDossierLegacy: true })
             : [createDefaultProposal()],
           lignesData: Array.isArray(snapshot.lignesData) ? snapshot.lignesData : [],
           repriseData: (snapshot.repriseData && typeof snapshot.repriseData === 'object')
@@ -1133,6 +1164,7 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
         selectedTemplateId: state.selectedTemplateId,
         currentStep: state.currentStep,
         isActive: state.isActive,
+        fraisTrancheVersion: state.fraisTrancheVersion,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error) {
@@ -1210,6 +1242,13 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
                 ...p,
                 montantInvestissement: p.montantInvestissement ?? state.matriceData?.montantInvestissement ?? null,
               }));
+            }
+
+            // Brouillon enregistré avant les frais par tranche : garder le défaut partenaire.
+            if (state.fraisTrancheVersion !== 1) {
+              state.proposals = state.proposals.map(p =>
+                p.fraisDossierFige !== undefined ? p : { ...p, fraisDossierLegacy: true });
+              state.fraisTrancheVersion = 1;
             }
 
             // Validate / migrate repriseData
