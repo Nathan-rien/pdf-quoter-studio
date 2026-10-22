@@ -116,6 +116,7 @@ export function BaseTauxImportDialog({ open, onOpenChange }: Props) {
             montantMax: r.montantMax,
             dureeMois: r.dureeMois,
             taux: r.taux,
+            ...(r.fraisDossier === undefined ? {} : { fraisDossier: r.fraisDossier }),
           })),
         ),
         updates: plan.diffs.flatMap((d) =>
@@ -126,6 +127,7 @@ export function BaseTauxImportDialog({ open, onOpenChange }: Props) {
             montantMax: u.row.montantMax,
             dureeMois: u.row.dureeMois,
             taux: u.row.taux,
+            ...(u.row.fraisDossier === undefined ? {} : { fraisDossier: u.row.fraisDossier }),
           })),
         ),
         deleteIds: plan.diffs.flatMap((d) => d.deletes.map((r) => r.id)),

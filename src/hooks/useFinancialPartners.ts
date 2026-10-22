@@ -24,6 +24,7 @@ const toRow = (r: Tables<'base_taux'>): BaseTauxRow => ({
   montantMax: Number(r.montant_max),
   dureeMois: r.duree_mois,
   taux: Number(r.taux),
+  fraisDossier: r.frais_dossier === null ? null : Number(r.frais_dossier),
   isActive: r.is_active,
 });
 
@@ -161,6 +162,7 @@ export interface BaseTauxInput {
   montantMax: number;
   dureeMois: number;
   taux: number;
+  fraisDossier?: number | null;
   isActive?: boolean;
 }
 
@@ -170,6 +172,7 @@ const toDb = (r: BaseTauxInput, updated_by: string | null) => ({
   montant_max: r.montantMax,
   duree_mois: r.dureeMois,
   taux: r.taux,
+  ...(r.fraisDossier === undefined ? {} : { frais_dossier: r.fraisDossier }),
   ...(r.isActive === undefined ? {} : { is_active: r.isActive }),
   updated_by,
 });
@@ -199,6 +202,19 @@ export function useDeleteBaseTauxRow() {
       if (error) throw error;
     },
     onSuccess: invalidate,
+  });
+}
+
+/** Édition des frais seuls : ne réécrit pas le taux, la tranche ni les autres champs. */
+export function useSaveBaseTauxFees() {
+  const invalidate = useInvalidateReferenceData();
+  return useMutation({
+    mutationFn: async ({ id, fraisDossier }: { id: string; fraisDossier: number | null }) => {
+      const { error } = await supabase.from('base_taux')
+        .update({ frais_dossier: fraisDossier, updated_by: await currentUserId() }).eq('id', id);
+      if (error) throw error;
+    },
+    onSettled: invalidate,
   });
 }
 

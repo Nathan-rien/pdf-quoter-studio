@@ -228,7 +228,7 @@ export function calculateAllMatriceValues(
   const margeLoc = calculateMargeLoc(investMarge, montantInvestissement);
   
   // Frais de dossier
-  const fraisDossier = getFraisDossier(refinanceur);
+  const fraisDossier = getFraisDossier(refinanceur, montantInvestissement, duree);
   
   return {
     coefficient,

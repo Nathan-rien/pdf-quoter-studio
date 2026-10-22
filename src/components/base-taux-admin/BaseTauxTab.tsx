@@ -26,6 +26,7 @@ import {
 import { findOverlaps, validateBaseTauxDraft, type BaseTauxRow } from '@/lib/partners';
 import { cn } from '@/lib/utils';
 import { BaseTauxImportDialog } from './BaseTauxImportDialog';
+import { BaseTauxFeesInput } from './BaseTauxFeesInput';
 
 interface FormState {
   id?: string;
@@ -34,6 +35,7 @@ interface FormState {
   montantMax: string;
   dureeMois: string;
   taux: string;
+  fraisDossier: string;
   isActive: boolean;
 }
 
@@ -76,6 +78,7 @@ export function BaseTauxTab() {
       montantMax: '',
       dureeMois: filterDuree !== 'all' ? filterDuree : '',
       taux: '',
+      fraisDossier: '',
       isActive: true,
     });
 
@@ -87,6 +90,7 @@ export function BaseTauxTab() {
       montantMax: String(r.montantMax),
       dureeMois: String(r.dureeMois),
       taux: String(r.taux),
+      fraisDossier: r.fraisDossier == null ? '' : r.fraisDossier.toFixed(2),
       isActive: r.isActive,
     });
 
@@ -99,6 +103,7 @@ export function BaseTauxTab() {
       montantMax: num(form.montantMax),
       dureeMois: num(form.dureeMois),
       taux: num(form.taux),
+      fraisDossier: form.fraisDossier.trim() === '' ? null : Math.round(num(form.fraisDossier) * 100) / 100,
     };
     const errors = validateBaseTauxDraft(draft);
     if (errors.length) return toast.error(errors.join(' · '));
@@ -202,13 +207,14 @@ export function BaseTauxTab() {
                 <TableHead className="text-right">Montant max</TableHead>
                 <TableHead className="text-right">Durée</TableHead>
                 <TableHead className="text-right">Taux</TableHead>
+                <TableHead className="text-right">Frais de dossier (€ HT)</TableHead>
                 <TableHead className="w-[90px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Chargement…
                   </TableCell>
                 </TableRow>
@@ -230,6 +236,9 @@ export function BaseTauxTab() {
                     <TableCell className="text-right">{r.montantMax.toLocaleString('fr-FR')} €</TableCell>
                     <TableCell className="text-right">{r.dureeMois} mois</TableCell>
                     <TableCell className="text-right font-mono">{r.taux}</TableCell>
+                    <TableCell className="text-right">
+                      <BaseTauxFeesInput key={`${r.id}-${r.fraisDossier ?? 'default'}`} row={r} defaultFees={partner?.fraisDossier ?? null} />
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="iconSm" title="Modifier" onClick={() => openEdit(r)}>
@@ -294,6 +303,12 @@ export function BaseTauxTab() {
                     />
                   </div>
                 ))}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="bt-frais">Frais de dossier (€ HT)</Label>
+                <Input id="bt-frais" inputMode="decimal" value={form.fraisDossier}
+                  placeholder={partnerById.get(form.partnerId)?.fraisDossier?.toFixed(2) ?? '—'}
+                  onChange={(e) => setForm({ ...form, fraisDossier: e.target.value })} />
               </div>
               <div className="flex items-center gap-2">
                 <Switch id="bt-active" checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
