@@ -50,3 +50,35 @@ describe('frais de dossier des anciennes propositions', () => {
     expect(fees()).toEqual([150]);
   });
 });
+
+describe('« Appliquer les frais actuels » avec plusieurs scénarios', () => {
+  const multiPartners: FinancialPartner[] = [
+    { id: 'ff', name: 'Franfinance 1', fraisDossier: 118, aliases: [], isActive: true, sortOrder: 1, conditionFinContrat: null },
+    { id: 'gr', name: 'Grenke 1', fraisDossier: 0, aliases: [], isActive: true, sortOrder: 2, conditionFinContrat: null },
+  ];
+  const multiRows: BaseTauxRow[] = [
+    { id: 'a', partnerId: 'ff', montantMin: 1500, montantMax: 19999, dureeMois: 36, taux: 3, fraisDossier: 60, isActive: true },
+    { id: 'b', partnerId: 'ff', montantMin: 20000, montantMax: 49999, dureeMois: 36, taux: 2.9, fraisDossier: null, isActive: true },
+    { id: 'c', partnerId: 'gr', montantMin: 1500, montantMax: 49999, dureeMois: 36, taux: 3, fraisDossier: null, isActive: true },
+  ];
+  const base = { duree: 36, margeAppliquee: 6, coefficientOverride: null };
+  const scenarios = [
+    { ...base, id: 's1', montantInvestissement: 15000, refinanceur: 'Franfinance 1' },
+    { ...base, id: 's2', montantInvestissement: 15000, refinanceur: 'Grenke 1' },
+    { ...base, id: 's3', montantInvestissement: 25000, refinanceur: 'Franfinance 1' },
+  ];
+  beforeEach(() => { setPartnersCache(multiPartners); setBaseTauxCache(multiRows); });
+
+  it('une ancienne proposition garde 118 € puis chaque scénario prend son propre tarif', () => {
+    store().loadFromExport({ proposals: scenarios });
+    expect(fees()).toEqual([118, 0, 118]);
+    store().applyCurrentFraisDossier();
+    expect(fees()).toEqual([60, 0, 118]);
+  });
+
+  it('une nouvelle proposition à 3 scénarios prend directement 60 / 0 / 118', () => {
+    store().loadFromExport({ proposals: scenarios.map((s) => ({ ...s, fraisDossierFige: undefined })) });
+    store().applyCurrentFraisDossier();
+    expect(fees()).toEqual([60, 0, 118]);
+  });
+});
