@@ -20,6 +20,30 @@ const line = (over: Partial<ParsedImportRow>): ParsedImportRow => ({
 });
 
 describe('parseBaseTauxSheetRows', () => {
+  it('sans colonne frais : propriété absente', () => {
+    const result = parseBaseTauxSheetRows([
+      ['Partenaire', 'Montant min', 'Montant max', 'Durée', 'Taux'],
+      ['Grenke', 1000, 5000, 36, 3],
+    ]);
+    expect(result.rows[0]).not.toHaveProperty('fraisDossier');
+  });
+  it.each([[60, 60], ['60,125 € HT', 60.13], [0, 0], ['', null]])('colonne frais : %s devient %s', (cell, expected) => {
+    const result = parseBaseTauxSheetRows([
+      ['Partenaire', 'Montant min', 'Montant max', 'Durée', 'Taux', 'Frais de dossier (€ HT)'],
+      ['Grenke', 1000, 5000, 36, 3, cell],
+    ]);
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0].fraisDossier).toBe(expected);
+  });
+  it('refuse les frais invalides', () => {
+    const result = parseBaseTauxSheetRows([
+      ['Partenaire', 'Montant min', 'Montant max', 'Durée', 'Taux', 'Frais dossier'],
+      ['Grenke', 1000, 5000, 36, 3, 'invalide'],
+      ['Grenke', 5001, 10000, 36, 3, -60],
+    ]);
+    expect(result.errors).toHaveLength(2);
+    expect(result.rows).toEqual([]);
+  });
   it('parse les colonnes, convertit les trimestres en mois et applique le max par défaut', () => {
     const { rows, errors } = parseBaseTauxSheetRows([
       ['Partenaire', 'Montant min', 'Montant max', 'Durée Location', 'Taux'],
@@ -38,6 +62,19 @@ describe('parseBaseTauxSheetRows', () => {
 });
 
 describe('planBaseTauxImport', () => {
+  it('sans colonne frais conserve 60 €, même quand le taux change', () => {
+    const current = [{ ...existing[0], fraisDossier: 60 }];
+    const unchanged = planBaseTauxImport(partners, current, [line({})]);
+    expect(unchanged.diffs[0].unchanged).toBe(1);
+    const changed = planBaseTauxImport(partners, current, [line({ taux: 4 })]);
+    expect(changed.diffs[0].updates[0].existing.fraisDossier).toBe(60);
+    expect(changed.diffs[0].updates[0].row).not.toHaveProperty('fraisDossier');
+  });
+  it.each([118, 0, null])('détecte une modification de frais seuls vers %s', (fraisDossier) => {
+    const plan = planBaseTauxImport(partners, [{ ...existing[0], fraisDossier: 60 }], [line({ fraisDossier })]);
+    expect(plan.diffs[0].unchanged).toBe(0);
+    expect(plan.diffs[0].updates[0].row.fraisDossier).toBe(fraisDossier);
+  });
   it('résout les alias et classe inchangé / modifié / ajouté / supprimé', () => {
     const plan = planBaseTauxImport(partners, existing, [
       line({ taux: 3 }), // inchangé (alias Grenke)

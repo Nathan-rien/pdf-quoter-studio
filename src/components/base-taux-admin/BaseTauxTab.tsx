@@ -304,6 +304,12 @@ export function BaseTauxTab() {
                   </div>
                 ))}
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="bt-frais">Frais de dossier (€ HT)</Label>
+                <Input id="bt-frais" inputMode="decimal" value={form.fraisDossier}
+                  placeholder={partnerById.get(form.partnerId)?.fraisDossier?.toFixed(2) ?? '—'}
+                  onChange={(e) => setForm({ ...form, fraisDossier: e.target.value })} />
+              </div>
               <div className="flex items-center gap-2">
                 <Switch id="bt-active" checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
                 <Label htmlFor="bt-active">Ligne active</Label>
