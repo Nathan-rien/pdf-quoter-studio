@@ -134,7 +134,12 @@ export function RentalProposalExport() {
         clientData: store.clientData,
         commercialData: store.commercialData,
         matriceData: store.matriceData,
-        proposals: store.proposals,
+        // Mémorise les frais appliqués à chaque scénario pour les retrouver au rechargement.
+        proposals: allProps.map(({ proposal, calculations }) => ({
+          ...proposal,
+          fraisDossierFige: calculations.fraisDossier,
+          fraisDossierLegacy: undefined,
+        })),
         lignesData: store.lignesData,
         servicesInclus: store.servicesInclus,
         optionsServices: store.optionsServices,

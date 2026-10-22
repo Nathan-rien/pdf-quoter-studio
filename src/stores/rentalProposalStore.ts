@@ -389,6 +389,7 @@ const initialState: RentalProposalState = {
   currentStep: 'import',
   hasUnsavedChanges: false,
   isActive: false,
+  fraisTrancheVersion: 1,
 };
 
 export const useRentalProposalStore = create<RentalProposalState & RentalProposalActions>()(
