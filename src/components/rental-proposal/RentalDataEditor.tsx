@@ -484,53 +484,102 @@ export function RentalDataEditor() {
             </Card>
           )}
 
-          {/* Encart Condition fin de contrat - using first proposal's refinanceur */}
+          {/* Encart Condition fin de contrat - par scénario si refinanceurs/tranches différents */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Condition fin de contrat</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Frais de dossier</Label>
-                  <div className="flex items-center h-10 px-3 bg-muted rounded-md">
-                    <span className="font-medium">{calculatedValues.fraisDossier ?? '-'} €</span>
-                  </div>
-                  {calculatedValues.fraisDossierDiffere && (() => {
-                    const fmt = (v: number | null) => v === null ? '-' : v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    const detail = `Frais enregistrés : ${fmt(calculatedValues.fraisDossier)} € HT — tarif actuel : ${fmt(calculatedValues.fraisDossierActuel)} € HT`;
-                    return (
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">{detail}</p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          title={detail}
-                          onClick={() => {
-                            applyCurrentFraisDossier();
-                            toast.success(`Tarif actuel appliqué : ${fmt(calculatedValues.fraisDossierActuel)} € HT`);
-                          }}
-                        >
-                          Appliquer les frais actuels
-                        </Button>
+              {(() => {
+                const fmt = (v: number | null) => v === null ? '-' : v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const rows = useRentalProposalStore.getState().getAllProposalsCalculations();
+                const anyDiffere = rows.some(r => r.calculations.fraisDossierDiffere);
+                const keys = new Set(rows.map(r => `${r.proposal.refinanceur ?? ''}|${r.calculations.fraisDossier}|${r.calculations.fraisDossierActuel}|${getConditionFinContrat(r.proposal.refinanceur) ?? ''}`));
+                const perScenario = rows.length > 1 && keys.size > 1;
+                const onApply = () => {
+                  applyCurrentFraisDossier();
+                  const after = useRentalProposalStore.getState().getAllProposalsCalculations();
+                  if (after.length > 1) {
+                    const detail = after.map(r => `${r.proposal.refinanceur || 'Sans refinanceur'} : ${fmt(r.calculations.fraisDossier)} €`).join(' · ');
+                    toast.success('Tarifs actuels appliqués', { description: detail });
+                  } else {
+                    toast.success(`Tarif actuel appliqué : ${fmt(after[0]?.calculations.fraisDossier ?? null)} € HT`);
+                  }
+                };
+                const applyButton = anyDiffere && (
+                  <Button type="button" variant="outline" size="sm" onClick={onApply}>
+                    Appliquer les frais actuels
+                  </Button>
+                );
+                const conditionBadge = (refi: string | null | undefined) => refi ? (
+                  <Badge
+                    variant={getConditionFinContrat(refi) === 'Reprise obligatoire loueur' ? 'destructive' : 'default'}
+                    className="text-sm"
+                  >
+                    {getConditionFinContrat(refi) ?? 'Non définie'}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-sm">Sélectionnez un refinanceur</Badge>
+                );
+
+                if (perScenario) {
+                  return (
+                    <div className="space-y-2">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Proposition</TableHead>
+                            <TableHead>Refinanceur</TableHead>
+                            <TableHead>Frais de dossier</TableHead>
+                            <TableHead>Condition fin de contrat</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {rows.map((r, i) => (
+                            <TableRow key={r.proposal.id}>
+                              <TableCell>{i + 1}</TableCell>
+                              <TableCell>{r.proposal.refinanceur || '-'}</TableCell>
+                              <TableCell>
+                                <span className="font-medium">{fmt(r.calculations.fraisDossier)} € HT</span>
+                                {r.calculations.fraisDossierDiffere && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Frais enregistrés : {fmt(r.calculations.fraisDossier)} € HT — tarif actuel : {fmt(r.calculations.fraisDossierActuel)} € HT
+                                  </p>
+                                )}
+                              </TableCell>
+                              <TableCell>{conditionBadge(r.proposal.refinanceur)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      {applyButton}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Frais de dossier</Label>
+                      <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                        <span className="font-medium">{calculatedValues.fraisDossier ?? '-'} €</span>
                       </div>
-                    );
-                  })()}
-                </div>
-                <div className="space-y-2">
-                  {proposals[0]?.refinanceur ? (
-                    <Badge 
-                      variant={getConditionFinContrat(proposals[0].refinanceur) === 'Reprise obligatoire loueur' ? 'destructive' : 'default'}
-                      className="text-sm"
-                    >
-                      {getConditionFinContrat(proposals[0].refinanceur) ?? 'Non définie'}
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-sm">Sélectionnez un refinanceur</Badge>
-                  )}
-                </div>
-              </div>
+                      {calculatedValues.fraisDossierDiffere && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            Frais enregistrés : {fmt(calculatedValues.fraisDossier)} € HT — tarif actuel : {fmt(calculatedValues.fraisDossierActuel)} € HT
+                          </p>
+                          {applyButton}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {conditionBadge(proposals[0]?.refinanceur)}
+                    </div>
+                  </div>
+                );
+              })()}
+
 
               {/* Commentaire libre */}
               <div className="mt-4 space-y-2">
