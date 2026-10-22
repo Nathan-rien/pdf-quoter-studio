@@ -8,6 +8,13 @@
       "when": 1792506859709,
       "tag": "0000_service_billing_days",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792680768711,
+      "tag": "0001_base_taux_frais_dossier",
+      "breakpoints": true
     }
   ]
 }

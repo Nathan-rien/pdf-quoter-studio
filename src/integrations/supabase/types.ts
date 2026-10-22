@@ -86,6 +86,7 @@ export type Database = {
         Row: {
           created_at: string
           duree_mois: number
+          frais_dossier: number | null
           id: string
           is_active: boolean
           montant_max: number
@@ -98,6 +99,7 @@ export type Database = {
         Insert: {
           created_at?: string
           duree_mois: number
+          frais_dossier?: number | null
           id?: string
           is_active?: boolean
           montant_max: number
@@ -110,6 +112,7 @@ export type Database = {
         Update: {
           created_at?: string
           duree_mois?: number
+          frais_dossier?: number | null
           id?: string
           is_active?: boolean
           montant_max?: number
