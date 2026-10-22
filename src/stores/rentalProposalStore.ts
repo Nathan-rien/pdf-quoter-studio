@@ -40,6 +40,9 @@ export interface MatriceProposal {
   refinanceur: string | null;
   margeAppliquee: number;
   coefficientOverride: number | null; // null = utiliser la valeur auto
+  // Frais de dossier mémorisés (voir SavedFraisDossier) ; absents = tarif actuel
+  fraisDossierFige?: number | null;
+  fraisDossierLegacy?: boolean;
 }
 
 interface MatriceData {
@@ -492,6 +495,9 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             ...original,
             id: generateProposalId(),
             refinanceur: clearedInactivePartner ? null : original.refinanceur,
+            // Une copie est une nouvelle offre : tarif actuel, pas l'ancien montant.
+            fraisDossierFige: undefined,
+            fraisDossierLegacy: undefined,
           };
           
           // Insert duplicate right after the original
@@ -541,7 +547,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           proposal.refinanceur,
           proposal.margeAppliquee,
           optionsPrices,
-          proposal.coefficientOverride
+          proposal.coefficientOverride,
+          proposal
         );
       },
 
@@ -559,7 +566,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
             proposal.refinanceur,
             proposal.margeAppliquee,
             optionsPrices,
-            proposal.coefficientOverride
+            proposal.coefficientOverride,
+            proposal
           ),
         }));
       },
@@ -923,7 +931,8 @@ export const useRentalProposalStore = create<RentalProposalState & RentalProposa
           firstProposal?.refinanceur ?? state.matriceData.refinanceur,
           firstProposal?.margeAppliquee ?? state.matriceData.margeAppliquee,
           optionsPrices,
-          firstProposal?.coefficientOverride
+          firstProposal?.coefficientOverride,
+          firstProposal
         );
       },
 
