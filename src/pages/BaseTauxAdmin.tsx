@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { PartnersTab } from '@/components/base-taux-admin/PartnersTab';
 import { BaseTauxTab } from '@/components/base-taux-admin/BaseTauxTab';
+import { TransacBrandSettings } from '@/components/transac/TransacBrandSettings';
 
 /**
  * Administration des partenaires financiers et de la base taux (Supabase).
@@ -26,12 +27,16 @@ export default function BaseTauxAdmin() {
         <TabsList>
           <TabsTrigger value="partners">Partenaires</TabsTrigger>
           <TabsTrigger value="base-taux">Base taux</TabsTrigger>
+          <TabsTrigger value="transac-brands">Mentions devis transac</TabsTrigger>
         </TabsList>
         <TabsContent value="partners" className="mt-4">
           <PartnersTab />
         </TabsContent>
         <TabsContent value="base-taux" className="mt-4">
           <BaseTauxTab />
+        </TabsContent>
+        <TabsContent value="transac-brands" className="mt-4">
+          <TransacBrandSettings />
         </TabsContent>
       </Tabs>
     </div>

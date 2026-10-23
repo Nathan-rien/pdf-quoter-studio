@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { TransacQuoteEditor, type TransacOpenRequest } from "@/components/transac/TransacQuoteEditor";
+import { TransacHistoryView } from "@/components/transac/TransacHistoryView";
 import { useRentalProposalStore } from "@/stores/rentalProposalStore";
 import { useServiceProposalStore } from "@/stores/serviceProposalStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +35,8 @@ export default function Index() {
   const [isManualEntry, setIsManualEntry] = useState(false);
   const [serviceAutoOpenCreate, setServiceAutoOpenCreate] = useState(false);
   const [planningPrefill, setPlanningPrefill] = useState<PlanningPrefill | null>(null);
+  const [transacOpen, setTransacOpen] = useState<TransacOpenRequest | null>(null);
+  const clearTransacOpen = useCallback(() => setTransacOpen(null), []);
   const { user, isAdmin, isCommercial, isTechnicien, userRole, signOut } = useAuth();
   const [targetContract, setTargetContract] = useState<string | null>(null);
   const canAccessAdmin = userRole === 'admin';
@@ -203,6 +207,19 @@ export default function Index() {
         return <MesInfosView />;
       case 'backups':
         return <BackupsView />;
+      case 'transac-proposal':
+        return (isAdmin || isCommercial) ? (
+          <TransacQuoteEditor openRequest={transacOpen} onOpenHandled={clearTransacOpen} />
+        ) : null;
+      case 'transac-history':
+        return (isAdmin || isCommercial) ? (
+          <TransacHistoryView
+            onOpen={(id, duplicate) => {
+              setTransacOpen({ id, duplicate, nonce: Date.now() });
+              setCurrentView('transac-proposal');
+            }}
+          />
+        ) : null;
       default:
         return null;
     }

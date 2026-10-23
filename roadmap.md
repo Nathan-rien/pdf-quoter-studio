@@ -12,3 +12,5 @@
 - [x] Ajouter la cloche, la navigation ciblée et le lien contrat dans le planning.
 - [x] Ajouter l’historique dans la fiche et les récaps PDF/CSV.
 - [x] Tester les règles et droits dans une base isolée (17 tests) ; vérifier cloche, formulaire et téléchargements connectés. Aucun cycle création/suppression effectué dans la base réelle afin de préserver ses données.
+# Devis transactionnel
+- [x] Tables, droits, éditeur, location, PDF, historique, mentions admin, tests.
