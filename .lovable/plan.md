@@ -10,7 +10,9 @@
 - **Option location** (case à cocher) : durée (parmi celles de la base taux), partenaire actif ou « Meilleur coefficient » par défaut. Affiche coefficient, loyer mensuel ou trimestriel, coût total et frais de dossier. Si le montant est hors tranches : message clair, pas de loyer.
 - **PDF** : reprend la mise en page de la « Fiche devis » : logo et mentions de la marque, tableau, totaux, « Sous réserve d'acceptation du comité Groupe Cybertek », bloc « Bon pour accord », conditions en pied de page (délai, garantie, pénalités, indemnité de 40 €, lien CGV). Encart « Proposition de financement » si la location est cochée, sans le nom du partenaire, avec « Sous réserve d'acceptation du comité de financement ». Nom du fichier : `Devis_Transac_<marque>_<n° devis>_<client>.pdf`.
 - **Historique Transac** : filtres par marque, commercial, période et client ; actions Ouvrir, Dupliquer (la copie recalcule la location au tarif actuel ; le n° de devis est vidé et doit être ressaisi) et Exporter PDF.
+- **Visibilité** : un commercial voit, modifie et exporte les devis qu'il a créés **et** ceux où il est désigné comme commercial (même règle que pour les contrats). Exemple : un admin prépare un devis au nom de Christophe Besse, et Christophe le retrouve dans son Historique Transac. Les colonnes internes sont visibles par l'auteur, le commercial désigné et les admins, jamais sur le PDF. Seuls l'auteur et les admins peuvent changer le commercial désigné ou supprimer le devis.
 - **Admin** : dans l'écran Base taux / Partenaires, un nouvel onglet « Mentions devis transac » permet de modifier, pour chaque marque, le pied de page légal, le contact, le lien CGV et le texte des conditions. Les valeurs fournies ici servent de valeurs par défaut.
+- **Conditions par défaut** (reprises de la fiche Excel, modifiables par les admins) : délai de livraison, garantie, pénalités de retard égales à 3 fois le taux d'intérêt légal, indemnité forfaitaire de 40 € pour frais de recouvrement, lien CGV de la marque. La fiche Excel « Fiche devis » n'est pas dans les fichiers du projet : sans elle, je rédige ces conditions à partir de cette liste. Joignez la fiche (ou collez le texte exact) pour une reprise mot pour mot.
 
 ## Règles de calcul (testées)
 
@@ -81,37 +83,61 @@ GRANT ALL ON public.transac_quotes, public.transac_quote_lines TO service_role;
 ALTER TABLE public.transac_quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transac_quote_lines ENABLE ROW LEVEL SECURITY;
 
--- Devis : l'auteur (admin ou commercial) gère les siens ; les admins voient et gèrent tout.
+-- Accès à un devis : auteur, commercial désigné (même règle que les contrats), ou admin.
+CREATE OR REPLACE FUNCTION public.can_access_transac_quote(_quote_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.transac_quotes q
+    WHERE q.id = _quote_id
+      AND (q.created_by = auth.uid()
+           OR public.has_role(auth.uid(), 'admin')
+           OR public.can_access_contract(auth.uid(), q.commercial_id, q.commercial_name))
+  );
+$$;
+REVOKE ALL ON FUNCTION public.can_access_transac_quote(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.can_access_transac_quote(uuid) TO authenticated;
+
 DROP POLICY IF EXISTS "transac_quotes_select" ON public.transac_quotes;
 CREATE POLICY "transac_quotes_select" ON public.transac_quotes FOR SELECT TO authenticated
-  USING (created_by = auth.uid() OR public.has_role(auth.uid(), 'admin'));
+  USING (created_by = auth.uid()
+         OR public.has_role(auth.uid(), 'admin')
+         OR public.can_access_contract(auth.uid(), commercial_id, commercial_name));
 DROP POLICY IF EXISTS "transac_quotes_insert" ON public.transac_quotes;
 CREATE POLICY "transac_quotes_insert" ON public.transac_quotes FOR INSERT TO authenticated
   WITH CHECK (created_by = auth.uid()
     AND (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'commercial')));
 DROP POLICY IF EXISTS "transac_quotes_update" ON public.transac_quotes;
 CREATE POLICY "transac_quotes_update" ON public.transac_quotes FOR UPDATE TO authenticated
-  USING (created_by = auth.uid() OR public.has_role(auth.uid(), 'admin'))
-  WITH CHECK (created_by = auth.uid() OR public.has_role(auth.uid(), 'admin'));
+  USING (created_by = auth.uid()
+         OR public.has_role(auth.uid(), 'admin')
+         OR public.can_access_contract(auth.uid(), commercial_id, commercial_name))
+  WITH CHECK (created_by = auth.uid()
+         OR public.has_role(auth.uid(), 'admin')
+         OR public.can_access_contract(auth.uid(), commercial_id, commercial_name));
+-- Suppression : auteur et admins uniquement (le commercial désigné lit, modifie, exporte).
 DROP POLICY IF EXISTS "transac_quotes_delete" ON public.transac_quotes;
 CREATE POLICY "transac_quotes_delete" ON public.transac_quotes FOR DELETE TO authenticated
   USING (created_by = auth.uid() OR public.has_role(auth.uid(), 'admin'));
 
--- Lignes : mêmes droits que le devis parent.
+-- Lignes : mêmes droits que le devis parent (auteur, commercial désigné, admin).
 DROP POLICY IF EXISTS "transac_lines_all" ON public.transac_quote_lines;
 CREATE POLICY "transac_lines_all" ON public.transac_quote_lines FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.transac_quotes q WHERE q.id = quote_id
-           AND (q.created_by = auth.uid() OR public.has_role(auth.uid(), 'admin'))))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.transac_quotes q WHERE q.id = quote_id
-           AND (q.created_by = auth.uid() OR public.has_role(auth.uid(), 'admin'))));
+  USING (public.can_access_transac_quote(quote_id))
+  WITH CHECK (public.can_access_transac_quote(quote_id));
 
--- Empêche un non-admin de transférer un devis à un autre auteur.
+-- Garde-fous : l'auteur ne change jamais (sauf admin) ; le commercial désigné
+-- ne peut être changé que par l'auteur ou un admin.
 CREATE OR REPLACE FUNCTION public.transac_quotes_guard()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
+DECLARE _is_admin boolean := public.has_role(auth.uid(), 'admin');
 BEGIN
-  IF NEW.created_by IS DISTINCT FROM OLD.created_by
-     AND NOT public.has_role(auth.uid(), 'admin') THEN
+  IF NEW.created_by IS DISTINCT FROM OLD.created_by AND NOT _is_admin THEN
     RAISE EXCEPTION 'created_by is immutable';
+  END IF;
+  IF (NEW.commercial_id IS DISTINCT FROM OLD.commercial_id
+      OR NEW.commercial_name IS DISTINCT FROM OLD.commercial_name)
+     AND NOT _is_admin AND OLD.created_by IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'only the author or an admin can change the assigned commercial';
   END IF;
   NEW.updated_at := now();
   RETURN NEW;
