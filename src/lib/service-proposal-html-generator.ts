@@ -472,11 +472,13 @@ export async function generateServiceProposalHtml(
   const BLOCK_WRAPPER_STYLE = `${SECTION_WRAPPER_STYLE}display:block;`;
 
 
-  const renderClientZone = (zone: PositionedDynamicZone) => `
+  // `beneficiaryOnly`: contract-only "Parties contractantes" page shows the
+  // beneficiary column full width, without the interlocutor column/divider.
+  const renderClientZone = (zone: PositionedDynamicZone, beneficiaryOnly = false) => `
     <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
       <div style="${SECTION_BODY_STYLE}">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
+        <div style="display: grid; grid-template-columns: ${beneficiaryOnly ? '1fr' : '1fr 1fr'}; gap: 5mm;">
           <div>
             <p style="${LABEL_STYLE}">Bénéficiaire</p>
             ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
@@ -489,21 +491,23 @@ export async function generateServiceProposalHtml(
               ${clientData.capitalSocial ? `<p style="margin:0.5mm 0;">Capital social : ${escapeText(clientData.capitalSocial)}</p>` : ''}
             </div>
           </div>
+          ${beneficiaryOnly ? '' : `
           <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
             <p style="${LABEL_STYLE}">Votre interlocuteur</p>
             ${
               selectedCommercial
-                ? `
+                ? \`
               <p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
               <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
-                ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
-                ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
+                ${selectedCommercial.telephone ? \`<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>\` : ''}
+                ${selectedCommercial.email ? \`<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>\` : ''}
+                ${entityLabel ? \`<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>\` : ''}
               </div>
-            `
-                : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
+            \`
+                : \`<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>\`
             }
           </div>
+          `}
         </div>
       </div>
     </div>
@@ -947,7 +951,12 @@ export async function generateServiceProposalHtml(
   `;
 
   const renderServiceZone = (zone: PositionedDynamicZone) => {
-    if (zone.type === 'service_client_info') return renderClientZone(zone);
+    if (zone.type === 'service_client_info') {
+      const zonePageNumber = (zone as unknown as { pageNumber?: number }).pageNumber;
+      const zonePage = visibleTemplatePages.find((p: any) => p.pageNumber === zonePageNumber);
+      const contractOnlyPage = mode === 'contrat' && (zonePage?.documentScope ?? 'both') === 'contrat';
+      return renderClientZone(zone, contractOnlyPage);
+    }
     if (zone.type === 'service_conditions') return renderConditionsZone(zone);
     if (zone.type === 'service_invest_table') return renderInvestZone(zone);
     if (zone.type === 'service_signature') {
