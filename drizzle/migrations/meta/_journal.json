@@ -29,6 +29,13 @@
       "when": 1792751463613,
       "tag": "0003_secure_contract_intervention_history",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792751539206,
+      "tag": "0004_restrict_notification_browser_privileges",
+      "breakpoints": true
     }
   ]
 }
