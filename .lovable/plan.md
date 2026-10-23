@@ -170,9 +170,10 @@ Les mentions par marque sont stockées dans la table de réglages existante `adm
 - Tests Vitest `src/lib/transac-calculations.test.ts` et `src/lib/transac-html-generator.test.ts` : PU suggéré et taux réel, marge négative ligne et total, totaux/TVA arrondis, loyer mensuel et trimestriel, coût total et frais de dossier via la base taux (dont Franfinance tranche 1 → 60 €), meilleur coefficient, hors tranche → pas de loyer, absence des prix d'achat, grossistes, réf. fournisseur et taux dans le HTML exporté.
 - Règle ajoutée à `AGENTS.md` : l'impression des devis transac passe uniquement par le modèle d'impression filtré.
 
-## Hypothèses à confirmer
+## Décisions validées
 
 - L'éco-participation est incluse dans le PU (et non ajoutée en plus).
-- Location : périodicité mensuelle ou trimestrielle au choix, mensuelle par défaut.
+- Location : mensuelle par défaut, trimestrielle au choix.
 - Pas de statut « signé » ni de conversion en contrat pour l'instant.
 - La duplication vide le n° de devis.
+- Tests de droits ajoutés : le commercial désigné voit et modifie le devis, un autre commercial ne le voit pas, seuls l'auteur ou un admin changent le commercial désigné.
