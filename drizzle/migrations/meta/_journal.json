@@ -36,6 +36,13 @@
       "when": 1792751539206,
       "tag": "0004_restrict_notification_browser_privileges",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792751665160,
+      "tag": "0005_protect_notification_identity",
+      "breakpoints": true
     }
   ]
 }
