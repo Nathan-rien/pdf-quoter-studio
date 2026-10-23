@@ -15,6 +15,13 @@
       "when": 1792680768711,
       "tag": "0001_base_taux_frais_dossier",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792751308867,
+      "tag": "0002_intervention_notifications_contract_history",
+      "breakpoints": true
     }
   ]
 }
