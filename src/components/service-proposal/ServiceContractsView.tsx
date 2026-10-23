@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, User, FileText, Bell, Loader2, Plus, Filter, X, Zap, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { addMonths, parseISO } from 'date-fns';
@@ -44,6 +44,7 @@ function CommercialGroup({
 }) {
 
   const [open, setOpen] = useState(true);
+  useEffect(() => { if (autoExpandId && contracts.some(c => c.id === autoExpandId)) setOpen(true); }, [autoExpandId, contracts]);
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
 
   return (
@@ -84,7 +85,7 @@ function CommercialGroup({
   );
 }
 
-export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { onCreateManual?: () => void; onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void } = {}) {
+export function ServiceContractsView({ onCreateManual, onPlanIntervention, targetContractId, onTargetHandled }: { onCreateManual?: () => void; onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void; targetContractId?: string | null; onTargetHandled?: () => void } = {}) {
   const { data: contracts = [], isLoading, error } = useContracts('service');
   const { toast } = useToast();
   const { getCommercialById } = useCommerciaux();
@@ -104,6 +105,16 @@ export function ServiceContractsView({ onCreateManual, onPlanIntervention }: { o
   const [commercialFilter, setCommercialFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortMode, setSortMode] = useState<string>('recent');
+  useEffect(() => {
+    if (!targetContractId || isLoading) return;
+    const target = contracts.find(c => c.id === targetContractId);
+    if (!target) { toast({ title: 'Contrat indisponible', description: 'Ce contrat est absent ou vous n’avez pas accès à sa fiche.', variant: 'destructive' }); onTargetHandled?.(); return; }
+    setEntityFilter('all'); setCommercialFilter('all'); setSearchQuery('');
+    setSortMode(target.closed_at ? 'archived' : 'recent');
+    setAutoExpandId(targetContractId);
+    const timer = setTimeout(() => { document.getElementById(`contract-${targetContractId}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }); onTargetHandled?.(); }, 200);
+    return () => clearTimeout(timer);
+  }, [targetContractId, isLoading, contracts]);
 
   const commercialOptions = useMemo(() => {
     const map = new Map<string, string>();

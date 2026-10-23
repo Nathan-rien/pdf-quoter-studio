@@ -15,6 +15,34 @@
       "when": 1792680768711,
       "tag": "0001_base_taux_frais_dossier",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792751308867,
+      "tag": "0002_intervention_notifications_contract_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792751463613,
+      "tag": "0003_secure_contract_intervention_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792751539206,
+      "tag": "0004_restrict_notification_browser_privileges",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792751665160,
+      "tag": "0005_protect_notification_identity",
+      "breakpoints": true
     }
   ]
 }

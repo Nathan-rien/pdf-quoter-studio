@@ -24,6 +24,7 @@ import {
 interface Intervention {
   id: string;
   reference_id: string | null;
+  contract_id?: string | null;
   client_name?: string | null;
   service_label?: string | null;
   technician_user_id: string | null;
@@ -216,6 +217,8 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pl-interventions'] });
+      qc.invalidateQueries({ queryKey: ['contract-interventions'] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
       toast({ title: 'Intervention enregistrée' });
       setDialog(null);
     },
@@ -229,6 +232,8 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pl-interventions'] });
+      qc.invalidateQueries({ queryKey: ['contract-interventions'] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
       toast({ title: 'Intervention supprimée' });
       setDialog(null);
     },
@@ -250,10 +255,10 @@ export function PlanningView({ prefill, onPrefillHandled }: Props) {
 
   function labelForIntervention(i: Intervention) {
     const ref = i.reference_id ? refById.get(i.reference_id) : undefined;
-    const contract = ref ? contractById.get(ref.contract_id) : undefined;
+    const contract = contractById.get(i.contract_id || ref?.contract_id || '');
     return {
       client: contract?.client_name ?? i.client_name ?? 'Client ?',
-      service: ref?.service_label ?? i.service_label ?? (i.reference_id ? 'Service ?' : 'Hors contrat'),
+      service: ref?.service_label ?? i.service_label ?? (i.contract_id || i.reference_id ? 'Prestation non précisée' : 'Hors contrat'),
     };
   }
 
@@ -437,7 +442,7 @@ function InterventionDialog({
   const iv = isEdit ? initial.intervention : null;
 
   const [kind, setKind] = useState<'contrat' | 'hors'>(
-    iv ? (iv.reference_id ? 'contrat' : 'hors') : 'contrat'
+    iv ? (iv.contract_id || iv.reference_id ? 'contrat' : 'hors') : 'contrat'
   );
   const [clientSearch, setClientSearch] = useState('');
   const [freeClientName, setFreeClientName] = useState<string>(iv?.client_name ?? '');
@@ -447,7 +452,7 @@ function InterventionDialog({
   const [freeServiceLabel, setFreeServiceLabel] = useState<string>('');
 
   const [contractId, setContractId] = useState<string>(
-    iv ? (refs.find((r) => r.id === iv.reference_id)?.contract_id ?? '') : (initial.mode === 'create' ? initial.prefill?.contract_id ?? '' : '')
+    iv ? (iv.contract_id ?? refs.find((r) => r.id === iv.reference_id)?.contract_id ?? '') : (initial.mode === 'create' ? initial.prefill?.contract_id ?? '' : '')
   );
   const [referenceId, setReferenceId] = useState<string>(
     iv?.reference_id ?? (initial.mode === 'create' ? initial.prefill?.reference_id ?? '' : '')
@@ -560,7 +565,7 @@ function InterventionDialog({
   }
 
   const horsValid = freeClientName.trim().length > 0;
-  const canSubmit = kind === 'contrat' ? !!referenceId : horsValid;
+  const canSubmit = (kind === 'contrat' ? !!contractId : horsValid) && !!dateLocal;
 
   function submit() {
     if (!canSubmit) return;
@@ -571,24 +576,25 @@ function InterventionDialog({
     const dureeVal = totalMinutes > 0 ? totalMinutes : null;
     const target =
       kind === 'contrat'
-        ? { reference_id: referenceId, client_name: null, service_label: null }
+        ? { contract_id: contractId, reference_id: referenceId || null, client_name: null, service_label: null }
         : {
             reference_id: null,
+            contract_id: null,
             client_name: freeClientName.trim(),
             service_label:
               [...prestations, freeServiceLabel.trim()].filter(Boolean).join(' + ') || null,
           };
 
-    const payload: Partial<Intervention> & { id?: string } = isEdit
+    const payload: Partial<Intervention> & { id?: string } = iv
       ? {
-          id: iv!.id,
+          id: iv.id,
           statut,
           ...(canEditAll ? {
             ...target,
             date_intervention: new Date(dateLocal).toISOString(),
             duree_estimee_minutes: dureeVal,
             technician_name: technicianName.trim() || 'Technicien',
-            technician_user_id: iv!.technician_user_id ?? (iv!.technician_name === technicianName ? iv!.technician_user_id : null),
+            technician_user_id: iv.technician_user_id ?? (iv.technician_name === technicianName ? iv.technician_user_id : null),
             commentaire: commentaire.trim() || null,
           } : {}),
         }
@@ -653,10 +659,11 @@ function InterventionDialog({
               )}
 
               <div>
-                <label className="text-xs font-medium mb-1 block">Service / référence</label>
-                <Select value={referenceId} onValueChange={setReferenceId} disabled={!contractId || !canEditAll}>
+                <label className="text-xs font-medium mb-1 block">Service / référence (optionnel)</label>
+                <Select value={referenceId || '__none__'} onValueChange={v => setReferenceId(v === '__none__' ? '' : v)} disabled={!contractId || !canEditAll}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__">Prestation non précisée</SelectItem>
                     {refsForContract.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
                         {r.service_label}{r.erp_reference ? ` — JAJA ${r.erp_reference}` : ''}
@@ -830,8 +837,8 @@ function InterventionDialog({
 
         <DialogFooter className="shrink-0 flex items-center justify-between sm:justify-between">
           <div>
-            {isEdit && (isAdmin || isOwner) && (
-              <Button variant="ghost" size="sm" onClick={() => onDelete(iv!.id)} className="text-destructive">
+            {iv && (isAdmin || isOwner) && (
+              <Button variant="ghost" size="sm" onClick={() => onDelete(iv.id)} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-1" /> Supprimer
               </Button>
             )}

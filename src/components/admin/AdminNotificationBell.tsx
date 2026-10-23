@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { AdminNotification } from "@/hooks/useAdminNotifications";
+import type { InterventionNotification } from '@/hooks/useNotifications';
 
 interface AdminNotificationBellProps {
   notifications: AdminNotification[];
@@ -15,6 +16,9 @@ interface AdminNotificationBellProps {
   onMarkAllAsRead: () => void;
   onMarkAsRead: (id: string) => void;
   onNavigateToHistory: (highlightedIds: string[]) => void;
+  interventionNotifications?: InterventionNotification[];
+  onInterventionClick?: (notification: InterventionNotification) => void;
+  error?: boolean;
 }
 
 export function AdminNotificationBell({
@@ -23,6 +27,9 @@ export function AdminNotificationBell({
   onMarkAllAsRead,
   onMarkAsRead,
   onNavigateToHistory,
+  interventionNotifications = [],
+  onInterventionClick,
+  error,
 }: AdminNotificationBellProps) {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -49,6 +56,7 @@ export function AdminNotificationBell({
           variant="ghost"
           size="icon"
           className="relative h-8 w-8 text-muted-foreground hover:text-foreground"
+          aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
@@ -79,7 +87,9 @@ export function AdminNotificationBell({
         </div>
 
         <div className="max-h-80 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {error && <p className="px-3 py-2 text-xs text-destructive">Notifications indisponibles. Nouvelle tentative automatique.</p>}
+          {interventionNotifications.map(notif => <Button key={notif.id} variant="ghost" className={cn('w-full h-auto rounded-none text-left justify-start items-start whitespace-normal px-3 py-2.5 border-b', !notif.is_read && 'bg-primary/5')} onClick={() => onInterventionClick?.(notif)}><Bell className="h-3 w-3 shrink-0 mt-1 mr-2" /><span className="min-w-0"><span className="block text-xs font-semibold">{notif.title}</span><span className="block text-[11px] text-muted-foreground mt-1">{notif.message}</span><span className="block text-[10px] text-muted-foreground mt-1">{formatTime(notif.created_at)}</span></span>{!notif.is_read && <span className="h-2 w-2 rounded-full bg-primary shrink-0 ml-auto mt-1" />}</Button>)}
+          {notifications.length === 0 && interventionNotifications.length === 0 ? (
             <div className="py-8 text-center">
               <Bell className="h-6 w-6 text-muted-foreground mx-auto mb-2 opacity-40" />
               <p className="text-xs text-muted-foreground">Aucune notification</p>

@@ -576,6 +576,7 @@ export type Database = {
         Row: {
           client_name: string | null
           commentaire: string | null
+          contract_id: string | null
           created_at: string
           created_by: string | null
           date_intervention: string
@@ -591,6 +592,7 @@ export type Database = {
         Insert: {
           client_name?: string | null
           commentaire?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           date_intervention: string
@@ -606,6 +608,7 @@ export type Database = {
         Update: {
           client_name?: string | null
           commentaire?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           date_intervention?: string
@@ -620,6 +623,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "intervention_planning_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "intervention_planning_reference_id_fkey"
             columns: ["reference_id"]
             isOneToOne: false
@@ -627,6 +637,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          contract_id: string | null
+          created_at: string
+          id: string
+          intervention_id: string | null
+          is_read: boolean
+          link: string | null
+          message: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string
+          id?: string
+          intervention_id?: string | null
+          is_read?: boolean
+          link?: string | null
+          message?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string
+          id?: string
+          intervention_id?: string | null
+          is_read?: boolean
+          link?: string | null
+          message?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       options_services: {
         Row: {
@@ -1202,6 +1251,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_notification: {
+        Args: {
+          _contract_id?: string
+          _intervention_id?: string
+          _link: string
+          _message: string
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      get_contract_interventions: {
+        Args: { _contract_id: string }
+        Returns: Json
+      }
       get_user_commercial_id: { Args: { _user_id: string }; Returns: string }
       get_user_commercial_name: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -1210,6 +1275,11 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      normalize_person_name: { Args: { _n: string }; Returns: string }
+      resolve_contract_commercial_user: {
+        Args: { _contract_id: string }
+        Returns: string
       }
     }
     Enums: {

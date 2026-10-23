@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { PartnerSelect } from '@/components/partners/PartnerSelect';
 import { ServiceReferencesPanel, useServiceReferences } from '@/components/technician-tracking/ServiceReferencesPanel';
+import { InterventionsHistory } from './InterventionsHistory';
 
 
 const DURATIONS = [12, 24, 36, 48, 60];
@@ -66,6 +67,7 @@ function normalizeExternalProviders(value: unknown): ContractExternalProvider[] 
 
 export function ContractRow({ contract, onVisualize, defaultExpanded = false, hideFinancialPartner = false, onPlanIntervention }: { contract: Contract; onVisualize?: (contract: Contract) => void; defaultExpanded?: boolean; hideFinancialPartner?: boolean; onPlanIntervention?: (p: { reference_id: string; contract_id: string }) => void }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  useEffect(() => { if (defaultExpanded) setExpanded(true); }, [defaultExpanded]);
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
   const queryClient = useQueryClient();
@@ -447,7 +449,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
   }
 
   return (
-    <div className="border border-border rounded-lg bg-card overflow-hidden">
+    <div id={`contract-${contract.id}`} className="border border-border rounded-lg bg-card overflow-hidden">
       <div
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left cursor-pointer"
@@ -813,6 +815,7 @@ export function ContractRow({ contract, onVisualize, defaultExpanded = false, hi
 
 
 
+          {isServiceContract && <InterventionsHistory contractId={contract.id} clientName={contract.client_name} contractNumber={contract.contract_number ?? null} />}
           {!canEditContract && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
               <div className="space-y-0.5">
