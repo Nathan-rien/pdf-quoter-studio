@@ -585,16 +585,16 @@ function InterventionDialog({
               [...prestations, freeServiceLabel.trim()].filter(Boolean).join(' + ') || null,
           };
 
-    const payload: Partial<Intervention> & { id?: string } = isEdit
+    const payload: Partial<Intervention> & { id?: string } = iv
       ? {
-          id: iv!.id,
+          id: iv.id,
           statut,
           ...(canEditAll ? {
             ...target,
             date_intervention: new Date(dateLocal).toISOString(),
             duree_estimee_minutes: dureeVal,
             technician_name: technicianName.trim() || 'Technicien',
-            technician_user_id: iv!.technician_user_id ?? (iv!.technician_name === technicianName ? iv!.technician_user_id : null),
+            technician_user_id: iv.technician_user_id ?? (iv.technician_name === technicianName ? iv.technician_user_id : null),
             commentaire: commentaire.trim() || null,
           } : {}),
         }
@@ -837,8 +837,8 @@ function InterventionDialog({
 
         <DialogFooter className="shrink-0 flex items-center justify-between sm:justify-between">
           <div>
-            {isEdit && (isAdmin || isOwner) && (
-              <Button variant="ghost" size="sm" onClick={() => onDelete(iv!.id)} className="text-destructive">
+            {iv && (isAdmin || isOwner) && (
+              <Button variant="ghost" size="sm" onClick={() => onDelete(iv.id)} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-1" /> Supprimer
               </Button>
             )}

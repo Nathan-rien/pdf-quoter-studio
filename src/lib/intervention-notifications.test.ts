@@ -28,6 +28,7 @@ beforeAll(async () => {
   INSERT INTO public.intervention_planning(reference_id,technician_name,date_intervention,statut) VALUES ('${reference}','Technicien','2026-10-23 09:00Z','prevue');`);
   await db.exec(readFileSync('drizzle/migrations/0002_intervention_notifications_contract_history.sql', 'utf8'));
   await db.exec(readFileSync('drizzle/migrations/0003_secure_contract_intervention_history.sql', 'utf8'));
+  await db.exec(readFileSync('drizzle/migrations/0004_restrict_notification_browser_privileges.sql', 'utf8'));
 }, 30000);
 afterAll(async () => { await db.close(); });
 async function scalar(sql: string) { const result = await db.query<{ value: unknown }>(sql); return result.rows[0]?.value; }
@@ -93,5 +94,20 @@ describe('Intervention notifications — actual SQL in an isolated database', ()
     await expect(db.exec(`DELETE FROM notifications WHERE id='${id}'`)).rejects.toThrow();
     await expect(db.exec(`SELECT create_notification('${commercial}','fake','fake',NULL,NULL)`)).rejects.toThrow();
     await db.exec('RESET ROLE');
+  });
+  it('another user cannot mark someone else’s notification read', async () => {
+    const id = await scalar(`SELECT id::text AS value FROM notifications WHERE user_id='${commercial}' LIMIT 1`);
+    await db.exec(`UPDATE notifications SET is_read=false WHERE id='${id}'; SET ROLE authenticated; SET test.user_id='${other}'`);
+    await db.exec(`UPDATE notifications SET is_read=true WHERE id='${id}'`);
+    await db.exec('RESET ROLE');
+    expect(await scalar(`SELECT is_read AS value FROM notifications WHERE id='${id}'`)).toBe(false);
+  });
+  it('a contract intervention can omit the optional service', async () => {
+    await db.exec(`INSERT INTO intervention_planning(contract_id,technician_name,date_intervention,statut) VALUES ('${contract}','Tech','2026-10-23 09:00Z','prevue')`);
+    expect(await scalar(`SELECT count(*)::int AS value FROM notifications WHERE user_id='${commercial}' AND message LIKE '%Prestation non précisée%'`)).toBe(1);
+  });
+  it('non-owner cannot change the new contract association', async () => {
+    await db.exec(`SET test.user_id='${other}'`);
+    await expect(db.exec(`UPDATE intervention_planning SET contract_id=NULL WHERE reference_id='${reference}'`)).rejects.toThrow('not_owner_can_only_change_status');
   });
 });

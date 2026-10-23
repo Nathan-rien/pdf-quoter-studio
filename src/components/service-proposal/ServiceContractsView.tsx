@@ -44,6 +44,7 @@ function CommercialGroup({
 }) {
 
   const [open, setOpen] = useState(true);
+  useEffect(() => { if (autoExpandId && contracts.some(c => c.id === autoExpandId)) setOpen(true); }, [autoExpandId, contracts]);
   const renewingCount = contracts.filter(isContractRenewingSoon).length;
 
   return (
