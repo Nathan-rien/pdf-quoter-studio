@@ -95,6 +95,6 @@ describe('HTML exporté', () => {
     expect(html).not.toContain('22,22');
     expect(html).not.toContain('Franfinance');
     expect(html).toContain('Proposition de financement');
-    expect(html).toContain('indemnité forfaitaire de 40 €');
+    expect(html).toContain('Indemnité légale de frais de recouvrement : 40 €');
   });
 });
