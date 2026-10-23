@@ -10,10 +10,12 @@ export function useNotifications(userId: string | undefined) {
   const query = useQuery({
     queryKey: key, enabled: !!userId, refetchInterval: 15000,
     queryFn: async () => {
-      if (!userId) return [];
-      const { data, error } = await supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      if (!userId) return { rows: [], unread: 0 };
+      const { data, error } = await supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
-      return data ?? [];
+      const count = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_read', false);
+      if (count.error) throw count.error;
+      return { rows: data ?? [], unread: count.count ?? 0 };
     },
   });
   const mark = useMutation({
@@ -27,6 +29,6 @@ export function useNotifications(userId: string | undefined) {
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
     onError: () => toast.error('Lecture non enregistrée', { description: 'NOTIFICATION_READ — Impossible d’enregistrer la lecture. Réessayez.' }),
   });
-  const notifications = query.data ?? [];
-  return { notifications, unreadCount: notifications.filter(n => !n.is_read).length, error: query.error, markAsRead: (id: string) => mark.mutate(id), markAllAsRead: () => mark.mutate(undefined) };
+  const notifications = query.data?.rows ?? [];
+  return { notifications, unreadCount: query.data?.unread ?? 0, error: query.error, markAsRead: (id: string) => mark.mutate(id), markAllAsRead: () => mark.mutate(undefined) };
 }

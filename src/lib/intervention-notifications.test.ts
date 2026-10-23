@@ -29,6 +29,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('drizzle/migrations/0002_intervention_notifications_contract_history.sql', 'utf8'));
   await db.exec(readFileSync('drizzle/migrations/0003_secure_contract_intervention_history.sql', 'utf8'));
   await db.exec(readFileSync('drizzle/migrations/0004_restrict_notification_browser_privileges.sql', 'utf8'));
+  await db.exec(readFileSync('drizzle/migrations/0005_protect_notification_identity.sql', 'utf8'));
 }, 30000);
 afterAll(async () => { await db.close(); });
 async function scalar(sql: string) { const result = await db.query<{ value: unknown }>(sql); return result.rows[0]?.value; }
@@ -90,6 +91,7 @@ describe('Intervention notifications — actual SQL in an isolated database', ()
     await db.exec(`UPDATE notifications SET is_read=true WHERE id='${id}'`);
     expect(await scalar(`SELECT is_read AS value FROM notifications WHERE id='${id}'`)).toBe(true);
     await expect(db.exec(`UPDATE notifications SET title='hacked' WHERE id='${id}'`)).rejects.toThrow('only_is_read_can_change');
+    await expect(db.exec(`UPDATE notifications SET id=gen_random_uuid() WHERE id='${id}'`)).rejects.toThrow('only_is_read_can_change');
     await expect(db.exec(`INSERT INTO notifications(user_id,type,title) VALUES ('${commercial}','fake','fake')`)).rejects.toThrow();
     await expect(db.exec(`DELETE FROM notifications WHERE id='${id}'`)).rejects.toThrow();
     await expect(db.exec(`SELECT create_notification('${commercial}','fake','fake',NULL,NULL)`)).rejects.toThrow();

@@ -32,9 +32,20 @@ function escapeHtml(value: unknown) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char);
 }
 export function interventionsRecapHtml(rows: ContractIntervention[], client: string, number: string | null, from = '', to = '') {
-  // Small fixed pages plus bounded text prevent long comments from overflowing A4.
+  // Split long fields into continuation rows so the PDF preserves the full comments.
+  const split = (value: string, length: number) => {
+    const parts: string[] = [];
+    for (let i = 0; i < value.length; i += length) parts.push(value.slice(i, i + length));
+    return parts.length ? parts : [''];
+  };
+  const reportRows = rows.flatMap(row => {
+    const comments = split(row.commentaire ?? '', 250);
+    const names = split(row.technician_name, 80);
+    const services = split(service(row), 100);
+    return Array.from({ length: Math.max(comments.length, names.length, services.length) }, (_, index) => ({ ...row, technician_name: names[index] ?? '', resolved_service_label: services[index] ?? ' ', commentaire: comments[index] ?? '' }));
+  });
   const chunks: ContractIntervention[][] = [];
-  for (let i = 0; i < rows.length; i += 8) chunks.push(rows.slice(i, i + 8));
+  for (let i = 0; i < reportRows.length; i += 4) chunks.push(reportRows.slice(i, i + 4));
   if (!chunks.length) chunks.push([]);
   const totals = interventionHours(rows);
   const totalText = Object.entries(totals).map(([status, hours]) => `${INTERVENTION_STATUS_LABELS[status as keyof typeof totals]} : ${hours.toFixed(2)} h`).join(' · ');
@@ -44,7 +55,7 @@ export function interventionsRecapHtml(rows: ContractIntervention[], client: str
     .page-sheet{width:210mm;height:297mm;padding:15mm;background:var(--paper);overflow:hidden}
     h1{font-size:18pt}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border-bottom:1px solid var(--line);padding:5px;text-align:left;overflow-wrap:anywhere;vertical-align:top}th{background:var(--alt)}
     .note{white-space:pre-wrap;font-size:9pt}.totals{margin-top:8mm}
-  </style></head><body>${chunks.map((chunk, index) => `<section class="page-sheet"><h1>Récap interventions</h1><p><strong>${escapeHtml(client)}</strong> · Contrat ${escapeHtml(number || '—')}</p><p>Période : ${escapeHtml(from || 'Début')} au ${escapeHtml(to || 'Fin')} · Page ${index + 1}/${chunks.length}</p><table><thead><tr><th>Date</th><th>Technicien</th><th>Prestation</th><th>Durée</th><th>Statut</th></tr></thead><tbody>${chunk.map(row => `<tr><td>${escapeHtml(interventionDate(row.date_intervention))}</td><td>${escapeHtml(row.technician_name.slice(0, 150))}</td><td>${escapeHtml(service(row).slice(0, 200))}</td><td>${row.duree_estimee_minutes == null ? '—' : `${(Math.round(row.duree_estimee_minutes / 60 * 100) / 100).toFixed(2)} h`}</td><td>${INTERVENTION_STATUS_LABELS[row.statut]}</td></tr>${row.commentaire ? `<tr><td colspan="5" class="note">${escapeHtml(row.commentaire.slice(0, 500))}${row.commentaire.length > 500 ? '… (commentaire complet dans le CSV)' : ''}</td></tr>` : ''}`).join('')}</tbody></table>${index === chunks.length - 1 ? `<p class="totals"><strong>Total heures par statut</strong><br>${escapeHtml(totalText)}</p>` : ''}</section>`).join('')}</body></html>`;
+  </style></head><body>${chunks.map((chunk, index) => `<section class="page-sheet"><h1>Récap interventions</h1><p><strong>${escapeHtml(client)}</strong> · Contrat ${escapeHtml(number || '—')}</p><p>Période : ${escapeHtml(from || 'Début')} au ${escapeHtml(to || 'Fin')} · Page ${index + 1}/${chunks.length}</p><table><thead><tr><th>Date</th><th>Technicien</th><th>Prestation</th><th>Durée</th><th>Statut</th></tr></thead><tbody>${chunk.map(row => `<tr><td>${escapeHtml(interventionDate(row.date_intervention))}</td><td>${escapeHtml(row.technician_name)}</td><td>${escapeHtml(service(row))}</td><td>${row.duree_estimee_minutes == null ? '—' : `${(Math.round(row.duree_estimee_minutes / 60 * 100) / 100).toFixed(2)} h`}</td><td>${INTERVENTION_STATUS_LABELS[row.statut]}</td></tr>${row.commentaire ? `<tr><td colspan="5" class="note">${escapeHtml(row.commentaire)}</td></tr>` : ''}`).join('')}</tbody></table>${index === chunks.length - 1 ? `<p class="totals"><strong>Total heures par statut</strong><br>${escapeHtml(totalText)}</p>` : ''}</section>`).join('')}</body></html>`;
 }
 export function downloadRecap(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
