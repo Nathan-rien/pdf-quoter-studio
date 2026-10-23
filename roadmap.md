@@ -8,7 +8,7 @@
 - [x] Protection des anciennes propositions (montant mémorisé, défaut partenaire pour l’ancien, bouton tarif actuel, copie = tarif actuel).
 
 # Notifications et historique des interventions
-- [ ] Appliquer le SQL validé avec notifications de suppression et vérifier la base.
-- [ ] Ajouter la cloche, la navigation ciblée et le lien contrat dans le planning.
-- [ ] Ajouter l’historique dans la fiche et les récaps PDF/CSV.
-- [ ] Tester les règles, les droits et les parcours ; récapituler les fichiers et contrats quick non identifiés.
+- [x] Appliquer le SQL validé avec notifications de suppression et vérifier la base.
+- [x] Ajouter la cloche, la navigation ciblée et le lien contrat dans le planning.
+- [x] Ajouter l’historique dans la fiche et les récaps PDF/CSV.
+- [x] Tester les règles et droits dans une base isolée (17 tests) ; vérifier cloche, formulaire et téléchargements connectés. Aucun cycle création/suppression effectué dans la base réelle afin de préserver ses données.
