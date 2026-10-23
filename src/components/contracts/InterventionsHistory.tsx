@@ -19,17 +19,9 @@ export function InterventionsHistory({ contractId, clientName, contractNumber }:
   const query = useQuery({
     queryKey: ['contract-interventions', contractId], refetchInterval: 15000,
     queryFn: async (): Promise<ContractIntervention[]> => {
-      const { data, error } = await supabase.from('intervention_planning').select('*').eq('contract_id', contractId).order('date_intervention', { ascending: false });
+      const { data, error } = await supabase.rpc('get_contract_interventions', { _contract_id: contractId });
       if (error) throw error;
-      // The commercial can read interventions but not the separate service-reference table.
-      // Fetch labels through the existing contract proposal snapshot when reference reads are denied.
-      const ids = [...new Set((data ?? []).flatMap(row => row.reference_id ? [row.reference_id] : []))];
-      const labels = new Map<string, string>();
-      if (ids.length) {
-        const refs = await supabase.from('client_service_references').select('id, service_label').in('id', ids);
-        refs.data?.forEach(ref => labels.set(ref.id, ref.service_label));
-      }
-      return (data ?? []).map(row => ({ ...row, resolved_service_label: row.reference_id ? labels.get(row.reference_id) : undefined }));
+      return Array.isArray(data) ? data as unknown as ContractIntervention[] : [];
     },
   });
   const rows = query.data ?? [];
