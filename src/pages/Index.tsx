@@ -17,6 +17,7 @@ import { ServiceProposalView } from "@/components/service-proposal/ServicePropos
 import { ServiceHistoryView } from "@/components/service-proposal/ServiceHistoryView";
 import { ServiceContractsView } from "@/components/service-proposal/ServiceContractsView";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { useNotifications, InterventionNotification } from '@/hooks/useNotifications';
 import { MesInfosView } from "@/components/commercial/MesInfosView";
 import OptionsServicesAdmin from "@/pages/OptionsServicesAdmin";
 import BaseTauxAdmin from "@/pages/BaseTauxAdmin";
@@ -32,7 +33,8 @@ export default function Index() {
   const [isManualEntry, setIsManualEntry] = useState(false);
   const [serviceAutoOpenCreate, setServiceAutoOpenCreate] = useState(false);
   const [planningPrefill, setPlanningPrefill] = useState<PlanningPrefill | null>(null);
-  const { isAdmin, isCommercial, isTechnicien, userRole, signOut } = useAuth();
+  const { user, isAdmin, isCommercial, isTechnicien, userRole, signOut } = useAuth();
+  const [targetContract, setTargetContract] = useState<string | null>(null);
   const canAccessAdmin = userRole === 'admin';
 
   // Charge partenaires + base taux (Supabase) dès l'entrée dans l'app : alimente le cache
@@ -48,6 +50,21 @@ export default function Index() {
 
 
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useAdminNotifications(isAdmin);
+  const interventionNotifications = useNotifications(user?.id);
+  const openInterventionNotification = (notification: InterventionNotification) => {
+    interventionNotifications.markAsRead(notification.id);
+    if (notification.contract_id) {
+      setTargetContract(notification.contract_id);
+      setCurrentView('service-contracts');
+    } else if (isAdmin || isTechnicien) setCurrentView('service-planning');
+  };
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'service-contracts' && params.get('contract')) {
+      setTargetContract(params.get('contract'));
+      setCurrentView('service-contracts');
+    }
+  }, []);
 
   // Nettoyer le localStorage corrompu par l'ancien code ServiceProposalView
   // qui appelait loadFromExport sur rentalProposalStore.
@@ -128,6 +145,8 @@ export default function Index() {
       case 'service-contracts':
         return (isAdmin || isTechnicien || isCommercial) ? (
           <ServiceContractsView
+            targetContractId={targetContract}
+            onTargetHandled={() => setTargetContract(null)}
             onCreateManual={isAdmin ? () => {
               setServiceAutoOpenCreate(true);
               setCurrentView('service-proposal');
@@ -206,13 +225,16 @@ export default function Index() {
 
       <main className={cn("flex-1 p-3 lg:p-4", currentView === 'gantt' ? 'overflow-hidden flex flex-col' : 'overflow-auto')}>
         <div className="flex justify-end items-center gap-3 mb-2">
-          {isAdmin && (
+          {(isAdmin || isCommercial || isTechnicien) && (
             <AdminNotificationBell
               notifications={notifications}
-              unreadCount={unreadCount}
-              onMarkAllAsRead={markAllAsRead}
+              unreadCount={unreadCount + interventionNotifications.unreadCount}
+              onMarkAllAsRead={() => { markAllAsRead(); interventionNotifications.markAllAsRead(); }}
               onMarkAsRead={markAsRead}
               onNavigateToHistory={handleNavigateToHistory}
+              interventionNotifications={interventionNotifications.notifications}
+              onInterventionClick={openInterventionNotification}
+              error={!!interventionNotifications.error}
             />
           )}
           <img
