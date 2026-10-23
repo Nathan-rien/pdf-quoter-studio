@@ -664,7 +664,7 @@ export async function generateServiceProposalHtml(
     <div style="${BLOCK_WRAPPER_STYLE}">
       <div style="${SECTION_BANNER_STYLE}">Coordonnées</div>
       <div style="${SECTION_BODY_STYLE}">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 5mm;">
           <div>
             <p style="${LABEL_STYLE}">Bénéficiaire</p>
             ${clientData.raisonSociale ? `<p style="${VALUE_STYLE}">${escapeText(clientData.raisonSociale)}</p>` : ''}
@@ -674,19 +674,6 @@ export async function generateServiceProposalHtml(
               ${clientData.email ? `<p style="margin:0.5mm 0;">${escapeText(clientData.email)}</p>` : ''}
               ${clientData.telephone ? `<p style="margin:0.5mm 0;">${escapeText(clientData.telephone)}</p>` : ''}
             </div>
-          </div>
-          <div style="border-left: 1px solid #e5e7eb; padding-left: 5mm;">
-            <p style="${LABEL_STYLE}">Votre interlocuteur</p>
-            ${
-              selectedCommercial
-                ? `<p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
-                   <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                     ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
-                     ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
-                     ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
-                   </div>`
-                : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
-            }
           </div>
         </div>
       </div>
