@@ -12,12 +12,13 @@ export interface TransacBrandSettings {
   conditions: string;
 }
 
-const conditions = (cgv: string) =>
+const conditions = (cgvLine: string) =>
   [
-    'Délai de livraison : indicatif, communiqué à la commande selon disponibilité fournisseur.',
-    'Garantie : garantie constructeur selon les conditions de chaque fabricant.',
-    "Paiement : tout retard de paiement entraîne des pénalités égales à 3 fois le taux d'intérêt légal, ainsi qu'une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
-    `Conditions générales de vente : ${cgv}`,
+    'Délai de livraison : 24 à 48h sur stock disponible',
+    "Date d'échéance : date de facture",
+    'Intérêts de retard : taux 1,5 % par mois – Indemnité légale de frais de recouvrement : 40 €',
+    'Escompte pour paiement anticipé : néant',
+    cgvLine,
   ].join('\n');
 
 export const TRANSAC_BRAND_DEFAULTS: Record<TransacBrand, TransacBrandSettings> = {
