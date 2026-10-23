@@ -19,6 +19,7 @@ import {
   ClipboardList,
   CalendarDays,
   HardDrive,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ const TRANSPORT_LINKS = [
   { label: "WelcomeTrack", url: "https://app.welcometrack.io/index.cfm" },
 ];
 
-export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt' | 'technician-tracking' | 'service-planning' | 'backups';
+export type ViewType = 'rental-proposal' | 'rental-workflow' | 'service-proposal' | 'contracts' | 'service-contracts' | 'history' | 'service-history' | 'template-editor' | 'options-admin' | 'base-taux-admin' | 'access-management' | 'statistics' | 'mes-infos' | 'gantt' | 'technician-tracking' | 'service-planning' | 'backups' | 'transac-proposal' | 'transac-history';
 
 interface AppSidebarProps {
   currentView: ViewType;
@@ -183,6 +184,32 @@ export function AppSidebar({
                 </Button>
               </>
             )}
+          </>
+        )}
+
+        {/* SECTION 3 — Transactionnel (admin + commercial) */}
+        {(isAdmin || isCommercial) && (
+          <>
+            <div className="border-t border-border my-2" />
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-2">
+              Transactionnel
+            </p>
+            <Button
+              variant={currentView === 'transac-proposal' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('transac-proposal')}
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              Prop. Transac
+            </Button>
+            <Button
+              variant={currentView === 'transac-history' ? 'secondary' : 'ghost'}
+              className="w-full justify-start gap-2 h-8 text-sm"
+              onClick={() => onNavigate('transac-history')}
+            >
+              <History className="h-3.5 w-3.5" />
+              Historique Transac
+            </Button>
           </>
         )}
 

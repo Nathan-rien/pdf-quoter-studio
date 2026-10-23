@@ -1166,6 +1166,146 @@ export type Database = {
           },
         ]
       }
+      transac_quote_lines: {
+        Row: {
+          designation: string
+          eco_participation: number | null
+          id: string
+          line_type: string
+          markup_rate: number | null
+          position: number
+          purchase_price: number | null
+          quantity: number
+          quote_id: string
+          reference: string | null
+          supplier: string | null
+          supplier_ref: string | null
+          total_ht: number
+          unit_price_ht: number
+        }
+        Insert: {
+          designation?: string
+          eco_participation?: number | null
+          id?: string
+          line_type?: string
+          markup_rate?: number | null
+          position?: number
+          purchase_price?: number | null
+          quantity?: number
+          quote_id: string
+          reference?: string | null
+          supplier?: string | null
+          supplier_ref?: string | null
+          total_ht?: number
+          unit_price_ht?: number
+        }
+        Update: {
+          designation?: string
+          eco_participation?: number | null
+          id?: string
+          line_type?: string
+          markup_rate?: number | null
+          position?: number
+          purchase_price?: number | null
+          quantity?: number
+          quote_id?: string
+          reference?: string | null
+          supplier?: string | null
+          supplier_ref?: string | null
+          total_ht?: number
+          unit_price_ht?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transac_quote_lines_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "transac_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transac_quotes: {
+        Row: {
+          billing_address: Json
+          billing_same_as_delivery: boolean
+          brand: string
+          client_name: string | null
+          client_number: string | null
+          comment: string | null
+          commercial_id: string | null
+          commercial_name: string | null
+          created_at: string
+          created_by: string
+          delivery_address: Json
+          exported_at: string | null
+          id: string
+          quote_date: string
+          quote_number: string
+          rental: Json | null
+          rental_enabled: boolean
+          status: string
+          total_ht: number
+          total_purchase: number
+          total_ttc: number
+          total_tva: number
+          updated_at: string
+          valid_until: string
+        }
+        Insert: {
+          billing_address?: Json
+          billing_same_as_delivery?: boolean
+          brand: string
+          client_name?: string | null
+          client_number?: string | null
+          comment?: string | null
+          commercial_id?: string | null
+          commercial_name?: string | null
+          created_at?: string
+          created_by?: string
+          delivery_address?: Json
+          exported_at?: string | null
+          id?: string
+          quote_date?: string
+          quote_number: string
+          rental?: Json | null
+          rental_enabled?: boolean
+          status?: string
+          total_ht?: number
+          total_purchase?: number
+          total_ttc?: number
+          total_tva?: number
+          updated_at?: string
+          valid_until?: string
+        }
+        Update: {
+          billing_address?: Json
+          billing_same_as_delivery?: boolean
+          brand?: string
+          client_name?: string | null
+          client_number?: string | null
+          comment?: string | null
+          commercial_id?: string | null
+          commercial_name?: string | null
+          created_at?: string
+          created_by?: string
+          delivery_address?: Json
+          exported_at?: string | null
+          id?: string
+          quote_date?: string
+          quote_number?: string
+          rental?: Json | null
+          rental_enabled?: boolean
+          status?: string
+          total_ht?: number
+          total_purchase?: number
+          total_ttc?: number
+          total_tva?: number
+          updated_at?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1198,6 +1338,10 @@ export type Database = {
           _commercial_name: string
           _user_id: string
         }
+        Returns: boolean
+      }
+      can_access_transac_quote: {
+        Args: { _quote_id: string }
         Returns: boolean
       }
       consume_remote_support_ticket: {
@@ -1280,6 +1424,10 @@ export type Database = {
       resolve_contract_commercial_user: {
         Args: { _contract_id: string }
         Returns: string
+      }
+      transac_quote_number_exists: {
+        Args: { _exclude_id?: string; _number: string }
+        Returns: boolean
       }
     }
     Enums: {

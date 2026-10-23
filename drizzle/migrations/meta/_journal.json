@@ -43,6 +43,13 @@
       "when": 1792751665160,
       "tag": "0005_protect_notification_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792756912445,
+      "tag": "0006_transac_quotes",
+      "breakpoints": true
     }
   ]
 }
