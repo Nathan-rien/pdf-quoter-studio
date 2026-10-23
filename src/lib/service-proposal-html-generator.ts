@@ -496,15 +496,15 @@ export async function generateServiceProposalHtml(
             <p style="${LABEL_STYLE}">Votre interlocuteur</p>
             ${
               selectedCommercial
-                ? \`
+                ? `
               <p style="${VALUE_STYLE}">${escapeText(selectedCommercial.nom)}</p>
               <div style="${BODY_TEXT_STYLE} margin-top:1mm;">
-                ${selectedCommercial.telephone ? \`<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>\` : ''}
-                ${selectedCommercial.email ? \`<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>\` : ''}
-                ${entityLabel ? \`<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>\` : ''}
+                ${selectedCommercial.telephone ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.telephone)}</p>` : ''}
+                ${selectedCommercial.email ? `<p style="margin:0.5mm 0;">${escapeText(selectedCommercial.email)}</p>` : ''}
+                ${entityLabel ? `<p style="margin:0.5mm 0;">${escapeText(entityLabel)}</p>` : ''}
               </div>
-            \`
-                : \`<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>\`
+            `
+                : `<p style="${EMPTY_HINT_STYLE}">Non sélectionné</p>`
             }
           </div>
           `}
