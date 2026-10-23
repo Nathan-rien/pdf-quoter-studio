@@ -68,7 +68,7 @@ export async function loadTransacQuote(id: string): Promise<TransacEditorState> 
   ]);
   if (error) throw error;
   if (lErr) throw lErr;
-  const rental = (q.rental ?? null) as null | { durationMonths: number | null; partner: string | null; periodicity: Periodicity; frozen: FrozenRental | null };
+  const rental = (q.rental ?? null) as unknown as null | { durationMonths: number | null; partner: string | null; periodicity: Periodicity; frozen: FrozenRental | null };
   return {
     id: q.id,
     brand: q.brand as TransacBrand,
