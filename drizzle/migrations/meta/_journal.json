@@ -22,6 +22,13 @@
       "when": 1792751308867,
       "tag": "0002_intervention_notifications_contract_history",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792751463613,
+      "tag": "0003_secure_contract_intervention_history",
+      "breakpoints": true
     }
   ]
 }

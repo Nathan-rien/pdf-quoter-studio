@@ -1263,6 +1263,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_contract_interventions: {
+        Args: { _contract_id: string }
+        Returns: Json
+      }
       get_user_commercial_id: { Args: { _user_id: string }; Returns: string }
       get_user_commercial_name: { Args: { _user_id: string }; Returns: string }
       has_role: {
